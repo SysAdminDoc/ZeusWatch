@@ -1,0 +1,12 @@
+v1.0.0 - Initial public release
+
+- Share weather as text or rendered image
+- App shortcuts (long-press launcher icon)
+- Deep link support (nimbus:// URI scheme)
+- Adaptive layouts for landscape and tablet
+- Full TalkBack accessibility on all components
+- Predictive back gesture support
+- GitHub Actions CI/CD
+- F-Droid metadata
+
+Previous versions delivered: current conditions, hourly/daily forecasts, interactive radar, severe weather alerts with notifications, home screen widgets, air quality + pollen data, moon phase, multi-location support, and offline caching.

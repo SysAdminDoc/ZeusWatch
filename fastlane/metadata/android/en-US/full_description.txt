@@ -1,0 +1,22 @@
+Nimbus Weather is a free, open-source Android weather app with a premium dark interface inspired by The Weather Channel. No API keys, no ads, no tracking.
+
+Features:
+- Current conditions with dynamic sky gradients
+- 48-hour scrollable hourly forecast
+- 16-day expandable daily forecast
+- Interactive radar map with RainViewer global tiles
+- NWS severe weather alerts with push notifications (US)
+- Air quality index with pollutant breakdown
+- Pollen levels for 6 species
+- Moon phase and astronomy data
+- Multiple saved locations
+- Home screen widgets (3 sizes)
+- Share weather as text or image
+- Landscape and tablet adaptive layouts
+- Full TalkBack accessibility support
+
+All weather data comes from Open-Meteo (free, no key required). Radar imagery from RainViewer. US severe weather alerts from the National Weather Service.
+
+The app uses a deep navy color palette with glassmorphism effects and animated weather particles. Dark theme only.
+
+Built with Kotlin, Jetpack Compose, Hilt, Retrofit, Room, and MapLibre. Targets Android 8.0+ (API 26).
