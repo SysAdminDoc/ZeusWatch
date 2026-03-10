@@ -1,0 +1,61 @@
+name: Build & Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # ZeusWatch has two product flavors:
+      # standard = Google Play Services location (default)
+      # freenet  = F-Droid compatible, no proprietary dependencies
+      - name: Build Standard Debug APK
+        run: ./gradlew assembleStandardDebug
+
+      - name: Build Freenet Debug APK
+        run: ./gradlew assembleFreenetDebug
+
+      - name: Find APKs
+        id: apks
+        run: |
+          STD=$(find app/build/outputs/apk/standard/debug -name "*.apk" | head -1)
+          FN=$(find app/build/outputs/apk/freenet/debug -name "*.apk" | head -1)
+          echo "standard=$STD" >> $GITHUB_OUTPUT
+          echo "freenet=$FN" >> $GITHUB_OUTPUT
+
+      - name: Upload APKs to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ steps.apks.outputs.standard }}
+            ${{ steps.apks.outputs.freenet }}
+          fail_on_unmatched_files: true
