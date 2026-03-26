@@ -69,6 +69,9 @@ fun RadarScreen(
                     RadarMapView(
                         latitude = resolvedLat,
                         longitude = resolvedLon,
+                        currentTileUrl = radarState.currentFrame?.tileUrl,
+                        previousTileUrl = radarState.frameSet?.allFrames
+                            ?.getOrNull(radarState.currentFrameIndex - 1)?.tileUrl,
                         modifier = Modifier.fillMaxSize(),
                     )
                     RadarPlaybackControls(
@@ -136,6 +139,9 @@ fun RadarTab(
                 RadarMapView(
                     latitude = latitude,
                     longitude = longitude,
+                    currentTileUrl = radarState.currentFrame?.tileUrl,
+                    previousTileUrl = radarState.frameSet?.allFrames
+                        ?.getOrNull(radarState.currentFrameIndex - 1)?.tileUrl,
                     modifier = Modifier.fillMaxSize(),
                 )
                 // Playback controls overlay

@@ -63,19 +63,17 @@ fun WindCompass(
                 modifier = Modifier.size(120.dp),
                 contentAlignment = Alignment.Center,
             ) {
+                val s = LocalUnitSettings.current
+                val ringColor = if (s.showBeaufortColors) {
+                    Color(WeatherFormatter.beaufortScale(windSpeed).colorHex)
+                } else {
+                    Color.White.copy(alpha = 0.1f)
+                }
+                val ringWidth = if (s.showBeaufortColors) 3f else 1.5f
                 Canvas(modifier = Modifier.size(120.dp)) {
                     val cx = size.width / 2f
                     val cy = size.height / 2f
                     val radius = size.width / 2f - 16f
-
-                    // Outer circle (Beaufort-colored when enabled)
-                    val s = LocalUnitSettings.current
-                    val ringColor = if (s.showBeaufortColors) {
-                        Color(WeatherFormatter.beaufortScale(windSpeed).colorHex)
-                    } else {
-                        Color.White.copy(alpha = 0.1f)
-                    }
-                    val ringWidth = if (s.showBeaufortColors) 3f else 1.5f
                     drawCircle(
                         color = ringColor,
                         radius = radius,
