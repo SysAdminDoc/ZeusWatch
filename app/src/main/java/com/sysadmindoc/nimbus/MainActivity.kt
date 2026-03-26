@@ -8,17 +8,25 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.ThemeMode
+import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.ui.component.AdaptiveLayoutInfo
 import com.sysadmindoc.nimbus.ui.component.LocalAdaptiveLayout
 import com.sysadmindoc.nimbus.ui.navigation.NimbusNavHost
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var prefs: UserPreferences
 
     private var pendingDeepLink by mutableStateOf<String?>(null)
 
@@ -32,8 +40,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
             val adaptiveInfo = AdaptiveLayoutInfo.from(windowSizeClass.widthSizeClass)
+            val settings by prefs.settings.collectAsState(initial = NimbusSettings())
 
-            NimbusTheme {
+            NimbusTheme(
+                useWeatherAdaptive = settings.themeMode == ThemeMode.WEATHER_ADAPTIVE,
+            ) {
                 CompositionLocalProvider(LocalAdaptiveLayout provides adaptiveInfo) {
                     NimbusNavHost(
                         startRoute = pendingDeepLink,
@@ -57,6 +68,7 @@ class MainActivity : ComponentActivity() {
             "locations" -> "locations"
             "settings" -> "settings"
             "radar" -> "radar/0.0/0.0" // Uses last-known location via ViewModel fallback
+            "compare" -> "compare"
             else -> null
         }
     }

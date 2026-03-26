@@ -15,8 +15,8 @@ android {
         applicationId = "com.sysadmindoc.nimbus"
         minSdk = 26
         targetSdk = 35
-        versionCode = 40
-        versionName = "1.2.0"
+        versionCode = 50
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -129,6 +129,7 @@ dependencies {
 
     // Images
     implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 
     // Location (standard flavor only)
     "standardImplementation"(libs.play.services.location)

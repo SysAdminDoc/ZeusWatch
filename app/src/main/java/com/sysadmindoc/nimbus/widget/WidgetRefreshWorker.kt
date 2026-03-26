@@ -13,7 +13,10 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
 import com.sysadmindoc.nimbus.data.model.WeatherCode
+import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
+import com.sysadmindoc.nimbus.data.repository.WeatherRepository
+import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -31,6 +34,8 @@ class WidgetRefreshWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val weatherApi: OpenMeteoApi,
     private val prefs: UserPreferences,
+    private val weatherRepository: WeatherRepository,
+    private val locationRepository: LocationRepository,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
@@ -117,6 +122,28 @@ class WidgetRefreshWorker @AssistedInject constructor(
             NimbusSmallWidget().updateAll(applicationContext)
             NimbusMediumWidget().updateAll(applicationContext)
             NimbusLargeWidget().updateAll(applicationContext)
+            NimbusForecastStripWidget().updateAll(applicationContext)
+
+            // Update persistent weather notification if enabled
+            if (settings.persistentWeatherNotif) {
+                try {
+                    val weatherData = weatherRepository.getWeather(lastLoc.latitude, lastLoc.longitude, lastLoc.name)
+                    weatherData.getOrNull()?.let {
+                        WeatherNotificationHelper.showOrUpdate(applicationContext, it, settings)
+                    }
+                } catch (_: Exception) {}
+            } else {
+                WeatherNotificationHelper.dismiss(applicationContext)
+            }
+
+            // Proactively cache weather for all saved locations
+            try {
+                val savedLocations = locationRepository.getAll()
+                for (loc in savedLocations) {
+                    if (loc.latitude == lastLoc.latitude && loc.longitude == lastLoc.longitude) continue
+                    weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
+                }
+            } catch (_: Exception) { /* Non-fatal; widget update already succeeded */ }
 
             Result.success()
         } catch (_: Exception) {

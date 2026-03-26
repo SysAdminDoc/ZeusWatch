@@ -49,6 +49,19 @@ fun AlertBanner(
 ) {
     if (alerts.isEmpty()) return
 
+    val settings = LocalUnitSettings.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Haptic feedback for severe+ alerts on first composition
+    if (settings.hapticFeedbackForAlerts) {
+        val topAlert = alerts.firstOrNull()
+        androidx.compose.runtime.LaunchedEffect(topAlert?.id) {
+            topAlert?.let {
+                com.sysadmindoc.nimbus.util.HapticHelper.vibrateForAlert(context, it.severity)
+            }
+        }
+    }
+
     Column(modifier = modifier.fillMaxWidth()) {
         alerts.forEach { alert ->
             AlertBannerItem(alert = alert, onClick = { onAlertClick(alert) })

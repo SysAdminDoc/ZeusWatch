@@ -34,21 +34,21 @@ class LocationsViewModel @Inject constructor(
     private var searchJob: Job? = null
 
     fun onSearchQueryChanged(query: String) {
-        _searchState.update { it.copy(query = query) }
         searchJob?.cancel()
         if (query.length < 2) {
-            _searchState.update { it.copy(results = emptyList(), isSearching = false) }
+            _searchState.update { it.copy(query = query, results = emptyList(), isSearching = false) }
             return
         }
+        // Set isSearching=true immediately so UI shows spinner, not "No results"
+        _searchState.update { it.copy(query = query, isSearching = true) }
         searchJob = viewModelScope.launch {
             delay(350) // Debounce
-            _searchState.update { it.copy(isSearching = true) }
             locationRepository.search(query).fold(
                 onSuccess = { results ->
                     _searchState.update { it.copy(results = results, isSearching = false) }
                 },
                 onFailure = {
-                    _searchState.update { it.copy(results = emptyList(), isSearching = false) }
+                    _searchState.update { it.copy(results = emptyList(), isSearching = false, error = "Search failed") }
                 }
             )
         }
@@ -78,4 +78,5 @@ data class SearchState(
     val query: String = "",
     val results: List<GeocodingResult> = emptyList(),
     val isSearching: Boolean = false,
+    val error: String? = null,
 )

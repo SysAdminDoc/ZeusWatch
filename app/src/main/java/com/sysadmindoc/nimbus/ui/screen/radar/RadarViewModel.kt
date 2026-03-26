@@ -27,6 +27,9 @@ class RadarViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RadarUiState())
     val uiState: StateFlow<RadarUiState> = _uiState.asStateFlow()
 
+    /** Settings flow for radar provider selection. */
+    val settings = prefs.settings
+
     private var playbackJob: Job? = null
 
     init {

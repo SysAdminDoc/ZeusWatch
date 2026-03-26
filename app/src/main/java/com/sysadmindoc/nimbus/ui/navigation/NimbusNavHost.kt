@@ -34,6 +34,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.sysadmindoc.nimbus.ui.screen.compare.CompareScreen
 import com.sysadmindoc.nimbus.ui.screen.locations.LocationsScreen
 import com.sysadmindoc.nimbus.ui.screen.main.MainScreen
 import com.sysadmindoc.nimbus.ui.screen.radar.RadarScreen
@@ -49,6 +50,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val RADAR = "radar/{lat}/{lon}"
     const val LOCATIONS = "locations"
+    const val COMPARE = "compare"
 
     fun radar(lat: Double, lon: Double): String = "radar/$lat/$lon"
     fun mainWithLocation(id: Long): String = "main/$id"
@@ -89,6 +91,7 @@ fun NimbusNavHost(
                     navController.navigate(Routes.radar(lat, lon))
                 },
                 onNavigateToLocations = { navController.navigate(Routes.LOCATIONS) },
+                onNavigateToCompare = { navController.navigate(Routes.COMPARE) },
             )
         }
         composable(
@@ -101,6 +104,7 @@ fun NimbusNavHost(
                     navController.navigate(Routes.radar(lat, lon))
                 },
                 onNavigateToLocations = { navController.navigate(Routes.LOCATIONS) },
+                onNavigateToCompare = { navController.navigate(Routes.COMPARE) },
             )
         }
         composable(Routes.SETTINGS) {
@@ -131,6 +135,11 @@ fun NimbusNavHost(
                         popUpTo(Routes.MAIN) { inclusive = true }
                     }
                 },
+            )
+        }
+        composable(Routes.COMPARE) {
+            CompareScreen(
+                onBack = { navController.popBackStack() },
             )
         }
     }

@@ -40,6 +40,8 @@ data class CurrentConditions(
     val dewPoint: Double?,
     val cloudCover: Int,
     val precipitation: Double,
+    val snowfall: Double? = null,
+    val snowDepth: Double? = null,
     val dailyHigh: Double,
     val dailyLow: Double,
     val sunrise: String?,
@@ -61,6 +63,9 @@ data class HourlyConditions(
     val uvIndex: Double?,
     val cloudCover: Int?,
     val visibility: Double?,
+    val snowfall: Double? = null,
+    val windGusts: Double? = null,
+    val sunshineDuration: Double? = null,
 )
 
 @Stable
@@ -76,4 +81,14 @@ data class DailyConditions(
     val uvIndexMax: Double?,
     val windSpeedMax: Double?,
     val windDirectionDominant: Int?,
+    val snowfallSum: Double? = null,
+    val sunshineDuration: Double? = null,
+    val windGustsMax: Double? = null,
+    val precipitationHours: Double? = null,
+)
+
+@Stable
+data class MinutelyPrecipitation(
+    val time: LocalDateTime,
+    val precipitation: Double,
 )

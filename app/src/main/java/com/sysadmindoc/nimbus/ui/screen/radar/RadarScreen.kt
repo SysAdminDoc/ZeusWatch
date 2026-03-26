@@ -32,6 +32,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.RadarProvider
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
@@ -52,17 +55,41 @@ fun RadarScreen(
         resolvedLon = lon
     }
 
+    val settings by viewModel.settings.collectAsStateWithLifecycle(initialValue = NimbusSettings())
+    val radarState by viewModel.uiState.collectAsStateWithLifecycle()
+
     PredictiveBackScaffold(onBack = onBack) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(NimbusNavyDark),
         ) {
-            RadarWebView(
-                latitude = resolvedLat,
-                longitude = resolvedLon,
-                modifier = Modifier.fillMaxSize(),
-            )
+            when (settings.radarProvider) {
+                RadarProvider.NATIVE_MAPLIBRE -> {
+                    RadarMapView(
+                        latitude = resolvedLat,
+                        longitude = resolvedLon,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    RadarPlaybackControls(
+                        isPlaying = radarState.isPlaying,
+                        currentFrame = radarState.currentFrameIndex,
+                        totalFrames = radarState.totalFrames,
+                        pastFrameCount = radarState.pastFrameCount,
+                        currentTimestamp = radarState.currentFrame?.timestamp,
+                        onTogglePlayback = { viewModel.togglePlayback() },
+                        onSeekToFrame = { viewModel.seekToFrame(it) },
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+                }
+                RadarProvider.WINDY_WEBVIEW -> {
+                    RadarWebView(
+                        latitude = resolvedLat,
+                        longitude = resolvedLon,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
 
             // Back button overlay
             IconButton(
@@ -88,22 +115,49 @@ fun RadarScreen(
 
 /**
  * Standalone radar composable for embedding in bottom nav tab (no back button).
+ * Respects the user's radar provider preference (Windy WebView vs native MapLibre).
  */
 @Composable
 fun RadarTab(
     latitude: Double,
     longitude: Double,
+    viewModel: RadarViewModel = hiltViewModel(),
 ) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle(initialValue = NimbusSettings())
+    val radarState by viewModel.uiState.collectAsStateWithLifecycle()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(NimbusNavyDark),
     ) {
-        RadarWebView(
-            latitude = latitude,
-            longitude = longitude,
-            modifier = Modifier.fillMaxSize(),
-        )
+        when (settings.radarProvider) {
+            RadarProvider.NATIVE_MAPLIBRE -> {
+                RadarMapView(
+                    latitude = latitude,
+                    longitude = longitude,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                // Playback controls overlay
+                RadarPlaybackControls(
+                    isPlaying = radarState.isPlaying,
+                    currentFrame = radarState.currentFrameIndex,
+                    totalFrames = radarState.totalFrames,
+                    pastFrameCount = radarState.pastFrameCount,
+                    currentTimestamp = radarState.currentFrame?.timestamp,
+                    onTogglePlayback = { viewModel.togglePlayback() },
+                    onSeekToFrame = { viewModel.seekToFrame(it) },
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
+            }
+            RadarProvider.WINDY_WEBVIEW -> {
+                RadarWebView(
+                    latitude = latitude,
+                    longitude = longitude,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
     }
 }
 

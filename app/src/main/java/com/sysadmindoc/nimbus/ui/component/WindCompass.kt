@@ -68,12 +68,19 @@ fun WindCompass(
                     val cy = size.height / 2f
                     val radius = size.width / 2f - 16f
 
-                    // Outer circle
+                    // Outer circle (Beaufort-colored when enabled)
+                    val s = LocalUnitSettings.current
+                    val ringColor = if (s.showBeaufortColors) {
+                        Color(WeatherFormatter.beaufortScale(windSpeed).colorHex)
+                    } else {
+                        Color.White.copy(alpha = 0.1f)
+                    }
+                    val ringWidth = if (s.showBeaufortColors) 3f else 1.5f
                     drawCircle(
-                        color = Color.White.copy(alpha = 0.1f),
+                        color = ringColor,
                         radius = radius,
                         center = Offset(cx, cy),
-                        style = Stroke(width = 1.5f),
+                        style = Stroke(width = ringWidth),
                     )
 
                     // Tick marks for cardinal + ordinal directions
@@ -157,6 +164,16 @@ fun WindCompass(
                     style = MaterialTheme.typography.bodyMedium,
                     color = NimbusTextSecondary,
                 )
+                // Beaufort scale label (when enabled in settings)
+                if (s.showBeaufortColors) {
+                    val beaufort = WeatherFormatter.beaufortScale(windSpeed)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Beaufort ${beaufort.scale} \u2022 ${beaufort.label}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(beaufort.colorHex),
+                    )
+                }
                 if (windGusts != null && windGusts > windSpeed) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(

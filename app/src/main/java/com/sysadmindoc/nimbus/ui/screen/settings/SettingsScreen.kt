@@ -57,6 +57,33 @@ fun SettingsScreen(
         onPrecipUnit = { viewModel.setPrecipUnit(it) },
         onTimeFormat = { viewModel.setTimeFormat(it) },
         onParticlesEnabled = { viewModel.setParticlesEnabled(it) },
+        onAlertNotificationsEnabled = { viewModel.setAlertNotificationsEnabled(it) },
+        onAlertMinSeverity = { viewModel.setAlertMinSeverity(it) },
+        onAlertCheckAllLocations = { viewModel.setAlertCheckAllLocations(it) },
+        // Display
+        onRadarProvider = { viewModel.setRadarProvider(it) },
+        onIconStyle = { viewModel.setIconStyle(it) },
+        onThemeMode = { viewModel.setThemeMode(it) },
+        onSummaryStyle = { viewModel.setSummaryStyle(it) },
+        // Card config
+        onCardEnabled = { card, enabled -> viewModel.setCardEnabled(card, enabled) },
+        // Notifications
+        onPersistentWeatherNotif = { viewModel.setPersistentWeatherNotif(it) },
+        onNowcastingAlerts = { viewModel.setNowcastingAlerts(it) },
+        onDrivingAlerts = { viewModel.setDrivingAlerts(it) },
+        onHealthAlertsEnabled = { viewModel.setHealthAlertsEnabled(it) },
+        // Data display
+        onShowSnowfall = { viewModel.setShowSnowfall(it) },
+        onShowCape = { viewModel.setShowCape(it) },
+        onShowSunshineDuration = { viewModel.setShowSunshineDuration(it) },
+        onShowGoldenHour = { viewModel.setShowGoldenHour(it) },
+        onShowBeaufortColors = { viewModel.setShowBeaufortColors(it) },
+        onShowOutdoorScore = { viewModel.setShowOutdoorScore(it) },
+        onShowYesterdayComparison = { viewModel.setShowYesterdayComparison(it) },
+        // Health
+        onMigraineAlerts = { viewModel.setMigraineAlerts(it) },
+        // Haptics
+        onHapticFeedbackForAlerts = { viewModel.setHapticFeedbackForAlerts(it) },
     )
 }
 
@@ -70,6 +97,33 @@ internal fun SettingsContent(
     onPrecipUnit: (PrecipUnit) -> Unit = {},
     onTimeFormat: (TimeFormat) -> Unit = {},
     onParticlesEnabled: (Boolean) -> Unit = {},
+    onAlertNotificationsEnabled: (Boolean) -> Unit = {},
+    onAlertMinSeverity: (AlertMinSeverity) -> Unit = {},
+    onAlertCheckAllLocations: (Boolean) -> Unit = {},
+    // Display
+    onRadarProvider: (RadarProvider) -> Unit = {},
+    onIconStyle: (IconStyle) -> Unit = {},
+    onThemeMode: (ThemeMode) -> Unit = {},
+    onSummaryStyle: (SummaryStyle) -> Unit = {},
+    // Card config
+    onCardEnabled: (CardType, Boolean) -> Unit = { _, _ -> },
+    // Notifications
+    onPersistentWeatherNotif: (Boolean) -> Unit = {},
+    onNowcastingAlerts: (Boolean) -> Unit = {},
+    onDrivingAlerts: (Boolean) -> Unit = {},
+    onHealthAlertsEnabled: (Boolean) -> Unit = {},
+    // Data display
+    onShowSnowfall: (Boolean) -> Unit = {},
+    onShowCape: (Boolean) -> Unit = {},
+    onShowSunshineDuration: (Boolean) -> Unit = {},
+    onShowGoldenHour: (Boolean) -> Unit = {},
+    onShowBeaufortColors: (Boolean) -> Unit = {},
+    onShowOutdoorScore: (Boolean) -> Unit = {},
+    onShowYesterdayComparison: (Boolean) -> Unit = {},
+    // Health
+    onMigraineAlerts: (Boolean) -> Unit = {},
+    // Haptics
+    onHapticFeedbackForAlerts: (Boolean) -> Unit = {},
 ) {
     PredictiveBackScaffold(onBack = onBack) {
         Column(
@@ -101,6 +155,79 @@ internal fun SettingsContent(
         }
 
         Spacer(modifier = Modifier.height(8.dp))
+
+        // ── Display ──────────────────────────────────────────
+        SettingSection("Display") {
+            Text(
+                text = "Radar Provider",
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+            )
+            RadarProvider.entries.forEach { provider ->
+                SettingRadio(
+                    label = provider.label,
+                    selected = settings.radarProvider == provider,
+                    onClick = { onRadarProvider(provider) },
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Icon Style",
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+            )
+            IconStyle.entries.forEach { style ->
+                SettingRadio(
+                    label = style.label,
+                    selected = settings.iconStyle == style,
+                    onClick = { onIconStyle(style) },
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Theme Mode",
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+            )
+            ThemeMode.entries.forEach { mode ->
+                SettingRadio(
+                    label = mode.label,
+                    selected = settings.themeMode == mode,
+                    onClick = { onThemeMode(mode) },
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Weather Summary Style",
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+            )
+            SummaryStyle.entries.forEach { style ->
+                SettingRadio(
+                    label = style.label,
+                    selected = settings.summaryStyle == style,
+                    onClick = { onSummaryStyle(style) },
+                )
+            }
+        }
+
+        // ── Cards ────────────────────────────────────────────
+        SettingSection("Cards") {
+            CardType.entries.forEach { card ->
+                val enabled = card.name !in settings.disabledCards
+                SettingToggle(
+                    label = card.label,
+                    checked = enabled,
+                    onCheckedChange = { onCardEnabled(card, it) },
+                )
+            }
+        }
+
+        // ── Units ────────────────────────────────────────────
 
         // Temperature
         SettingSection("Temperature") {
@@ -158,7 +285,130 @@ internal fun SettingsContent(
             }
         }
 
-        // Particles toggle
+        // ── Notifications ────────────────────────────────────
+        SettingSection("Notifications") {
+            SettingToggle(
+                label = "Alert Notifications",
+                sublabel = "Background checks for severe weather alerts",
+                checked = settings.alertNotificationsEnabled,
+                onCheckedChange = { onAlertNotificationsEnabled(it) },
+            )
+            if (settings.alertNotificationsEnabled) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Minimum severity",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+                )
+                AlertMinSeverity.entries.forEach { severity ->
+                    SettingRadio(
+                        label = severity.label,
+                        selected = settings.alertMinSeverity == severity,
+                        onClick = { onAlertMinSeverity(severity) },
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                SettingToggle(
+                    label = "Monitor All Saved Locations",
+                    sublabel = "Check alerts for all your locations, not just the current one",
+                    checked = settings.alertCheckAllLocations,
+                    onCheckedChange = { onAlertCheckAllLocations(it) },
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            SettingToggle(
+                label = "Persistent Weather Notification",
+                sublabel = "Always-on notification showing current conditions",
+                checked = settings.persistentWeatherNotif,
+                onCheckedChange = { onPersistentWeatherNotif(it) },
+            )
+            SettingToggle(
+                label = "Nowcasting Alerts",
+                sublabel = "Alert when rain is approaching",
+                checked = settings.nowcastingAlerts,
+                onCheckedChange = { onNowcastingAlerts(it) },
+            )
+            SettingToggle(
+                label = "Driving Condition Alerts",
+                sublabel = "Alerts for hazardous driving conditions",
+                checked = settings.drivingAlerts,
+                onCheckedChange = { onDrivingAlerts(it) },
+            )
+            SettingToggle(
+                label = "Health Alerts",
+                sublabel = "Alerts for health-related weather conditions",
+                checked = settings.healthAlertsEnabled,
+                onCheckedChange = { onHealthAlertsEnabled(it) },
+            )
+        }
+
+        // ── Data Display ─────────────────────────────────────
+        SettingSection("Data Display") {
+            SettingToggle(
+                label = "Show Snowfall",
+                checked = settings.showSnowfall,
+                onCheckedChange = { onShowSnowfall(it) },
+            )
+            SettingToggle(
+                label = "Show Severe Weather Potential (CAPE)",
+                checked = settings.showCape,
+                onCheckedChange = { onShowCape(it) },
+            )
+            SettingToggle(
+                label = "Show Sunshine Duration",
+                checked = settings.showSunshineDuration,
+                onCheckedChange = { onShowSunshineDuration(it) },
+            )
+            SettingToggle(
+                label = "Show Golden Hour",
+                checked = settings.showGoldenHour,
+                onCheckedChange = { onShowGoldenHour(it) },
+            )
+            SettingToggle(
+                label = "Show Beaufort Wind Colors",
+                checked = settings.showBeaufortColors,
+                onCheckedChange = { onShowBeaufortColors(it) },
+            )
+            SettingToggle(
+                label = "Show Outdoor Activity Score",
+                checked = settings.showOutdoorScore,
+                onCheckedChange = { onShowOutdoorScore(it) },
+            )
+            SettingToggle(
+                label = "Show Yesterday Comparison",
+                checked = settings.showYesterdayComparison,
+                onCheckedChange = { onShowYesterdayComparison(it) },
+            )
+        }
+
+        // ── Health ───────────────────────────────────────────
+        if (settings.healthAlertsEnabled) {
+            SettingSection("Health") {
+                SettingToggle(
+                    label = "Migraine Alerts",
+                    sublabel = "Alert on rapid pressure changes",
+                    checked = settings.migraineAlerts,
+                    onCheckedChange = { onMigraineAlerts(it) },
+                )
+                SettingInfo(
+                    label = "Migraine Pressure Threshold",
+                    value = "${settings.migrainePressureThreshold} hPa/3h",
+                )
+            }
+        }
+
+        // ── Accessibility ────────────────────────────────────
+        SettingSection("Accessibility") {
+            SettingToggle(
+                label = "Haptic Feedback for Alerts",
+                sublabel = "Vibration feedback when alerts are shown",
+                checked = settings.hapticFeedbackForAlerts,
+                onCheckedChange = { onHapticFeedbackForAlerts(it) },
+            )
+        }
+
+        // ── Visual Effects ───────────────────────────────────
         SettingSection("Visual Effects") {
             SettingToggle(
                 label = "Weather Particles",
@@ -168,9 +418,9 @@ internal fun SettingsContent(
             )
         }
 
-        // About
+        // ── About ────────────────────────────────────────────
         SettingSection("About") {
-            SettingInfo("Version", "1.2.0")
+            SettingInfo("Version", com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME)
             SettingInfo("Data Source", "Open-Meteo.com")
             SettingInfo("License", "LGPL-3.0")
         }

@@ -55,9 +55,10 @@ fun CurrentConditionsHeader(
                 style = MaterialTheme.typography.displayLarge,
             )
             Spacer(modifier = Modifier.width(12.dp))
-            WeatherIcon(
+            AnimatedWeatherIcon(
                 weatherCode = current.weatherCode,
                 isDay = current.isDay,
+                iconStyle = s.iconStyle,
                 modifier = Modifier.size(64.dp),
             )
         }

@@ -15,6 +15,8 @@
 
     <!-- Notifications -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <!-- Widgets -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -111,6 +113,19 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_large_info" />
+        </receiver>
+
+        <!-- Forecast Strip Widget (4x1): hourly temps -->
+        <receiver
+            android:name=".widget.NimbusForecastStripWidgetReceiver"
+            android:exported="true"
+            android:label="ZeusWatch Hourly Strip">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_forecast_strip_info" />
         </receiver>
 
     </application>

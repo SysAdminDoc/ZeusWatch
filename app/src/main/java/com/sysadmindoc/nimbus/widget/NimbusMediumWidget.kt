@@ -11,6 +11,7 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.cornerRadius
@@ -54,11 +55,23 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
             .fillMaxSize()
             .cornerRadius(16.dp)
             .background(WidgetTheme.bgColor)
-            .clickable(actionStartActivity<MainActivity>())
+            .clickable(
+                if (data != null) actionStartActivity<MainActivity>()
+                else actionRunCallback<WidgetRefreshAction>()
+            )
             .padding(12.dp),
     ) {
         if (data == null) {
-            Text("Tap to load weather", style = WidgetTheme.labelStyle)
+            Text(
+                "ZeusWatch",
+                style = TextStyle(
+                    color = WidgetTheme.textPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+            )
+            Spacer(modifier = GlanceModifier.height(4.dp))
+            Text("Tap to open and load weather", style = WidgetTheme.labelStyle)
             return@Column
         }
 
@@ -82,11 +95,24 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
                 ),
             )
             Spacer(modifier = GlanceModifier.width(8.dp))
-            Column {
+            Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(data.locationName, style = WidgetTheme.locationStyle, maxLines = 1)
                 Text(
                     "H:${data.high.toInt()}\u00B0 L:${data.low.toInt()}\u00B0",
                     style = WidgetTheme.highLowStyle,
+                )
+            }
+            // Staleness indicator
+            if (data.updatedAt > 0L) {
+                val mins = (System.currentTimeMillis() - data.updatedAt) / 60_000
+                val agoText = when {
+                    mins < 5 -> "Now"
+                    mins < 60 -> "${mins}m"
+                    else -> "${mins / 60}h"
+                }
+                Text(
+                    text = agoText,
+                    style = TextStyle(color = WidgetTheme.textTertiary, fontSize = 9.sp),
                 )
             }
         }

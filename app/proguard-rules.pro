@@ -34,3 +34,15 @@
 
 # Glance Widgets
 -keep class androidx.glance.** { *; }
+
+# Room Database
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Entity class *
+-dontwarn androidx.room.paging.**
+
+# Lottie Animations
+-dontwarn com.airbnb.lottie.**
+-keep class com.airbnb.lottie.** { *; }
+
+# Coil Image Loading
+-dontwarn coil3.**

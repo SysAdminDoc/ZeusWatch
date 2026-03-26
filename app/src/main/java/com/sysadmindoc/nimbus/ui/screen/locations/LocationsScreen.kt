@@ -157,9 +157,9 @@ internal fun LocationsContent(
                 } else if (!search.isSearching) {
                     item {
                         Text(
-                            "No results found",
+                            search.error ?: "No results found",
                             style = MaterialTheme.typography.bodySmall,
-                            color = NimbusTextTertiary,
+                            color = if (search.error != null) NimbusError else NimbusTextTertiary,
                             modifier = Modifier.padding(vertical = 16.dp),
                         )
                     }

@@ -69,7 +69,15 @@ fun MoonPhaseCard(
                 AstroDetail("Sunset", com.sysadmindoc.nimbus.util.WeatherFormatter.formatTime(sunset, s))
                 astronomy.dayLength?.let { AstroDetail("Day Length", it) }
             }
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Sun arc showing current position in sky
+            SunArc(
+                sunrise = sunrise,
+                sunset = sunset,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
         Row(

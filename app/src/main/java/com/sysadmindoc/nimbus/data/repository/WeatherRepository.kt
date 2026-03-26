@@ -162,6 +162,8 @@ class WeatherRepository @Inject constructor(
                 dewPoint = current.dewPoint,
                 cloudCover = current.cloudCover ?: 0,
                 precipitation = current.precipitation ?: 0.0,
+                snowfall = current.snowfall,
+                snowDepth = current.snowDepth,
                 dailyHigh = dailyHigh,
                 dailyLow = dailyLow,
                 sunrise = daily?.sunrise?.getOrNull(todayIndex),
@@ -192,6 +194,9 @@ class WeatherRepository @Inject constructor(
                 uvIndex = hourly.uvIndex?.getOrNull(i),
                 cloudCover = hourly.cloudCover?.getOrNull(i),
                 visibility = hourly.visibility?.getOrNull(i),
+                snowfall = hourly.snowfall?.getOrNull(i),
+                windGusts = hourly.windGusts?.getOrNull(i),
+                sunshineDuration = hourly.sunshineDuration?.getOrNull(i),
             )
         }
     }
@@ -212,7 +217,58 @@ class WeatherRepository @Inject constructor(
                 uvIndexMax = daily.uvIndexMax?.getOrNull(i),
                 windSpeedMax = daily.windSpeedMax?.getOrNull(i),
                 windDirectionDominant = daily.windDirectionDominant?.getOrNull(i),
+                snowfallSum = daily.snowfallSum?.getOrNull(i),
+                sunshineDuration = daily.sunshineDuration?.getOrNull(i),
+                windGustsMax = daily.windGustsMax?.getOrNull(i),
+                precipitationHours = daily.precipitationHours?.getOrNull(i),
             )
+        }
+    }
+
+    suspend fun getMinutelyPrecipitation(
+        latitude: Double,
+        longitude: Double,
+    ): Result<List<MinutelyPrecipitation>> = withContext(Dispatchers.IO) {
+        try {
+            val response = weatherApi.getMinutely15Forecast(latitude, longitude)
+            val minutely = response.minutely15 ?: return@withContext Result.success(emptyList())
+            val data = minutely.time.mapIndexedNotNull { i, timeStr ->
+                val time = parseDateTime(timeStr) ?: return@mapIndexedNotNull null
+                val precip = minutely.precipitation?.getOrNull(i) ?: 0.0
+                MinutelyPrecipitation(time = time, precipitation = precip)
+            }
+            Result.success(data)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getYesterdayWeather(
+        latitude: Double,
+        longitude: Double,
+    ): Result<DailyConditions?> = withContext(Dispatchers.IO) {
+        try {
+            val response = weatherApi.getHistoricalForecast(latitude, longitude)
+            val daily = response.daily ?: return@withContext Result.success(null)
+            val yesterday = daily.time.firstOrNull() ?: return@withContext Result.success(null)
+            val date = parseDate(yesterday) ?: return@withContext Result.success(null)
+            Result.success(
+                DailyConditions(
+                    date = date,
+                    weatherCode = WeatherCode.fromCode(daily.weatherCode?.getOrNull(0)),
+                    temperatureHigh = daily.temperatureMax?.getOrNull(0) ?: 0.0,
+                    temperatureLow = daily.temperatureMin?.getOrNull(0) ?: 0.0,
+                    precipitationProbability = 0,
+                    precipitationSum = null,
+                    sunrise = null,
+                    sunset = null,
+                    uvIndexMax = null,
+                    windSpeedMax = null,
+                    windDirectionDominant = null,
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
