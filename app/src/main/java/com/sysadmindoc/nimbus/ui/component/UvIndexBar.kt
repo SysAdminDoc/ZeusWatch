@@ -21,8 +21,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.theme.*
 import com.sysadmindoc.nimbus.util.WeatherFormatter
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * UV Index display with a color-coded gradient bar and marker.
@@ -33,8 +36,18 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 fun UvIndexBar(
     uvIndex: Double,
     modifier: Modifier = Modifier,
+    hourly: List<HourlyConditions> = emptyList(),
 ) {
     val level = WeatherFormatter.uvDescription(uvIndex)
+
+    // Find peak UV hour from hourly data
+    val peakUvNote = if (hourly.isNotEmpty()) {
+        val peakHour = hourly.take(12).maxByOrNull { it.uvIndex ?: 0.0 }
+        if (peakHour != null && (peakHour.uvIndex ?: 0.0) > uvIndex) {
+            val s = LocalUnitSettings.current
+            "Peaks at ${WeatherFormatter.formatHourLabel(peakHour.time, s)}"
+        } else null
+    } else null
     val levelColor = when {
         uvIndex < 3 -> NimbusUvLow
         uvIndex < 6 -> NimbusUvModerate
@@ -64,6 +77,13 @@ fun UvIndexBar(
                     style = MaterialTheme.typography.titleSmall,
                     color = levelColor,
                 )
+                if (peakUvNote != null) {
+                    Text(
+                        text = peakUvNote,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NimbusTextTertiary,
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Gradient bar with marker

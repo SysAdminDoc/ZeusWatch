@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Compress
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.outlined.AcUnit
 import androidx.compose.material.icons.outlined.Air
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Thermostat
@@ -43,7 +44,11 @@ fun WeatherDetailsGrid(
     ) {
         DetailRow(
             left = DetailItem(Icons.Filled.WaterDrop, "Humidity", WeatherFormatter.formatHumidity(current.humidity)),
-            right = DetailItem(Icons.Outlined.Air, "Wind", WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s)),
+            right = DetailItem(
+                Icons.Outlined.Air, "Wind",
+                WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s),
+                subtitle = current.windGusts?.let { "Gusts ${WeatherFormatter.formatWindSpeed(it, s)}" },
+            ),
         )
         Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
@@ -65,6 +70,14 @@ fun WeatherDetailsGrid(
             left = DetailItem(Icons.Outlined.Cloud, "Cloud Cover", WeatherFormatter.formatCloudCover(current.cloudCover)),
             right = DetailItem(Icons.Filled.WaterDrop, "Precipitation", WeatherFormatter.formatPrecipitation(current.precipitation, s)),
         )
+        // Snowfall row (shown when snow is present)
+        if ((current.snowfall ?: 0.0) > 0 || (current.snowDepth ?: 0.0) > 0) {
+            Spacer(modifier = Modifier.height(16.dp))
+            DetailRow(
+                left = DetailItem(Icons.Outlined.AcUnit, "Snowfall", current.snowfall?.let { WeatherFormatter.formatSnowfall(it, s) } ?: "--"),
+                right = DetailItem(Icons.Outlined.AcUnit, "Snow Depth", current.snowDepth?.let { WeatherFormatter.formatSnowDepth(it, s) } ?: "--"),
+            )
+        }
     }
 }
 

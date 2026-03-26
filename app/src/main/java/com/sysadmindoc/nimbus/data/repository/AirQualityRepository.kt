@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.data.repository
 
 import com.sysadmindoc.nimbus.data.api.AirQualityApi
+import com.sysadmindoc.nimbus.data.api.AqHourly
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.AqiLevel
 import com.sysadmindoc.nimbus.data.model.AstronomyData
@@ -34,7 +35,7 @@ class AirQualityRepository @Inject constructor(
                 val usAqi = current.usAqi ?: 0
                 val euAqi = current.europeanAqi ?: 0
 
-                val pollen = PollenData(
+                val pollenFromCurrent = PollenData(
                     alder = PollenReading.fromConcentration(current.alderPollen, "Alder", PollenThresholdsDb.ALDER),
                     birch = PollenReading.fromConcentration(current.birchPollen, "Birch", PollenThresholdsDb.BIRCH),
                     grass = PollenReading.fromConcentration(current.grassPollen, "Grass", PollenThresholdsDb.GRASS),
@@ -45,6 +46,13 @@ class AirQualityRepository @Inject constructor(
 
                 // Build hourly AQI (next 24h)
                 val now = LocalDateTime.now()
+
+                // Pollen: fall back to hourly data if current returns no pollen
+                val pollen = if (!pollenFromCurrent.hasData && response.hourly != null) {
+                    extractCurrentHourPollen(response.hourly!!, now)
+                } else {
+                    pollenFromCurrent
+                }
                 val hourlyAqi = mutableListOf<HourlyAqi>()
                 response.hourly?.let { h ->
                     for (i in h.time.indices) {
@@ -142,5 +150,27 @@ class AirQualityRepository @Inject constructor(
             val minutes = ChronoUnit.MINUTES.between(rise, set)
             "%dh %dm".format(minutes / 60, minutes % 60)
         } catch (_: Exception) { null }
+    }
+
+    /**
+     * Extract pollen readings from hourly data for the current hour.
+     * Open-Meteo may return null pollen in `current` but provide it in `hourly`.
+     */
+    private fun extractCurrentHourPollen(hourly: AqHourly, now: LocalDateTime): PollenData {
+        val currentIndex = hourly.time.indexOfFirst { timeStr ->
+            try {
+                val t = LocalDateTime.parse(timeStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                t.hour == now.hour && t.toLocalDate() == now.toLocalDate()
+            } catch (_: Exception) { false }
+        }
+        if (currentIndex < 0) return PollenData()
+        return PollenData(
+            alder = PollenReading.fromConcentration(hourly.alderPollen?.getOrNull(currentIndex), "Alder", PollenThresholdsDb.ALDER),
+            birch = PollenReading.fromConcentration(hourly.birchPollen?.getOrNull(currentIndex), "Birch", PollenThresholdsDb.BIRCH),
+            grass = PollenReading.fromConcentration(hourly.grassPollen?.getOrNull(currentIndex), "Grass", PollenThresholdsDb.GRASS),
+            mugwort = PollenReading.fromConcentration(hourly.mugwortPollen?.getOrNull(currentIndex), "Mugwort", PollenThresholdsDb.MUGWORT),
+            olive = PollenReading.fromConcentration(hourly.olivePollen?.getOrNull(currentIndex), "Olive", PollenThresholdsDb.OLIVE),
+            ragweed = PollenReading.fromConcentration(hourly.ragweedPollen?.getOrNull(currentIndex), "Ragweed", PollenThresholdsDb.RAGWEED),
+        )
     }
 }

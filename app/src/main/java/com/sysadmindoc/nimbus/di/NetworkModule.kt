@@ -43,7 +43,7 @@ object NetworkModule {
             )
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
-                    .header("User-Agent", "ZeusWatch/1.2.0 (Android; Open-Source)")
+                    .header("User-Agent", "ZeusWatch/1.3.0 (Android; Open-Source)")
                     .build()
                 chain.proceed(request)
             }
@@ -110,7 +110,7 @@ object NetworkModule {
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .header("Accept", "application/geo+json")
-                    .header("User-Agent", "ZeusWatch/1.2.0 (Android; Open-Source; contact@sysadmindoc.com)")
+                    .header("User-Agent", "ZeusWatch/1.3.0 (Android; Open-Source; contact@sysadmindoc.com)")
                     .build()
                 chain.proceed(request)
             }
