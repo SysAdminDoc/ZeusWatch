@@ -11,6 +11,7 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.cornerRadius
@@ -53,15 +54,28 @@ private fun SmallWidgetContent(data: WidgetWeatherData?) {
             .fillMaxSize()
             .cornerRadius(16.dp)
             .background(WidgetTheme.bgColor)
-            .clickable(actionStartActivity<MainActivity>())
+            .clickable(
+                if (data != null) actionStartActivity<MainActivity>()
+                else actionRunCallback<WidgetRefreshAction>()
+            )
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (data == null) {
-            Text(
-                text = "Tap to load",
-                style = WidgetTheme.labelStyle,
-            )
+            Column {
+                Text(
+                    text = "ZeusWatch",
+                    style = TextStyle(
+                        color = WidgetTheme.textPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                    ),
+                )
+                Text(
+                    text = "Tap to open and load weather",
+                    style = WidgetTheme.labelStyle,
+                )
+            }
         } else {
             // Weather icon
             Image(

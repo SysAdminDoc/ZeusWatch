@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
+import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.widget.WidgetRefreshWorker
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -23,6 +24,7 @@ class NimbusApplication : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         AlertNotificationHelper.createChannels(this)
+        WeatherNotificationHelper.createChannel(this)
         AlertCheckWorker.schedule(this)
         WidgetRefreshWorker.schedule(this)
     }

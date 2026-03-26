@@ -20,6 +20,7 @@ data class OpenMeteoResponse(
     @SerialName("current") val current: CurrentWeather? = null,
     @SerialName("hourly") val hourly: HourlyWeather? = null,
     @SerialName("daily") val daily: DailyWeather? = null,
+    @SerialName("minutely_15") val minutely15: Minutely15Weather? = null,
 )
 
 @Serializable
@@ -41,6 +42,8 @@ data class CurrentWeather(
     @SerialName("uv_index") val uvIndex: Double? = null,
     @SerialName("visibility") val visibility: Double? = null,
     @SerialName("dew_point_2m") val dewPoint: Double? = null,
+    @SerialName("snowfall") val snowfall: Double? = null,
+    @SerialName("snow_depth") val snowDepth: Double? = null,
 )
 
 @Serializable
@@ -58,6 +61,10 @@ data class HourlyWeather(
     @SerialName("wind_direction_10m") val windDirection: List<Int?>? = null,
     @SerialName("uv_index") val uvIndex: List<Double?>? = null,
     @SerialName("is_day") val isDay: List<Int?>? = null,
+    @SerialName("snowfall") val snowfall: List<Double?>? = null,
+    @SerialName("snow_depth") val snowDepth: List<Double?>? = null,
+    @SerialName("wind_gusts_10m") val windGusts: List<Double?>? = null,
+    @SerialName("sunshine_duration") val sunshineDuration: List<Double?>? = null,
 )
 
 @Serializable
@@ -76,4 +83,13 @@ data class DailyWeather(
     @SerialName("wind_speed_10m_max") val windSpeedMax: List<Double?>? = null,
     @SerialName("wind_direction_10m_dominant") val windDirectionDominant: List<Int?>? = null,
     @SerialName("precipitation_hours") val precipitationHours: List<Double?>? = null,
+    @SerialName("snowfall_sum") val snowfallSum: List<Double?>? = null,
+    @SerialName("sunshine_duration") val sunshineDuration: List<Double?>? = null,
+    @SerialName("wind_gusts_10m_max") val windGustsMax: List<Double?>? = null,
+)
+
+@Serializable
+data class Minutely15Weather(
+    val time: List<String> = emptyList(),
+    val precipitation: List<Double?>? = null,
 )

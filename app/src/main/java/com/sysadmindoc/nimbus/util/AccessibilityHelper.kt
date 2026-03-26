@@ -8,6 +8,7 @@ import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.PollenData
 import com.sysadmindoc.nimbus.data.model.PollenLevel
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -33,13 +34,13 @@ object AccessibilityHelper {
     }
 
     /** Wind compass Canvas description. */
-    fun windCompass(speed: Double, direction: Int, gusts: Double?): String {
+    fun windCompass(speed: Double, direction: Int, gusts: Double?, s: NimbusSettings = NimbusSettings()): String {
         val dir = WeatherFormatter.formatWindDirection(direction)
         return buildString {
             append("Wind compass. ")
-            append("Wind from $dir at ${speed.toInt()} miles per hour. ")
+            append("Wind from $dir at ${WeatherFormatter.formatWindSpeed(speed, s)}. ")
             if (gusts != null && gusts > speed) {
-                append("Gusts up to ${gusts.toInt()} miles per hour.")
+                append("Gusts up to ${WeatherFormatter.formatWindSpeed(gusts, s)}.")
             }
         }
     }
@@ -133,17 +134,18 @@ object AccessibilityHelper {
     }
 
     /** Weather details grid description. */
-    fun detailsGrid(current: CurrentConditions): String {
+    fun detailsGrid(current: CurrentConditions, s: NimbusSettings = NimbusSettings()): String {
         return buildString {
             append("Weather details. ")
             append("Humidity ${current.humidity} percent. ")
-            append("Wind ${WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection)}. ")
-            append("Pressure ${WeatherFormatter.formatPressure(current.pressure)}. ")
+            append("Wind ${WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s)}. ")
+            current.windGusts?.let { if (it > current.windSpeed) append("Gusts ${WeatherFormatter.formatWindSpeed(it, s)}. ") }
+            append("Pressure ${WeatherFormatter.formatPressure(current.pressure, s)}. ")
             append("UV index ${current.uvIndex.toInt()}. ")
-            current.visibility?.let { append("Visibility ${WeatherFormatter.formatVisibility(it)}. ") }
-            current.dewPoint?.let { append("Dew point ${it.toInt()} degrees. ") }
-            current.sunrise?.let { append("Sunrise ${WeatherFormatter.formatTime(it)}. ") }
-            current.sunset?.let { append("Sunset ${WeatherFormatter.formatTime(it)}.") }
+            current.visibility?.let { append("Visibility ${WeatherFormatter.formatVisibility(it, s)}. ") }
+            current.dewPoint?.let { append("Dew point ${WeatherFormatter.formatDewPoint(it, s)}. ") }
+            current.sunrise?.let { append("Sunrise ${WeatherFormatter.formatTime(it, s)}. ") }
+            current.sunset?.let { append("Sunset ${WeatherFormatter.formatTime(it, s)}.") }
         }
     }
 

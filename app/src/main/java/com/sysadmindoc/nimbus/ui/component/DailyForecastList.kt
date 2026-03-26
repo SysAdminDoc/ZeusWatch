@@ -73,7 +73,7 @@ private fun ExpandableDailyRow(day: DailyConditions) {
         ) {
             Text(WeatherFormatter.formatDayLabel(day.date), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(80.dp))
             Spacer(Modifier.width(8.dp))
-            WeatherIcon(day.weatherCode, isDay = true, modifier = Modifier.size(24.dp))
+            AnimatedWeatherIcon(weatherCode = day.weatherCode, isDay = true, iconStyle = s.iconStyle, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(12.dp))
             Row(Modifier.width(44.dp), horizontalArrangement = Arrangement.End) {
                 if (day.precipitationProbability > 0) {
@@ -105,15 +105,33 @@ private fun DailyDetail(day: DailyConditions, s: NimbusSettings) {
             Column {
                 DetailMini(Icons.Filled.WaterDrop, "Precip", if (day.precipitationSum != null) WeatherFormatter.formatPrecipitation(day.precipitationSum, s) else "0.0")
                 Spacer(Modifier.height(6.dp))
+                day.precipitationHours?.let {
+                    DetailMini(Icons.Filled.WaterDrop, "Rain Hours", WeatherFormatter.formatPrecipitationHours(it))
+                    Spacer(Modifier.height(6.dp))
+                }
                 DetailMini(Icons.Filled.Air, "Wind", if (day.windSpeedMax != null && day.windDirectionDominant != null) WeatherFormatter.formatWindSpeed(day.windSpeedMax, day.windDirectionDominant, s) else "--")
+                day.windGustsMax?.let {
+                    Spacer(Modifier.height(6.dp))
+                    DetailMini(Icons.Filled.Air, "Gusts", WeatherFormatter.formatWindSpeed(it, s))
+                }
             }
             Column {
                 DetailMini(Icons.Outlined.WbSunny, "Sunrise", WeatherFormatter.formatTime(day.sunrise, s))
                 Spacer(Modifier.height(6.dp))
                 DetailMini(Icons.Outlined.WbTwilight, "Sunset", WeatherFormatter.formatTime(day.sunset, s))
+                day.sunshineDuration?.let {
+                    Spacer(Modifier.height(6.dp))
+                    DetailMini(Icons.Outlined.WbSunny, "Sunshine", WeatherFormatter.formatSunshineDuration(it))
+                }
             }
             Column {
                 DetailMini(Icons.Outlined.WbSunny, "UV Max", day.uvIndexMax?.let { WeatherFormatter.formatUvIndex(it) } ?: "--")
+                day.snowfallSum?.let {
+                    if (it > 0) {
+                        Spacer(Modifier.height(6.dp))
+                        DetailMini(Icons.Outlined.WbSunny, "Snow", WeatherFormatter.formatSnowfall(it, s))
+                    }
+                }
             }
         }
     }
