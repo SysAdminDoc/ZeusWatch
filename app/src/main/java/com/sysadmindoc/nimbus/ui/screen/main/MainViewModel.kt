@@ -7,13 +7,23 @@ import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.nimbus.data.location.LocationProvider
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.AstronomyData
+import com.sysadmindoc.nimbus.data.model.DailyConditions
+import com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.util.DrivingAlert
+import com.sysadmindoc.nimbus.util.DrivingConditionEvaluator
+import com.sysadmindoc.nimbus.util.HealthAlert
+import com.sysadmindoc.nimbus.util.HealthAlertEvaluator
+import com.sysadmindoc.nimbus.util.WeatherFormatter
+import com.sysadmindoc.nimbus.util.WeatherSummaryEngine
+import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import com.sysadmindoc.nimbus.data.repository.AirQualityRepository
 import com.sysadmindoc.nimbus.data.repository.AlertRepository
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +37,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.runtime.Stable
 import javax.inject.Inject
+import kotlin.math.ln
+import kotlin.math.tan
+import kotlin.math.cos
 
 private const val TAG = "MainViewModel"
 
@@ -35,6 +48,7 @@ class MainViewModel @Inject constructor(
     private val repository: WeatherRepository,
     private val alertRepository: AlertRepository,
     private val airQualityRepository: AirQualityRepository,
+    private val radarRepository: RadarRepository,
     private val locationRepository: LocationRepository,
     private val locationProvider: LocationProvider,
     private val prefs: UserPreferences,
@@ -189,6 +203,11 @@ class MainViewModel @Inject constructor(
                     fetchAlerts(lat, lon)
                     fetchAirQuality(lat, lon)
                     fetchAstronomy(data)
+                    fetchRadarPreview(lat, lon)
+                    fetchNowcast(lat, lon)
+                    // Yesterday comparison must complete before derived data computation
+                    fetchYesterdayComparison(lat, lon)
+                    computeDerivedData(data)
                 },
                 onFailure = { e ->
                     Log.e(TAG, "fetchWeather: failed: ${e.message}")
@@ -232,6 +251,109 @@ class MainViewModel @Inject constructor(
             val astronomy = airQualityRepository.getAstronomy(data.current.sunrise, data.current.sunset)
             _uiState.update { it.copy(astronomy = astronomy) }
         } catch (_: Exception) {}
+    }
+
+    private fun fetchRadarPreview(lat: Double, lon: Double) {
+        viewModelScope.launch {
+            try {
+                radarRepository.getRadarFrames().fold(
+                    onSuccess = { frameSet ->
+                        val latestFrame = frameSet.past.lastOrNull() ?: return@fold
+                        val zoom = 6
+                        val (tileX, tileY) = latLonToTile(lat, lon, zoom)
+                        val radarUrl = latestFrame.tileUrl
+                            .replace("{z}", zoom.toString())
+                            .replace("{x}", tileX.toString())
+                            .replace("{y}", tileY.toString())
+                        val baseUrl = "https://basemaps.cartocdn.com/dark_all/$zoom/$tileX/$tileY@2x.png"
+                        _uiState.update {
+                            it.copy(radarPreviewTileUrl = radarUrl, radarBaseMapUrl = baseUrl)
+                        }
+                    },
+                    onFailure = { /* keep placeholder */ }
+                )
+            } catch (_: Exception) {}
+        }
+    }
+
+    // ── Nowcast (minutely precipitation) ────────────────────────────────
+
+    private fun fetchNowcast(lat: Double, lon: Double) {
+        viewModelScope.launch {
+            try {
+                repository.getMinutelyPrecipitation(lat, lon).fold(
+                    onSuccess = { data ->
+                        _uiState.update { it.copy(nowcastData = data) }
+                    },
+                    onFailure = { _uiState.update { it.copy(nowcastData = emptyList()) } }
+                )
+            } catch (_: Exception) {}
+        }
+    }
+
+    // ── Yesterday Comparison ──────────────────────────────────────────────
+
+    private suspend fun fetchYesterdayComparison(lat: Double, lon: Double) {
+        try {
+            repository.getYesterdayWeather(lat, lon).fold(
+                onSuccess = { yesterday ->
+                    _uiState.update { it.copy(yesterdayHigh = yesterday?.temperatureHigh) }
+                },
+                onFailure = {}
+            )
+        } catch (_: Exception) {}
+    }
+
+    // ── Derived Computations (summary, scores, alerts) ────────────────────
+
+    private fun computeDerivedData(data: WeatherData) {
+        val settings = _uiState.value.settings
+
+        // Weather summary
+        val summary = WeatherSummaryEngine.generate(
+            current = data.current,
+            today = data.daily.firstOrNull(),
+            hourly = data.hourly,
+            yesterdayHigh = _uiState.value.yesterdayHigh,
+            s = settings,
+        )
+        _uiState.update { it.copy(weatherSummary = summary) }
+
+        // Outdoor activity score
+        val score = WeatherFormatter.outdoorActivityScore(
+            tempCelsius = data.current.temperature,
+            humidity = data.current.humidity,
+            windKmh = data.current.windSpeed,
+            uvIndex = data.current.uvIndex,
+            precipProbability = data.daily.firstOrNull()?.precipitationProbability ?: 0,
+            aqi = _uiState.value.airQuality?.usAqi,
+        )
+        _uiState.update { it.copy(outdoorScore = score) }
+
+        // Driving condition alerts
+        val drivingAlerts = DrivingConditionEvaluator.evaluate(data.current)
+        _uiState.update { it.copy(drivingAlerts = drivingAlerts) }
+
+        // Health alerts
+        val healthAlerts = HealthAlertEvaluator.evaluate(
+            hourly = data.hourly,
+            pressureThresholdHpa = settings.migrainePressureThreshold,
+        )
+        _uiState.update { it.copy(healthAlerts = healthAlerts) }
+
+        // Golden hour times
+        val goldenHour = WeatherFormatter.goldenHourTimes(
+            data.current.sunrise, data.current.sunset, settings,
+        )
+        _uiState.update { it.copy(goldenHourTimes = goldenHour) }
+    }
+
+    private fun latLonToTile(lat: Double, lon: Double, zoom: Int): Pair<Int, Int> {
+        val n = 1 shl zoom
+        val x = ((lon + 180.0) / 360.0 * n).toInt()
+        val latRad = Math.toRadians(lat)
+        val y = ((1.0 - ln(tan(latRad) + 1.0 / cos(latRad)) / Math.PI) / 2.0 * n).toInt()
+        return Pair(x, y)
     }
 
     private suspend fun tryLoadCached(): Boolean {
@@ -300,4 +422,14 @@ data class MainUiState(
     val settings: NimbusSettings = NimbusSettings(),
     val savedLocations: List<SavedLocationEntity> = emptyList(),
     val currentPage: Int = 0,
+    val radarPreviewTileUrl: String? = null,
+    val radarBaseMapUrl: String? = null,
+    // Phase 1-2 additions
+    val weatherSummary: String = "",
+    val yesterdayHigh: Double? = null,
+    val nowcastData: List<MinutelyPrecipitation> = emptyList(),
+    val outdoorScore: Int = 0,
+    val drivingAlerts: List<DrivingAlert> = emptyList(),
+    val healthAlerts: List<HealthAlert> = emptyList(),
+    val goldenHourTimes: Pair<String, String>? = null,
 )

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
+import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -68,10 +69,11 @@ private fun HourlyItem(hour: HourlyConditions) {
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        // Weather icon
-        WeatherIcon(
+        // Weather icon (supports Meteocons Lottie when enabled)
+        AnimatedWeatherIcon(
             weatherCode = hour.weatherCode,
             isDay = hour.isDay,
+            iconStyle = s.iconStyle,
             modifier = Modifier.size(28.dp),
         )
 
@@ -84,5 +86,15 @@ private fun HourlyItem(hour: HourlyConditions) {
             color = if (hour.precipitationProbability > 20) NimbusRainBlue
                 else NimbusTextSecondary,
         )
+
+        // Precipitation amount (when > 0)
+        val precip = hour.precipitation
+        if (precip != null && precip > 0.0) {
+            Text(
+                text = WeatherFormatter.formatPrecipitation(precip, s),
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextTertiary,
+            )
+        }
     }
 }
