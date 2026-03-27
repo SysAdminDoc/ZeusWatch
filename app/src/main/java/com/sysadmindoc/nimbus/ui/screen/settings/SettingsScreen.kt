@@ -496,7 +496,7 @@ internal fun SettingsContent(
         }
 
         // ── Data Sources ─────────────────────────────────────────
-        SettingSection("Data Sources") {
+        SettingSection("Data Sources", initiallyExpanded = false) {
             val sourceConfig = settings.sourceConfig
 
             // Forecast source
@@ -597,7 +597,7 @@ internal fun SettingsContent(
         }
 
         // ── Advanced ───────────────────────────────────────────
-        SettingSection("Advanced") {
+        SettingSection("Advanced", initiallyExpanded = false) {
             Text(
                 "Cache Duration",
                 style = MaterialTheme.typography.bodySmall,
@@ -629,16 +629,34 @@ internal fun SettingsContent(
 @Composable
 private fun SettingSection(
     title: String,
+    initiallyExpanded: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    var expanded by remember { mutableStateOf(initiallyExpanded) }
+
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = NimbusBlueAccent,
-            modifier = Modifier.padding(bottom = 4.dp),
-        )
-        content()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(bottom = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = NimbusBlueAccent,
+            )
+            Text(
+                text = if (expanded) "\u25B2" else "\u25BC",
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusBlueAccent.copy(alpha = 0.6f),
+            )
+        }
+        if (expanded) {
+            content()
+        }
         HorizontalDivider(
             color = NimbusCardBorder,
             modifier = Modifier.padding(top = 8.dp),
