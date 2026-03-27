@@ -20,8 +20,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.outlined.AcUnit
 import androidx.compose.material.icons.outlined.WbSunny
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.outlined.WbTwilight
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -51,10 +57,12 @@ fun DailyForecastList(
     daily: List<DailyConditions>,
     modifier: Modifier = Modifier,
 ) {
-    // Find the warmest day index (within first 7 days)
+    // Find the warmest day index and weekly temp range (within first 7 days)
     val warmestIndex = remember(daily) {
         daily.take(7).indices.maxByOrNull { daily[it].temperatureHigh } ?: -1
     }
+    val weeklyMin = remember(daily) { daily.minOfOrNull { it.temperatureLow } ?: 0.0 }
+    val weeklyMax = remember(daily) { daily.maxOfOrNull { it.temperatureHigh } ?: 0.0 }
 
     WeatherCard(title = "Daily Forecast", modifier = modifier) {
         Column {
@@ -62,6 +70,8 @@ fun DailyForecastList(
                 ExpandableDailyRow(
                     day = day,
                     isWarmest = index == warmestIndex && daily.size > 1,
+                    weeklyMin = weeklyMin,
+                    weeklyMax = weeklyMax,
                 )
                 if (index < daily.lastIndex) {
                     HorizontalDivider(color = NimbusCardBorder, modifier = Modifier.padding(vertical = 2.dp))
@@ -75,6 +85,8 @@ fun DailyForecastList(
 private fun ExpandableDailyRow(
     day: DailyConditions,
     isWarmest: Boolean = false,
+    weeklyMin: Double = 0.0,
+    weeklyMax: Double = 0.0,
 ) {
     val s = LocalUnitSettings.current
     var expanded by remember { mutableStateOf(false) }
@@ -103,10 +115,22 @@ private fun ExpandableDailyRow(
                     Text("${day.precipitationProbability}%", style = MaterialTheme.typography.labelMedium, color = NimbusRainBlue, textAlign = TextAlign.End)
                 }
             }
-            Spacer(Modifier.weight(1f))
-            Text(WeatherFormatter.formatTemperature(day.temperatureHigh, s), style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(40.dp), textAlign = TextAlign.End)
-            Spacer(Modifier.width(8.dp))
-            Text(WeatherFormatter.formatTemperature(day.temperatureLow, s), style = MaterialTheme.typography.titleSmall, color = NimbusTextTertiary, modifier = Modifier.width(40.dp), textAlign = TextAlign.End)
+            Spacer(Modifier.width(4.dp))
+            Text(WeatherFormatter.formatTemperature(day.temperatureLow, s), style = MaterialTheme.typography.labelMedium, color = NimbusTextTertiary, modifier = Modifier.width(34.dp), textAlign = TextAlign.End)
+            // Temperature range bar
+            if (weeklyMax > weeklyMin) {
+                val range = weeklyMax - weeklyMin
+                val startFraction = ((day.temperatureLow - weeklyMin) / range).toFloat().coerceIn(0f, 1f)
+                val endFraction = ((day.temperatureHigh - weeklyMin) / range).toFloat().coerceIn(0f, 1f)
+                TempRangeBar(
+                    startFraction = startFraction,
+                    endFraction = endFraction,
+                    modifier = Modifier.weight(1f).padding(horizontal = 6.dp),
+                )
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
+            Text(WeatherFormatter.formatTemperature(day.temperatureHigh, s), style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(34.dp))
             Icon(Icons.Filled.KeyboardArrowDown, if (expanded) "Collapse" else "Expand", tint = NimbusTextTertiary, modifier = Modifier.size(20.dp).rotate(rotation).padding(start = 4.dp))
         }
 
@@ -154,6 +178,51 @@ private fun DailyDetail(day: DailyConditions, s: NimbusSettings) {
                         Spacer(Modifier.height(6.dp))
                         DetailMini(Icons.Outlined.AcUnit, "Snow", WeatherFormatter.formatSnowfall(it, s))
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Horizontal temperature range bar showing this day's range within the weekly min-max.
+ * Gradient from cool blue (left) to warm orange (right).
+ */
+@Composable
+private fun TempRangeBar(
+    startFraction: Float,
+    endFraction: Float,
+    modifier: Modifier = Modifier,
+) {
+    val trackColor = Color.White.copy(alpha = 0.06f)
+    val barShape = RoundedCornerShape(3.dp)
+    val gradientBrush = Brush.horizontalGradient(
+        colors = listOf(
+            Color(0xFF64B5F6), // cool blue
+            Color(0xFF81C784), // green
+            Color(0xFFFFB74D), // warm orange
+        ),
+    )
+
+    Box(
+        modifier = modifier.height(6.dp).clip(barShape).background(trackColor),
+    ) {
+        val barWidth = endFraction - startFraction
+        if (barWidth > 0.01f) {
+            Row(Modifier.matchParentSize()) {
+                if (startFraction > 0f) {
+                    Spacer(Modifier.weight(startFraction))
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(barWidth.coerceAtLeast(0.05f))
+                        .height(6.dp)
+                        .clip(barShape)
+                        .background(gradientBrush),
+                )
+                val endSpace = 1f - endFraction
+                if (endSpace > 0f) {
+                    Spacer(Modifier.weight(endSpace))
                 }
             }
         }

@@ -39,6 +39,9 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
+import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import java.time.OffsetDateTime
+import java.time.Duration
 
 /**
  * Alert banner displayed at the top of the main screen when active alerts exist.
@@ -127,11 +130,24 @@ private fun AlertBannerItem(
         )
         Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = alert.event,
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                color = severityColor,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = alert.event,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = severityColor,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                // Expiry countdown
+                val expiresIn = alert.expires?.let { formatExpiresIn(it) }
+                if (expiresIn != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = expiresIn,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NimbusTextTertiary,
+                    )
+                }
+            }
             Text(
                 text = alert.headline,
                 style = MaterialTheme.typography.bodySmall,
@@ -141,4 +157,21 @@ private fun AlertBannerItem(
             )
         }
     }
+}
+
+private fun formatExpiresIn(isoString: String): String? {
+    return try {
+        val expires = OffsetDateTime.parse(isoString)
+        val now = OffsetDateTime.now()
+        if (expires.isBefore(now)) return "Expired"
+        val dur = Duration.between(now, expires)
+        val hours = dur.toHours()
+        val minutes = dur.toMinutes() % 60
+        when {
+            hours >= 24 -> "${hours / 24}d ${hours % 24}h left"
+            hours >= 1 -> "${hours}h ${minutes}m left"
+            minutes > 0 -> "${minutes}m left"
+            else -> null
+        }
+    } catch (_: Exception) { null }
 }
