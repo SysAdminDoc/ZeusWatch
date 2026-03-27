@@ -75,7 +75,7 @@ fun AlertDetailSheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Filled.Warning,
-                    contentDescription = null,
+                    contentDescription = "${alert.severity.name} weather alert",
                     tint = alert.severity.color,
                     modifier = Modifier.size(28.dp),
                 )

@@ -2,7 +2,15 @@ package com.sysadmindoc.nimbus.di
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.sysadmindoc.nimbus.data.api.AirQualityApi
+import com.sysadmindoc.nimbus.data.api.AlertSourceAdapter
+import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertAdapter
+import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertApi
 import com.sysadmindoc.nimbus.data.api.GeocodingApi
+import com.sysadmindoc.nimbus.data.api.JmaAlertAdapter
+import com.sysadmindoc.nimbus.data.api.JmaAlertApi
+import com.sysadmindoc.nimbus.data.api.MeteoAlarmAdapter
+import com.sysadmindoc.nimbus.data.api.MeteoAlarmApi
+import com.sysadmindoc.nimbus.data.api.NwsAlertAdapter
 import com.sysadmindoc.nimbus.data.api.NwsAlertApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
@@ -143,5 +151,69 @@ object NetworkModule {
     @Singleton
     fun provideAirQualityApi(@Named("airquality") retrofit: Retrofit): AirQualityApi {
         return retrofit.create(AirQualityApi::class.java)
+    }
+
+    // --- International alert sources ---
+
+    @Provides
+    @Singleton
+    @Named("meteoalarm")
+    fun provideMeteoAlarmRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(MeteoAlarmApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideMeteoAlarmApi(@Named("meteoalarm") retrofit: Retrofit): MeteoAlarmApi {
+        return retrofit.create(MeteoAlarmApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    @Named("jma")
+    fun provideJmaRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(JmaAlertApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideJmaAlertApi(@Named("jma") retrofit: Retrofit): JmaAlertApi {
+        return retrofit.create(JmaAlertApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    @Named("eccc")
+    fun provideEnvironmentCanadaRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(EnvironmentCanadaAlertApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideEnvironmentCanadaAlertApi(@Named("eccc") retrofit: Retrofit): EnvironmentCanadaAlertApi {
+        return retrofit.create(EnvironmentCanadaAlertApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAlertAdapters(
+        nwsAdapter: NwsAlertAdapter,
+        meteoAlarmAdapter: MeteoAlarmAdapter,
+        jmaAdapter: JmaAlertAdapter,
+        ecccAdapter: EnvironmentCanadaAlertAdapter,
+    ): Set<@JvmSuppressWildcards AlertSourceAdapter> {
+        return setOf(nwsAdapter, meteoAlarmAdapter, jmaAdapter, ecccAdapter)
     }
 }

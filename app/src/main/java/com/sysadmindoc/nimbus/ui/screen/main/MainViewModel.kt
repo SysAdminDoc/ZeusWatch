@@ -12,20 +12,27 @@ import com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.util.ClothingSuggestion
+import com.sysadmindoc.nimbus.util.ClothingSuggestionEvaluator
 import com.sysadmindoc.nimbus.util.DrivingAlert
 import com.sysadmindoc.nimbus.util.DrivingConditionEvaluator
 import com.sysadmindoc.nimbus.util.HealthAlert
 import com.sysadmindoc.nimbus.util.HealthAlertEvaluator
+import com.sysadmindoc.nimbus.util.PetSafetyAlert
+import com.sysadmindoc.nimbus.util.PetSafetyEvaluator
 import com.sysadmindoc.nimbus.util.WeatherFormatter
+import com.sysadmindoc.nimbus.util.GeminiNanoSummaryEngine
 import com.sysadmindoc.nimbus.util.WeatherSummaryEngine
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import com.sysadmindoc.nimbus.data.repository.AirQualityRepository
 import com.sysadmindoc.nimbus.data.repository.AlertRepository
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.SummaryStyle
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
+import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,13 +52,16 @@ private const val TAG = "MainViewModel"
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val repository: WeatherRepository,
     private val alertRepository: AlertRepository,
     private val airQualityRepository: AirQualityRepository,
+    private val weatherSourceManager: WeatherSourceManager,
     private val radarRepository: RadarRepository,
     private val locationRepository: LocationRepository,
     private val locationProvider: LocationProvider,
     private val prefs: UserPreferences,
+    private val geminiNanoSummaryEngine: GeminiNanoSummaryEngine,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -228,7 +238,7 @@ class MainViewModel @Inject constructor(
 
     private suspend fun fetchAlerts(lat: Double, lon: Double) {
         try {
-            alertRepository.getAlerts(lat, lon).fold(
+            weatherSourceManager.getAlerts(lat, lon).fold(
                 onSuccess = { _uiState.update { s -> s.copy(alerts = it) } },
                 onFailure = { _uiState.update { s -> s.copy(alerts = emptyList()) } }
             )
@@ -239,7 +249,7 @@ class MainViewModel @Inject constructor(
 
     private suspend fun fetchAirQuality(lat: Double, lon: Double) {
         try {
-            airQualityRepository.getAirQuality(lat, lon).fold(
+            weatherSourceManager.getAirQuality(lat, lon).fold(
                 onSuccess = { _uiState.update { s -> s.copy(airQuality = it) } },
                 onFailure = { _uiState.update { s -> s.copy(airQuality = null) } }
             )
@@ -309,17 +319,15 @@ class MainViewModel @Inject constructor(
     private fun computeDerivedData(data: WeatherData) {
         val settings = _uiState.value.settings
 
-        // Weather summary
-        val summary = WeatherSummaryEngine.generate(
+        // Compute all derived values up front, then apply in a single state update
+        val templateSummary = WeatherSummaryEngine.generate(
             current = data.current,
             today = data.daily.firstOrNull(),
             hourly = data.hourly,
             yesterdayHigh = _uiState.value.yesterdayHigh,
             s = settings,
         )
-        _uiState.update { it.copy(weatherSummary = summary) }
 
-        // Outdoor activity score
         val score = WeatherFormatter.outdoorActivityScore(
             tempCelsius = data.current.temperature,
             humidity = data.current.humidity,
@@ -328,24 +336,53 @@ class MainViewModel @Inject constructor(
             precipProbability = data.daily.firstOrNull()?.precipitationProbability ?: 0,
             aqi = _uiState.value.airQuality?.usAqi,
         )
-        _uiState.update { it.copy(outdoorScore = score) }
 
-        // Driving condition alerts
         val drivingAlerts = DrivingConditionEvaluator.evaluate(data.current)
-        _uiState.update { it.copy(drivingAlerts = drivingAlerts) }
 
-        // Health alerts
         val healthAlerts = HealthAlertEvaluator.evaluate(
             hourly = data.hourly,
             pressureThresholdHpa = settings.migrainePressureThreshold,
         )
-        _uiState.update { it.copy(healthAlerts = healthAlerts) }
 
-        // Golden hour times
+        val clothingSuggestions = ClothingSuggestionEvaluator.evaluate(data.current)
+        val petSafetyAlerts = PetSafetyEvaluator.evaluate(data.current)
+
         val goldenHour = WeatherFormatter.goldenHourTimes(
             data.current.sunrise, data.current.sunset, settings,
         )
-        _uiState.update { it.copy(goldenHourTimes = goldenHour) }
+
+        // Single state update — triggers one recomposition instead of many
+        _uiState.update {
+            it.copy(
+                weatherSummary = templateSummary,
+                outdoorScore = score,
+                drivingAlerts = drivingAlerts,
+                healthAlerts = healthAlerts,
+                clothingSuggestions = clothingSuggestions,
+                petSafetyAlerts = petSafetyAlerts,
+                goldenHourTimes = goldenHour,
+            )
+        }
+
+        // If AI style is selected, launch async generation and update when ready
+        if (settings.summaryStyle == SummaryStyle.AI_GENERATED) {
+            viewModelScope.launch {
+                val aiSummary = WeatherSummaryEngine.generateWithStyle(
+                    current = data.current,
+                    today = data.daily.firstOrNull(),
+                    hourly = data.hourly,
+                    yesterdayHigh = _uiState.value.yesterdayHigh,
+                    s = settings,
+                    aiEngine = geminiNanoSummaryEngine,
+                )
+                _uiState.update { it.copy(weatherSummary = aiSummary) }
+            }
+        }
+
+        // Persistent weather notification
+        if (settings.persistentWeatherNotif) {
+            com.sysadmindoc.nimbus.util.WeatherNotificationHelper.showOrUpdate(appContext, data, settings)
+        }
     }
 
     private fun latLonToTile(lat: Double, lon: Double, zoom: Int): Pair<Int, Int> {
@@ -431,5 +468,7 @@ data class MainUiState(
     val outdoorScore: Int = 0,
     val drivingAlerts: List<DrivingAlert> = emptyList(),
     val healthAlerts: List<HealthAlert> = emptyList(),
+    val clothingSuggestions: List<ClothingSuggestion> = emptyList(),
+    val petSafetyAlerts: List<PetSafetyAlert> = emptyList(),
     val goldenHourTimes: Pair<String, String>? = null,
 )

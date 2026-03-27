@@ -92,4 +92,8 @@
     <string name="severe_weather">Severe Weather Potential</string>
     <string name="sunshine">Sunshine Duration</string>
     <string name="compare_weather">Compare Weather</string>
+
+    <!-- Live Wallpaper -->
+    <string name="wallpaper_label">ZeusWatch Weather</string>
+    <string name="wallpaper_description">Live weather particle effects over your wallpaper</string>
 </resources>
