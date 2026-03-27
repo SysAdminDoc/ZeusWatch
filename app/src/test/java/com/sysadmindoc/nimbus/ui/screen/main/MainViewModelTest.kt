@@ -121,7 +121,7 @@ class MainViewModelTest {
             locationRepository = locationRepository,
             locationProvider = locationProvider,
             prefs = prefs,
-            geminiNanoSummaryEngine = mockk(relaxed = true),
+            summaryEngine = mockk(relaxed = true),
             connectivityObserver = connectivityObserver,
             savedStateHandle = savedState,
         )

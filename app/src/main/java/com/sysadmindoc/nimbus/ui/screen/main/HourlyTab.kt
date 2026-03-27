@@ -14,12 +14,17 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,16 +39,34 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HourlyTab(
     hourly: List<HourlyConditions>,
     locationName: String,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
 ) {
     val dayFormatter = DateTimeFormatter.ofPattern("EEEE, MMM d")
     val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
 
+    val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
+    val forecastHours = s.hourlyForecastHours
+
+    val groupedHourly = remember(hourly, forecastHours) {
+        hourly.take(forecastHours).groupBy { it.time.toLocalDate() }
+            .toSortedMap()
+            .entries.toList()
+    }
+
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize(),
+    ) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -67,25 +90,34 @@ fun HourlyTab(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // Group by day
-        var lastDay: String? = null
-        itemsIndexed(hourly.take(48), key = { _, hour -> hour.time }) { index, hour ->
-            val dayLabel = hour.time.format(dayFormatter)
-            if (dayLabel != lastDay) {
-                lastDay = dayLabel
-                if (index > 0) Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    dayLabel,
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                    color = NimbusBlueAccent,
-                    modifier = Modifier.padding(vertical = 6.dp),
-                )
+        groupedHourly.forEach { (date, hours) ->
+            stickyHeader(key = "header_$date") {
+                val dayLabel = when (date) {
+                    LocalDate.now() -> "Today"
+                    LocalDate.now().plusDays(1) -> "Tomorrow"
+                    else -> date.format(dayFormatter)
+                }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(NimbusNavyDark),
+                ) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        dayLabel,
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        color = NimbusBlueAccent,
+                        modifier = Modifier.padding(vertical = 6.dp),
+                    )
+                }
             }
-
-            HourlyRow(hour = hour, timeFormatter = timeFormatter)
+            itemsIndexed(hours, key = { _, h -> h.time.toString() }) { _, hour ->
+                HourlyRow(hour = hour, timeFormatter = timeFormatter)
+            }
         }
 
         item { Spacer(modifier = Modifier.height(80.dp)) }
+    }
     }
 }
 
@@ -128,13 +160,34 @@ private fun HourlyRow(
             modifier = Modifier.width(52.dp),
         )
 
-        // Condition
-        Text(
-            hour.weatherCode.description,
-            style = MaterialTheme.typography.bodySmall,
-            color = NimbusTextSecondary,
-            modifier = Modifier.weight(1f),
-        )
+        // Condition + feels like
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                hour.weatherCode.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
+            val feelsLike = hour.feelsLike
+            if (feelsLike != null && kotlin.math.abs(feelsLike - hour.temperature) >= 3) {
+                Text(
+                    "Feels ${WeatherFormatter.formatTemperature(feelsLike, s)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NimbusTextTertiary,
+                )
+            }
+        }
+
+        // Wind speed
+        hour.windSpeed?.let { ws ->
+            if (ws > 0) {
+                Text(
+                    WeatherFormatter.formatWindSpeed(ws, s),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NimbusTextTertiary,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+            }
+        }
 
         // Precip probability
         if (hour.precipitationProbability > 0) {

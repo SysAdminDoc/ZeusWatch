@@ -23,8 +23,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusSurfaceVariant
@@ -63,7 +66,10 @@ fun RadarPreviewCard(
         ) {
             if (baseMapTileUrl != null) {
                 AsyncImage(
-                    model = baseMapTileUrl,
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(baseMapTileUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
@@ -71,7 +77,10 @@ fun RadarPreviewCard(
             }
             if (radarTileUrl != null) {
                 AsyncImage(
-                    model = radarTileUrl,
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(radarTileUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = "Radar overlay",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
