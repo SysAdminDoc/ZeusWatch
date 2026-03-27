@@ -50,6 +50,19 @@ fun MoonPhaseCard(
                 AstroDetail("Sunset", com.sysadmindoc.nimbus.util.WeatherFormatter.formatTime(sunset, s))
                 astronomy.dayLength?.let { AstroDetail("Day Length", it) }
             }
+
+            // Sunrise/sunset countdown
+            val countdown = sunCountdown(sunrise, sunset)
+            if (countdown != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = countdown,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NimbusTextTertiary,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
 
             // Sun arc showing current position in sky
@@ -190,4 +203,37 @@ private fun AstroDetail(label: String, value: String) {
             color = NimbusTextPrimary,
         )
     }
+}
+
+private fun sunCountdown(sunrise: String?, sunset: String?): String? {
+    if (sunrise == null || sunset == null) return null
+    return try {
+        val fmt = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
+        val now = java.time.LocalDateTime.now()
+        val rise = java.time.LocalDateTime.parse(sunrise, fmt)
+        val set = java.time.LocalDateTime.parse(sunset, fmt)
+
+        when {
+            now.isBefore(rise) -> {
+                val dur = java.time.Duration.between(now, rise)
+                val h = dur.toHours()
+                val m = dur.toMinutes() % 60
+                if (h > 0) "Sunrise in ${h}h ${m}m" else "Sunrise in ${m}m"
+            }
+            now.isBefore(set) -> {
+                val dur = java.time.Duration.between(now, set)
+                val h = dur.toHours()
+                val m = dur.toMinutes() % 60
+                if (h > 0) "Sunset in ${h}h ${m}m" else "Sunset in ${m}m"
+            }
+            else -> {
+                // After sunset — show time until tomorrow's sunrise
+                val tomorrowRise = rise.plusDays(1)
+                val dur = java.time.Duration.between(now, tomorrowRise)
+                val h = dur.toHours()
+                val m = dur.toMinutes() % 60
+                if (h > 0) "Sunrise in ${h}h ${m}m" else "Sunrise in ${m}m"
+            }
+        }
+    } catch (_: Exception) { null }
 }

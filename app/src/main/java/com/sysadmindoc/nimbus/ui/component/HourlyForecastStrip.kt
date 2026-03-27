@@ -3,11 +3,14 @@ package com.sysadmindoc.nimbus.ui.component
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
@@ -33,10 +36,21 @@ fun HourlyForecastStrip(
 ) {
     val s = LocalUnitSettings.current
 
+    // Smart precipitation summary
+    val precipSummary = remember(hourly) { precipitationSummary(hourly.take(12)) }
+
     WeatherCard(
         title = "Hourly Forecast",
         modifier = modifier,
     ) {
+        if (precipSummary != null) {
+            Text(
+                text = precipSummary,
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusRainBlue,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+        }
         LazyRow(
             contentPadding = PaddingValues(horizontal = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(20.dp),
@@ -108,5 +122,32 @@ private fun HourlyItem(hour: HourlyConditions) {
                 color = NimbusTextTertiary,
             )
         }
+    }
+}
+
+/** Smart rain start/stop summary from next 12 hourly entries. */
+private fun precipitationSummary(hours: List<HourlyConditions>): String? {
+    if (hours.size < 3) return null
+    val isCurrentlyRaining = hours.firstOrNull()?.precipitationProbability?.let { it > 40 } ?: false
+    val firstRainIdx = hours.indexOfFirst { it.precipitationProbability > 40 }
+    val lastRainIdx = hours.indexOfLast { it.precipitationProbability > 40 }
+    val maxProb = hours.maxOfOrNull { it.precipitationProbability } ?: 0
+
+    if (maxProb < 25) return null
+
+    return when {
+        isCurrentlyRaining && lastRainIdx <= 2 -> "Rain ending soon"
+        isCurrentlyRaining && lastRainIdx < hours.size - 1 -> {
+            val hoursLeft = lastRainIdx + 1
+            "Rain for the next ${hoursLeft}h"
+        }
+        isCurrentlyRaining -> "Rain expected to continue"
+        firstRainIdx in 1..3 -> "Rain likely within ${firstRainIdx}h"
+        firstRainIdx in 4..8 -> {
+            val time = hours[firstRainIdx].time
+            "Rain expected around ${WeatherFormatter.formatHourLabel(time)}"
+        }
+        firstRainIdx > 8 -> "Rain possible later today"
+        else -> null
     }
 }
