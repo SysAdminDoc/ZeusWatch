@@ -32,6 +32,9 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import kotlin.math.PI
 import kotlin.math.cos
@@ -70,7 +73,8 @@ fun WindCompass(
                     Color.White.copy(alpha = 0.1f)
                 }
                 val ringWidth = if (s.showBeaufortColors) 3f else 1.5f
-                Canvas(modifier = Modifier.size(120.dp)) {
+                val compassDescription = AccessibilityHelper.windCompass(windSpeed, windDirection, windGusts, s)
+                Canvas(modifier = Modifier.size(120.dp).semantics { contentDescription = compassDescription }) {
                     val cx = size.width / 2f
                     val cy = size.height / 2f
                     val radius = size.width / 2f - 16f

@@ -34,6 +34,8 @@ import com.sysadmindoc.nimbus.data.model.AqiLevel
 import com.sysadmindoc.nimbus.data.model.HourlyAqi
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 
@@ -155,8 +157,9 @@ fun AqiCard(
 
 @Composable
 private fun AqiGauge(aqi: Int, level: AqiLevel, modifier: Modifier = Modifier) {
+    val gaugeDescription = "Air quality index $aqi, ${level.label}"
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Canvas(modifier = Modifier.matchParentSize()) {
+        Canvas(modifier = Modifier.matchParentSize().semantics { contentDescription = gaugeDescription }) {
             val strokeWidth = 10.dp.toPx()
             val padding = strokeWidth / 2
             val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)

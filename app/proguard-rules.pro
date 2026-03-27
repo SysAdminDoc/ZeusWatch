@@ -66,3 +66,21 @@
 # Hilt generated components
 -keep class **_HiltModules* { *; }
 -keep class dagger.hilt.** { *; }
+
+# Firebase Crashlytics
+-keepattributes SourceFile,LineNumberTable
+-keep public class * extends java.lang.Exception
+
+# Hilt Workers
+-keep @androidx.hilt.work.HiltWorker class * { *; }
+
+# Widget serializable data classes
+-keep class com.sysadmindoc.nimbus.widget.WidgetWeatherData { *; }
+-keep class com.sysadmindoc.nimbus.widget.WidgetHourly { *; }
+-keep class com.sysadmindoc.nimbus.widget.WidgetDaily { *; }
+
+# Strip debug and verbose logs in release builds
+-assumenosideeffects class android.util.Log {
+    public static int d(...);
+    public static int v(...);
+}

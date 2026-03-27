@@ -178,7 +178,7 @@ private fun MetadataItem(label: String, value: String) {
 
 private fun formatAlertTime(isoString: String): String = try {
     val odt = OffsetDateTime.parse(isoString)
-    odt.format(DateTimeFormatter.ofPattern("EEE MMM d, h:mm a z", Locale.US))
+    odt.format(DateTimeFormatter.ofPattern("EEE MMM d, h:mm a z", Locale.getDefault()))
 } catch (_: Exception) {
     isoString
 }
