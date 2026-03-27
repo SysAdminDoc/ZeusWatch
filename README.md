@@ -8,7 +8,7 @@
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 ![Build](https://github.com/SysAdminDoc/zeuswatch/actions/workflows/build.yml/badge.svg)
 
-> A free, open-source Android weather app with a premium dark UI, deeply customizable cards, multi-source forecasts, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, and Environment Canada.
+> A free, open-source Android weather app with a premium dark UI, 25 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, and Environment Canada.
 
 <!-- Screenshots go here after first release build -->
 <!-- ![Screenshots](docs/screenshots.png) -->
@@ -35,8 +35,8 @@ Install the APK from `app/build/outputs/apk/standard/debug/` or open in Android 
 |---------|-------------|
 | **Current Conditions** | Large temp display, feels-like with wind chill/heat index explanation, condition, high/low, sky gradients |
 | **Yesterday Comparison** | "5° warmer than yesterday" label in hero header with color-coded warm/cool indicator |
-| **Weather Summary** | Natural language forecast via template engine or Gemini Nano on-device AI (with automatic template fallback) |
-| **Hourly Forecast** | 48h or 72h scrollable strip with temp, animated icons, precip probability, feels-like when significantly different |
+| **Weather Summary** | Time-aware natural language forecast ("Clear skies this morning") via Gemini Nano AI (default) or template engine, with UV/humidity warnings |
+| **Hourly Forecast** | 72h scrollable strip with temp, animated Lottie icons, wind direction arrows, precip probability, smart rain timeline ("Rain likely within 3h"), feels-like when significantly different |
 | **16-Day Forecast** | Expandable daily rows with temperature range bars, rain hours, sunshine, snowfall, wind gusts, UV max. "Warmest" day highlighted |
 | **Temperature Graph** | Interactive Canvas graph with drag-to-inspect, precipitation bars, forecast average normals band, and feels-like overlay |
 | **Rain Next Hour** | 60-minute precipitation nowcasting bar chart from Open-Meteo minutely_15 data |
@@ -51,8 +51,8 @@ Install the APK from `app/build/outputs/apk/standard/debug/` or open in Android 
 | **UV Index Bar** | Color gradient bar with level markers, descriptions, "UV peaks at 2 PM" annotation, and safe sun exposure time |
 | **Air Quality** | PM2.5, PM10, O3, NO2, SO2, CO with EPA/European AQI scales, circular gauge, dominant pollutant highlighting, and 5-day daily AQI forecast bars |
 | **Pollen Data** | Per-species animated bars: alder, birch, grass, mugwort, olive, ragweed (hourly fallback) |
-| **Moon Phase** | Canvas moon illumination with Conway's algorithm, moonrise/moonset, day length |
-| **Sun Arc** | Semicircular sun position visualization showing current position from sunrise to sunset |
+| **Moon Phase** | Canvas moon illumination with Conway's algorithm, moonrise/moonset, day length, sunrise/sunset countdown |
+| **Sun Arc** | Semicircular sun position visualization with "Sunset in 2h 15m" countdown |
 | **Snowfall Card** | Current snowfall rate + snow depth + daily total, auto-hidden when no snow |
 | **Sunshine Duration** | Today's sunshine hours with circular progress ring |
 | **Severe Weather Potential** | CAPE-based thunderstorm indicator with instability levels |
@@ -73,7 +73,7 @@ Install the APK from `app/build/outputs/apk/standard/debug/` or open in Android 
 | **Alert Source Preference** | Configurable: Auto-detect, NWS only, MeteoAlarm, JMA, Environment Canada, All sources |
 | **4 Notification Channels** | Extreme (alarm sound, bypass DND), Severe (high), Moderate (default), Minor (low) |
 | **Alert Deduplication** | Tracks seen alert IDs so the same warning is never re-notified |
-| **Multi-Location Alerts** | Optionally monitors all saved locations, not just current GPS |
+| **Multi-Location Alerts** | Monitors all saved locations by default, not just current GPS |
 | **Driving Condition Alerts** | Black ice, fog, low visibility, hydroplaning, high wind, snow/ice — derived from forecast data |
 | **Health Alerts** | Migraine triggers (pressure/temp swings, configurable threshold), respiratory (humidity extremes), arthritis (temp swing) |
 | **Haptic Feedback** | Severity-appropriate vibration patterns when alerts display |
@@ -126,9 +126,9 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | Setting | Options |
 |---------|---------|
 | **Radar Provider** | Windy WebView / Native MapLibre |
-| **Icon Style** | Material Icons / Meteocons Animated (Lottie) / Custom Icon Packs |
+| **Icon Style** | Meteocons Animated (Lottie, default) / Material Icons / Custom Icon Packs |
 | **Theme Mode** | Static Dark / Weather Adaptive (accent colors shift: amber for sun, blue for rain, purple for storms) |
-| **Weather Summary** | Standard template / AI-Generated (Gemini Nano on-device) |
+| **Weather Summary** | AI-Generated (Gemini Nano, default) / Standard template |
 | **Card Visibility** | Toggle each of the 25 card types on/off |
 | **Card Ordering** | Reorderable card list in Settings with move up/down arrows |
 | **Temperature** | Fahrenheit / Celsius |
@@ -137,8 +137,8 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Precipitation** | inches / mm |
 | **Visibility** | miles / km |
 | **Time Format** | 12-hour / 24-hour |
-| **Hourly Range** | 48 hours / 72 hours |
-| **Notifications** | Alert notifications, persistent weather notification, nowcasting alerts, driving alerts, health alerts (each toggleable) |
+| **Hourly Range** | 72 hours (default) / 48 hours |
+| **Notifications** | Alert notifications, persistent weather notification (default on), nowcasting alerts (default on), driving alerts, health alerts |
 | **Alert Severity** | Extreme only / Severe+ / Moderate+ / All |
 | **Alert Source** | Auto-detect / NWS / MeteoAlarm / JMA / Environment Canada / All |
 | **Data Toggles** | Snowfall, CAPE, sunshine duration, golden hour, Beaufort colors, outdoor score, yesterday comparison |
@@ -233,7 +233,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Stack:** Kotlin 2.1.0, Jetpack Compose (BOM 2024.12.01), Hilt 2.53.1, Retrofit 2.11.0, Room 2.6.1, DataStore 1.1.1, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.10.0, Lottie 6.6.2, Coil 3.0.4, Firebase Firestore 33.7.0
+**Stack:** Kotlin 2.1.0, Jetpack Compose (BOM 2024.12.01), Hilt 2.53.1, Retrofit 2.11.0, Room 2.6.1, DataStore 1.1.1, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.10.0, Lottie 6.6.2, Coil 3.0.4, Firebase Firestore
 
 ---
 
@@ -334,7 +334,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 │   ├── screen/
 │   │   ├── main/                # Today/Hourly/Daily tabs + tablet two-pane
 │   │   ├── radar/               # Dual-provider radar + playback + layers
-│   │   ├── settings/            # 9-section settings (35+ preferences)
+│   │   ├── settings/            # 11 collapsible sections (40+ preferences)
 │   │   ├── locations/           # Search + drag-to-reorder saved locations
 │   │   └── compare/             # Side-by-side weather comparison
 │   ├── navigation/              # NavHost with typed routes
@@ -373,11 +373,11 @@ app/src/main/java/com/sysadmindoc/nimbus/
 
 ## Configuration
 
-### Settings Sections
+### Settings Sections (all collapsible)
 
 | Section | Options |
 |---------|---------|
-| **Display** | Radar provider, icon style (Material/Meteocons/Custom), theme mode, summary style (template/AI) |
+| **Display** | Radar provider, icon style (Meteocons/Material/Custom), theme mode, summary style (AI/template) |
 | **Cards** | Toggle + reorder each of 25 card types with move up/down arrows |
 | **Units** | Temperature, wind, pressure, precipitation, visibility, time format |
 | **Notifications** | Alert notifications (severity threshold, multi-location, source preference), persistent weather, nowcasting, driving, health |
@@ -385,7 +385,8 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | **Health** | Migraine alerts with pressure threshold (3.0/5.0/7.0/10.0 hPa/3h) |
 | **Accessibility** | Haptic feedback for alerts |
 | **Visual Effects** | Weather particle animations |
-| **Advanced** | Cache TTL (15/30/60/120 min) |
+| **Data Sources** | Primary + fallback per data type, API keys (collapsed by default) |
+| **Advanced** | Cache TTL (15/30/60/120 min) (collapsed by default) |
 | **About** | Version, data source, license |
 
 ### Card Types (25)
@@ -396,15 +397,14 @@ Weather Summary, Radar Preview, Rain Next Hour, Hourly Forecast, Temperature Gra
 
 ---
 
-## Animated Icons (Optional)
+## Animated Icons (Default)
 
-ZeusWatch supports [Meteocons](https://github.com/basmilius/weather-icons) animated Lottie weather icons (MIT license). To enable:
+ZeusWatch uses [Meteocons](https://github.com/basmilius/weather-icons) animated Lottie weather icons by default (MIT license).
 
 1. Download the "fill" style Lottie JSON files from the Meteocons repository
 2. Place them in `app/src/main/assets/meteocons/`
-3. Enable "Animated (Meteocons)" in Settings > Display > Icon Style
 
-See `app/src/main/assets/meteocons/README.md` for the full file list. The app gracefully falls back to Material Icons when Lottie files are missing.
+See `app/src/main/assets/meteocons/README.md` for the full file list. The app gracefully falls back to Material Icons when Lottie files are missing. You can switch to static Material Icons in Settings > Display > Icon Style.
 
 ### Custom Icon Packs
 
@@ -461,23 +461,30 @@ See [RESEARCH.md](RESEARCH.md) for the full feature research and phased implemen
 
 **Implemented through v1.5.0:**
 - 25 dynamic card types with user-configurable order and visibility
+- Gemini Nano AI weather summaries enabled by default (with template fallback)
+- Animated Meteocons Lottie icons enabled by default
+- Sequential permission flow: Location -> Notifications -> Background Location
+- 72h hourly forecast, persistent notifications, nowcasting alerts on by default
 - 4 new data cards: Humidity, Precipitation Chart, Pressure Trend, Wind Forecast
+- Smart context: rain timeline, sunrise/sunset countdown, time-aware greetings
 - Feels-like overlay on temperature graph
-- Temperature range bars in daily forecast
-- Alert expiry countdown
+- Temperature range bars in daily forecast with color-coded gradients
+- Alert expiry countdown on banners
+- Card reorder in Settings with move up/down arrows
 - Collapsible settings sections
 - Pull-to-refresh on all tabs
 - Compare screen with weather icons and value highlighting
 - Outdoor score with factor breakdown bars
-- Location screen with weather condition icons
+- Wind direction arrows and dew point comfort colors
+- Data staleness indicator (amber when stale)
 - Native MapLibre animated radar with layer selector
 - Real-time lightning strike overlay (Blitzortung WebSocket)
-- Gemini Nano on-device weather summaries (standard flavor)
 - Live weather wallpaper with particle effects
 - Multi-source forecast fallback (6 providers)
 - International alert sources (NWS, MeteoAlarm, JMA, Environment Canada)
 - Community weather reports (Firebase Firestore)
 - Tablet two-pane layout
+- 22 crash/bug fixes, Crashlytics removed
 
 ---
 
