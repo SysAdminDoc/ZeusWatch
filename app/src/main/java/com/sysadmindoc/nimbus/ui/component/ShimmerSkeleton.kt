@@ -95,15 +95,23 @@ fun ShimmerLoadingSkeleton(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(32.dp))
 
         // Hourly card placeholder
-        ShimmerCard(height = 140.dp, brush = shimmerBrush)
+        ShimmerCard(height = 130.dp, brush = shimmerBrush)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Summary card placeholder
+        ShimmerCard(height = 60.dp, brush = shimmerBrush)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Temp graph placeholder
+        ShimmerCard(height = 180.dp, brush = shimmerBrush)
         Spacer(modifier = Modifier.height(12.dp))
 
         // Daily card placeholder
-        ShimmerCard(height = 320.dp, brush = shimmerBrush)
+        ShimmerCard(height = 280.dp, brush = shimmerBrush)
         Spacer(modifier = Modifier.height(12.dp))
 
         // Details card placeholder
-        ShimmerCard(height = 200.dp, brush = shimmerBrush)
+        ShimmerCard(height = 180.dp, brush = shimmerBrush)
     }
 }
 
