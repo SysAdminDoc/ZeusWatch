@@ -44,20 +44,7 @@ fun AqiCard(
     data: AirQualityData,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(16.dp)
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(NimbusCardBg)
-            .padding(16.dp),
-    ) {
-        Text(
-            "Air Quality",
-            style = MaterialTheme.typography.titleMedium,
-            color = NimbusTextPrimary,
-        )
-        Spacer(modifier = Modifier.height(12.dp))
+    WeatherCard(title = "Air Quality", modifier = modifier) {
 
         // Gauge + info row
         Row(

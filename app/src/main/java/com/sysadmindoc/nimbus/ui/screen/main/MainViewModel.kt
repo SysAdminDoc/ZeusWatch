@@ -22,7 +22,7 @@ import com.sysadmindoc.nimbus.util.PetSafetyAlert
 import com.sysadmindoc.nimbus.util.PetSafetyEvaluator
 import com.sysadmindoc.nimbus.util.ConnectivityObserver
 import com.sysadmindoc.nimbus.util.WeatherFormatter
-import com.sysadmindoc.nimbus.util.GeminiNanoSummaryEngine
+import com.sysadmindoc.nimbus.util.SummaryEngine
 import com.sysadmindoc.nimbus.util.WeatherSummaryEngine
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import com.sysadmindoc.nimbus.data.repository.AirQualityRepository
@@ -66,7 +66,7 @@ class MainViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
     private val locationProvider: LocationProvider,
     private val prefs: UserPreferences,
-    private val geminiNanoSummaryEngine: GeminiNanoSummaryEngine,
+    private val summaryEngine: SummaryEngine,
     private val connectivityObserver: ConnectivityObserver,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -357,7 +357,11 @@ class MainViewModel @Inject constructor(
             aqi = _uiState.value.airQuality?.usAqi,
         )
 
-        val drivingAlerts = DrivingConditionEvaluator.evaluate(data.current)
+        val drivingAlerts = if (settings.drivingAlerts) {
+            DrivingConditionEvaluator.evaluate(data.current)
+        } else {
+            persistentListOf()
+        }
 
         val healthAlerts = HealthAlertEvaluator.evaluate(
             hourly = data.hourly,
@@ -393,7 +397,7 @@ class MainViewModel @Inject constructor(
                     hourly = data.hourly,
                     yesterdayHigh = _uiState.value.yesterdayHigh,
                     s = settings,
-                    aiEngine = geminiNanoSummaryEngine,
+                    aiEngine = summaryEngine,
                 )
                 _uiState.update { it.copy(weatherSummary = aiSummary) }
             }

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.outlined.AcUnit
 import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material.icons.outlined.WbTwilight
 import androidx.compose.material3.HorizontalDivider
@@ -151,7 +152,7 @@ private fun DailyDetail(day: DailyConditions, s: NimbusSettings) {
                 day.snowfallSum?.let {
                     if (it > 0) {
                         Spacer(Modifier.height(6.dp))
-                        DetailMini(Icons.Outlined.WbSunny, "Snow", WeatherFormatter.formatSnowfall(it, s))
+                        DetailMini(Icons.Outlined.AcUnit, "Snow", WeatherFormatter.formatSnowfall(it, s))
                     }
                 }
             }

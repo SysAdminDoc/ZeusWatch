@@ -21,7 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CompareArrows
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -69,106 +71,128 @@ fun CompareScreen(
     val s = LocalUnitSettings.current
 
     PredictiveBackScaffold(onBack = onBack) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(NimbusNavyDark)
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+        when {
+            state.isLoading -> Box(
+                Modifier.fillMaxSize().background(NimbusNavyDark),
+                contentAlignment = Alignment.Center,
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = NimbusTextPrimary)
+                CircularProgressIndicator()
+            }
+            state.error != null -> Box(
+                Modifier.fillMaxSize().background(NimbusNavyDark),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        state.error ?: "Something went wrong",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = NimbusTextPrimary,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = { viewModel.retry() }) { Text("Retry") }
                 }
-                Icon(
-                    Icons.Filled.CompareArrows,
-                    contentDescription = null,
-                    tint = NimbusBlueAccent,
-                    modifier = Modifier.size(24.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "Compare Weather",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = NimbusTextPrimary,
-                )
             }
-
-            // Location selectors
-            Row(
+            else -> Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    .fillMaxSize()
+                    .background(NimbusNavyDark)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .verticalScroll(rememberScrollState()),
             ) {
-                LocationSelector(
-                    label = "Location 1",
-                    selected = state.location1,
-                    locations = state.savedLocations,
-                    onSelect = { viewModel.selectLocation1(it) },
-                    modifier = Modifier.weight(1f),
-                )
-                LocationSelector(
-                    label = "Location 2",
-                    selected = state.location2,
-                    locations = state.savedLocations,
-                    onSelect = { viewModel.selectLocation2(it) },
-                    modifier = Modifier.weight(1f),
-                )
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = NimbusTextPrimary)
+                    }
+                    Icon(
+                        Icons.AutoMirrored.Filled.CompareArrows,
+                        contentDescription = null,
+                        tint = NimbusBlueAccent,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Compare Weather",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = NimbusTextPrimary,
+                    )
+                }
+
+                // Location selectors
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    LocationSelector(
+                        label = "Location 1",
+                        selected = state.location1,
+                        locations = state.savedLocations,
+                        onSelect = { viewModel.selectLocation1(it) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    LocationSelector(
+                        label = "Location 2",
+                        selected = state.location2,
+                        locations = state.savedLocations,
+                        onSelect = { viewModel.selectLocation2(it) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Comparison table
+                if (state.weather1 != null && state.weather2 != null) {
+                    val w1 = state.weather1!!
+                    val w2 = state.weather2!!
+
+                    CompareRow("Temperature",
+                        WeatherFormatter.formatTemperature(w1.current.temperature, s),
+                        WeatherFormatter.formatTemperature(w2.current.temperature, s),
+                    )
+                    CompareRow("Feels Like",
+                        WeatherFormatter.formatTemperature(w1.current.feelsLike, s),
+                        WeatherFormatter.formatTemperature(w2.current.feelsLike, s),
+                    )
+                    CompareRow("Condition",
+                        w1.current.weatherCode.description,
+                        w2.current.weatherCode.description,
+                    )
+                    CompareRow("Humidity",
+                        "${w1.current.humidity}%",
+                        "${w2.current.humidity}%",
+                    )
+                    CompareRow("Wind",
+                        WeatherFormatter.formatWindSpeed(w1.current.windSpeed, w1.current.windDirection, s),
+                        WeatherFormatter.formatWindSpeed(w2.current.windSpeed, w2.current.windDirection, s),
+                    )
+                    CompareRow("UV Index",
+                        WeatherFormatter.formatUvIndex(w1.current.uvIndex),
+                        WeatherFormatter.formatUvIndex(w2.current.uvIndex),
+                    )
+                    CompareRow("Pressure",
+                        WeatherFormatter.formatPressure(w1.current.pressure, s),
+                        WeatherFormatter.formatPressure(w2.current.pressure, s),
+                    )
+                    CompareRow("High / Low",
+                        "${WeatherFormatter.formatTemperature(w1.current.dailyHigh, s)} / ${WeatherFormatter.formatTemperature(w1.current.dailyLow, s)}",
+                        "${WeatherFormatter.formatTemperature(w2.current.dailyHigh, s)} / ${WeatherFormatter.formatTemperature(w2.current.dailyLow, s)}",
+                    )
+
+                    val precip1 = w1.daily.firstOrNull()?.precipitationProbability ?: 0
+                    val precip2 = w2.daily.firstOrNull()?.precipitationProbability ?: 0
+                    CompareRow("Rain Chance", "$precip1%", "$precip2%")
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Comparison table
-            if (state.weather1 != null && state.weather2 != null) {
-                val w1 = state.weather1!!
-                val w2 = state.weather2!!
-
-                CompareRow("Temperature",
-                    WeatherFormatter.formatTemperature(w1.current.temperature, s),
-                    WeatherFormatter.formatTemperature(w2.current.temperature, s),
-                )
-                CompareRow("Feels Like",
-                    WeatherFormatter.formatTemperature(w1.current.feelsLike, s),
-                    WeatherFormatter.formatTemperature(w2.current.feelsLike, s),
-                )
-                CompareRow("Condition",
-                    w1.current.weatherCode.description,
-                    w2.current.weatherCode.description,
-                )
-                CompareRow("Humidity",
-                    "${w1.current.humidity}%",
-                    "${w2.current.humidity}%",
-                )
-                CompareRow("Wind",
-                    WeatherFormatter.formatWindSpeed(w1.current.windSpeed, w1.current.windDirection, s),
-                    WeatherFormatter.formatWindSpeed(w2.current.windSpeed, w2.current.windDirection, s),
-                )
-                CompareRow("UV Index",
-                    WeatherFormatter.formatUvIndex(w1.current.uvIndex),
-                    WeatherFormatter.formatUvIndex(w2.current.uvIndex),
-                )
-                CompareRow("Pressure",
-                    WeatherFormatter.formatPressure(w1.current.pressure, s),
-                    WeatherFormatter.formatPressure(w2.current.pressure, s),
-                )
-                CompareRow("High / Low",
-                    "${WeatherFormatter.formatTemperature(w1.current.dailyHigh, s)} / ${WeatherFormatter.formatTemperature(w1.current.dailyLow, s)}",
-                    "${WeatherFormatter.formatTemperature(w2.current.dailyHigh, s)} / ${WeatherFormatter.formatTemperature(w2.current.dailyLow, s)}",
-                )
-
-                val precip1 = w1.daily.firstOrNull()?.precipitationProbability ?: 0
-                val precip2 = w2.daily.firstOrNull()?.precipitationProbability ?: 0
-                CompareRow("Rain Chance", "$precip1%", "$precip2%")
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

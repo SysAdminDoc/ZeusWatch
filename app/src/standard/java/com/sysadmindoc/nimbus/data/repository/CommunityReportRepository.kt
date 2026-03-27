@@ -24,7 +24,7 @@ import kotlin.math.cos
 @Singleton
 class CommunityReportRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : CommunityReportSource {
 
     private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
     private val collection get() = firestore.collection(COLLECTION_NAME)

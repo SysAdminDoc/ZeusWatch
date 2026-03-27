@@ -28,7 +28,6 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
 /**
  * Rain-in-next-hour nowcasting card.
@@ -63,6 +62,7 @@ fun NowcastCard(
         }
     }
 
+    val settings = LocalUnitSettings.current
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
 
@@ -110,9 +110,7 @@ fun NowcastCard(
 
                 // Time labels every other bar
                 if (i % 2 == 0) {
-                    val label = try {
-                        entry.time.format(DateTimeFormatter.ofPattern("h:mm"))
-                    } catch (_: Exception) { "" }
+                    val label = com.sysadmindoc.nimbus.util.WeatherFormatter.formatHourLabel(entry.time, settings)
                     val m = textMeasurer.measure(label, labelStyle)
                     drawText(m, topLeft = Offset(x, h - 14f))
                 }

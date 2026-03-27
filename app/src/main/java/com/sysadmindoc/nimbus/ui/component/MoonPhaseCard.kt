@@ -1,9 +1,7 @@
 package com.sysadmindoc.nimbus.ui.component
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,13 +10,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -27,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.AstronomyData
 import com.sysadmindoc.nimbus.data.model.MoonPhase
-import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusMoonBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -43,21 +38,7 @@ fun MoonPhaseCard(
     sunset: String? = null,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(16.dp)
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(NimbusCardBg)
-            .padding(16.dp),
-    ) {
-        Text(
-            "Astronomy",
-            style = MaterialTheme.typography.titleMedium,
-            color = NimbusTextPrimary,
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-
+    WeatherCard(title = "Astronomy", modifier = modifier) {
         // Sunrise / Sunset row
         if (sunrise != null || sunset != null) {
             val s = LocalUnitSettings.current
@@ -118,26 +99,6 @@ fun MoonPhaseCard(
             AstroDetail("Moonrise", astronomy.moonrise ?: "--")
             AstroDetail("Moonset", astronomy.moonset ?: "--")
         }
-    }
-}
-
-/** Format ISO time string (e.g. "2024-01-15T06:45") to short time ("6:45 AM"). */
-private fun formatTimeShort(isoTime: String?): String? {
-    if (isoTime == null) return null
-    return try {
-        val timePart = isoTime.substringAfter("T")
-        val parts = timePart.split(":")
-        val hour = parts[0].toInt()
-        val minute = parts[1].toInt()
-        val amPm = if (hour < 12) "AM" else "PM"
-        val h12 = when {
-            hour == 0 -> 12
-            hour > 12 -> hour - 12
-            else -> hour
-        }
-        "%d:%02d %s".format(h12, minute, amPm)
-    } catch (_: Exception) {
-        isoTime
     }
 }
 

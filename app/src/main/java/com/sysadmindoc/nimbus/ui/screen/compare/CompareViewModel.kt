@@ -25,13 +25,10 @@ class CompareViewModel @Inject constructor(
     val uiState: StateFlow<CompareUiState> = _uiState.asStateFlow()
 
     init {
-        loadSavedLocations()
-    }
-
-    private fun loadSavedLocations() {
         viewModelScope.launch {
-            val locations = locationRepository.getAll()
-            _uiState.update { it.copy(savedLocations = locations) }
+            locationRepository.savedLocations.collect { locations ->
+                _uiState.update { it.copy(savedLocations = locations) }
+            }
         }
     }
 
@@ -43,6 +40,14 @@ class CompareViewModel @Inject constructor(
     fun selectLocation2(location: SavedLocationEntity) {
         _uiState.update { it.copy(location2 = location, weather2 = null) }
         fetchWeather(location, isFirst = false)
+    }
+
+    fun retry() {
+        _uiState.update { it.copy(error = null) }
+        val loc1 = _uiState.value.location1
+        val loc2 = _uiState.value.location2
+        if (loc1 != null) fetchWeather(loc1, isFirst = true)
+        if (loc2 != null) fetchWeather(loc2, isFirst = false)
     }
 
     private fun fetchWeather(location: SavedLocationEntity, isFirst: Boolean) {

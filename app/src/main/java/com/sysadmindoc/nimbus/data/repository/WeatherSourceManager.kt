@@ -96,6 +96,8 @@ class WeatherSourceManager @Inject constructor(
         longitude: Double,
     ): Result<List<WeatherAlert>> = when (provider) {
         WeatherSourceProvider.NWS -> nwsAlertAdapter.getAlerts(latitude, longitude)
+        WeatherSourceProvider.METEOALARM -> nwsAlertAdapter.getAlerts(latitude, longitude)
+        WeatherSourceProvider.JMA -> nwsAlertAdapter.getAlerts(latitude, longitude)
         WeatherSourceProvider.OPEN_WEATHER_MAP -> stubResult("OpenWeatherMap alerts")
         WeatherSourceProvider.BRIGHT_SKY -> stubResult("Bright Sky alerts")
         WeatherSourceProvider.ENVIRONMENT_CANADA -> stubResult("Environment Canada alerts")

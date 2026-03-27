@@ -15,7 +15,7 @@ private const val TAG = "WeatherSummaryEngine"
  * Produces human-readable sentences like:
  * "Partly cloudy today with afternoon showers likely. Highs near 78."
  *
- * When [SummaryStyle.AI_GENERATED] is requested, delegates to [GeminiNanoSummaryEngine]
+ * When [SummaryStyle.AI_GENERATED] is requested, delegates to the [SummaryEngine] implementation
  * with automatic fallback to the template engine if AI is unavailable.
  */
 object WeatherSummaryEngine {
@@ -139,7 +139,7 @@ object WeatherSummaryEngine {
         hourly: List<HourlyConditions>,
         yesterdayHigh: Double? = null,
         s: NimbusSettings = NimbusSettings(),
-        aiEngine: GeminiNanoSummaryEngine? = null,
+        aiEngine: SummaryEngine? = null,
     ): String {
         // Always compute the template fallback first (cheap)
         val templateSummary = generate(current, today, hourly, yesterdayHigh, s)

@@ -23,6 +23,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -32,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,8 +67,8 @@ fun ReportSubmitSheet(
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var selectedCondition by remember { mutableStateOf<ReportCondition?>(null) }
-    var noteText by remember { mutableStateOf("") }
+    var selectedCondition by rememberSaveable { mutableStateOf<ReportCondition?>(null) }
+    var noteText by rememberSaveable { mutableStateOf("") }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -84,7 +86,7 @@ fun ReportSubmitSheet(
             Text(
                 text = "Report Current Conditions",
                 color = NimbusTextPrimary,
-                fontSize = 20.sp,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
             )
 
@@ -93,7 +95,7 @@ fun ReportSubmitSheet(
             Text(
                 text = "Help others by sharing what you see outside",
                 color = NimbusTextSecondary,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -182,7 +184,7 @@ fun ReportSubmitSheet(
                 Text(
                     text = if (isSuccess) "Report submitted! Thanks for helping your community." else (submitResult ?: ""),
                     color = if (isSuccess) NimbusSuccess else NimbusError,
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -217,12 +219,12 @@ private fun ConditionChip(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = condition.emoji,
-                fontSize = 22.sp,
+                style = MaterialTheme.typography.headlineSmall,
             )
             Text(
                 text = condition.label,
                 color = if (isSelected) NimbusTextPrimary else NimbusTextSecondary,
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
             )
         }

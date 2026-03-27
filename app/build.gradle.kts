@@ -19,8 +19,8 @@ android {
         applicationId = "com.sysadmindoc.nimbus"
         minSdk = 26
         targetSdk = 35
-        versionCode = 60
-        versionName = "1.4.0"
+        versionCode = 61
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -178,12 +178,12 @@ dependencies {
     // MapLibre (Phase 3)
     implementation(libs.maplibre)
 
-    // Firebase (Phase 3.8 — Community Reports)
+    // Firebase (Phase 3.8 — Community Reports) — standard flavor only
     // NOTE: Requires google-services.json in app/ directory.
     // Configure at https://console.firebase.google.com and download the config file.
-    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-crashlytics-ktx")
+    "standardImplementation"(platform("com.google.firebase:firebase-bom:33.7.0"))
+    "standardImplementation"("com.google.firebase:firebase-firestore-ktx")
+    "standardImplementation"("com.google.firebase:firebase-crashlytics-ktx")
 
     // Desugaring
     coreLibraryDesugaring(libs.desugar)

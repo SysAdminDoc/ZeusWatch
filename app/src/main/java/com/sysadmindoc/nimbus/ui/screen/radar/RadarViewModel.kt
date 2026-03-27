@@ -7,7 +7,7 @@ import com.sysadmindoc.nimbus.data.api.BlitzortungService
 import com.sysadmindoc.nimbus.data.api.LightningStrike
 import com.sysadmindoc.nimbus.data.model.CommunityReport
 import com.sysadmindoc.nimbus.data.model.ReportCondition
-import com.sysadmindoc.nimbus.data.repository.CommunityReportRepository
+import com.sysadmindoc.nimbus.data.repository.CommunityReportSource
 import com.sysadmindoc.nimbus.data.repository.RadarFrameSet
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.TimedTileUrl
@@ -33,7 +33,7 @@ class RadarViewModel @Inject constructor(
     private val radarRepository: RadarRepository,
     private val prefs: UserPreferences,
     private val blitzortungService: BlitzortungService,
-    private val communityReportRepository: CommunityReportRepository,
+    private val communityReportRepository: CommunityReportSource,
     connectivityObserver: ConnectivityObserver,
 ) : ViewModel() {
 

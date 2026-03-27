@@ -26,7 +26,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
@@ -115,12 +114,12 @@ fun NimbusNavHost(
         composable(
             route = Routes.RADAR,
             arguments = listOf(
-                navArgument("lat") { type = NavType.FloatType },
-                navArgument("lon") { type = NavType.FloatType },
+                navArgument("lat") { type = NavType.StringType; defaultValue = "0.0" },
+                navArgument("lon") { type = NavType.StringType; defaultValue = "0.0" },
             ),
         ) { backStack ->
-            val lat = backStack.arguments?.getFloat("lat")?.toDouble() ?: 0.0
-            val lon = backStack.arguments?.getFloat("lon")?.toDouble() ?: 0.0
+            val lat = backStack.arguments?.getString("lat")?.toDoubleOrNull() ?: 0.0
+            val lon = backStack.arguments?.getString("lon")?.toDoubleOrNull() ?: 0.0
             RadarScreen(
                 latitude = lat,
                 longitude = lon,
@@ -157,7 +156,7 @@ fun ZeusWatchBottomNav(
 ) {
     NavigationBar(
         modifier = modifier.fillMaxWidth(),
-        containerColor = Color(0xFF0A0E1A),
+        containerColor = NimbusNavyDark,
         tonalElevation = 0.dp,
     ) {
         visibleTabs.forEach { tab ->

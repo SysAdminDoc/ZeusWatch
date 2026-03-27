@@ -20,10 +20,10 @@ private const val TAG = "GeminiNanoSummary"
 @Singleton
 class GeminiNanoSummaryEngine @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : SummaryEngine {
     private var model: GenerativeModel? = null
     private var availabilityChecked = false
-    private var isAvailable = false
+    private var _isAvailable = false
 
     /**
      * Lazily initialise the on-device model.
@@ -41,12 +41,12 @@ class GeminiNanoSummaryEngine @Inject constructor(
                 },
             )
             model = generativeModel
-            isAvailable = true
+            _isAvailable = true
             Log.d(TAG, "Gemini Nano model initialised successfully")
             generativeModel
         } catch (e: Exception) {
             Log.w(TAG, "Gemini Nano not available on this device: ${e.message}")
-            isAvailable = false
+            _isAvailable = false
             model = null
             null
         }
@@ -58,7 +58,7 @@ class GeminiNanoSummaryEngine @Inject constructor(
      *
      * @return The generated summary text, or null if AI generation failed.
      */
-    suspend fun generate(
+    override suspend fun generate(
         currentTemp: String,
         condition: String,
         high: String,
@@ -98,13 +98,15 @@ class GeminiNanoSummaryEngine @Inject constructor(
         }
     }
 
+    override fun isAvailable(): Boolean = _isAvailable
+
     /** Release the model resources when no longer needed. */
-    fun close() {
+    override fun close() {
         try {
             model?.close()
         } catch (_: Exception) {}
         model = null
         availabilityChecked = false
-        isAvailable = false
+        _isAvailable = false
     }
 }

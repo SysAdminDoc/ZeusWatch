@@ -37,6 +37,7 @@ fun SunArc(
 ) {
     if (sunrise == null || sunset == null) return
 
+    val settings = LocalUnitSettings.current
     val now = LocalDateTime.now()
     val fmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     val riseTime = try { LocalDateTime.parse(sunrise, fmt) } catch (_: Exception) { return }
@@ -107,17 +108,13 @@ fun SunArc(
             )
         }
 
-        // Sunrise label
-        val riseLabel = try {
-            riseTime.format(DateTimeFormatter.ofPattern("h:mm a"))
-        } catch (_: Exception) { "" }
+        // Sunrise label (uses user time format)
+        val riseLabel = com.sysadmindoc.nimbus.util.WeatherFormatter.formatTime(sunrise, settings)
         val riseM = textMeasurer.measure(riseLabel, labelStyle)
         drawText(riseM, topLeft = Offset(w * 0.05f, horizonY + 4f))
 
-        // Sunset label
-        val setLabel = try {
-            setTime.format(DateTimeFormatter.ofPattern("h:mm a"))
-        } catch (_: Exception) { "" }
+        // Sunset label (uses user time format)
+        val setLabel = com.sysadmindoc.nimbus.util.WeatherFormatter.formatTime(sunset, settings)
         val setM = textMeasurer.measure(setLabel, labelStyle)
         drawText(setM, topLeft = Offset(w * 0.95f - setM.size.width, horizonY + 4f))
     }
