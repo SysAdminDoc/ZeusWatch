@@ -30,21 +30,9 @@ enum class RadarLayer(
 ) {
     RADAR("Radar", null), // Handled separately by RainViewer
     LIGHTNING("Lightning", null), // Real-time Blitzortung WebSocket overlay
-    TEMPERATURE(
-        "Temperature",
-        "https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=",
-    ),
-    WIND(
-        "Wind",
-        "https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=",
-    ),
-    CLOUDS(
-        "Clouds",
-        "https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=",
-    ),
-    PRECIPITATION(
-        "Precipitation",
-        "https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=",
+    SATELLITE(
+        "Satellite",
+        "https://tilecache.rainviewer.com/v2/satellite/256/{z}/{x}/{y}/2/0_0.png",
     ),
 }
 

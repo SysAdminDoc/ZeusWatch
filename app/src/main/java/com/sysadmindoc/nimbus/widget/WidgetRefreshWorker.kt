@@ -119,7 +119,9 @@ class WidgetRefreshWorker @AssistedInject constructor(
                 val savedLocations = locationRepository.getAll()
                 for (loc in savedLocations) {
                     if (loc.latitude == lastLoc.latitude && loc.longitude == lastLoc.longitude) continue
-                    weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
+                    try {
+                        weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
+                    } catch (_: Exception) { /* Individual location failure is non-fatal */ }
                 }
             } catch (_: Exception) { /* Non-fatal; widget update already succeeded */ }
 

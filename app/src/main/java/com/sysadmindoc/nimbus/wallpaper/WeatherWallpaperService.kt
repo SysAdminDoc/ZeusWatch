@@ -127,8 +127,8 @@ class WeatherWallpaperService : WallpaperService() {
                 if (canvas != null) {
                     try {
                         surfaceHolder.unlockCanvasAndPost(canvas)
-                    } catch (_: IllegalArgumentException) {
-                        // Surface already destroyed
+                    } catch (_: Exception) {
+                        // Surface already destroyed or other surface error
                     }
                 }
             }
@@ -234,7 +234,7 @@ class WallpaperParticleSystem(private val effect: WeatherEffect) {
 
     fun update(width: Int, height: Int) {
         if (width <= 0 || height <= 0) return
-        frame++
+        frame = (frame + 1) and 0x7FFFFFFF // wrap to prevent overflow
         val w = width.toFloat()
         val h = height.toFloat()
 

@@ -106,8 +106,10 @@ fun TemperatureGraph(
                 val graphHeight = h - paddingTop - paddingBottom
 
                 val temps = data.map { it.temperature }
-                val rawMin = temps.min()
-                val rawMax = temps.max()
+                val feelsTemps = data.mapNotNull { it.feelsLike }
+                val allTemps = temps + feelsTemps
+                val rawMin = allTemps.min()
+                val rawMax = allTemps.max()
                 val minTemp = (rawMin - 2).toFloat()
                 val maxTemp = if (rawMax == rawMin) (rawMin + 2).toFloat() else (rawMax + 2).toFloat()
                 val tempRange = maxTemp - minTemp

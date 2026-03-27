@@ -100,8 +100,9 @@ private fun ForecastStripContent(data: WidgetWeatherData?) {
             // Divider space
             Spacer(modifier = GlanceModifier.width(4.dp))
 
-            // Next 5 hours
-            data.hourly.drop(1).take(5).forEach { hour ->
+            // Next 5 hours (guard: skip if insufficient data)
+            val upcoming = data.hourly.drop(1).take(5)
+            upcoming.forEach { hour ->
                 Spacer(modifier = GlanceModifier.width(2.dp))
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,

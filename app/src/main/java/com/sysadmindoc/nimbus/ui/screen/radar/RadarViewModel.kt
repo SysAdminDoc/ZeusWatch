@@ -158,7 +158,7 @@ class RadarViewModel @Inject constructor(
      * Returns Pair(lat, lon) with US center (39.8, -98.5) as ultimate fallback.
      */
     suspend fun resolveLocation(lat: Double, lon: Double): Pair<Double, Double> {
-        if (lat != 0.0 || lon != 0.0) return Pair(lat, lon)
+        if (lat != 0.0 && lon != 0.0) return Pair(lat, lon)
         val saved = prefs.lastLocation.first()
         return if (saved != null) Pair(saved.latitude, saved.longitude) else Pair(39.8, -98.5)
     }

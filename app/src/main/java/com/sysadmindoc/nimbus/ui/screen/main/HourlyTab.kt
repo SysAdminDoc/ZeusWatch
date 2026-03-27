@@ -50,11 +50,11 @@ fun HourlyTab(
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
 ) {
-    val dayFormatter = DateTimeFormatter.ofPattern("EEEE, MMM d")
-    val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
-
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
     val forecastHours = s.hourlyForecastHours
+    val dayFormatter = DateTimeFormatter.ofPattern("EEEE, MMM d")
+    val timePattern = if (s.timeFormat == com.sysadmindoc.nimbus.data.repository.TimeFormat.TWENTY_FOUR_HOUR) "HH:mm" else "h:mm a"
+    val timeFormatter = DateTimeFormatter.ofPattern(timePattern)
 
     val groupedHourly = remember(hourly, forecastHours) {
         hourly.take(forecastHours).groupBy { it.time.toLocalDate() }

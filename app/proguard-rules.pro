@@ -67,10 +67,6 @@
 -keep class **_HiltModules* { *; }
 -keep class dagger.hilt.** { *; }
 
-# Firebase Crashlytics
--keepattributes SourceFile,LineNumberTable
--keep public class * extends java.lang.Exception
-
 # Hilt Workers
 -keep @androidx.hilt.work.HiltWorker class * { *; }
 

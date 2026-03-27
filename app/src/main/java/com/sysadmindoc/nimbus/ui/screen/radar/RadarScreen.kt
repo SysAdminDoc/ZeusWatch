@@ -81,7 +81,7 @@ fun RadarScreen(
 
     // Load community reports when location is resolved
     LaunchedEffect(resolvedLat, resolvedLon) {
-        if (resolvedLat != 0.0 || resolvedLon != 0.0) {
+        if (resolvedLat != 0.0 && resolvedLon != 0.0) {
             viewModel.loadNearbyReports(resolvedLat, resolvedLon)
         }
     }
@@ -255,7 +255,7 @@ fun RadarTab(
 
     // Load community reports for this location
     LaunchedEffect(latitude, longitude) {
-        if (latitude != 0.0 || longitude != 0.0) {
+        if (latitude != 0.0 && longitude != 0.0) {
             viewModel.loadNearbyReports(latitude, longitude)
         }
     }
