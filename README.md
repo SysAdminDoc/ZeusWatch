@@ -1,6 +1,6 @@
 # ZeusWatch
 
-![Version](https://img.shields.io/badge/version-1.3.4-blue)
+![Version](https://img.shields.io/badge/version-1.5.0-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Android%208.0+-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white)
@@ -37,8 +37,8 @@ Install the APK from `app/build/outputs/apk/standard/debug/` or open in Android 
 | **Yesterday Comparison** | "5° warmer than yesterday" label in hero header with color-coded warm/cool indicator |
 | **Weather Summary** | Natural language forecast via template engine or Gemini Nano on-device AI (with automatic template fallback) |
 | **Hourly Forecast** | 48h or 72h scrollable strip with temp, animated icons, precip probability, feels-like when significantly different |
-| **16-Day Forecast** | Expandable daily rows with rain hours, sunshine duration, snowfall, wind gusts, UV max. "Warmest" day highlighted |
-| **Temperature Graph** | Interactive Canvas graph with drag-to-inspect, precipitation bars, and forecast average normals band |
+| **16-Day Forecast** | Expandable daily rows with temperature range bars, rain hours, sunshine, snowfall, wind gusts, UV max. "Warmest" day highlighted |
+| **Temperature Graph** | Interactive Canvas graph with drag-to-inspect, precipitation bars, forecast average normals band, and feels-like overlay |
 | **Rain Next Hour** | 60-minute precipitation nowcasting bar chart from Open-Meteo minutely_15 data |
 | **Temperature Normals** | Shaded band on temperature graph showing forecast average range with dashed boundary lines |
 
@@ -53,11 +53,15 @@ Install the APK from `app/build/outputs/apk/standard/debug/` or open in Android 
 | **Pollen Data** | Per-species animated bars: alder, birch, grass, mugwort, olive, ragweed (hourly fallback) |
 | **Moon Phase** | Canvas moon illumination with Conway's algorithm, moonrise/moonset, day length |
 | **Sun Arc** | Semicircular sun position visualization showing current position from sunrise to sunset |
-| **Snowfall Card** | Current snowfall rate + snow depth, auto-hidden when no snow |
+| **Snowfall Card** | Current snowfall rate + snow depth + daily total, auto-hidden when no snow |
 | **Sunshine Duration** | Today's sunshine hours with circular progress ring |
 | **Severe Weather Potential** | CAPE-based thunderstorm indicator with instability levels |
-| **Outdoor Activity Score** | Weighted 0-100 composite score from temp, wind, UV, humidity, precipitation, AQI |
+| **Outdoor Activity Score** | Weighted 0-100 composite score from temp, wind, UV, humidity, precipitation, AQI with factor breakdown bars |
 | **Golden Hour** | Morning and evening golden hour times for photographers |
+| **Humidity & Comfort** | Humidity gauge with comfort level indicator, dew point, and zone markers |
+| **Precipitation Forecast** | 24-hour precipitation probability bars with peak callout and accumulation total |
+| **Pressure Trend** | 24-hour barometric pressure line graph with trend direction and delta |
+| **Wind Forecast** | 24-hour wind speed line graph with gust overlay bars and peak callout |
 | **Clothing Suggestions** | Rule-based outfit recommendations from feels-like temp, rain, snow, UV, wind |
 | **Pet Safety** | Pavement temperature estimates, heat stress, cold exposure, storm anxiety alerts |
 
@@ -84,7 +88,7 @@ Install the APK from `app/build/outputs/apk/standard/debug/` or open in Android 
 | **Animated Radar Playback** | Play/pause, frame slider, past/forecast labels, timestamp overlay (native mode) |
 | **Radar Preview Card** | Live RainViewer tile + CartoDB dark basemap on the Today tab |
 | **Radar Tab** | Full-screen radar in the bottom nav with provider-aware rendering |
-| **Map Layer Selector** | 5 overlay layers: Radar, Temperature, Wind, Clouds, Precipitation |
+| **Map Layer Selector** | Overlay layers: Radar, Lightning, Satellite, Clouds |
 | **Lightning Strike Overlay** | Real-time global lightning data via Blitzortung WebSocket with GeoJSON rendering |
 | **Community Weather Reports** | Firebase Firestore-backed crowd-sourced condition reporting with rate limiting |
 
@@ -125,7 +129,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Icon Style** | Material Icons / Meteocons Animated (Lottie) / Custom Icon Packs |
 | **Theme Mode** | Static Dark / Weather Adaptive (accent colors shift: amber for sun, blue for rain, purple for storms) |
 | **Weather Summary** | Standard template / AI-Generated (Gemini Nano on-device) |
-| **Card Visibility** | Toggle each of 21 card types on/off |
+| **Card Visibility** | Toggle each of the 25 card types on/off |
 | **Card Ordering** | User-defined card order on the Today tab |
 | **Temperature** | Fahrenheit / Celsius |
 | **Wind Speed** | mph / km/h / m/s / knots |
@@ -147,11 +151,11 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 
 | Feature | Description |
 |---------|-------------|
-| **Compare Weather** | Side-by-side comparison of two saved locations (toolbar icon) |
+| **Compare Weather** | Side-by-side comparison with weather icons, visibility, cloud cover, and value highlighting |
 | **Location Search** | Open-Meteo geocoding with debounced search and error feedback |
 | **Multi-Location** | Room database with add/remove/auto-GPS saved locations |
 | **Drag-to-Reorder Locations** | Long-press drag handles to reorder saved locations with batch persistence |
-| **Location Temperature Preview** | Saved location list shows cached temperatures |
+| **Location Temperature Preview** | Saved location list shows cached temperatures with weather condition icons |
 | **Share as Text** | Formatted weather summary via system share sheet |
 | **Share as Image** | Rendered dark-themed weather card as PNG |
 | **Persistent Notification** | Always-on notification showing current conditions (toggleable) |
@@ -177,7 +181,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 │  │+ViewModel│ │+ViewModel │ │ + VM     │ │+ VM      │ │+ ViewModel   │  │
 │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └──────┬───────┘  │
 │       │            │            │            │               │           │
-│  21 Card Types via ReorderableCardColumn                                 │
+│  25 Card Types via LazyColumn items()                                    │
 │  WeatherSummary | NowcastCard | RadarPreview | HourlyStrip | TempGraph  │
 │  DailyForecast | UvIndexBar | WindCompass | AqiCard | PollenCard | ...   │
 │  ClothingSuggestion | PetSafety | DrivingAlert | HealthAlert | ...      │
@@ -315,7 +319,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 │   │   ├── SunMoonArc           # Sun position visualization
 │   │   ├── AqiGauge             # Circular AQI gauge + daily forecast
 │   │   ├── AnimatedWeatherIcon  # Material/Lottie/Custom switcher
-│   │   ├── ReorderableCardColumn# Dynamic card ordering engine
+│   │   ├── HumidityCard         # Humidity gauge with comfort
 │   │   ├── RadarLayerSelector   # Map overlay layer chips
 │   │   ├── AlertBanner          # Pulsing severity-colored alert bar
 │   │   └── ...                  # 14 more components
@@ -366,7 +370,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | Section | Options |
 |---------|---------|
 | **Display** | Radar provider, icon style (Material/Meteocons/Custom), theme mode, summary style (template/AI) |
-| **Cards** | Toggle visibility of each of 21 card types |
+| **Cards** | Toggle visibility of each of 25 card types |
 | **Units** | Temperature, wind, pressure, precipitation, visibility, time format |
 | **Notifications** | Alert notifications (severity threshold, multi-location, source preference), persistent weather, nowcasting, driving, health |
 | **Data Display** | Hourly range (48/72h), snowfall, CAPE, sunshine, golden hour, Beaufort colors, outdoor score, yesterday comparison |
@@ -380,7 +384,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 
 All cards can be independently shown/hidden and reordered:
 
-Weather Summary, Radar Preview, Rain Next Hour, Hourly Forecast, Temperature Graph, Daily Forecast, UV Index, Wind Compass, Air Quality, Pollen, Outdoor Activity Score, Snowfall, Severe Weather Potential, Golden Hour, Sunshine Duration, Driving Conditions, Health Alerts, Moon Phase, Today's Details, Clothing Suggestions, Pet Safety
+Weather Summary, Radar Preview, Rain Next Hour, Hourly Forecast, Temperature Graph, Daily Forecast, UV Index, Wind Compass, Air Quality, Pollen, Outdoor Activity Score, Snowfall, Severe Weather Potential, Golden Hour, Sunshine Duration, Driving Conditions, Health Alerts, Moon Phase, Humidity & Comfort, Precipitation Forecast, Pressure Trend, Wind Forecast, Today's Details, Clothing Suggestions, Pet Safety
 
 ---
 
@@ -417,7 +421,7 @@ Third-party icon packs are discoverable via:
 | Unit | JUnit 4 + MockK + Turbine + coroutines-test | WeatherFormatter (20), WeatherCode (12), Accessibility (12), AirQuality (14), Alerts (9), MainViewModel (10), LocationsViewModel (7) |
 | UI | Compose UI Test + JUnit4 + Hilt Testing | MainScreen (6), SettingsScreen (10), LocationsScreen (8) |
 
-**108 tests** across 10 test suites.
+**180+ tests** across 14 test suites.
 
 ---
 
@@ -435,7 +439,7 @@ Issues and PRs welcome. Please:
 
 - All raw API values are **metric** (Celsius, km/h, mm, hPa, meters). Unit conversion happens in `WeatherFormatter`.
 - Unit settings flow via `CompositionLocalProvider(LocalUnitSettings provides ...)`. Standalone screens (Radar, Compare) read from their ViewModel's `prefs.settings` flow.
-- Card rendering is driven by `CardType` enum + `ReorderableCardColumn`. Add new cards by extending `CardType` and adding a `when` branch.
+- Card rendering is driven by `CardType` enum + `LazyColumn items()` in MainScreen. Add new cards by extending `CardType` and adding a `when` branch in `RenderCard`.
 - Weather-adaptive theming reads from `LocalWeatherThemeState` CompositionLocal.
 - Multi-source forecasts use `WeatherSourceManager` with adapter pattern — add new sources by implementing `WeatherSourceAdapter`.
 - Alert sources use `AlertSourceAdapter` interface — auto-detected by country via Geocoder.
@@ -447,18 +451,25 @@ Issues and PRs welcome. Please:
 
 See [RESEARCH.md](RESEARCH.md) for the full feature research and phased implementation roadmap.
 
-**Implemented through v1.3.4:**
+**Implemented through v1.5.0:**
+- 25 dynamic card types with user-configurable order and visibility
+- 4 new data cards: Humidity, Precipitation Chart, Pressure Trend, Wind Forecast
+- Feels-like overlay on temperature graph
+- Temperature range bars in daily forecast
+- Alert expiry countdown
+- Collapsible settings sections
+- Pull-to-refresh on all tabs
+- Compare screen with weather icons and value highlighting
+- Outdoor score with factor breakdown bars
+- Location screen with weather condition icons
 - Native MapLibre animated radar with layer selector
 - Real-time lightning strike overlay (Blitzortung WebSocket)
 - Gemini Nano on-device weather summaries (standard flavor)
-- Per-widget location configuration
 - Live weather wallpaper with particle effects
 - Multi-source forecast fallback (6 providers)
 - International alert sources (NWS, MeteoAlarm, JMA, Environment Canada)
-- Custom icon pack support
 - Community weather reports (Firebase Firestore)
 - Tablet two-pane layout
-- Wear OS module scaffolding (complications + tile)
 
 ---
 
