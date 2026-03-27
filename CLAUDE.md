@@ -2,7 +2,7 @@
 
 **Version**: v1.5.0 (versionCode 61)
 **Package**: `com.sysadmindoc.nimbus`
-**Stack**: Kotlin 2.1.0, Jetpack Compose (BOM 2024.12), Hilt 2.53.1, Retrofit 2.11.0, Room 2.6.1, DataStore, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.10.0, Lottie 6.6.2, Coil 3.0.4, Firebase Firestore + Crashlytics
+**Stack**: Kotlin 2.1.0, Jetpack Compose (BOM 2024.12), Hilt 2.53.1, Retrofit 2.11.0, Room 2.6.1, DataStore, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.10.0, Lottie 6.6.2, Coil 3.0.4, Firebase Firestore
 **License**: LGPL-3.0
 
 ## Build
@@ -95,5 +95,5 @@
 - v1.3.4 — Bug fixes (unsafe !!, NaN guard, sourceManager safety), ProGuard hardening, accessibility contentDescriptions
 - v1.3.5 — Signing credentials to local.properties, particle battery fix, stable LazyList keys, Room migration safety
 - v1.3.6 — Coil ImageLoader config, WeatherSourceManager tests, battery-skip widget refresh
-- **v1.5.0** — 4 new cards (humidity/comfort, precipitation chart, pressure trend graph, wind forecast graph — 25 total), single-LazyColumn Today tab (perf: no nested scroll), pull-to-refresh Hourly/Daily tabs, HourlyTab feels-like+wind+respects forecast hours, DailyTab dynamic day count, consistent WeatherCard wrappers (AQI, Moon, Summary), SunArc/NowcastCard respect time format, deprecated icon fixes (CompareArrows, statusBar), yesterday comparison correct unit, DailyForecast snow icon, dead code removed
+- **v1.5.0** — 4 new cards (humidity, precip chart, pressure trend, wind forecast — 25 total). Single-LazyColumn Today tab (perf). Pull-to-refresh all tabs. Compare screen with icons+highlighting. Outdoor score factor breakdown. Location weather icons. Alert expiry countdown. Temp range bars. Feels-like graph overlay. Card reorder in Settings. Collapsible settings. Smart rain timeline. Sun countdown. Time-aware summary with UV/humidity warnings. Wind direction arrows. Dew point comfort colors. Data staleness coloring. 20+ crash/bug fixes (coordinate checks, widget safety, wallpaper overflow, manifest). Crashlytics removed. Dead code cleanup. README/CHANGELOG updated.
 - **v1.4.0** — Security hardening (allowBackup=false, network_security_config, debug-only logging, Firestore rules, safeValueOf), Crashlytics, offline detection + banner, reduced motion, tab crossfade, LazyColumn card perf, ImmutableList recomposition fix, shared RenderCard (~260 lines deduped), constructor injection for sourceManager, 6h cache eviction, OkHttp retry, parallel sub-fetches, user-friendly errors, widget staleness/accessibility/battery-skip, 74 new unit tests
