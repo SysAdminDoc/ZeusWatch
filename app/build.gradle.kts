@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -15,8 +16,8 @@ android {
         applicationId = "com.sysadmindoc.nimbus"
         minSdk = 26
         targetSdk = 35
-        versionCode = 50
-        versionName = "1.3.0"
+        versionCode = 54
+        versionName = "1.3.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -55,8 +56,7 @@ android {
         }
         create("freenet") {
             dimension = "distribution"
-            // F-Droid compatible: no proprietary deps
-            // TODO: Replace FusedLocationProvider with Android LocationManager
+            // F-Droid compatible: no proprietary deps, uses Android LocationManager
         }
     }
 
@@ -73,6 +73,10 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 
     packaging {
@@ -144,6 +148,9 @@ dependencies {
     // Location (standard flavor only)
     "standardImplementation"(libs.play.services.location)
 
+    // Gemini Nano on-device AI (standard flavor only — requires Google AI Core)
+    "standardImplementation"("com.google.ai.edge.aicore:aicore:0.0.1-exp02")
+
     // Animations
     implementation(libs.lottie.compose)
 
@@ -159,6 +166,12 @@ dependencies {
 
     // MapLibre (Phase 3)
     implementation(libs.maplibre)
+
+    // Firebase (Phase 3.8 — Community Reports)
+    // NOTE: Requires google-services.json in app/ directory.
+    // Configure at https://console.firebase.google.com and download the config file.
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-firestore-ktx")
 
     // Desugaring
     coreLibraryDesugaring(libs.desugar)

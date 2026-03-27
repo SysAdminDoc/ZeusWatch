@@ -50,7 +50,7 @@ fun HealthAlertCard(
             ) {
                 Icon(
                     Icons.Filled.HealthAndSafety,
-                    contentDescription = null,
+                    contentDescription = "${alert.type.label} health alert",
                     tint = alert.severity.color,
                     modifier = Modifier.size(20.dp),
                 )

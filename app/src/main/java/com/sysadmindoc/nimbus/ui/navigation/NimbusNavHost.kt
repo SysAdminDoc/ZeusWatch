@@ -153,13 +153,15 @@ fun ZeusWatchBottomNav(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    visibleTabs: List<BottomTab> = BottomTab.entries,
 ) {
     NavigationBar(
         modifier = modifier.fillMaxWidth(),
         containerColor = Color(0xFF0A0E1A),
         tonalElevation = 0.dp,
     ) {
-        BottomTab.entries.forEachIndexed { index, tab ->
+        visibleTabs.forEach { tab ->
+            val index = tab.ordinal
             NavigationBarItem(
                 selected = selectedTab == index,
                 onClick = { onTabSelected(index) },

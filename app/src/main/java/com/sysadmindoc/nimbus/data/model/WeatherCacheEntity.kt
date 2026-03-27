@@ -23,9 +23,18 @@ data class WeatherCacheEntity(
         fun makeKey(lat: Double, lon: Double): String =
             "%.2f,%.2f".format(lat, lon)
 
-        const val MAX_AGE_MS = 30 * 60 * 1000L // 30 minutes
+        const val DEFAULT_MAX_AGE_MS = 30 * 60 * 1000L // 30 minutes
+        const val MAX_AGE_MS = DEFAULT_MAX_AGE_MS // For backward compatibility
     }
 
     val isExpired: Boolean
-        get() = System.currentTimeMillis() - cachedAt > MAX_AGE_MS
+        get() = isExpired(DEFAULT_MAX_AGE_MS)
+
+    /** Check expiration against a configurable TTL. */
+    fun isExpired(maxAgeMs: Long): Boolean =
+        System.currentTimeMillis() - cachedAt > maxAgeMs
+
+    /** Age of cached data in minutes. */
+    val ageMinutes: Long
+        get() = (System.currentTimeMillis() - cachedAt) / 60_000
 }

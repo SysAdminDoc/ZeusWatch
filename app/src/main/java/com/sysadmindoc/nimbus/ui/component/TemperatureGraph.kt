@@ -50,6 +50,8 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 fun TemperatureGraph(
     hourly: List<HourlyConditions>,
     modifier: Modifier = Modifier,
+    normalHigh: Double? = null,
+    normalLow: Double? = null,
 ) {
     val s = LocalUnitSettings.current
     val data = remember(hourly) { hourly.take(24) }
@@ -133,6 +135,33 @@ fun TemperatureGraph(
                             )
                         }
                     }
+                }
+
+                // ── Historical normals band ─────────────────────────
+                if (normalHigh != null && normalLow != null && !normalHigh.isNaN() && !normalLow.isNaN() && normalHigh > normalLow) {
+                    val normHighY = paddingTop + graphHeight * (1f - (normalHigh.toFloat() - minTemp) / tempRange)
+                    val normLowY = paddingTop + graphHeight * (1f - (normalLow.toFloat() - minTemp) / tempRange)
+                    drawRect(
+                        color = Color(0x15FFFFFF),
+                        topLeft = Offset(0f, normHighY.coerceAtLeast(paddingTop)),
+                        size = androidx.compose.ui.geometry.Size(w, (normLowY - normHighY).coerceAtLeast(2f)),
+                    )
+                    // Dashed lines at normal high and low
+                    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f))
+                    drawLine(
+                        color = NimbusTextTertiary.copy(alpha = 0.3f),
+                        start = Offset(0f, normHighY),
+                        end = Offset(w, normHighY),
+                        strokeWidth = 1f,
+                        pathEffect = dashEffect,
+                    )
+                    drawLine(
+                        color = NimbusTextTertiary.copy(alpha = 0.3f),
+                        start = Offset(0f, normLowY),
+                        end = Offset(w, normLowY),
+                        strokeWidth = 1f,
+                        pathEffect = dashEffect,
+                    )
                 }
 
                 // ── Build curve paths ────────────────────────────────

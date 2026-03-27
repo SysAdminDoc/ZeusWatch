@@ -17,8 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
+import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
+import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
 import com.sysadmindoc.nimbus.util.WeatherFormatter
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Hero current conditions display matching TWC's layout:
@@ -28,6 +32,7 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 fun CurrentConditionsHeader(
     current: CurrentConditions,
     locationName: String,
+    yesterdayHigh: Double? = null,
     modifier: Modifier = Modifier,
 ) {
     val s = LocalUnitSettings.current
@@ -73,9 +78,16 @@ fun CurrentConditionsHeader(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Feels like
+        // Feels like + reason
+        val feelsLikeReason = WeatherFormatter.feelsLikeReason(
+            current.temperature, current.feelsLike, current.windSpeed, current.humidity,
+        )
+        val feelsLikeText = buildString {
+            append("Feels like ${WeatherFormatter.formatTemperature(current.feelsLike, s)}")
+            if (feelsLikeReason != null) append(" \u2022 $feelsLikeReason")
+        }
         Text(
-            text = "Feels like ${WeatherFormatter.formatTemperature(current.feelsLike, s)}",
+            text = feelsLikeText,
             style = MaterialTheme.typography.bodyMedium,
             color = NimbusTextSecondary,
         )
@@ -89,5 +101,21 @@ fun CurrentConditionsHeader(
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
             color = NimbusTextSecondary,
         )
+
+        // Yesterday comparison
+        if (yesterdayHigh != null) {
+            val diff = (current.dailyHigh - yesterdayHigh).roundToInt()
+            if (abs(diff) >= 2) {
+                val label = if (diff > 0) "${diff}\u00B0 warmer than yesterday"
+                    else "${abs(diff)}\u00B0 cooler than yesterday"
+                val color = if (diff > 0) NimbusWarning else NimbusRainBlue
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = color,
+                )
+            }
+        }
     }
 }

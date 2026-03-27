@@ -103,8 +103,8 @@ class AccessibilityHelperTest {
         val desc = AccessibilityHelper.windCompass(10.0, 180, 20.0)
         assertTrue(desc.contains("Wind compass"))
         assertTrue(desc.contains("from S"))
-        assertTrue(desc.contains("10 miles per hour"))
-        assertTrue(desc.contains("Gusts up to 20"))
+        assertTrue(desc.contains("6 mph"))
+        assertTrue(desc.contains("Gusts up to 12 mph"))
     }
 
     @Test

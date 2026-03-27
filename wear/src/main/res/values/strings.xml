@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ZeusWatch</string>
+    <string name="complication_label">Weather</string>
+    <string name="tile_label">ZeusWatch Weather</string>
+</resources>

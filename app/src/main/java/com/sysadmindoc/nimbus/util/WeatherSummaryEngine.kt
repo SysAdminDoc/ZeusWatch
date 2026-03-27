@@ -1,21 +1,28 @@
 package com.sysadmindoc.nimbus.util
 
+import android.util.Log
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.SummaryStyle
+
+private const val TAG = "WeatherSummaryEngine"
 
 /**
  * Template-based natural language weather summary generator.
  * Produces human-readable sentences like:
  * "Partly cloudy today with afternoon showers likely. Highs near 78."
+ *
+ * When [SummaryStyle.AI_GENERATED] is requested, delegates to [GeminiNanoSummaryEngine]
+ * with automatic fallback to the template engine if AI is unavailable.
  */
 object WeatherSummaryEngine {
 
     /**
-     * Generate a 1-2 sentence weather summary for the current conditions.
-     * Optionally includes yesterday comparison when [yesterdayHigh] is provided.
+     * Generate a template-based weather summary (synchronous).
+     * This is the default path and always works on every device.
      */
     fun generate(
         current: CurrentConditions,
@@ -116,6 +123,59 @@ object WeatherSummaryEngine {
             rainyHours >= 1 && maxProb > 60 -> "with a chance of showers"
             rainyHours >= 1 -> "with a slight chance of rain"
             else -> null
+        }
+    }
+
+    /**
+     * Generate a weather summary respecting the user's [SummaryStyle] preference.
+     *
+     * - [SummaryStyle.TEMPLATE]: returns the template summary synchronously (wrapped in suspend).
+     * - [SummaryStyle.AI_GENERATED]: attempts Gemini Nano on-device generation, falling back
+     *   to the template engine if the device doesn't support it or generation fails.
+     */
+    suspend fun generateWithStyle(
+        current: CurrentConditions,
+        today: DailyConditions?,
+        hourly: List<HourlyConditions>,
+        yesterdayHigh: Double? = null,
+        s: NimbusSettings = NimbusSettings(),
+        aiEngine: GeminiNanoSummaryEngine? = null,
+    ): String {
+        // Always compute the template fallback first (cheap)
+        val templateSummary = generate(current, today, hourly, yesterdayHigh, s)
+
+        if (s.summaryStyle != SummaryStyle.AI_GENERATED || aiEngine == null) {
+            return templateSummary
+        }
+
+        // Attempt AI generation with formatted display values
+        return try {
+            val currentTemp = WeatherFormatter.formatTemperatureUnit(current.temperature, s)
+            val condition = conditionPhrase(current.weatherCode, current.isDay)
+            val high = WeatherFormatter.formatTemperatureUnit(
+                today?.temperatureHigh ?: current.dailyHigh, s,
+            )
+            val low = WeatherFormatter.formatTemperatureUnit(
+                today?.temperatureLow ?: current.dailyLow, s,
+            )
+            val wind = WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s)
+            val precipChance = today?.precipitationProbability ?: 0
+
+            val aiSummary = aiEngine.generate(
+                currentTemp = currentTemp,
+                condition = condition,
+                high = high,
+                low = low,
+                humidity = current.humidity,
+                windSpeed = wind,
+                precipChance = precipChance,
+                uvIndex = current.uvIndex,
+            )
+
+            aiSummary ?: templateSummary
+        } catch (e: Exception) {
+            Log.w(TAG, "AI summary failed, using template fallback: ${e.message}")
+            templateSummary
         }
     }
 }
