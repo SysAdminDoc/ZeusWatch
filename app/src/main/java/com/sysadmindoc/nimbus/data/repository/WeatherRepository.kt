@@ -22,11 +22,13 @@ class WeatherRepository @Inject constructor(
     private val reverseGeocoder: ReverseGeocoder,
     private val weatherDao: WeatherDao,
     private val userPreferences: UserPreferences,
+    private val sourceManager: dagger.Lazy<WeatherSourceManager>,
 ) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true }
 
-    @Inject
-    lateinit var sourceManager: WeatherSourceManager
+    companion object {
+        private const val CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000L // 6 hours
+    }
 
     /**
      * Public entry point — delegates through [WeatherSourceManager] which handles
@@ -38,11 +40,7 @@ class WeatherRepository @Inject constructor(
         longitude: Double,
         locationName: String? = null,
     ): Result<WeatherData> {
-        return if (::sourceManager.isInitialized) {
-            sourceManager.getWeather(latitude, longitude, locationName)
-        } else {
-            getWeatherDirect(latitude, longitude, locationName)
-        }
+        return sourceManager.get().getWeather(latitude, longitude, locationName)
     }
 
     /**
@@ -74,6 +72,7 @@ class WeatherRepository @Inject constructor(
                         longitude = longitude,
                     )
                 )
+                weatherDao.deleteOlderThan(System.currentTimeMillis() - CACHE_MAX_AGE_MS)
             } catch (_: Exception) { /* Cache failure is non-fatal */ }
 
             Result.success(weatherData)
@@ -87,6 +86,8 @@ class WeatherRepository @Inject constructor(
             try {
                 val key = WeatherCacheEntity.makeKey(latitude, longitude)
                 val cached = weatherDao.getCached(key) ?: return@withContext null
+                // Return null if the cached entry is older than CACHE_MAX_AGE_MS
+                if (cached.isExpired(CACHE_MAX_AGE_MS)) return@withContext null
                 val response = json.decodeFromString(OpenMeteoResponse.serializer(), cached.responseJson)
                 val location = LocationInfo(
                     name = cached.locationName,
@@ -261,7 +262,7 @@ class WeatherRepository @Inject constructor(
         latitude: Double,
         longitude: Double,
     ): Result<List<MinutelyPrecipitation>> {
-        return sourceManager.getMinutelyPrecipitation(latitude, longitude)
+        return sourceManager.get().getMinutelyPrecipitation(latitude, longitude)
     }
 
     /**

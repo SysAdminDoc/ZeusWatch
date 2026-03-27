@@ -69,7 +69,7 @@ fun HourlyTab(
 
         // Group by day
         var lastDay: String? = null
-        itemsIndexed(hourly.take(48)) { index, hour ->
+        itemsIndexed(hourly.take(48), key = { _, hour -> hour.time }) { index, hour ->
             val dayLabel = hour.time.format(dayFormatter)
             if (dayLabel != lastDay) {
                 lastDay = dayLabel

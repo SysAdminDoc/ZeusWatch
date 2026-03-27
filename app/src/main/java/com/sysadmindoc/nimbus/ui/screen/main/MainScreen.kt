@@ -4,6 +4,8 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -34,7 +37,11 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -100,6 +107,7 @@ import com.sysadmindoc.nimbus.ui.component.ReorderableCardColumn
 import com.sysadmindoc.nimbus.ui.component.SunArc
 import com.sysadmindoc.nimbus.ui.component.WeatherSummaryCard
 import com.sysadmindoc.nimbus.data.repository.CardType
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.component.ShimmerLoadingSkeleton
 import com.sysadmindoc.nimbus.ui.component.TemperatureGraph
 import com.sysadmindoc.nimbus.ui.component.UvIndexBar
@@ -205,6 +213,15 @@ fun MainScreen(
                     state.error != null && state.weatherData == null -> ErrorState(
                         message = state.error!!,
                         onRetry = { viewModel.loadWeather() },
+                        icon = when {
+                            state.error!!.contains("permission", ignoreCase = true) ||
+                            state.error!!.contains("location", ignoreCase = true) -> Icons.Filled.LocationOff
+                            state.error!!.contains("network", ignoreCase = true) ||
+                            state.error!!.contains("connect", ignoreCase = true) ||
+                            state.error!!.contains("offline", ignoreCase = true) ||
+                            state.error!!.contains("internet", ignoreCase = true) -> Icons.Filled.CloudOff
+                            else -> Icons.Filled.ErrorOutline
+                        },
                     )
                     state.weatherData != null -> {
                         val data = state.weatherData!!
@@ -214,25 +231,27 @@ fun MainScreen(
                             Row(modifier = Modifier.fillMaxSize()) {
                                 // Left pane: Weather content (tab-switched)
                                 Box(modifier = Modifier.weight(0.55f)) {
-                                    when (selectedTab) {
-                                        BottomTab.TODAY.ordinal -> TodayContent(
-                                            state = state,
-                                            onRetry = { viewModel.loadWeather() },
-                                            onRefresh = { viewModel.refresh() },
-                                            onNavigateToSettings = onNavigateToSettings,
-                                            onNavigateToRadar = onNavigateToRadar,
-                                            onNavigateToLocations = onNavigateToLocations,
-                                            onNavigateToCompare = onNavigateToCompare,
-                                            onLocationSelected = { index -> viewModel.onPageChanged(index) },
-                                        )
-                                        BottomTab.HOURLY.ordinal -> HourlyTab(
-                                            hourly = data.hourly,
-                                            locationName = data.location.name,
-                                        )
-                                        BottomTab.DAILY.ordinal -> DailyTab(
-                                            daily = data.daily,
-                                            locationName = data.location.name,
-                                        )
+                                    Crossfade(targetState = selectedTab, animationSpec = tween(300), label = "tabletTab") { tab ->
+                                        when (tab) {
+                                            BottomTab.TODAY.ordinal -> TodayContent(
+                                                state = state,
+                                                onRetry = { viewModel.loadWeather() },
+                                                onRefresh = { viewModel.refresh() },
+                                                onNavigateToSettings = onNavigateToSettings,
+                                                onNavigateToRadar = onNavigateToRadar,
+                                                onNavigateToLocations = onNavigateToLocations,
+                                                onNavigateToCompare = onNavigateToCompare,
+                                                onLocationSelected = { index -> viewModel.onPageChanged(index) },
+                                            )
+                                            BottomTab.HOURLY.ordinal -> HourlyTab(
+                                                hourly = data.hourly,
+                                                locationName = data.location.name,
+                                            )
+                                            BottomTab.DAILY.ordinal -> DailyTab(
+                                                daily = data.daily,
+                                                locationName = data.location.name,
+                                            )
+                                        }
                                     }
                                 }
 
@@ -253,29 +272,31 @@ fun MainScreen(
                             }
                         } else {
                             // ── Phone layout with tab switching ─────────
-                            when (selectedTab) {
-                                BottomTab.TODAY.ordinal -> TodayContent(
-                                    state = state,
-                                    onRetry = { viewModel.loadWeather() },
-                                    onRefresh = { viewModel.refresh() },
-                                    onNavigateToSettings = onNavigateToSettings,
-                                    onNavigateToRadar = onNavigateToRadar,
-                                    onNavigateToLocations = onNavigateToLocations,
-                                    onNavigateToCompare = onNavigateToCompare,
-                                    onLocationSelected = { index -> viewModel.onPageChanged(index) },
-                                )
-                                BottomTab.HOURLY.ordinal -> HourlyTab(
-                                    hourly = data.hourly,
-                                    locationName = data.location.name,
-                                )
-                                BottomTab.DAILY.ordinal -> DailyTab(
-                                    daily = data.daily,
-                                    locationName = data.location.name,
-                                )
-                                BottomTab.RADAR.ordinal -> RadarTab(
-                                    latitude = data.location.latitude,
-                                    longitude = data.location.longitude,
-                                )
+                            Crossfade(targetState = selectedTab, animationSpec = tween(300), label = "phoneTab") { tab ->
+                                when (tab) {
+                                    BottomTab.TODAY.ordinal -> TodayContent(
+                                        state = state,
+                                        onRetry = { viewModel.loadWeather() },
+                                        onRefresh = { viewModel.refresh() },
+                                        onNavigateToSettings = onNavigateToSettings,
+                                        onNavigateToRadar = onNavigateToRadar,
+                                        onNavigateToLocations = onNavigateToLocations,
+                                        onNavigateToCompare = onNavigateToCompare,
+                                        onLocationSelected = { index -> viewModel.onPageChanged(index) },
+                                    )
+                                    BottomTab.HOURLY.ordinal -> HourlyTab(
+                                        hourly = data.hourly,
+                                        locationName = data.location.name,
+                                    )
+                                    BottomTab.DAILY.ordinal -> DailyTab(
+                                        daily = data.daily,
+                                        locationName = data.location.name,
+                                    )
+                                    BottomTab.RADAR.ordinal -> RadarTab(
+                                        latitude = data.location.latitude,
+                                        longitude = data.location.longitude,
+                                    )
+                                }
                             }
                         }
                     }
@@ -317,6 +338,15 @@ internal fun TodayContent(
         state.error != null && state.weatherData == null -> ErrorState(
             message = state.error!!,
             onRetry = onRetry,
+            icon = when {
+                state.error!!.contains("permission", ignoreCase = true) ||
+                state.error!!.contains("location", ignoreCase = true) -> Icons.Filled.LocationOff
+                state.error!!.contains("network", ignoreCase = true) ||
+                state.error!!.contains("connect", ignoreCase = true) ||
+                state.error!!.contains("offline", ignoreCase = true) ||
+                state.error!!.contains("internet", ignoreCase = true) -> Icons.Filled.CloudOff
+                else -> Icons.Filled.ErrorOutline
+            },
         )
         state.weatherData != null -> WeatherContent(
             data = state.weatherData!!,
@@ -461,6 +491,31 @@ private fun WeatherContent(
                 }
             }
 
+            // ── Offline Banner ──────────────────────────────────────
+            if (state.isOffline) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.errorContainer)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Filled.CloudOff,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "You're offline. Showing cached data.",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+
             // ── Location Selector Bar ────────────────────────────────
             if (savedLocations.size > 1) {
                 LocationSelectorBar(
@@ -504,12 +559,16 @@ private fun WeatherContent(
 
             // Precipitation chance + updated time row
             val todayPrecipChance = data.daily.firstOrNull()?.precipitationProbability ?: 0
-            val updatedAgo = remember(data.lastUpdated) {
-                val mins = Duration.between(data.lastUpdated, LocalDateTime.now()).toMinutes()
-                when {
-                    mins < 1 -> "Just now"
-                    mins < 60 -> "${mins}m ago"
-                    else -> "${mins / 60}h ago"
+            var updatedAgo by remember { mutableStateOf("") }
+            LaunchedEffect(data.lastUpdated) {
+                while (true) {
+                    val minutes = Duration.between(data.lastUpdated, LocalDateTime.now()).toMinutes()
+                    updatedAgo = when {
+                        minutes < 1 -> "Just now"
+                        minutes < 60 -> "${minutes}m ago"
+                        else -> "${minutes / 60}h ago"
+                    }
+                    kotlinx.coroutines.delay(60_000L)
                 }
             }
             Row(
@@ -558,227 +617,26 @@ private fun WeatherContent(
 
             Spacer(modifier = Modifier.height(layout.cardSpacing))
 
-            // ── Compact layout (phone) — dynamic card ordering ─────────
-            if (layout.isCompact) {
-                val cardPad = Modifier.padding(horizontal = layout.contentPadding)
+            // ── Dynamic card ordering (shared for compact and wide) ─────
+            val cardPad = Modifier.padding(horizontal = layout.contentPadding)
 
-                ReorderableCardColumn(
+            ReorderableCardColumn(
+                settings = settings,
+                contentPadding = layout.contentPadding,
+                cardSpacing = layout.cardSpacing,
+            ) { cardType ->
+                RenderCard(
+                    cardType = cardType,
+                    modifier = cardPad,
+                    state = state,
+                    data = data,
+                    airQuality = airQuality,
+                    astronomy = astronomy,
                     settings = settings,
-                    contentPadding = layout.contentPadding,
-                    cardSpacing = layout.cardSpacing,
-                ) { cardType ->
-                    when (cardType) {
-                        CardType.WEATHER_SUMMARY -> {
-                            if (state.weatherSummary.isNotBlank()) {
-                                WeatherSummaryCard(
-                                    summary = state.weatherSummary,
-                                    modifier = cardPad,
-                                )
-                            }
-                        }
-                        CardType.RADAR_PREVIEW -> RadarPreviewCard(
-                            onOpenRadar = { onNavigateToRadar(data.location.latitude, data.location.longitude) },
-                            modifier = cardPad,
-                            radarTileUrl = radarPreviewTileUrl,
-                            baseMapTileUrl = radarBaseMapUrl,
-                        )
-                        CardType.NOWCAST -> {
-                            if (state.nowcastData.isNotEmpty()) {
-                                NowcastCard(data = state.nowcastData, modifier = cardPad)
-                            }
-                        }
-                        CardType.HOURLY_FORECAST -> HourlyForecastStrip(
-                            hourly = data.hourly,
-                            modifier = cardPad,
-                        )
-                        CardType.TEMPERATURE_GRAPH -> {
-                            if (data.hourly.size >= 4) {
-                                val avgHigh = data.daily.takeIf { it.size > 2 }?.map { it.temperatureHigh }?.average()
-                                val avgLow = data.daily.takeIf { it.size > 2 }?.map { it.temperatureLow }?.average()
-                                TemperatureGraph(hourly = data.hourly, modifier = cardPad, normalHigh = avgHigh, normalLow = avgLow)
-                            }
-                        }
-                        CardType.DAILY_FORECAST -> DailyForecastList(
-                            daily = data.daily,
-                            modifier = cardPad,
-                        )
-                        CardType.UV_INDEX -> UvIndexBar(
-                            uvIndex = data.current.uvIndex,
-                            modifier = cardPad,
-                            hourly = data.hourly,
-                        )
-                        CardType.WIND_COMPASS -> WindCompass(
-                            windSpeed = data.current.windSpeed,
-                            windDirection = data.current.windDirection,
-                            windGusts = data.current.windGusts,
-                            modifier = cardPad,
-                        )
-                        CardType.AIR_QUALITY -> airQuality?.let { aq ->
-                            AqiCard(data = aq, modifier = cardPad)
-                        }
-                        CardType.POLLEN -> airQuality?.let { aq ->
-                            PollenCard(pollen = aq.pollen, modifier = cardPad)
-                        }
-                        CardType.OUTDOOR_SCORE -> {
-                            if (state.outdoorScore > 0) {
-                                OutdoorScoreCard(score = state.outdoorScore, modifier = cardPad)
-                            }
-                        }
-                        CardType.SNOWFALL -> SnowfallCard(
-                            snowfall = data.current.snowfall,
-                            snowDepth = data.current.snowDepth,
-                            modifier = cardPad,
-                        )
-                        CardType.SEVERE_WEATHER -> {
-                            data.current.cape?.let { cape ->
-                                SevereWeatherCard(cape = cape, modifier = cardPad)
-                            }
-                        }
-                        CardType.GOLDEN_HOUR -> {
-                            state.goldenHourTimes?.let { (morning, evening) ->
-                                GoldenHourCard(
-                                    morningGoldenEnd = morning,
-                                    eveningGoldenStart = evening,
-                                    sunrise = WeatherFormatter.formatTime(data.current.sunrise, settings),
-                                    sunset = WeatherFormatter.formatTime(data.current.sunset, settings),
-                                    modifier = cardPad,
-                                )
-                            }
-                        }
-                        CardType.SUNSHINE -> {
-                            data.daily.firstOrNull()?.sunshineDuration?.let { seconds ->
-                                SunshineDurationCard(
-                                    sunshineDurationSeconds = seconds,
-                                    modifier = cardPad,
-                                )
-                            }
-                        }
-                        CardType.DRIVING_CONDITIONS -> {
-                            if (state.drivingAlerts.isNotEmpty()) {
-                                DrivingAlertCard(alerts = state.drivingAlerts, modifier = cardPad)
-                            }
-                        }
-                        CardType.HEALTH_ALERTS -> {
-                            if (state.healthAlerts.isNotEmpty()) {
-                                HealthAlertCard(alerts = state.healthAlerts, modifier = cardPad)
-                            }
-                        }
-                        CardType.CLOTHING -> {
-                            if (state.clothingSuggestions.isNotEmpty()) {
-                                ClothingSuggestionCard(suggestions = state.clothingSuggestions, modifier = cardPad)
-                            }
-                        }
-                        CardType.PET_SAFETY -> {
-                            if (state.petSafetyAlerts.isNotEmpty()) {
-                                PetSafetyCard(alerts = state.petSafetyAlerts, modifier = cardPad)
-                            }
-                        }
-                        CardType.MOON_PHASE -> astronomy?.let { astro ->
-                            MoonPhaseCard(
-                                astronomy = astro,
-                                sunrise = data.current.sunrise,
-                                sunset = data.current.sunset,
-                                modifier = cardPad,
-                            )
-                        }
-                        CardType.DETAILS_GRID -> WeatherDetailsGrid(
-                            current = data.current,
-                            modifier = cardPad,
-                            hourly = data.hourly,
-                        )
-                    }
-                }
-            } else {
-                // ── Wide layout (tablet) — same dynamic card system ───
-                val cardPadWide = Modifier.padding(horizontal = layout.contentPadding)
-
-                ReorderableCardColumn(
-                    settings = settings,
-                    contentPadding = layout.contentPadding,
-                    cardSpacing = layout.cardSpacing,
-                ) { cardType ->
-                    when (cardType) {
-                        CardType.WEATHER_SUMMARY -> {
-                            if (state.weatherSummary.isNotBlank()) {
-                                WeatherSummaryCard(summary = state.weatherSummary, modifier = cardPadWide)
-                            }
-                        }
-                        CardType.RADAR_PREVIEW -> RadarPreviewCard(
-                            onOpenRadar = { onNavigateToRadar(data.location.latitude, data.location.longitude) },
-                            modifier = cardPadWide,
-                            radarTileUrl = radarPreviewTileUrl,
-                            baseMapTileUrl = radarBaseMapUrl,
-                        )
-                        CardType.NOWCAST -> {
-                            if (state.nowcastData.isNotEmpty()) {
-                                NowcastCard(data = state.nowcastData, modifier = cardPadWide)
-                            }
-                        }
-                        CardType.HOURLY_FORECAST -> HourlyForecastStrip(hourly = data.hourly, modifier = cardPadWide)
-                        CardType.TEMPERATURE_GRAPH -> {
-                            if (data.hourly.size >= 4) {
-                                val avgHigh = data.daily.takeIf { it.size > 2 }?.map { it.temperatureHigh }?.average()
-                                val avgLow = data.daily.takeIf { it.size > 2 }?.map { it.temperatureLow }?.average()
-                                TemperatureGraph(hourly = data.hourly, modifier = cardPadWide, normalHigh = avgHigh, normalLow = avgLow)
-                            }
-                        }
-                        CardType.DAILY_FORECAST -> DailyForecastList(daily = data.daily, modifier = cardPadWide)
-                        CardType.UV_INDEX -> UvIndexBar(uvIndex = data.current.uvIndex, modifier = cardPadWide, hourly = data.hourly)
-                        CardType.WIND_COMPASS -> WindCompass(
-                            windSpeed = data.current.windSpeed,
-                            windDirection = data.current.windDirection,
-                            windGusts = data.current.windGusts,
-                            modifier = cardPadWide,
-                        )
-                        CardType.AIR_QUALITY -> airQuality?.let { AqiCard(data = it, modifier = cardPadWide) }
-                        CardType.POLLEN -> airQuality?.let { PollenCard(pollen = it.pollen, modifier = cardPadWide) }
-                        CardType.OUTDOOR_SCORE -> {
-                            if (state.outdoorScore > 0) OutdoorScoreCard(score = state.outdoorScore, modifier = cardPadWide)
-                        }
-                        CardType.SNOWFALL -> SnowfallCard(
-                            snowfall = data.current.snowfall,
-                            snowDepth = data.current.snowDepth,
-                            modifier = cardPadWide,
-                        )
-                        CardType.SEVERE_WEATHER -> {
-                            data.current.cape?.let { cape ->
-                                SevereWeatherCard(cape = cape, modifier = cardPadWide)
-                            }
-                        }
-                        CardType.GOLDEN_HOUR -> {
-                            state.goldenHourTimes?.let { (morning, evening) ->
-                                GoldenHourCard(
-                                    morningGoldenEnd = morning,
-                                    eveningGoldenStart = evening,
-                                    sunrise = WeatherFormatter.formatTime(data.current.sunrise, settings),
-                                    sunset = WeatherFormatter.formatTime(data.current.sunset, settings),
-                                    modifier = cardPadWide,
-                                )
-                            }
-                        }
-                        CardType.SUNSHINE -> {
-                            data.daily.firstOrNull()?.sunshineDuration?.let { seconds ->
-                                SunshineDurationCard(sunshineDurationSeconds = seconds, modifier = cardPadWide)
-                            }
-                        }
-                        CardType.DRIVING_CONDITIONS -> {
-                            if (state.drivingAlerts.isNotEmpty()) DrivingAlertCard(alerts = state.drivingAlerts, modifier = cardPadWide)
-                        }
-                        CardType.HEALTH_ALERTS -> {
-                            if (state.healthAlerts.isNotEmpty()) HealthAlertCard(alerts = state.healthAlerts, modifier = cardPadWide)
-                        }
-                        CardType.CLOTHING -> {
-                            if (state.clothingSuggestions.isNotEmpty()) ClothingSuggestionCard(suggestions = state.clothingSuggestions, modifier = cardPadWide)
-                        }
-                        CardType.PET_SAFETY -> {
-                            if (state.petSafetyAlerts.isNotEmpty()) PetSafetyCard(alerts = state.petSafetyAlerts, modifier = cardPadWide)
-                        }
-                        CardType.MOON_PHASE -> astronomy?.let {
-                            MoonPhaseCard(astronomy = it, sunrise = data.current.sunrise, sunset = data.current.sunset, modifier = cardPadWide)
-                        }
-                        CardType.DETAILS_GRID -> WeatherDetailsGrid(current = data.current, modifier = cardPadWide, hourly = data.hourly)
-                    }
-                }
+                    radarPreviewTileUrl = radarPreviewTileUrl,
+                    radarBaseMapUrl = radarBaseMapUrl,
+                    onNavigateToRadar = onNavigateToRadar,
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -790,6 +648,140 @@ private fun WeatherContent(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
         }
+    }
+}
+
+// ── Shared Card Renderer ─────────────────────────────────────────────────
+
+@Composable
+private fun RenderCard(
+    cardType: CardType,
+    modifier: Modifier,
+    state: MainUiState,
+    data: WeatherData,
+    airQuality: AirQualityData?,
+    astronomy: AstronomyData?,
+    settings: NimbusSettings,
+    radarPreviewTileUrl: String?,
+    radarBaseMapUrl: String?,
+    onNavigateToRadar: (Double, Double) -> Unit,
+) {
+    when (cardType) {
+        CardType.WEATHER_SUMMARY -> {
+            if (state.weatherSummary.isNotBlank()) {
+                WeatherSummaryCard(summary = state.weatherSummary, modifier = modifier)
+            }
+        }
+        CardType.RADAR_PREVIEW -> RadarPreviewCard(
+            onOpenRadar = { onNavigateToRadar(data.location.latitude, data.location.longitude) },
+            modifier = modifier,
+            radarTileUrl = radarPreviewTileUrl,
+            baseMapTileUrl = radarBaseMapUrl,
+        )
+        CardType.NOWCAST -> {
+            if (state.nowcastData.isNotEmpty()) {
+                NowcastCard(data = state.nowcastData, modifier = modifier)
+            }
+        }
+        CardType.HOURLY_FORECAST -> HourlyForecastStrip(
+            hourly = data.hourly,
+            modifier = modifier,
+        )
+        CardType.TEMPERATURE_GRAPH -> {
+            if (data.hourly.size >= 4) {
+                val avgHigh = data.daily.takeIf { it.size > 2 }?.map { it.temperatureHigh }?.average()
+                val avgLow = data.daily.takeIf { it.size > 2 }?.map { it.temperatureLow }?.average()
+                TemperatureGraph(hourly = data.hourly, modifier = modifier, normalHigh = avgHigh, normalLow = avgLow)
+            }
+        }
+        CardType.DAILY_FORECAST -> DailyForecastList(
+            daily = data.daily,
+            modifier = modifier,
+        )
+        CardType.UV_INDEX -> UvIndexBar(
+            uvIndex = data.current.uvIndex,
+            modifier = modifier,
+            hourly = data.hourly,
+        )
+        CardType.WIND_COMPASS -> WindCompass(
+            windSpeed = data.current.windSpeed,
+            windDirection = data.current.windDirection,
+            windGusts = data.current.windGusts,
+            modifier = modifier,
+        )
+        CardType.AIR_QUALITY -> airQuality?.let { aq ->
+            AqiCard(data = aq, modifier = modifier)
+        }
+        CardType.POLLEN -> airQuality?.let { aq ->
+            PollenCard(pollen = aq.pollen, modifier = modifier)
+        }
+        CardType.OUTDOOR_SCORE -> {
+            if (state.outdoorScore > 0) {
+                OutdoorScoreCard(score = state.outdoorScore, modifier = modifier)
+            }
+        }
+        CardType.SNOWFALL -> SnowfallCard(
+            snowfall = data.current.snowfall,
+            snowDepth = data.current.snowDepth,
+            modifier = modifier,
+        )
+        CardType.SEVERE_WEATHER -> {
+            data.current.cape?.let { cape ->
+                SevereWeatherCard(cape = cape, modifier = modifier)
+            }
+        }
+        CardType.GOLDEN_HOUR -> {
+            state.goldenHourTimes?.let { (morning, evening) ->
+                GoldenHourCard(
+                    morningGoldenEnd = morning,
+                    eveningGoldenStart = evening,
+                    sunrise = WeatherFormatter.formatTime(data.current.sunrise, settings),
+                    sunset = WeatherFormatter.formatTime(data.current.sunset, settings),
+                    modifier = modifier,
+                )
+            }
+        }
+        CardType.SUNSHINE -> {
+            data.daily.firstOrNull()?.sunshineDuration?.let { seconds ->
+                SunshineDurationCard(
+                    sunshineDurationSeconds = seconds,
+                    modifier = modifier,
+                )
+            }
+        }
+        CardType.DRIVING_CONDITIONS -> {
+            if (state.drivingAlerts.isNotEmpty()) {
+                DrivingAlertCard(alerts = state.drivingAlerts, modifier = modifier)
+            }
+        }
+        CardType.HEALTH_ALERTS -> {
+            if (state.healthAlerts.isNotEmpty()) {
+                HealthAlertCard(alerts = state.healthAlerts, modifier = modifier)
+            }
+        }
+        CardType.CLOTHING -> {
+            if (state.clothingSuggestions.isNotEmpty()) {
+                ClothingSuggestionCard(suggestions = state.clothingSuggestions, modifier = modifier)
+            }
+        }
+        CardType.PET_SAFETY -> {
+            if (state.petSafetyAlerts.isNotEmpty()) {
+                PetSafetyCard(alerts = state.petSafetyAlerts, modifier = modifier)
+            }
+        }
+        CardType.MOON_PHASE -> astronomy?.let { astro ->
+            MoonPhaseCard(
+                astronomy = astro,
+                sunrise = data.current.sunrise,
+                sunset = data.current.sunset,
+                modifier = modifier,
+            )
+        }
+        CardType.DETAILS_GRID -> WeatherDetailsGrid(
+            current = data.current,
+            modifier = modifier,
+            hourly = data.hourly,
+        )
     }
 }
 
@@ -815,6 +807,7 @@ private fun LocationSelectorBar(
 
             Row(
                 modifier = Modifier
+                    .heightIn(min = 48.dp)
                     .clip(RoundedCornerShape(20.dp))
                     .background(bgColor)
                     .clickable { onSelected(index) }
@@ -847,7 +840,11 @@ private fun LocationSelectorBar(
 // ── Error State ──────────────────────────────────────────────────────────
 
 @Composable
-private fun ErrorState(message: String, onRetry: () -> Unit) {
+private fun ErrorState(
+    message: String,
+    onRetry: () -> Unit,
+    icon: ImageVector = Icons.Filled.ErrorOutline,
+) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -858,7 +855,7 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
             modifier = Modifier.padding(32.dp),
         ) {
             Icon(
-                imageVector = Icons.Filled.LocationOn,
+                imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
                 tint = NimbusTextSecondary,

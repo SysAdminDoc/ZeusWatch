@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.di
 
+import com.sysadmindoc.nimbus.BuildConfig
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.sysadmindoc.nimbus.data.api.AirQualityApi
 import com.sysadmindoc.nimbus.data.api.AlertSourceAdapter
@@ -20,9 +21,11 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.inject.Singleton
@@ -37,6 +40,23 @@ object NetworkModule {
         coerceInputValues = true
     }
 
+    /** Retry interceptor: retries on IOException up to 2 times with exponential backoff. */
+    private val retryInterceptor = Interceptor { chain ->
+        val request = chain.request()
+        var lastException: IOException? = null
+        for (attempt in 0..2) {
+            try {
+                return@Interceptor chain.proceed(request)
+            } catch (e: IOException) {
+                lastException = e
+                if (attempt < 2) {
+                    Thread.sleep((1000L * (1 shl attempt))) // 1s, 2s
+                }
+            }
+        }
+        throw lastException!!
+    }
+
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
@@ -44,14 +64,19 @@ object NetworkModule {
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
-            .addInterceptor(
-                HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BASIC
+            .addInterceptor(retryInterceptor)
+            .apply {
+                if (BuildConfig.DEBUG) {
+                    addInterceptor(
+                        HttpLoggingInterceptor().apply {
+                            level = HttpLoggingInterceptor.Level.BASIC
+                        }
+                    )
                 }
-            )
+            }
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
-                    .header("User-Agent", "ZeusWatch/1.3.0 (Android; Open-Source)")
+                    .header("User-Agent", "ZeusWatch/${BuildConfig.VERSION_NAME} (Android; Open-Source)")
                     .build()
                 chain.proceed(request)
             }
@@ -118,7 +143,7 @@ object NetworkModule {
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .header("Accept", "application/geo+json")
-                    .header("User-Agent", "ZeusWatch/1.3.0 (Android; Open-Source; contact@sysadmindoc.com)")
+                    .header("User-Agent", "ZeusWatch/${BuildConfig.VERSION_NAME} (Android; Open-Source; contact@sysadmindoc.com)")
                     .build()
                 chain.proceed(request)
             }

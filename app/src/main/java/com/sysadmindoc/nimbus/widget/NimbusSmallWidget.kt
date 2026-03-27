@@ -82,7 +82,7 @@ private fun SmallWidgetContent(data: WidgetWeatherData?) {
             // Weather icon
             Image(
                 provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
-                contentDescription = null,
+                contentDescription = WidgetUtils.weatherDescription(data.weatherCode, data.isDay),
                 modifier = GlanceModifier.size(32.dp),
             )
 
@@ -107,7 +107,7 @@ private fun SmallWidgetContent(data: WidgetWeatherData?) {
 
             Spacer(modifier = GlanceModifier.width(8.dp))
 
-            // High / Low
+            // High / Low + staleness
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = "H:${data.high.toInt()}\u00B0",
@@ -120,6 +120,18 @@ private fun SmallWidgetContent(data: WidgetWeatherData?) {
                         fontSize = 11.sp,
                     ),
                 )
+                if (data.updatedAt > 0L) {
+                    val mins = (System.currentTimeMillis() - data.updatedAt) / 60_000
+                    val agoText = when {
+                        mins < 5 -> "Now"
+                        mins < 60 -> "${mins}m"
+                        else -> "${mins / 60}h"
+                    }
+                    Text(
+                        text = agoText,
+                        style = TextStyle(color = WidgetTheme.textTertiary, fontSize = 9.sp),
+                    )
+                }
             }
         }
     }

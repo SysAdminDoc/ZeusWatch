@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.sysadmindoc.nimbus.data.location.LocationProvider
 import com.sysadmindoc.nimbus.data.model.*
 import com.sysadmindoc.nimbus.data.repository.*
+import com.sysadmindoc.nimbus.util.ConnectivityObserver
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,6 +30,7 @@ class MainViewModelTest {
     private lateinit var locationRepository: LocationRepository
     private lateinit var locationProvider: LocationProvider
     private lateinit var prefs: UserPreferences
+    private lateinit var connectivityObserver: ConnectivityObserver
 
     private lateinit var viewModel: MainViewModel
 
@@ -72,6 +74,8 @@ class MainViewModelTest {
         locationRepository = mockk()
         locationProvider = mockk()
         prefs = mockk(relaxed = true)
+        connectivityObserver = mockk()
+        every { connectivityObserver.isOnline } returns flowOf(true)
 
         every { prefs.settings } returns flowOf(NimbusSettings())
         every { prefs.lastLocation } returns flowOf(null)
@@ -118,6 +122,7 @@ class MainViewModelTest {
             locationProvider = locationProvider,
             prefs = prefs,
             geminiNanoSummaryEngine = mockk(relaxed = true),
+            connectivityObserver = connectivityObserver,
             savedStateHandle = savedState,
         )
     }

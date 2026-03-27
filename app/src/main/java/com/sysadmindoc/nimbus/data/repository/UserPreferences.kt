@@ -98,27 +98,27 @@ class UserPreferences @Inject constructor(
 
     val settings: Flow<NimbusSettings> = store.data.map { prefs ->
         NimbusSettings(
-            tempUnit = TempUnit.valueOf(prefs[Keys.TEMP_UNIT] ?: TempUnit.FAHRENHEIT.name),
-            windUnit = WindUnit.valueOf(prefs[Keys.WIND_UNIT] ?: WindUnit.MPH.name),
-            pressureUnit = PressureUnit.valueOf(prefs[Keys.PRESSURE_UNIT] ?: PressureUnit.INHG.name),
-            precipUnit = PrecipUnit.valueOf(prefs[Keys.PRECIP_UNIT] ?: PrecipUnit.INCHES.name),
-            visibilityUnit = VisibilityUnit.valueOf(prefs[Keys.VISIBILITY_UNIT] ?: VisibilityUnit.MILES.name),
-            timeFormat = TimeFormat.valueOf(prefs[Keys.TIME_FORMAT] ?: TimeFormat.TWELVE_HOUR.name),
+            tempUnit = safeValueOf<TempUnit>(prefs[Keys.TEMP_UNIT] ?: TempUnit.FAHRENHEIT.name) ?: TempUnit.FAHRENHEIT,
+            windUnit = safeValueOf<WindUnit>(prefs[Keys.WIND_UNIT] ?: WindUnit.MPH.name) ?: WindUnit.MPH,
+            pressureUnit = safeValueOf<PressureUnit>(prefs[Keys.PRESSURE_UNIT] ?: PressureUnit.INHG.name) ?: PressureUnit.INHG,
+            precipUnit = safeValueOf<PrecipUnit>(prefs[Keys.PRECIP_UNIT] ?: PrecipUnit.INCHES.name) ?: PrecipUnit.INCHES,
+            visibilityUnit = safeValueOf<VisibilityUnit>(prefs[Keys.VISIBILITY_UNIT] ?: VisibilityUnit.MILES.name) ?: VisibilityUnit.MILES,
+            timeFormat = safeValueOf<TimeFormat>(prefs[Keys.TIME_FORMAT] ?: TimeFormat.TWELVE_HOUR.name) ?: TimeFormat.TWELVE_HOUR,
             particlesEnabled = prefs[Keys.PARTICLES_ENABLED] ?: true,
             alertNotificationsEnabled = prefs[Keys.ALERT_NOTIFICATIONS_ENABLED] ?: true,
-            alertMinSeverity = AlertMinSeverity.valueOf(
+            alertMinSeverity = safeValueOf<AlertMinSeverity>(
                 prefs[Keys.ALERT_MIN_SEVERITY] ?: AlertMinSeverity.SEVERE.name
-            ),
+            ) ?: AlertMinSeverity.SEVERE,
             alertCheckAllLocations = prefs[Keys.ALERT_CHECK_ALL_LOCATIONS] ?: false,
-            alertSourcePref = AlertSourcePreference.valueOf(
+            alertSourcePref = safeValueOf<AlertSourcePreference>(
                 prefs[Keys.ALERT_SOURCE_PREF] ?: AlertSourcePreference.AUTO.name
-            ),
+            ) ?: AlertSourcePreference.AUTO,
             // Display
-            radarProvider = RadarProvider.valueOf(prefs[Keys.RADAR_PROVIDER] ?: RadarProvider.WINDY_WEBVIEW.name),
-            iconStyle = IconStyle.valueOf(prefs[Keys.ICON_STYLE] ?: IconStyle.MATERIAL.name),
+            radarProvider = safeValueOf<RadarProvider>(prefs[Keys.RADAR_PROVIDER] ?: RadarProvider.WINDY_WEBVIEW.name) ?: RadarProvider.WINDY_WEBVIEW,
+            iconStyle = safeValueOf<IconStyle>(prefs[Keys.ICON_STYLE] ?: IconStyle.MATERIAL.name) ?: IconStyle.MATERIAL,
             customIconPackId = prefs[Keys.CUSTOM_ICON_PACK_ID] ?: "",
-            themeMode = ThemeMode.valueOf(prefs[Keys.THEME_MODE] ?: ThemeMode.STATIC_DARK.name),
-            summaryStyle = SummaryStyle.valueOf(prefs[Keys.SUMMARY_STYLE] ?: SummaryStyle.TEMPLATE.name),
+            themeMode = safeValueOf<ThemeMode>(prefs[Keys.THEME_MODE] ?: ThemeMode.STATIC_DARK.name) ?: ThemeMode.STATIC_DARK,
+            summaryStyle = safeValueOf<SummaryStyle>(prefs[Keys.SUMMARY_STYLE] ?: SummaryStyle.TEMPLATE.name) ?: SummaryStyle.TEMPLATE,
             // Card config
             cardOrder = (prefs[Keys.CARD_ORDER] ?: "").let { orderStr ->
                 if (orderStr.isBlank()) DEFAULT_CARD_ORDER

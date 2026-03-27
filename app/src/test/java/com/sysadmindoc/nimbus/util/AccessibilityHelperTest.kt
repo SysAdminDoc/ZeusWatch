@@ -1,12 +1,16 @@
 package com.sysadmindoc.nimbus.util
 
 import com.sysadmindoc.nimbus.data.model.*
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.TempUnit
 import org.junit.Assert.*
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
 
 class AccessibilityHelperTest {
+
+    private val celsiusSettings = NimbusSettings(tempUnit = TempUnit.CELSIUS)
 
     // --- Test fixtures ---
 
@@ -87,13 +91,13 @@ class AccessibilityHelperTest {
 
     @Test
     fun `currentConditions includes location, temp, condition, feels like, high and low`() {
-        val desc = AccessibilityHelper.currentConditions(makeCurrent(), "Denver")
-        assertTrue(desc.contains("Denver"))
-        assertTrue(desc.contains("72 degrees"))
-        assertTrue(desc.contains("Clear"))
-        assertTrue(desc.contains("Feels like 70"))
-        assertTrue(desc.contains("High 80"))
-        assertTrue(desc.contains("low 60"))
+        val desc = AccessibilityHelper.currentConditions(makeCurrent(), "Denver", celsiusSettings)
+        assertTrue("Expected Denver in: $desc", desc.contains("Denver"))
+        assertTrue("Expected 72 in: $desc", desc.contains("72"))
+        assertTrue("Expected Clear in: $desc", desc.contains("Clear"))
+        assertTrue("Expected Feels like 70 in: $desc", desc.contains("Feels like 70"))
+        assertTrue("Expected High 80 in: $desc", desc.contains("High 80"))
+        assertTrue("Expected low 60 in: $desc", desc.contains("low 60"))
     }
 
     // --- Wind compass ---
@@ -124,10 +128,10 @@ class AccessibilityHelperTest {
     @Test
     fun `temperatureGraph includes range and current temp`() {
         val hourly = makeHourly(24, 65.0)
-        val desc = AccessibilityHelper.temperatureGraph(hourly)
-        assertTrue(desc.contains("24-hour"))
-        assertTrue(desc.contains("65"))
-        assertTrue(desc.contains("88")) // 65 + 23
+        val desc = AccessibilityHelper.temperatureGraph(hourly, celsiusSettings)
+        assertTrue("Expected 24-hour in: $desc", desc.contains("24-hour"))
+        assertTrue("Expected 65 in: $desc", desc.contains("65"))
+        assertTrue("Expected 88 in: $desc", desc.contains("88"))
     }
 
     @Test
@@ -183,10 +187,11 @@ class AccessibilityHelperTest {
 
     @Test
     fun `hourlyForecast includes temp range and precip`() {
-        val desc = AccessibilityHelper.hourlyForecast(makeHourly(12, 60.0))
-        assertTrue(desc.contains("12 hours"))
-        assertTrue(desc.contains("60 to 71"))
-        assertTrue(desc.contains("Precipitation chance up to 30"))
+        val desc = AccessibilityHelper.hourlyForecast(makeHourly(12, 60.0), celsiusSettings)
+        assertTrue("Expected 12 hours in: $desc", desc.contains("12 hours"))
+        assertTrue("Expected 60 in: $desc", desc.contains("60"))
+        assertTrue("Expected 71 in: $desc", desc.contains("71"))
+        assertTrue("Expected precip in: $desc", desc.contains("Precipitation chance up to 30"))
     }
 
     @Test

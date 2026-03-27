@@ -12,6 +12,7 @@ import com.sysadmindoc.nimbus.data.repository.RadarFrameSet
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.TimedTileUrl
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
+import com.sysadmindoc.nimbus.util.ConnectivityObserver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -19,6 +20,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.Stable
@@ -30,6 +34,7 @@ class RadarViewModel @Inject constructor(
     private val prefs: UserPreferences,
     private val blitzortungService: BlitzortungService,
     private val communityReportRepository: CommunityReportRepository,
+    connectivityObserver: ConnectivityObserver,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RadarUiState())
@@ -37,6 +42,11 @@ class RadarViewModel @Inject constructor(
 
     /** Settings flow for radar provider selection. */
     val settings = prefs.settings
+
+    /** Offline state derived from ConnectivityObserver. */
+    val isOffline: StateFlow<Boolean> = connectivityObserver.isOnline
+        .map { !it }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     /** Real-time lightning strikes from Blitzortung WebSocket. */
     val lightningStrikes: StateFlow<List<LightningStrike>> = blitzortungService.recentStrikes

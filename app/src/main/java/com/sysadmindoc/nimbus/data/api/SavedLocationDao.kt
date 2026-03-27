@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import kotlinx.coroutines.flow.Flow
@@ -44,4 +45,11 @@ interface SavedLocationDao {
 
     @Query("UPDATE saved_locations SET sortOrder = :order WHERE id = :id")
     suspend fun updateSortOrder(id: Long, order: Int)
+
+    @Transaction
+    suspend fun reorderAll(orderedIds: List<Long>) {
+        orderedIds.forEachIndexed { index, id ->
+            updateSortOrder(id, index)
+        }
+    }
 }

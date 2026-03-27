@@ -84,7 +84,7 @@ private fun LargeWidgetContent(data: WidgetWeatherData?) {
         ) {
             Image(
                 provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
-                contentDescription = null,
+                contentDescription = WidgetUtils.weatherDescription(data.weatherCode, data.isDay),
                 modifier = GlanceModifier.size(32.dp),
             )
             Spacer(modifier = GlanceModifier.width(8.dp))
@@ -166,7 +166,7 @@ private fun HourColumn(hour: WidgetHourly, modifier: GlanceModifier = GlanceModi
         )
         Image(
             provider = ImageProvider(weatherIconRes(hour.code, hour.isDay)),
-            contentDescription = null,
+            contentDescription = WidgetUtils.weatherDescription(hour.code, hour.isDay),
             modifier = GlanceModifier.size(16.dp),
         )
         Text("${hour.temp}\u00B0", style = WidgetTheme.tempSmall)
@@ -200,7 +200,7 @@ private fun DayRow(day: WidgetDaily) {
         // Icon
         Image(
             provider = ImageProvider(weatherIconRes(day.code, true)),
-            contentDescription = null,
+            contentDescription = WidgetUtils.weatherDescription(day.code),
             modifier = GlanceModifier.size(16.dp),
         )
 

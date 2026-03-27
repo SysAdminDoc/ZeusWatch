@@ -3,6 +3,7 @@ package com.sysadmindoc.nimbus.data.api
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,7 +42,8 @@ data class LightningStrike(
 class BlitzortungService @Inject constructor(
     private val okHttpClient: OkHttpClient,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var scopeJob = SupervisorJob()
+    private var scope = CoroutineScope(scopeJob + Dispatchers.IO)
 
     private val _strikes = MutableSharedFlow<LightningStrike>(extraBufferCapacity = 64)
     val strikes: SharedFlow<LightningStrike> = _strikes.asSharedFlow()
@@ -50,7 +52,7 @@ class BlitzortungService @Inject constructor(
     val recentStrikes: StateFlow<List<LightningStrike>> = _recentStrikes.asStateFlow()
 
     private var webSocket: WebSocket? = null
-    private var isConnected = false
+    @Volatile private var isConnected = false
 
     private val strikeBuffer = mutableListOf<LightningStrike>()
     private val bufferLock = Any()
@@ -59,6 +61,7 @@ class BlitzortungService @Inject constructor(
      * Open the WebSocket connection and begin receiving lightning data.
      * Safe to call multiple times — reconnects only if not already connected.
      */
+    @Synchronized
     fun connect() {
         if (isConnected) return
 
@@ -102,10 +105,15 @@ class BlitzortungService @Inject constructor(
     /**
      * Close the WebSocket connection and clear the strike buffer.
      */
+    @Synchronized
     fun disconnect() {
         webSocket?.close(NORMAL_CLOSURE, "User navigated away")
         webSocket = null
         isConnected = false
+        // Cancel outstanding coroutines and recreate the scope
+        scopeJob.cancel()
+        scopeJob = SupervisorJob()
+        scope = CoroutineScope(scopeJob + Dispatchers.IO)
         synchronized(bufferLock) {
             strikeBuffer.clear()
             _recentStrikes.value = emptyList()

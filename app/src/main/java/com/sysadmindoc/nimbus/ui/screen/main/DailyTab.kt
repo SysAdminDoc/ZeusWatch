@@ -69,7 +69,7 @@ fun DailyTab(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        itemsIndexed(daily) { index, day ->
+        itemsIndexed(daily, key = { _, day -> day.date }) { index, day ->
             DailyDetailRow(
                 day = day,
                 dayLabel = when {

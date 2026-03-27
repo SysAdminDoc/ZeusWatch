@@ -1,9 +1,13 @@
 package com.sysadmindoc.nimbus.data.model
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "saved_locations")
+@Entity(
+    tableName = "saved_locations",
+    indices = [Index("isCurrentLocation"), Index("sortOrder")]
+)
 data class SavedLocationEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,

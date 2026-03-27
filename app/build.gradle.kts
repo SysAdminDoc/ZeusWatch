@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +8,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 android {
@@ -16,18 +19,23 @@ android {
         applicationId = "com.sysadmindoc.nimbus"
         minSdk = 26
         targetSdk = 35
-        versionCode = 54
-        versionName = "1.3.4"
+        versionCode = 60
+        versionName = "1.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
         create("release") {
-            storeFile = file("../zeuswatch.jks")
-            storePassword = "zeuswatch123"
-            keyAlias = "zeuswatch"
-            keyPassword = "zeuswatch123"
+            val props = Properties()
+            val propsFile = rootProject.file("local.properties")
+            if (propsFile.exists()) {
+                propsFile.inputStream().use { stream -> props.load(stream) }
+            }
+            storeFile = file(props.getProperty("RELEASE_STORE_FILE", "../zeuswatch.jks"))
+            storePassword = props.getProperty("RELEASE_STORE_PASSWORD", "")
+            keyAlias = props.getProperty("RELEASE_KEY_ALIAS", "")
+            keyPassword = props.getProperty("RELEASE_KEY_PASSWORD", "")
         }
     }
 
@@ -164,6 +172,9 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.android)
 
+    // Immutable Collections
+    implementation(libs.kotlinx.collections.immutable)
+
     // MapLibre (Phase 3)
     implementation(libs.maplibre)
 
@@ -172,6 +183,7 @@ dependencies {
     // Configure at https://console.firebase.google.com and download the config file.
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-crashlytics-ktx")
 
     // Desugaring
     coreLibraryDesugaring(libs.desugar)

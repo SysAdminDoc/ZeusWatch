@@ -105,7 +105,7 @@ fun RadarPlaybackControls(
 
                     // Timestamp
                     currentTimestamp?.let { ts ->
-                        val dateFormat = SimpleDateFormat("h:mm a", Locale.US)
+                        val dateFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
                         Text(
                             text = dateFormat.format(Date(ts * 1000)),
                             style = MaterialTheme.typography.labelSmall,

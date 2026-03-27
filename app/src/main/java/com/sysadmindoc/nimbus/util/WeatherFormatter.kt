@@ -168,7 +168,7 @@ object WeatherFormatter {
             TimeFormat.TWELVE_HOUR -> "h a"
             TimeFormat.TWENTY_FOUR_HOUR -> "HH:mm"
         }
-        return time.format(DateTimeFormatter.ofPattern(pattern, Locale.US))
+        return time.format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
     }
 
     fun formatDayLabel(date: java.time.LocalDate): String {
@@ -177,7 +177,7 @@ object WeatherFormatter {
             today -> "Today"
             today.plusDays(1) -> "Tomorrow"
             else -> {
-                val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.US)
+                val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
                 val dayNum = date.dayOfMonth
                 "$dayName $dayNum"
             }
@@ -192,7 +192,7 @@ object WeatherFormatter {
                 TimeFormat.TWELVE_HOUR -> "h:mm a"
                 TimeFormat.TWENTY_FOUR_HOUR -> "HH:mm"
             }
-            dt.format(DateTimeFormatter.ofPattern(pattern, Locale.US))
+            dt.format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
         } catch (_: Exception) {
             "--"
         }

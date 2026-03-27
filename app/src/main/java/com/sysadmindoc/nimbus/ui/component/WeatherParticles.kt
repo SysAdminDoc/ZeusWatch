@@ -12,6 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -19,6 +22,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotate
 import com.sysadmindoc.nimbus.data.model.WeatherCode
+import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -34,6 +38,16 @@ fun WeatherParticles(
     isDay: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    // Stop animations when app is backgrounded to save battery
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val isResumed by remember {
+        derivedStateOf { lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) }
+    }
+    if (!isResumed) return
+
+    // Respect system reduced motion / animation off setting
+    if (isReducedMotionEnabled()) return
+
     val transition = rememberInfiniteTransition(label = "particles")
 
     val phase by transition.animateFloat(

@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default: deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Community weather reports
+    match /community_reports/{reportId} {
+      // Anyone can read reports (needed for map display)
+      allow read: if true;
+
+      // Create: validate required fields and enforce limits
+      allow create: if request.resource.data.keys().hasAll(['latitude', 'longitude', 'condition', 'deviceId', 'timestamp'])
+        && request.resource.data.latitude is number
+        && request.resource.data.latitude >= -90
+        && request.resource.data.latitude <= 90
+        && request.resource.data.longitude is number
+        && request.resource.data.longitude >= -180
+        && request.resource.data.longitude <= 180
+        && request.resource.data.condition is string
+        && request.resource.data.condition.size() <= 50
+        && (!request.resource.data.keys().hasAny(['note']) || request.resource.data.note.size() <= 100)
+        && request.resource.data.deviceId is string
+        && request.resource.data.deviceId.size() <= 128;
+
+      // Delete: only the device that created it
+      allow delete: if resource.data.deviceId == request.resource.data.deviceId;
+
+      // No updates allowed
+      allow update: if false;
+    }
+  }
+}

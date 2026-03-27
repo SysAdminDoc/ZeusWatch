@@ -25,7 +25,6 @@ object DatabaseModule {
             "nimbus.db"
         )
             .addMigrations(NimbusDatabase.MIGRATION_1_2)
-            .fallbackToDestructiveMigration()
             .build()
     }
 
