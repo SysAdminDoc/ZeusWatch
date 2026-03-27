@@ -105,6 +105,17 @@ private fun HourlyItem(hour: HourlyConditions) {
 
         Spacer(modifier = Modifier.height(6.dp))
 
+        // Wind direction arrow (when wind > 10 km/h)
+        val windSpeed = hour.windSpeed
+        val windDir = hour.windDirection
+        if (windSpeed != null && windSpeed > 10 && windDir != null) {
+            Text(
+                text = windArrow(windDir),
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextTertiary.copy(alpha = 0.6f),
+            )
+        }
+
         // Precipitation probability
         Text(
             text = "${hour.precipitationProbability}%",
@@ -123,6 +134,19 @@ private fun HourlyItem(hour: HourlyConditions) {
             )
         }
     }
+}
+
+/** Wind direction to arrow character. */
+private fun windArrow(degrees: Int): String = when {
+    degrees < 23 -> "\u2193"   // N wind blows south
+    degrees < 68 -> "\u2199"   // NE
+    degrees < 113 -> "\u2190"  // E
+    degrees < 158 -> "\u2196"  // SE
+    degrees < 203 -> "\u2191"  // S
+    degrees < 248 -> "\u2197"  // SW
+    degrees < 293 -> "\u2192"  // W
+    degrees < 338 -> "\u2198"  // NW
+    else -> "\u2193"           // N
 }
 
 /** Smart rain start/stop summary from next 12 hourly entries. */
