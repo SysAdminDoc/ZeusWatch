@@ -234,6 +234,7 @@ fun MainScreen(
 
         Scaffold(
             containerColor = NimbusNavyDark,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
                 ZeusWatchBottomNav(
                     selectedTab = selectedTab,
@@ -245,7 +246,7 @@ fun MainScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding),
+                    .padding(bottom = innerPadding.calculateBottomPadding()),
             ) {
                 when {
                     state.isLoading && state.weatherData == null -> ShimmerLoadingSkeleton()
@@ -662,18 +663,9 @@ private fun WeatherContent(
                 }
             }
 
-            // ── Hourly Forecast Strip ────────────────────────────────
-            item(key = "hourly_strip") {
+            // ── Spacer before cards ───────────────────────────────
+            item(key = "pre_cards_spacer") {
                 Spacer(modifier = Modifier.height(16.dp))
-                HourlyForecastStrip(
-                    hourly = data.hourly,
-                    modifier = Modifier
-                        .padding(horizontal = layout.contentPadding)
-                        .semantics {
-                            contentDescription = AccessibilityHelper.hourlyForecast(data.hourly)
-                        },
-                )
-                Spacer(modifier = Modifier.height(layout.cardSpacing))
             }
 
             // ── Dynamic Cards (truly lazy now) ───────────────────────
