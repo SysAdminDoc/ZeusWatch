@@ -182,7 +182,6 @@ dependencies {
     // Configure at https://console.firebase.google.com and download the config file.
     "standardImplementation"(platform("com.google.firebase:firebase-bom:33.7.0"))
     "standardImplementation"("com.google.firebase:firebase-firestore-ktx")
-    // Crashlytics removed
 
     // Desugaring
     coreLibraryDesugaring(libs.desugar)
