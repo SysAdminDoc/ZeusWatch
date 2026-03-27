@@ -196,11 +196,18 @@ private fun TempRangeBar(
 ) {
     val trackColor = Color.White.copy(alpha = 0.06f)
     val barShape = RoundedCornerShape(3.dp)
+    // Map gradient stops to this day's position in the weekly range
+    // so cold days get blue and hot days get orange
+    val midFraction = (startFraction + endFraction) / 2f
+    val barColor = when {
+        midFraction < 0.33f -> Color(0xFF64B5F6) // cool blue
+        midFraction < 0.66f -> Color(0xFF81C784) // green
+        else -> Color(0xFFFFB74D) // warm orange
+    }
     val gradientBrush = Brush.horizontalGradient(
         colors = listOf(
-            Color(0xFF64B5F6), // cool blue
-            Color(0xFF81C784), // green
-            Color(0xFFFFB74D), // warm orange
+            barColor.copy(alpha = 0.7f),
+            barColor,
         ),
     )
 

@@ -197,10 +197,10 @@ private fun DayRow(day: WidgetDaily) {
             modifier = GlanceModifier.width(48.dp),
         )
 
-        // Icon
+        // Icon (daily forecasts use daytime icons)
         Image(
             provider = ImageProvider(weatherIconRes(day.code, true)),
-            contentDescription = WidgetUtils.weatherDescription(day.code),
+            contentDescription = WidgetUtils.weatherDescription(day.code, true),
             modifier = GlanceModifier.size(16.dp),
         )
 
