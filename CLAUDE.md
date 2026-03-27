@@ -15,7 +15,7 @@
 ## Architecture
 
 ### Data Layer
-- **APIs**: Open-Meteo (forecast + AQ + pollen + minutely_15 nowcast + historical), NWS (alerts, US-only), RainViewer (radar tiles), Blitzortung (lightning WebSocket), Open-Meteo Geocoding
+- **APIs**: Open-Meteo (forecast + AQ + pollen + minutely_15 nowcast + historical), NWS (alerts, US-only), RainViewer (radar tiles + satellite), Blitzortung (lightning WebSocket), Open-Meteo Geocoding
 - **Room DB**: `NimbusDatabase` with `WeatherDao` (cache, auto-evicts >6h) + `SavedLocationDao` (indexed on `isCurrentLocation`, `sortOrder`)
 - **DataStore**: `UserPreferences` (30+ settings), `WidgetDataProvider` (per-widget keyed storage), `WidgetLocationPrefs`
 - **Repositories**: `WeatherRepository`, `LocationRepository`, `AlertRepository`, `RadarRepository`, `AirQualityRepository`, `CommunityReportRepository` (Firestore)
@@ -24,43 +24,41 @@
 - All raw API values are **metric**. Conversion in `WeatherFormatter`
 
 ### UI Layer
-- **Screens**: Main (Today/Hourly/Daily tabs + Radar tab), Radar (Windy WebView OR native MapLibre), Locations (drag-reorder), Settings (9 sections), Compare
+- **Screens**: Main (Today/Hourly/Daily tabs + Radar tab), Radar (Windy WebView OR native MapLibre), Locations (drag-reorder), Settings (10 collapsible sections), Compare
 - **Navigation**: `NimbusNavHost` with bottom nav (`BottomTab` enum)
 - **Theme**: `NimbusTheme` with weather-adaptive colors (sunny=amber, rainy=blue, snowy=ice, storm=purple) or static dark
-- **Dynamic Cards**: LazyColumn renders 25 card types in user-defined order
+- **Dynamic Cards**: Single `LazyColumn` renders 25 card types in user-defined order (reorderable in Settings)
 - **Tablet**: Two-pane layout at screenWidthDp >= 840 (weather 55% + radar 45%)
 - **Offline**: `ConnectivityObserver` with persistent banner, radar offline guard
 - **Reduced motion**: Respects system `ANIMATOR_DURATION_SCALE` for particles/shimmer
 - **Accessibility**: TalkBack liveRegion on alerts, mergeDescendants on cards, 48dp touch targets, screen reader semantics on Canvas elements
 
 ### Background
-- `AlertCheckWorker` — 15min severe weather checks
+- `AlertCheckWorker` — 15min severe weather checks with expiry filtering
 - `WidgetRefreshWorker` — periodic widget refresh, skips at battery <= 15%, per-widget location support
 - `WeatherNotificationHelper` — persistent current-weather notification
 - `WeatherWallpaperService` — live weather wallpaper with particle effects
 
 ### Build Variants
-- `standard`: Google Play Services (FusedLocationProvider)
+- `standard`: Google Play Services (FusedLocationProvider) + Gemini Nano AI
 - `freenet`: F-Droid compatible, no proprietary deps
 
 ## Key Components
 
+### Card Types (25)
+WEATHER_SUMMARY, RADAR_PREVIEW, NOWCAST, HOURLY_FORECAST, TEMPERATURE_GRAPH, DAILY_FORECAST, UV_INDEX, WIND_COMPASS, AIR_QUALITY, POLLEN, OUTDOOR_SCORE, SNOWFALL, SEVERE_WEATHER, GOLDEN_HOUR, SUNSHINE, DRIVING_CONDITIONS, HEALTH_ALERTS, MOON_PHASE, HUMIDITY, PRECIPITATION_CHART, PRESSURE_TREND, WIND_TREND, DETAILS_GRID, CLOTHING, PET_SAFETY
+
 ### Utility Files
-- `WeatherSummaryEngine.kt` — Template-based NLG + Gemini Nano AI summaries
+- `WeatherSummaryEngine.kt` — Template-based NLG with time-aware greetings, UV/humidity warnings + Gemini Nano AI fallback
+- `WeatherFormatter.kt` — 30+ unit-aware format methods, `convertedTemp()` for unit-correct comparisons
 - `ConnectivityObserver.kt` — Reactive network state via ConnectivityManager callback
-- `ReducedMotion.kt` — Composable checking ANIMATOR_DURATION_SCALE
-- `DrivingConditionEvaluator.kt` — Ice, fog, hydroplaning, wind, snow alerts
-- `HealthAlertEvaluator.kt` — Migraine, respiratory, arthritis triggers
-- `ClothingSuggestionEvaluator.kt` — Rule-based outfit recommendations
-- `PetSafetyEvaluator.kt` — Pavement temp, heat stress, cold exposure, storm anxiety
+- `DrivingConditionEvaluator.kt` / `HealthAlertEvaluator.kt` / `ClothingSuggestionEvaluator.kt` / `PetSafetyEvaluator.kt` — Smart alert engines
 - `MeteoconMapper.kt` — WMO code to Lottie filename mapping
-- `WidgetUtils.kt` — Shared widget contentDescription + staleness timestamp
 - `BlitzortungService.kt` — WebSocket for real-time lightning (thread-safe with @Volatile/@Synchronized)
 - `IconPackManager.kt` — Bundled + external APK icon pack discovery
 
 ### Settings Enums (in `UserPreferences.kt`)
 - `RadarProvider`, `IconStyle`, `ThemeMode`, `SummaryStyle`, `AlertMinSeverity`, `AlertSourcePreference`, `VisibilityUnit`
-- `CardType`: 25 types (WEATHER_SUMMARY, RADAR_PREVIEW, NOWCAST, HOURLY_FORECAST, TEMPERATURE_GRAPH, DAILY_FORECAST, UV_INDEX, WIND_COMPASS, AIR_QUALITY, POLLEN, OUTDOOR_SCORE, SNOWFALL, SEVERE_WEATHER, GOLDEN_HOUR, SUNSHINE, DRIVING_CONDITIONS, HEALTH_ALERTS, MOON_PHASE, HUMIDITY, PRECIPITATION_CHART, PRESSURE_TREND, WIND_TREND, DETAILS_GRID, CLOTHING, PET_SAFETY)
 - All enum deserialization uses `safeValueOf()` (no unsafe `valueOf()`)
 
 ## Key Architecture Patterns
@@ -73,16 +71,16 @@
 - Independent sub-fetches (alerts, AQI, astronomy, radar, nowcast) run in parallel via coroutines
 - Weather cache auto-evicts entries older than 6 hours
 - Today tab is a single `LazyColumn` — header items + card `items()` — truly lazy, no nested scroll
-- `ReorderableCardColumn` still available as utility but Today tab inlines card rendering directly
+- Card rendering driven by `CardType` enum + `RenderCard` when-block in MainScreen
 
 ## Gotchas
 - `LocalUnitSettings.current` cannot be called inside Canvas DrawScope (not @Composable) — extract before Canvas
 - `RadarMapView` requires `currentTileUrl`, `previousTileUrl`, and `overlayTileUrl` params
 - Gradle wrapper jar/scripts were missing from repo initially — generated with extracted Gradle dist
-- MSVC raw string limit doesn't apply here, but Wear OS module is scaffolding-only (`:wear` in settings.gradle.kts)
 - `BlitzortungService.isConnected` must be `@Volatile` with `@Synchronized` connect/disconnect to avoid race conditions
 - Unimplemented weather source adapters (OWM, Pirate Weather, Bright Sky) are hidden from Settings UI
-- `Icons.Filled.CompareArrows` is deprecated — migrated to `Icons.AutoMirrored.Filled.CompareArrows` in v1.5.0
+- Radar overlay layers use RainViewer satellite tiles (OWM tile API requires key, removed in v1.5.0)
+- `FOREGROUND_SERVICE_SPECIAL_USE` removed in v1.5.0 (no foregroundServiceType declared, crashes Android 14+)
 
 ## Release History
 - v1.0.0 — Initial release with share, widgets, accessibility, CI/CD, 108 unit tests
@@ -95,5 +93,5 @@
 - v1.3.4 — Bug fixes (unsafe !!, NaN guard, sourceManager safety), ProGuard hardening, accessibility contentDescriptions
 - v1.3.5 — Signing credentials to local.properties, particle battery fix, stable LazyList keys, Room migration safety
 - v1.3.6 — Coil ImageLoader config, WeatherSourceManager tests, battery-skip widget refresh
-- **v1.5.0** — 4 new cards (humidity, precip chart, pressure trend, wind forecast — 25 total). Single-LazyColumn Today tab (perf). Pull-to-refresh all tabs. Compare screen with icons+highlighting. Outdoor score factor breakdown. Location weather icons. Alert expiry countdown. Temp range bars. Feels-like graph overlay. Card reorder in Settings. Collapsible settings. Smart rain timeline. Sun countdown. Time-aware summary with UV/humidity warnings. Wind direction arrows. Dew point comfort colors. Data staleness coloring. 20+ crash/bug fixes (coordinate checks, widget safety, wallpaper overflow, manifest). Crashlytics removed. Dead code cleanup. README/CHANGELOG updated.
-- **v1.4.0** — Security hardening (allowBackup=false, network_security_config, debug-only logging, Firestore rules, safeValueOf), Crashlytics, offline detection + banner, reduced motion, tab crossfade, LazyColumn card perf, ImmutableList recomposition fix, shared RenderCard (~260 lines deduped), constructor injection for sourceManager, 6h cache eviction, OkHttp retry, parallel sub-fetches, user-friendly errors, widget staleness/accessibility/battery-skip, 74 new unit tests
+- v1.4.0 — Security hardening, offline detection, reduced motion, ImmutableList perf, OkHttp retry, parallel sub-fetches, 74 new unit tests
+- **v1.5.0** — 4 new cards (humidity, precip chart, pressure trend, wind forecast — 25 total). Single-LazyColumn Today tab perf. Pull-to-refresh all tabs. Compare screen icons + value highlighting. Outdoor score factor breakdown. Location weather icons. Alert expiry countdown. Daily temp range bars. Feels-like graph overlay. Card reorder in Settings. Collapsible settings. Smart rain timeline. Sunrise/sunset countdown. Time-aware summary with UV/humidity warnings. Wind direction arrows in hourly. Dew point comfort colors. Data staleness coloring. 22 crash/bug fixes. Crashlytics removed. Dead code cleanup. README/CHANGELOG/CLAUDE.md updated.
