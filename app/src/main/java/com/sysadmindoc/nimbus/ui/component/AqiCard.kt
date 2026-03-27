@@ -1,6 +1,5 @@
 package com.sysadmindoc.nimbus.ui.component
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -21,21 +19,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.data.model.AirQualityData
-import com.sysadmindoc.nimbus.data.model.AqiLevel
 import com.sysadmindoc.nimbus.data.model.HourlyAqi
-import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 
@@ -51,11 +41,11 @@ fun AqiCard(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // AQI arc gauge
+            // AQI arc gauge (uses gradient version from AqiGauge.kt)
             AqiGauge(
                 aqi = data.usAqi,
                 level = data.aqiLevel,
-                modifier = Modifier.size(100.dp),
+                size = 100.dp,
             )
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -138,59 +128,6 @@ fun AqiCard(
                     DailyAqiBar(day)
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun AqiGauge(aqi: Int, level: AqiLevel, modifier: Modifier = Modifier) {
-    val gaugeDescription = "Air quality index $aqi, ${level.label}"
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Canvas(modifier = Modifier.matchParentSize().semantics { contentDescription = gaugeDescription }) {
-            val strokeWidth = 10.dp.toPx()
-            val padding = strokeWidth / 2
-            val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
-            val topLeft = Offset(padding, padding)
-
-            // Background arc (220 degrees, starting from bottom-left)
-            drawArc(
-                color = Color(0xFF2A2A3E),
-                startAngle = 160f,
-                sweepAngle = 220f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-            )
-
-            // Filled arc (proportional to AQI, max 500)
-            val sweep = (aqi.coerceIn(0, 500) / 500f) * 220f
-            drawArc(
-                color = level.color,
-                startAngle = 160f,
-                sweepAngle = sweep,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-            )
-        }
-
-        // Center text
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                "$aqi",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 28.sp,
-                ),
-                color = level.color,
-            )
-            Text(
-                "US AQI",
-                style = MaterialTheme.typography.labelSmall,
-                color = NimbusTextTertiary,
-            )
         }
     }
 }
