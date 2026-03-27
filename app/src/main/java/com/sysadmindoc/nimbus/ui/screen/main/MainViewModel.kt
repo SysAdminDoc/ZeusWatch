@@ -20,6 +20,7 @@ import com.sysadmindoc.nimbus.util.HealthAlert
 import com.sysadmindoc.nimbus.util.HealthAlertEvaluator
 import com.sysadmindoc.nimbus.util.PetSafetyAlert
 import com.sysadmindoc.nimbus.util.PetSafetyEvaluator
+import com.sysadmindoc.nimbus.util.ConnectivityObserver
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import com.sysadmindoc.nimbus.util.GeminiNanoSummaryEngine
 import com.sysadmindoc.nimbus.util.WeatherSummaryEngine
@@ -40,9 +41,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.runtime.Stable
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import javax.inject.Inject
 import kotlin.math.ln
 import kotlin.math.tan
@@ -62,6 +67,7 @@ class MainViewModel @Inject constructor(
     private val locationProvider: LocationProvider,
     private val prefs: UserPreferences,
     private val geminiNanoSummaryEngine: GeminiNanoSummaryEngine,
+    private val connectivityObserver: ConnectivityObserver,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -79,6 +85,11 @@ class MainViewModel @Inject constructor(
         Log.d(TAG, "init: overrideLocationId=$overrideLocationId")
         observeSettings()
         observeSavedLocations()
+        viewModelScope.launch {
+            connectivityObserver.isOnline.collect { online ->
+                _uiState.update { it.copy(isOffline = !online) }
+            }
+        }
         if (overrideLocationId > 0L) {
             loadForLocation(overrideLocationId)
         } else {
@@ -106,7 +117,7 @@ class MainViewModel @Inject constructor(
     private fun observeSavedLocations() {
         viewModelScope.launch {
             locationRepository.savedLocations.collect { locations ->
-                _uiState.update { it.copy(savedLocations = locations) }
+                _uiState.update { it.copy(savedLocations = locations.toImmutableList()) }
             }
         }
     }
@@ -135,11 +146,17 @@ class MainViewModel @Inject constructor(
     fun loadWeather() {
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(isLoading = true, error = null) }
+                _uiState.update { it.copy(isLoading = true, error = null, needsLocationPermission = false) }
 
                 if (!locationProvider.hasLocationPermission) {
-                    tryLoadCached()
-                    _uiState.update { it.copy(isLoading = false, needsLocationPermission = true) }
+                    val hasCached = tryLoadCached()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            needsLocationPermission = true,
+                            error = if (!hasCached) "Location permission required to show weather." else null,
+                        )
+                    }
                     return@launch
                 }
 
@@ -165,7 +182,7 @@ class MainViewModel @Inject constructor(
                             it.copy(
                                 isLoading = false,
                                 isRefreshing = false,
-                                error = lastError?.message ?: "Unable to determine location.",
+                                error = if (lastError is Exception) userFriendlyError(lastError as Exception) else "Unable to determine location.",
                             )
                         }
                     }
@@ -174,7 +191,7 @@ class MainViewModel @Inject constructor(
                 Log.e(TAG, "loadWeather: error", e)
                 if (!tryLoadCached()) {
                     _uiState.update {
-                        it.copy(isLoading = false, isRefreshing = false, error = "Error: ${e.message}")
+                        it.copy(isLoading = false, isRefreshing = false, error = userFriendlyError(e))
                     }
                 }
             }
@@ -210,11 +227,14 @@ class MainViewModel @Inject constructor(
                             isCached = false,
                         )
                     }
-                    fetchAlerts(lat, lon)
-                    fetchAirQuality(lat, lon)
-                    fetchAstronomy(data)
-                    fetchRadarPreview(lat, lon)
-                    fetchNowcast(lat, lon)
+                    // Run independent sub-fetches in parallel
+                    coroutineScope {
+                        launch { fetchAlerts(lat, lon) }
+                        launch { fetchAirQuality(lat, lon) }
+                        launch { fetchAstronomy(data) }
+                        launch { fetchRadarPreview(lat, lon) }
+                        launch { fetchNowcast(lat, lon) }
+                    }
                     // Yesterday comparison must complete before derived data computation
                     fetchYesterdayComparison(lat, lon)
                     computeDerivedData(data)
@@ -223,7 +243,7 @@ class MainViewModel @Inject constructor(
                     Log.e(TAG, "fetchWeather: failed: ${e.message}")
                     if (!tryLoadCached()) {
                         _uiState.update {
-                            it.copy(isLoading = false, isRefreshing = false, error = e.message ?: "Failed to load weather")
+                            it.copy(isLoading = false, isRefreshing = false, error = userFriendlyError(e as Exception))
                         }
                     }
                 }
@@ -231,7 +251,7 @@ class MainViewModel @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "fetchWeather: unexpected", e)
             _uiState.update {
-                it.copy(isLoading = false, isRefreshing = false, error = "Network error: ${e.message}")
+                it.copy(isLoading = false, isRefreshing = false, error = userFriendlyError(e))
             }
         }
     }
@@ -239,11 +259,11 @@ class MainViewModel @Inject constructor(
     private suspend fun fetchAlerts(lat: Double, lon: Double) {
         try {
             weatherSourceManager.getAlerts(lat, lon).fold(
-                onSuccess = { _uiState.update { s -> s.copy(alerts = it) } },
-                onFailure = { _uiState.update { s -> s.copy(alerts = emptyList()) } }
+                onSuccess = { _uiState.update { s -> s.copy(alerts = it.toImmutableList()) } },
+                onFailure = { _uiState.update { s -> s.copy(alerts = persistentListOf()) } }
             )
         } catch (_: Exception) {
-            _uiState.update { it.copy(alerts = emptyList()) }
+            _uiState.update { it.copy(alerts = persistentListOf()) }
         }
     }
 
@@ -253,52 +273,51 @@ class MainViewModel @Inject constructor(
                 onSuccess = { _uiState.update { s -> s.copy(airQuality = it) } },
                 onFailure = { _uiState.update { s -> s.copy(airQuality = null) } }
             )
-        } catch (_: Exception) { _uiState.update { it.copy(airQuality = null) } }
+        } catch (e: Exception) {
+            Log.w(TAG, "fetchAirQuality failed", e)
+            _uiState.update { it.copy(airQuality = null) }
+        }
     }
 
     private fun fetchAstronomy(data: WeatherData) {
         try {
             val astronomy = airQualityRepository.getAstronomy(data.current.sunrise, data.current.sunset)
             _uiState.update { it.copy(astronomy = astronomy) }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w(TAG, "fetchAstronomy failed", e) }
     }
 
-    private fun fetchRadarPreview(lat: Double, lon: Double) {
-        viewModelScope.launch {
-            try {
-                radarRepository.getRadarFrames().fold(
-                    onSuccess = { frameSet ->
-                        val latestFrame = frameSet.past.lastOrNull() ?: return@fold
-                        val zoom = 6
-                        val (tileX, tileY) = latLonToTile(lat, lon, zoom)
-                        val radarUrl = latestFrame.tileUrl
-                            .replace("{z}", zoom.toString())
-                            .replace("{x}", tileX.toString())
-                            .replace("{y}", tileY.toString())
-                        val baseUrl = "https://basemaps.cartocdn.com/dark_all/$zoom/$tileX/$tileY@2x.png"
-                        _uiState.update {
-                            it.copy(radarPreviewTileUrl = radarUrl, radarBaseMapUrl = baseUrl)
-                        }
-                    },
-                    onFailure = { /* keep placeholder */ }
-                )
-            } catch (_: Exception) {}
-        }
+    private suspend fun fetchRadarPreview(lat: Double, lon: Double) {
+        try {
+            radarRepository.getRadarFrames().fold(
+                onSuccess = { frameSet ->
+                    val latestFrame = frameSet.past.lastOrNull() ?: return@fold
+                    val zoom = 6
+                    val (tileX, tileY) = latLonToTile(lat, lon, zoom)
+                    val radarUrl = latestFrame.tileUrl
+                        .replace("{z}", zoom.toString())
+                        .replace("{x}", tileX.toString())
+                        .replace("{y}", tileY.toString())
+                    val baseUrl = "https://basemaps.cartocdn.com/dark_all/$zoom/$tileX/$tileY@2x.png"
+                    _uiState.update {
+                        it.copy(radarPreviewTileUrl = radarUrl, radarBaseMapUrl = baseUrl)
+                    }
+                },
+                onFailure = { /* keep placeholder */ }
+            )
+        } catch (e: Exception) { Log.w(TAG, "fetchRadarPreview failed", e) }
     }
 
     // ── Nowcast (minutely precipitation) ────────────────────────────────
 
-    private fun fetchNowcast(lat: Double, lon: Double) {
-        viewModelScope.launch {
-            try {
-                repository.getMinutelyPrecipitation(lat, lon).fold(
-                    onSuccess = { data ->
-                        _uiState.update { it.copy(nowcastData = data) }
-                    },
-                    onFailure = { _uiState.update { it.copy(nowcastData = emptyList()) } }
-                )
-            } catch (_: Exception) {}
-        }
+    private suspend fun fetchNowcast(lat: Double, lon: Double) {
+        try {
+            repository.getMinutelyPrecipitation(lat, lon).fold(
+                onSuccess = { data ->
+                    _uiState.update { it.copy(nowcastData = data.toImmutableList()) }
+                },
+                onFailure = { Log.w(TAG, "fetchNowcast failed: ${it.message}") }
+            )
+        } catch (e: Exception) { Log.w(TAG, "fetchNowcast failed", e) }
     }
 
     // ── Yesterday Comparison ──────────────────────────────────────────────
@@ -307,11 +326,12 @@ class MainViewModel @Inject constructor(
         try {
             repository.getYesterdayWeather(lat, lon).fold(
                 onSuccess = { yesterday ->
-                    _uiState.update { it.copy(yesterdayHigh = yesterday?.temperatureHigh) }
+                    val high = yesterday?.temperatureHigh
+                    _uiState.update { it.copy(yesterdayHigh = high) }
                 },
-                onFailure = {}
+                onFailure = { Log.w(TAG, "fetchYesterdayComparison failed: ${it.message}") }
             )
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w(TAG, "fetchYesterdayComparison failed", e) }
     }
 
     // ── Derived Computations (summary, scores, alerts) ────────────────────
@@ -356,10 +376,10 @@ class MainViewModel @Inject constructor(
             it.copy(
                 weatherSummary = templateSummary,
                 outdoorScore = score,
-                drivingAlerts = drivingAlerts,
-                healthAlerts = healthAlerts,
-                clothingSuggestions = clothingSuggestions,
-                petSafetyAlerts = petSafetyAlerts,
+                drivingAlerts = drivingAlerts.toImmutableList(),
+                healthAlerts = healthAlerts.toImmutableList(),
+                clothingSuggestions = clothingSuggestions.toImmutableList(),
+                petSafetyAlerts = petSafetyAlerts.toImmutableList(),
                 goldenHourTimes = goldenHour,
             )
         }
@@ -383,6 +403,14 @@ class MainViewModel @Inject constructor(
         if (settings.persistentWeatherNotif) {
             com.sysadmindoc.nimbus.util.WeatherNotificationHelper.showOrUpdate(appContext, data, settings)
         }
+    }
+
+    private fun userFriendlyError(e: Exception): String = when (e) {
+        is java.net.UnknownHostException -> "No internet connection"
+        is java.net.SocketTimeoutException -> "Server took too long to respond"
+        is java.net.ConnectException -> "Could not connect to weather service"
+        is retrofit2.HttpException -> "Weather service error (${e.code()})"
+        else -> "Something went wrong. Please try again."
     }
 
     private fun latLonToTile(lat: Double, lon: Double, zoom: Int): Pair<Int, Int> {
@@ -427,7 +455,7 @@ class MainViewModel @Inject constructor(
                     else { useGpsLocation = false; fetchWeather(loc.latitude, loc.longitude) }
                 } else { useGpsLocation = true; loadWeather() }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = "Failed: ${e.message}") }
+                _uiState.update { it.copy(isLoading = false, error = userFriendlyError(e)) }
             }
         }
     }
@@ -453,22 +481,23 @@ data class MainUiState(
     val needsLocationPermission: Boolean = false,
     val particlesEnabled: Boolean = true,
     val isCached: Boolean = false,
-    val alerts: List<WeatherAlert> = emptyList(),
+    val alerts: ImmutableList<WeatherAlert> = persistentListOf(),
     val airQuality: AirQualityData? = null,
     val astronomy: AstronomyData? = null,
     val settings: NimbusSettings = NimbusSettings(),
-    val savedLocations: List<SavedLocationEntity> = emptyList(),
+    val savedLocations: ImmutableList<SavedLocationEntity> = persistentListOf(),
     val currentPage: Int = 0,
     val radarPreviewTileUrl: String? = null,
     val radarBaseMapUrl: String? = null,
     // Phase 1-2 additions
     val weatherSummary: String = "",
     val yesterdayHigh: Double? = null,
-    val nowcastData: List<MinutelyPrecipitation> = emptyList(),
+    val nowcastData: ImmutableList<MinutelyPrecipitation> = persistentListOf(),
     val outdoorScore: Int = 0,
-    val drivingAlerts: List<DrivingAlert> = emptyList(),
-    val healthAlerts: List<HealthAlert> = emptyList(),
-    val clothingSuggestions: List<ClothingSuggestion> = emptyList(),
-    val petSafetyAlerts: List<PetSafetyAlert> = emptyList(),
+    val drivingAlerts: ImmutableList<DrivingAlert> = persistentListOf(),
+    val healthAlerts: ImmutableList<HealthAlert> = persistentListOf(),
+    val clothingSuggestions: ImmutableList<ClothingSuggestion> = persistentListOf(),
+    val petSafetyAlerts: ImmutableList<PetSafetyAlert> = persistentListOf(),
     val goldenHourTimes: Pair<String, String>? = null,
+    val isOffline: Boolean = false,
 )

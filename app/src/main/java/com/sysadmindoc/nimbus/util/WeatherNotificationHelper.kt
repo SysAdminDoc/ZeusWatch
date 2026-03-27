@@ -13,6 +13,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.sysadmindoc.nimbus.MainActivity
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 
@@ -57,7 +58,7 @@ object WeatherNotificationHelper {
         val feelsLike = WeatherFormatter.formatTemperature(data.current.feelsLike, s)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_alert)
+            .setSmallIcon(weatherNotificationIcon(data.current.weatherCode, data.current.isDay))
             .setContentTitle("$temp $condition \u2022 ${data.location.name}")
             .setContentText("Feels like $feelsLike \u2022 H:$high L:$low")
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -75,6 +76,19 @@ object WeatherNotificationHelper {
 
     fun dismiss(context: Context) {
         NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
+    }
+
+    private fun weatherNotificationIcon(code: WeatherCode, isDay: Boolean): Int = when {
+        code.isStormy -> R.drawable.ic_w_thunderstorm
+        code.isSnowy -> R.drawable.ic_w_snow
+        code.isRainy -> R.drawable.ic_w_rain
+        code.isFoggy -> R.drawable.ic_w_fog
+        code == WeatherCode.OVERCAST -> R.drawable.ic_w_cloudy
+        code == WeatherCode.PARTLY_CLOUDY -> if (isDay) R.drawable.ic_w_partly_cloudy else R.drawable.ic_w_cloudy
+        code == WeatherCode.MAINLY_CLEAR -> if (isDay) R.drawable.ic_w_sunny else R.drawable.ic_w_night
+        code == WeatherCode.CLEAR_SKY -> if (isDay) R.drawable.ic_w_sunny else R.drawable.ic_w_night
+        !isDay -> R.drawable.ic_w_night
+        else -> R.drawable.ic_w_sunny
     }
 
     private fun hasNotificationPermission(context: Context): Boolean {

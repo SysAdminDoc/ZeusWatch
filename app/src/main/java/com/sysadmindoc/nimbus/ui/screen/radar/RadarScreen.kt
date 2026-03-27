@@ -5,11 +5,16 @@ import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.webkit.WebResourceRequest
 import android.webkit.WebViewClient
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -19,9 +24,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -66,6 +74,7 @@ fun RadarScreen(
     val strikes by viewModel.lightningStrikes.collectAsStateWithLifecycle()
     val nearbyReports by viewModel.nearbyReports.collectAsStateWithLifecycle()
     val reportSubmitState by viewModel.reportSubmitState.collectAsStateWithLifecycle()
+    val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
 
     var selectedLayer by remember { mutableStateOf(RadarLayer.RADAR) }
     var showReportSheet by remember { mutableStateOf(false) }
@@ -105,7 +114,24 @@ fun RadarScreen(
                 .fillMaxSize()
                 .background(NimbusNavyDark),
         ) {
-            when (settings.radarProvider) {
+            if (isOffline) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Filled.CloudOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = NimbusTextPrimary,
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "Radar requires an internet connection",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = NimbusTextPrimary,
+                        )
+                    }
+                }
+            } else when (settings.radarProvider) {
                 RadarProvider.NATIVE_MAPLIBRE -> {
                     val isRadarMode = selectedLayer == RadarLayer.RADAR
                     val isLightningMode = selectedLayer == RadarLayer.LIGHTNING
@@ -223,6 +249,7 @@ fun RadarTab(
     val strikes by viewModel.lightningStrikes.collectAsStateWithLifecycle()
     val nearbyReports by viewModel.nearbyReports.collectAsStateWithLifecycle()
     val reportSubmitState by viewModel.reportSubmitState.collectAsStateWithLifecycle()
+    val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
 
     var showReportSheet by remember { mutableStateOf(false) }
 
@@ -262,7 +289,24 @@ fun RadarTab(
             }
         }
 
-        when (settings.radarProvider) {
+        if (isOffline) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Filled.CloudOff,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = NimbusTextPrimary,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "Radar requires an internet connection",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = NimbusTextPrimary,
+                    )
+                }
+            }
+        } else when (settings.radarProvider) {
             RadarProvider.NATIVE_MAPLIBRE -> {
                 val isRadarMode = selectedLayer == RadarLayer.RADAR
                 val isLightningMode = selectedLayer == RadarLayer.LIGHTNING
@@ -366,7 +410,27 @@ private fun RadarWebView(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT,
                 )
-                webViewClient = WebViewClient()
+                webViewClient = object : WebViewClient() {
+                    private val allowedHosts = listOf(
+                        "embed.windy.com",
+                    )
+                    private val allowedPatterns = listOf(
+                        Regex(""".*\.openstreetmap\.org$"""),
+                        Regex(""".*\.cartocdn\.com$"""),
+                    )
+                    private fun isAllowedUrl(uri: Uri): Boolean {
+                        val host = uri.host ?: return false
+                        return host in allowedHosts ||
+                            allowedPatterns.any { it.matches(host) }
+                    }
+                    override fun shouldOverrideUrlLoading(
+                        view: WebView?,
+                        request: WebResourceRequest?,
+                    ): Boolean {
+                        val uri = request?.url ?: return false
+                        return !isAllowedUrl(uri)
+                    }
+                }
                 webChromeClient = WebChromeClient()
                 settings.apply {
                     javaScriptEnabled = true
@@ -376,7 +440,7 @@ private fun RadarWebView(
                     builtInZoomControls = true
                     displayZoomControls = false
                     cacheMode = WebSettings.LOAD_DEFAULT
-                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                 }
                 setBackgroundColor(android.graphics.Color.parseColor("#0F1526"))
                 webViewRef[0] = this

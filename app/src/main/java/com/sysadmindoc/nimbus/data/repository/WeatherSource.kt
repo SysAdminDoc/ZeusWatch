@@ -18,6 +18,7 @@ enum class WeatherSourceProvider(
     val displayName: String,
     val supportedTypes: Set<WeatherDataType>,
     val requiresApiKey: Boolean = false,
+    val implemented: Boolean = true,
 ) {
     OPEN_METEO(
         displayName = "Open-Meteo",
@@ -31,15 +32,18 @@ enum class WeatherSourceProvider(
         displayName = "OpenWeatherMap",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.ALERTS, WeatherDataType.AIR_QUALITY),
         requiresApiKey = true,
+        implemented = false,
     ),
     PIRATE_WEATHER(
         displayName = "Pirate Weather",
         supportedTypes = setOf(WeatherDataType.FORECAST),
         requiresApiKey = true,
+        implemented = false,
     ),
     BRIGHT_SKY(
         displayName = "Bright Sky (DWD)",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.ALERTS),
+        implemented = false,
     ),
     ENVIRONMENT_CANADA(
         displayName = "Environment Canada",
@@ -58,9 +62,9 @@ enum class WeatherSourceProvider(
     fun supports(type: WeatherDataType): Boolean = type in supportedTypes
 
     companion object {
-        /** Returns all providers that support a given data type. */
+        /** Returns all implemented providers that support a given data type. */
         fun forType(type: WeatherDataType): List<WeatherSourceProvider> =
-            entries.filter { it.supports(type) }
+            entries.filter { it.supports(type) && it.implemented }
     }
 }
 
