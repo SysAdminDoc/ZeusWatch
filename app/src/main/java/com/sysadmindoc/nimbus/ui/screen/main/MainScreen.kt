@@ -125,6 +125,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
 import java.time.Duration
 import java.time.LocalDateTime
 import com.sysadmindoc.nimbus.ui.theme.skyGradient
@@ -610,10 +611,17 @@ private fun WeatherContent(
                             color = NimbusTextTertiary,
                         )
                     }
+                    val stalenessColor = when {
+                        isCached -> NimbusTextTertiary.copy(alpha = 0.7f)
+                        updatedAgo == "Just now" || updatedAgo.endsWith("m ago") -> NimbusTextTertiary
+                        updatedAgo.contains("1h") -> NimbusWarning.copy(alpha = 0.7f)
+                        updatedAgo.contains("h") -> NimbusWarning
+                        else -> NimbusTextTertiary
+                    }
                     Text(
                         text = if (isCached) "Cached \u2022 $updatedAgo" else "Updated $updatedAgo",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isCached) NimbusTextTertiary.copy(alpha = 0.7f) else NimbusTextTertiary,
+                        color = stalenessColor,
                     )
                 }
             }

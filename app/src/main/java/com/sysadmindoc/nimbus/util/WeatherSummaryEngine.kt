@@ -33,8 +33,14 @@ object WeatherSummaryEngine {
     ): String {
         val parts = mutableListOf<String>()
 
-        // Opening: time-of-day + condition
-        val timeOfDay = if (current.isDay) "today" else "tonight"
+        // Opening: time-of-day greeting + condition
+        val hour = java.time.LocalTime.now().hour
+        val timeOfDay = when {
+            !current.isDay -> "tonight"
+            hour < 12 -> "this morning"
+            hour < 17 -> "this afternoon"
+            else -> "this evening"
+        }
         val conditionPhrase = conditionPhrase(current.weatherCode, current.isDay)
         parts.add("$conditionPhrase $timeOfDay")
 

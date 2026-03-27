@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
+import androidx.compose.ui.graphics.Color
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -63,11 +64,15 @@ fun WeatherDetailsGrid(
         Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
             left = DetailItem(Icons.Filled.Visibility, "Visibility", WeatherFormatter.formatVisibility(current.visibility, s)),
-            right = DetailItem(
-                Icons.Outlined.Thermostat, "Dew Point",
-                if (current.dewPoint != null) WeatherFormatter.formatDewPoint(current.dewPoint, s) else "--",
-                subtitle = current.dewPoint?.let { WeatherFormatter.dewPointComfort(it) },
-            ),
+            right = run {
+                val dewComfort = current.dewPoint?.let { WeatherFormatter.dewPointComfort(it) }
+                DetailItem(
+                    Icons.Outlined.Thermostat, "Dew Point",
+                    if (current.dewPoint != null) WeatherFormatter.formatDewPoint(current.dewPoint, s) else "--",
+                    subtitle = dewComfort,
+                    subtitleColor = current.dewPoint?.let { dewPointComfortColor(it) },
+                )
+            },
         )
         Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
@@ -95,6 +100,7 @@ private data class DetailItem(
     val label: String,
     val value: String,
     val subtitle: String? = null,
+    val subtitleColor: androidx.compose.ui.graphics.Color? = null,
 )
 
 @Composable
@@ -113,8 +119,16 @@ private fun DetailCell(item: DetailItem, modifier: Modifier = Modifier) {
             Text(text = item.label, style = MaterialTheme.typography.labelMedium, color = NimbusTextSecondary)
             Text(text = item.value, style = MaterialTheme.typography.titleSmall)
             if (item.subtitle != null) {
-                Text(text = item.subtitle, style = MaterialTheme.typography.labelSmall, color = NimbusTextTertiary)
+                Text(text = item.subtitle, style = MaterialTheme.typography.labelSmall, color = item.subtitleColor ?: NimbusTextTertiary)
             }
         }
     }
+}
+
+private fun dewPointComfortColor(dewPointCelsius: Double): Color = when {
+    dewPointCelsius < 10 -> Color(0xFF64B5F6)   // Dry — cool blue
+    dewPointCelsius < 16 -> Color(0xFF81C784)   // Comfortable — green
+    dewPointCelsius < 21 -> Color(0xFFFFB74D)   // Slightly humid — amber
+    dewPointCelsius < 24 -> Color(0xFFFF9800)   // Muggy — orange
+    else -> Color(0xFFEF5350)                    // Oppressive — red
 }
