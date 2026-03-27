@@ -102,9 +102,11 @@ fun CurrentConditionsHeader(
             color = NimbusTextSecondary,
         )
 
-        // Yesterday comparison
+        // Yesterday comparison (convert Celsius diff to user's unit scale)
         if (yesterdayHigh != null) {
-            val diff = (current.dailyHigh - yesterdayHigh).roundToInt()
+            val todayConverted = WeatherFormatter.convertedTemp(current.dailyHigh, s)
+            val yesterdayConverted = WeatherFormatter.convertedTemp(yesterdayHigh, s)
+            val diff = (todayConverted - yesterdayConverted).roundToInt()
             if (abs(diff) >= 2) {
                 val label = if (diff > 0) "${diff}\u00B0 warmer than yesterday"
                     else "${abs(diff)}\u00B0 cooler than yesterday"

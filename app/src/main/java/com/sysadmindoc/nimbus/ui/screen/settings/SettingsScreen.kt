@@ -420,39 +420,9 @@ internal fun SettingsContent(
         // ── Data Display ─────────────────────────────────────
         SettingSection("Data Display") {
             SettingToggle(
-                label = "Show Snowfall",
-                checked = settings.showSnowfall,
-                onCheckedChange = { onShowSnowfall(it) },
-            )
-            SettingToggle(
-                label = "Show Severe Weather Potential (CAPE)",
-                checked = settings.showCape,
-                onCheckedChange = { onShowCape(it) },
-            )
-            SettingToggle(
-                label = "Show Sunshine Duration",
-                checked = settings.showSunshineDuration,
-                onCheckedChange = { onShowSunshineDuration(it) },
-            )
-            SettingToggle(
-                label = "Show Golden Hour",
-                checked = settings.showGoldenHour,
-                onCheckedChange = { onShowGoldenHour(it) },
-            )
-            SettingToggle(
                 label = "Show Beaufort Wind Colors",
                 checked = settings.showBeaufortColors,
                 onCheckedChange = { onShowBeaufortColors(it) },
-            )
-            SettingToggle(
-                label = "Show Outdoor Activity Score",
-                checked = settings.showOutdoorScore,
-                onCheckedChange = { onShowOutdoorScore(it) },
-            )
-            SettingToggle(
-                label = "Show Yesterday Comparison",
-                checked = settings.showYesterdayComparison,
-                onCheckedChange = { onShowYesterdayComparison(it) },
             )
 
             // Hourly forecast range
