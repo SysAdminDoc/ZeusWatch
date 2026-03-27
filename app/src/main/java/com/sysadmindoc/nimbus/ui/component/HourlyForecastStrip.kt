@@ -31,6 +31,8 @@ fun HourlyForecastStrip(
     hourly: List<HourlyConditions>,
     modifier: Modifier = Modifier,
 ) {
+    val s = LocalUnitSettings.current
+
     WeatherCard(
         title = "Hourly Forecast",
         modifier = modifier,
@@ -39,7 +41,7 @@ fun HourlyForecastStrip(
             contentPadding = PaddingValues(horizontal = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            items(hourly.take(24), key = { it.time }) { hour ->
+            items(hourly.take(s.hourlyForecastHours), key = { it.time }) { hour ->
                 HourlyItem(hour)
             }
         }

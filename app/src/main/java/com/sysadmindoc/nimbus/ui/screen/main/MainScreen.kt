@@ -738,7 +738,15 @@ private fun RenderCard(
         }
         CardType.OUTDOOR_SCORE -> {
             if (state.outdoorScore > 0) {
-                OutdoorScoreCard(score = state.outdoorScore, modifier = modifier)
+                OutdoorScoreCard(
+                    score = state.outdoorScore,
+                    modifier = modifier,
+                    tempCelsius = data.current.temperature,
+                    humidity = data.current.humidity,
+                    windKmh = data.current.windSpeed,
+                    uvIndex = data.current.uvIndex,
+                    precipProbability = data.daily.firstOrNull()?.precipitationProbability ?: 0,
+                )
             }
         }
         CardType.SNOWFALL -> SnowfallCard(
