@@ -130,7 +130,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Theme Mode** | Static Dark / Weather Adaptive (accent colors shift: amber for sun, blue for rain, purple for storms) |
 | **Weather Summary** | Standard template / AI-Generated (Gemini Nano on-device) |
 | **Card Visibility** | Toggle each of the 25 card types on/off |
-| **Card Ordering** | User-defined card order on the Today tab |
+| **Card Ordering** | Reorderable card list in Settings with move up/down arrows |
 | **Temperature** | Fahrenheit / Celsius |
 | **Wind Speed** | mph / km/h / m/s / knots |
 | **Pressure** | inHg / hPa / mbar |
@@ -161,13 +161,21 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Persistent Notification** | Always-on notification showing current conditions (toggleable) |
 | **Proactive Caching** | Background worker pre-fetches weather for all saved locations |
 | **Offline Mode** | Room-cached weather data survives network failures with "Cached" indicator |
-| **Adaptive Layout** | Phone and tablet layouts via `ReorderableCardColumn`. Tablets get two-pane weather + radar (840dp+) |
+| **Adaptive Layout** | Phone and tablet layouts via LazyColumn. Tablets get two-pane weather + radar (840dp+) |
 | **Live Weather Wallpaper** | Rain, snow, thunderstorm, sun rays, cloud wisps, fog particle effects over existing wallpaper |
 | **Accessibility** | TalkBack descriptions on all Canvas components, alert icons, and merged card semantics with liveRegion alerts |
 | **App Shortcuts** | Long-press launcher: Search, Radar, Settings, Compare |
 | **Deep Links** | `zeuswatch://` URI scheme for locations, radar, settings, compare |
 | **F-Droid Ready** | `freenet` build flavor with no proprietary dependencies |
 | **Custom Icon Packs** | Discover bundled + external APK icon packs via intent |
+| **Alert Expiry Countdown** | Alert banners show "3h 15m left" / "Expired" |
+| **Sunrise/Sunset Countdown** | Astronomy card shows "Sunset in 2h 15m" with auto-switch |
+| **Smart Rain Timeline** | Hourly strip shows "Rain likely within 3h" or "Rain ending soon" |
+| **Data Staleness Indicator** | "Updated" text turns amber when data is 1+ hours old |
+| **Wind Direction Arrows** | Hourly forecast items show wind direction when > 10 km/h |
+| **Dew Point Comfort Colors** | Color-coded comfort level (blue=dry, green=comfortable, orange=muggy, red=oppressive) |
+| **Time-Aware Summary** | "Clear skies this morning" / "Overcast this afternoon" / "tonight" |
+| **Collapsible Settings** | All sections collapsible with tap-to-toggle, Data Sources + Advanced start collapsed |
 
 ---
 
@@ -370,7 +378,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | Section | Options |
 |---------|---------|
 | **Display** | Radar provider, icon style (Material/Meteocons/Custom), theme mode, summary style (template/AI) |
-| **Cards** | Toggle visibility of each of 25 card types |
+| **Cards** | Toggle + reorder each of 25 card types with move up/down arrows |
 | **Units** | Temperature, wind, pressure, precipitation, visibility, time format |
 | **Notifications** | Alert notifications (severity threshold, multi-location, source preference), persistent weather, nowcasting, driving, health |
 | **Data Display** | Hourly range (48/72h), snowfall, CAPE, sunshine, golden hour, Beaufort colors, outdoor score, yesterday comparison |
@@ -380,7 +388,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | **Advanced** | Cache TTL (15/30/60/120 min) |
 | **About** | Version, data source, license |
 
-### Card Types (21)
+### Card Types (25)
 
 All cards can be independently shown/hidden and reordered:
 
