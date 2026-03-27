@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -80,6 +81,7 @@ fun SettingsScreen(
         onSummaryStyle = { viewModel.setSummaryStyle(it) },
         // Card config
         onCardEnabled = { card, enabled -> viewModel.setCardEnabled(card, enabled) },
+        onCardOrder = { viewModel.setCardOrder(it) },
         // Notifications
         onPersistentWeatherNotif = { viewModel.setPersistentWeatherNotif(it) },
         onNowcastingAlerts = { viewModel.setNowcastingAlerts(it) },
@@ -136,6 +138,7 @@ internal fun SettingsContent(
     onSummaryStyle: (SummaryStyle) -> Unit = {},
     // Card config
     onCardEnabled: (CardType, Boolean) -> Unit = { _, _ -> },
+    onCardOrder: (List<CardType>) -> Unit = {},
     // Notifications
     onPersistentWeatherNotif: (Boolean) -> Unit = {},
     onNowcastingAlerts: (Boolean) -> Unit = {},
@@ -264,15 +267,76 @@ internal fun SettingsContent(
             }
         }
 
-        // ── Cards ────────────────────────────────────────────
+        // ── Cards (ordered, with move up/down) ─────────────
         SettingSection("Cards") {
-            CardType.entries.forEach { card ->
+            Text(
+                "Tap arrows to reorder. Toggle to show/hide.",
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextTertiary,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+            settings.cardOrder.forEachIndexed { index, card ->
                 val enabled = card.name !in settings.disabledCards
-                SettingToggle(
-                    label = card.label,
-                    checked = enabled,
-                    onCheckedChange = { onCardEnabled(card, it) },
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onCardEnabled(card, !enabled) }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Move up/down arrows
+                    Column {
+                        if (index > 0) {
+                            Text(
+                                "\u25B2",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = NimbusBlueAccent,
+                                modifier = Modifier
+                                    .clickable {
+                                        val newOrder = settings.cardOrder.toMutableList()
+                                        val item = newOrder.removeAt(index)
+                                        newOrder.add(index - 1, item)
+                                        onCardOrder(newOrder)
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                            )
+                        } else {
+                            Spacer(Modifier.padding(horizontal = 8.dp, vertical = 6.dp))
+                        }
+                        if (index < settings.cardOrder.lastIndex) {
+                            Text(
+                                "\u25BC",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = NimbusBlueAccent,
+                                modifier = Modifier
+                                    .clickable {
+                                        val newOrder = settings.cardOrder.toMutableList()
+                                        val item = newOrder.removeAt(index)
+                                        newOrder.add(index + 1, item)
+                                        onCardOrder(newOrder)
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = card.label,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (enabled) NimbusTextPrimary else NimbusTextTertiary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = enabled,
+                        onCheckedChange = { onCardEnabled(card, it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = NimbusBlueAccent,
+                            checkedTrackColor = NimbusBlueAccent.copy(alpha = 0.3f),
+                            uncheckedThumbColor = NimbusTextTertiary,
+                            uncheckedTrackColor = NimbusCardBg,
+                        ),
+                    )
+                }
             }
         }
 
