@@ -27,15 +27,16 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.CompareArrows
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -94,7 +95,10 @@ import com.sysadmindoc.nimbus.ui.component.LocalUnitSettings
 import com.sysadmindoc.nimbus.ui.component.DrivingAlertCard
 import com.sysadmindoc.nimbus.ui.component.GoldenHourCard
 import com.sysadmindoc.nimbus.ui.component.HealthAlertCard
+import com.sysadmindoc.nimbus.ui.component.HumidityCard
 import com.sysadmindoc.nimbus.ui.component.MoonPhaseCard
+import com.sysadmindoc.nimbus.ui.component.PrecipitationChartCard
+import com.sysadmindoc.nimbus.ui.component.PressureTrendCard
 import com.sysadmindoc.nimbus.ui.component.NowcastCard
 import com.sysadmindoc.nimbus.ui.component.OutdoorScoreCard
 import com.sysadmindoc.nimbus.ui.component.PetSafetyCard
@@ -103,9 +107,9 @@ import com.sysadmindoc.nimbus.ui.component.SevereWeatherCard
 import com.sysadmindoc.nimbus.ui.component.SnowfallCard
 import com.sysadmindoc.nimbus.ui.component.SunshineDurationCard
 import com.sysadmindoc.nimbus.ui.component.RadarPreviewCard
-import com.sysadmindoc.nimbus.ui.component.ReorderableCardColumn
 import com.sysadmindoc.nimbus.ui.component.SunArc
 import com.sysadmindoc.nimbus.ui.component.WeatherSummaryCard
+import com.sysadmindoc.nimbus.ui.component.WindTrendCard
 import com.sysadmindoc.nimbus.data.repository.CardType
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.component.ShimmerLoadingSkeleton
@@ -246,10 +250,14 @@ fun MainScreen(
                                             BottomTab.HOURLY.ordinal -> HourlyTab(
                                                 hourly = data.hourly,
                                                 locationName = data.location.name,
+                                                isRefreshing = state.isRefreshing,
+                                                onRefresh = { viewModel.refresh() },
                                             )
                                             BottomTab.DAILY.ordinal -> DailyTab(
                                                 daily = data.daily,
                                                 locationName = data.location.name,
+                                                isRefreshing = state.isRefreshing,
+                                                onRefresh = { viewModel.refresh() },
                                             )
                                         }
                                     }
@@ -308,18 +316,6 @@ fun MainScreen(
             }
         }
     }
-}
-
-@Composable
-internal fun MainScreenContent(
-    state: MainUiState,
-    onRetry: () -> Unit = {},
-    onRefresh: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
-    onNavigateToRadar: (Double, Double) -> Unit = { _, _ -> },
-    onNavigateToLocations: () -> Unit = {},
-) {
-    TodayContent(state, onRetry, onRefresh, onNavigateToSettings, onNavigateToRadar, onNavigateToLocations)
 }
 
 @Composable
@@ -414,216 +410,235 @@ private fun WeatherContent(
         )
     }
 
+    // Precompute enabled cards for LazyColumn
+    val enabledCards = remember(settings.cardOrder, settings.disabledCards) {
+        settings.cardOrder.filter { card -> card.name !in settings.disabledCards }
+    }
+
+    // Precipitation chance + updated time state
+    val todayPrecipChance = data.daily.firstOrNull()?.precipitationProbability ?: 0
+    var updatedAgo by remember { mutableStateOf("") }
+    LaunchedEffect(data.lastUpdated) {
+        while (true) {
+            val minutes = Duration.between(data.lastUpdated, LocalDateTime.now()).toMinutes()
+            updatedAgo = when {
+                minutes < 1 -> "Just now"
+                minutes < 60 -> "${minutes}m ago"
+                else -> "${minutes / 60}h ago"
+            }
+            kotlinx.coroutines.delay(60_000L)
+        }
+    }
+
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
         modifier = Modifier.fillMaxSize(),
     ) {
-        Column(
+        val cardPad = Modifier.padding(horizontal = layout.contentPadding)
+
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(bgBrush)
                 .windowInsetsPadding(WindowInsets.safeDrawing)
-                .verticalScroll(rememberScrollState())
                 .padding(bottom = 8.dp),
         ) {
-            // Toolbar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 4.dp, top = 4.dp, end = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                IconButton(onClick = onNavigateToLocations) {
-                    Icon(
-                        Icons.Filled.LocationOn,
-                        contentDescription = "Manage locations",
-                        tint = NimbusTextPrimary.copy(alpha = 0.6f),
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-                Row {
-                    Box {
-                        IconButton(onClick = { showShareMenu = true }) {
+            // ── Toolbar ─────────────────────────────────────────────
+            item(key = "toolbar") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp, top = 4.dp, end = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    IconButton(onClick = onNavigateToLocations) {
+                        Icon(
+                            Icons.Filled.LocationOn,
+                            contentDescription = "Manage locations",
+                            tint = NimbusTextPrimary.copy(alpha = 0.6f),
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Row {
+                        Box {
+                            IconButton(onClick = { showShareMenu = true }) {
+                                Icon(
+                                    Icons.Filled.Share,
+                                    contentDescription = "Share weather",
+                                    tint = NimbusTextPrimary.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showShareMenu,
+                                onDismissRequest = { showShareMenu = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Share as Text") },
+                                    onClick = {
+                                        showShareMenu = false
+                                        ShareWeatherHelper.share(context, data, airQuality, settings)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Share as Image") },
+                                    onClick = {
+                                        showShareMenu = false
+                                        ShareWeatherHelper.shareAsImage(context, data, settings)
+                                    },
+                                )
+                            }
+                        }
+                        IconButton(onClick = onNavigateToCompare) {
                             Icon(
-                                Icons.Filled.Share,
-                                contentDescription = "Share weather",
+                                Icons.AutoMirrored.Filled.CompareArrows,
+                                contentDescription = "Compare locations",
                                 tint = NimbusTextPrimary.copy(alpha = 0.6f),
                                 modifier = Modifier.size(22.dp),
                             )
                         }
-                        DropdownMenu(
-                            expanded = showShareMenu,
-                            onDismissRequest = { showShareMenu = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Share as Text") },
-                                onClick = {
-                                    showShareMenu = false
-                                    ShareWeatherHelper.share(context, data, airQuality, settings)
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Share as Image") },
-                                onClick = {
-                                    showShareMenu = false
-                                    ShareWeatherHelper.shareAsImage(context, data, settings)
-                                },
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(
+                                Icons.Filled.Settings,
+                                contentDescription = "Settings",
+                                tint = NimbusTextPrimary.copy(alpha = 0.6f),
+                                modifier = Modifier.size(22.dp),
                             )
                         }
-                    }
-                    IconButton(onClick = onNavigateToCompare) {
-                        Icon(
-                            Icons.Filled.CompareArrows,
-                            contentDescription = "Compare locations",
-                            tint = NimbusTextPrimary.copy(alpha = 0.6f),
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(
-                            Icons.Filled.Settings,
-                            contentDescription = "Settings",
-                            tint = NimbusTextPrimary.copy(alpha = 0.6f),
-                            modifier = Modifier.size(22.dp),
-                        )
                     }
                 }
             }
 
             // ── Offline Banner ──────────────────────────────────────
             if (state.isOffline) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.errorContainer)
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        Icons.Filled.CloudOff,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onErrorContainer,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "You're offline. Showing cached data.",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                    )
+                item(key = "offline_banner") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.errorContainer)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Filled.CloudOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "You're offline. Showing cached data.",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
                 }
             }
 
             // ── Location Selector Bar ────────────────────────────────
             if (savedLocations.size > 1) {
-                LocationSelectorBar(
-                    locations = savedLocations,
-                    currentIndex = currentPage,
-                    onSelected = onLocationSelected,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                )
+                item(key = "location_bar") {
+                    LocationSelectorBar(
+                        locations = savedLocations,
+                        currentIndex = currentPage,
+                        onSelected = onLocationSelected,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    )
+                }
             }
 
-            // Alert banner
+            // ── Alert Banner ─────────────────────────────────────────
             if (alerts.isNotEmpty()) {
-                AlertBanner(
-                    alerts = alerts,
-                    onAlertClick = { selectedAlert = it },
-                    modifier = Modifier.padding(horizontal = layout.contentPadding, vertical = 4.dp),
-                )
-            }
-
-            // Hero
-            Box(
-                modifier = Modifier.semantics {
-                    contentDescription = AccessibilityHelper.currentConditions(
-                        data.current, data.location.name,
-                    )
-                },
-            ) {
-                if (particlesEnabled) {
-                    WeatherParticles(
-                        weatherCode = data.current.weatherCode,
-                        isDay = data.current.isDay,
-                        modifier = Modifier.matchParentSize(),
+                item(key = "alert_banner") {
+                    AlertBanner(
+                        alerts = alerts,
+                        onAlertClick = { selectedAlert = it },
+                        modifier = Modifier.padding(horizontal = layout.contentPadding, vertical = 4.dp),
                     )
                 }
-                CurrentConditionsHeader(
-                    current = data.current,
-                    locationName = data.location.name,
-                    yesterdayHigh = state.yesterdayHigh,
-                )
             }
 
-            // Precipitation chance + updated time row
-            val todayPrecipChance = data.daily.firstOrNull()?.precipitationProbability ?: 0
-            var updatedAgo by remember { mutableStateOf("") }
-            LaunchedEffect(data.lastUpdated) {
-                while (true) {
-                    val minutes = Duration.between(data.lastUpdated, LocalDateTime.now()).toMinutes()
-                    updatedAgo = when {
-                        minutes < 1 -> "Just now"
-                        minutes < 60 -> "${minutes}m ago"
-                        else -> "${minutes / 60}h ago"
-                    }
-                    kotlinx.coroutines.delay(60_000L)
-                }
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = layout.contentPadding),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (todayPrecipChance > 0) {
-                    Icon(
-                        Icons.Filled.WaterDrop,
-                        contentDescription = null,
-                        tint = NimbusBlueAccent,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = "$todayPrecipChance% chance of rain",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NimbusBlueAccent,
-                    )
-                    Text(
-                        text = " \u2022 ",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NimbusTextTertiary,
-                    )
-                }
-                Text(
-                    text = if (isCached) "Cached \u2022 $updatedAgo" else "Updated $updatedAgo",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isCached) NimbusTextTertiary.copy(alpha = 0.7f) else NimbusTextTertiary,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            HourlyForecastStrip(
-                hourly = data.hourly,
-                modifier = Modifier
-                    .padding(horizontal = layout.contentPadding)
-                    .semantics {
-                        contentDescription = AccessibilityHelper.hourlyForecast(data.hourly)
+            // ── Hero ─────────────────────────────────────────────────
+            item(key = "hero") {
+                Box(
+                    modifier = Modifier.semantics {
+                        contentDescription = AccessibilityHelper.currentConditions(
+                            data.current, data.location.name,
+                        )
                     },
-            )
+                ) {
+                    if (particlesEnabled) {
+                        WeatherParticles(
+                            weatherCode = data.current.weatherCode,
+                            isDay = data.current.isDay,
+                            modifier = Modifier.matchParentSize(),
+                        )
+                    }
+                    CurrentConditionsHeader(
+                        current = data.current,
+                        locationName = data.location.name,
+                        yesterdayHigh = state.yesterdayHigh,
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(layout.cardSpacing))
+            // ── Precip chance + updated time ─────────────────────────
+            item(key = "updated_row") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = layout.contentPadding),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (todayPrecipChance > 0) {
+                        Icon(
+                            Icons.Filled.WaterDrop,
+                            contentDescription = null,
+                            tint = NimbusBlueAccent,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = "$todayPrecipChance% chance of rain",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NimbusBlueAccent,
+                        )
+                        Text(
+                            text = " \u2022 ",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NimbusTextTertiary,
+                        )
+                    }
+                    Text(
+                        text = if (isCached) "Cached \u2022 $updatedAgo" else "Updated $updatedAgo",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isCached) NimbusTextTertiary.copy(alpha = 0.7f) else NimbusTextTertiary,
+                    )
+                }
+            }
 
-            // ── Dynamic card ordering (shared for compact and wide) ─────
-            val cardPad = Modifier.padding(horizontal = layout.contentPadding)
+            // ── Hourly Forecast Strip ────────────────────────────────
+            item(key = "hourly_strip") {
+                Spacer(modifier = Modifier.height(16.dp))
+                HourlyForecastStrip(
+                    hourly = data.hourly,
+                    modifier = Modifier
+                        .padding(horizontal = layout.contentPadding)
+                        .semantics {
+                            contentDescription = AccessibilityHelper.hourlyForecast(data.hourly)
+                        },
+                )
+                Spacer(modifier = Modifier.height(layout.cardSpacing))
+            }
 
-            ReorderableCardColumn(
-                settings = settings,
-                contentPadding = layout.contentPadding,
-                cardSpacing = layout.cardSpacing,
+            // ── Dynamic Cards (truly lazy now) ───────────────────────
+            items(
+                items = enabledCards,
+                key = { it.name },
+                contentType = { it.name },
             ) { cardType ->
                 RenderCard(
                     cardType = cardType,
@@ -637,16 +652,22 @@ private fun WeatherContent(
                     radarBaseMapUrl = radarBaseMapUrl,
                     onNavigateToRadar = onNavigateToRadar,
                 )
+                Spacer(modifier = Modifier.height(layout.cardSpacing))
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "ZeusWatch v${com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME} \u2022 Data: Open-Meteo.com",
-                style = MaterialTheme.typography.labelSmall,
-                color = NimbusTextSecondary,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
+            // ── Footer ──────────────────────────────────────────────
+            item(key = "footer") {
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "ZeusWatch v${com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME} \u2022 Data: Open-Meteo.com",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NimbusTextSecondary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
         }
     }
 }
@@ -777,6 +798,24 @@ private fun RenderCard(
                 modifier = modifier,
             )
         }
+        CardType.HUMIDITY -> HumidityCard(
+            humidity = data.current.humidity,
+            dewPoint = data.current.dewPoint,
+            modifier = modifier,
+        )
+        CardType.PRECIPITATION_CHART -> PrecipitationChartCard(
+            hourly = data.hourly,
+            modifier = modifier,
+        )
+        CardType.PRESSURE_TREND -> PressureTrendCard(
+            hourly = data.hourly,
+            currentPressure = data.current.pressure,
+            modifier = modifier,
+        )
+        CardType.WIND_TREND -> WindTrendCard(
+            hourly = data.hourly,
+            modifier = modifier,
+        )
         CardType.DETAILS_GRID -> WeatherDetailsGrid(
             current = data.current,
             modifier = modifier,

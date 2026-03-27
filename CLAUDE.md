@@ -1,6 +1,6 @@
 # ZeusWatch (Nimbus) - Android Weather App
 
-**Version**: v1.4.0 (versionCode 60)
+**Version**: v1.5.0 (versionCode 61)
 **Package**: `com.sysadmindoc.nimbus`
 **Stack**: Kotlin 2.1.0, Jetpack Compose (BOM 2024.12), Hilt 2.53.1, Retrofit 2.11.0, Room 2.6.1, DataStore, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.10.0, Lottie 6.6.2, Coil 3.0.4, Firebase Firestore + Crashlytics
 **License**: LGPL-3.0
@@ -27,7 +27,7 @@
 - **Screens**: Main (Today/Hourly/Daily tabs + Radar tab), Radar (Windy WebView OR native MapLibre), Locations (drag-reorder), Settings (9 sections), Compare
 - **Navigation**: `NimbusNavHost` with bottom nav (`BottomTab` enum)
 - **Theme**: `NimbusTheme` with weather-adaptive colors (sunny=amber, rainy=blue, snowy=ice, storm=purple) or static dark
-- **Dynamic Cards**: `ReorderableCardColumn` (LazyColumn) renders 21 card types in user-defined order
+- **Dynamic Cards**: LazyColumn renders 25 card types in user-defined order
 - **Tablet**: Two-pane layout at screenWidthDp >= 840 (weather 55% + radar 45%)
 - **Offline**: `ConnectivityObserver` with persistent banner, radar offline guard
 - **Reduced motion**: Respects system `ANIMATOR_DURATION_SCALE` for particles/shimmer
@@ -60,7 +60,7 @@
 
 ### Settings Enums (in `UserPreferences.kt`)
 - `RadarProvider`, `IconStyle`, `ThemeMode`, `SummaryStyle`, `AlertMinSeverity`, `AlertSourcePreference`, `VisibilityUnit`
-- `CardType`: 21 types (WEATHER_SUMMARY, RADAR_PREVIEW, NOWCAST, HOURLY_FORECAST, TEMPERATURE_GRAPH, DAILY_FORECAST, UV_INDEX, WIND_COMPASS, AIR_QUALITY, POLLEN, OUTDOOR_SCORE, SNOWFALL, SEVERE_WEATHER, GOLDEN_HOUR, SUNSHINE, DRIVING_CONDITIONS, HEALTH_ALERTS, MOON_PHASE, DETAILS_GRID, CLOTHING, PET_SAFETY)
+- `CardType`: 25 types (WEATHER_SUMMARY, RADAR_PREVIEW, NOWCAST, HOURLY_FORECAST, TEMPERATURE_GRAPH, DAILY_FORECAST, UV_INDEX, WIND_COMPASS, AIR_QUALITY, POLLEN, OUTDOOR_SCORE, SNOWFALL, SEVERE_WEATHER, GOLDEN_HOUR, SUNSHINE, DRIVING_CONDITIONS, HEALTH_ALERTS, MOON_PHASE, HUMIDITY, PRECIPITATION_CHART, PRESSURE_TREND, WIND_TREND, DETAILS_GRID, CLOTHING, PET_SAFETY)
 - All enum deserialization uses `safeValueOf()` (no unsafe `valueOf()`)
 
 ## Key Architecture Patterns
@@ -72,7 +72,8 @@
 - OkHttp retry interceptor: 2 retries with exponential backoff on IOException
 - Independent sub-fetches (alerts, AQI, astronomy, radar, nowcast) run in parallel via coroutines
 - Weather cache auto-evicts entries older than 6 hours
-- `ReorderableCardColumn` uses `LazyColumn` — only visible cards composed
+- Today tab is a single `LazyColumn` — header items + card `items()` — truly lazy, no nested scroll
+- `ReorderableCardColumn` still available as utility but Today tab inlines card rendering directly
 
 ## Gotchas
 - `LocalUnitSettings.current` cannot be called inside Canvas DrawScope (not @Composable) — extract before Canvas
@@ -81,7 +82,7 @@
 - MSVC raw string limit doesn't apply here, but Wear OS module is scaffolding-only (`:wear` in settings.gradle.kts)
 - `BlitzortungService.isConnected` must be `@Volatile` with `@Synchronized` connect/disconnect to avoid race conditions
 - Unimplemented weather source adapters (OWM, Pirate Weather, Bright Sky) are hidden from Settings UI
-- `Icons.Filled.CompareArrows` is deprecated — should migrate to `Icons.AutoMirrored.Filled.CompareArrows`
+- `Icons.Filled.CompareArrows` is deprecated — migrated to `Icons.AutoMirrored.Filled.CompareArrows` in v1.5.0
 
 ## Release History
 - v1.0.0 — Initial release with share, widgets, accessibility, CI/CD, 108 unit tests
@@ -94,4 +95,5 @@
 - v1.3.4 — Bug fixes (unsafe !!, NaN guard, sourceManager safety), ProGuard hardening, accessibility contentDescriptions
 - v1.3.5 — Signing credentials to local.properties, particle battery fix, stable LazyList keys, Room migration safety
 - v1.3.6 — Coil ImageLoader config, WeatherSourceManager tests, battery-skip widget refresh
+- **v1.5.0** — 4 new cards (humidity/comfort, precipitation chart, pressure trend graph, wind forecast graph — 25 total), single-LazyColumn Today tab (perf: no nested scroll), pull-to-refresh Hourly/Daily tabs, HourlyTab feels-like+wind+respects forecast hours, DailyTab dynamic day count, consistent WeatherCard wrappers (AQI, Moon, Summary), SunArc/NowcastCard respect time format, deprecated icon fixes (CompareArrows, statusBar), yesterday comparison correct unit, DailyForecast snow icon, dead code removed
 - **v1.4.0** — Security hardening (allowBackup=false, network_security_config, debug-only logging, Firestore rules, safeValueOf), Crashlytics, offline detection + banner, reduced motion, tab crossfade, LazyColumn card perf, ImmutableList recomposition fix, shared RenderCard (~260 lines deduped), constructor injection for sourceManager, 6h cache eviction, OkHttp retry, parallel sub-fetches, user-friendly errors, widget staleness/accessibility/battery-skip, 74 new unit tests

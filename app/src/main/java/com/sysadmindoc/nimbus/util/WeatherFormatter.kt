@@ -33,6 +33,9 @@ object WeatherFormatter {
         return "${value.roundToInt()}${s.tempUnit.symbol}"
     }
 
+    /** Convert Celsius to user's preferred unit (raw numeric value). */
+    fun convertedTemp(celsius: Double, s: NimbusSettings): Double = convertTemp(celsius, s.tempUnit)
+
     private fun convertTemp(celsius: Double, unit: TempUnit): Double = when (unit) {
         TempUnit.FAHRENHEIT -> celsius * 9.0 / 5.0 + 32.0
         TempUnit.CELSIUS -> celsius

@@ -19,12 +19,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
 
 /**
  * Golden Hour / Blue Hour card for photographers.
@@ -38,8 +39,8 @@ fun GoldenHourCard(
     sunset: String,
     modifier: Modifier = Modifier,
 ) {
-    val goldenColor = Color(0xFFFFB74D)
-    val blueColor = Color(0xFF64B5F6)
+    val goldenColor = NimbusWarning
+    val blueColor = NimbusRainBlue
 
     WeatherCard(
         title = "Golden Hour",
