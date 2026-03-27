@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.ui.component
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,6 +39,11 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 fun OutdoorScoreCard(
     score: Int,
     modifier: Modifier = Modifier,
+    tempCelsius: Double = 20.0,
+    humidity: Int = 50,
+    windKmh: Double = 10.0,
+    uvIndex: Double = 3.0,
+    precipProbability: Int = 0,
 ) {
     val label = WeatherFormatter.outdoorScoreLabel(score)
     val scoreColor = when {
@@ -93,7 +102,7 @@ fun OutdoorScoreCard(
             }
 
             Column(
-                modifier = Modifier.padding(start = 16.dp),
+                modifier = Modifier.padding(start = 16.dp).weight(1f),
             ) {
                 Text(
                     text = label,
@@ -113,6 +122,64 @@ fun OutdoorScoreCard(
                     color = NimbusTextSecondary,
                 )
             }
+        }
+
+        // Factor breakdown
+        Spacer(modifier = Modifier.height(12.dp))
+        val factors = listOf(
+            "Temp" to factorScore(tempCelsius, 15.0, 25.0, 5.0, 35.0),
+            "Wind" to (100 - (windKmh / 50.0 * 100).toInt()).coerceIn(0, 100),
+            "Rain" to (100 - precipProbability).coerceIn(0, 100),
+            "UV" to (100 - (uvIndex / 11.0 * 100).toInt()).coerceIn(0, 100),
+            "Humidity" to factorScore(humidity.toDouble(), 30.0, 60.0, 10.0, 85.0),
+        )
+        factors.forEach { (name, value) ->
+            FactorBar(name = name, value = value)
+        }
+    }
+}
+
+private fun factorScore(value: Double, idealLow: Double, idealHigh: Double, okLow: Double, okHigh: Double): Int {
+    return when {
+        value in idealLow..idealHigh -> 100
+        value in okLow..okHigh -> 60
+        else -> 20
+    }
+}
+
+@Composable
+private fun FactorBar(name: String, value: Int) {
+    val barColor = when {
+        value >= 80 -> Color(0xFF4CAF50)
+        value >= 50 -> Color(0xFFFF9800)
+        else -> Color(0xFFF44336)
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.labelSmall,
+            color = NimbusTextTertiary,
+            modifier = Modifier.width(52.dp),
+        )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(Color.White.copy(alpha = 0.06f)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(value / 100f)
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(barColor),
+            )
         }
     }
 }

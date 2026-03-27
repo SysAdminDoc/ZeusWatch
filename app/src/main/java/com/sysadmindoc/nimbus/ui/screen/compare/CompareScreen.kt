@@ -153,21 +153,69 @@ fun CompareScreen(
                     val w1 = state.weather1!!
                     val w2 = state.weather2!!
 
-                    CompareRow("Temperature",
-                        WeatherFormatter.formatTemperature(w1.current.temperature, s),
-                        WeatherFormatter.formatTemperature(w2.current.temperature, s),
-                    )
+                    // Weather condition icons row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            WeatherIcon(
+                                weatherCode = w1.current.weatherCode,
+                                isDay = w1.current.isDay,
+                                modifier = Modifier.size(48.dp),
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                WeatherFormatter.formatTemperature(w1.current.temperature, s),
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                                color = NimbusTextPrimary,
+                            )
+                            Text(
+                                w1.current.weatherCode.description,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = NimbusTextSecondary,
+                            )
+                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.CompareArrows,
+                            contentDescription = null,
+                            tint = NimbusTextTertiary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            WeatherIcon(
+                                weatherCode = w2.current.weatherCode,
+                                isDay = w2.current.isDay,
+                                modifier = Modifier.size(48.dp),
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                WeatherFormatter.formatTemperature(w2.current.temperature, s),
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                                color = NimbusTextPrimary,
+                            )
+                            Text(
+                                w2.current.weatherCode.description,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = NimbusTextSecondary,
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = NimbusCardBorder, modifier = Modifier.padding(horizontal = 16.dp))
+                    Spacer(Modifier.height(8.dp))
+
                     CompareRow("Feels Like",
                         WeatherFormatter.formatTemperature(w1.current.feelsLike, s),
                         WeatherFormatter.formatTemperature(w2.current.feelsLike, s),
                     )
-                    CompareRow("Condition",
-                        w1.current.weatherCode.description,
-                        w2.current.weatherCode.description,
-                    )
                     CompareRow("Humidity",
                         "${w1.current.humidity}%",
                         "${w2.current.humidity}%",
+                        highlightLower = true,
                     )
                     CompareRow("Wind",
                         WeatherFormatter.formatWindSpeed(w1.current.windSpeed, w1.current.windDirection, s),
@@ -176,10 +224,22 @@ fun CompareScreen(
                     CompareRow("UV Index",
                         WeatherFormatter.formatUvIndex(w1.current.uvIndex),
                         WeatherFormatter.formatUvIndex(w2.current.uvIndex),
+                        highlightLower = true,
+                        raw1 = w1.current.uvIndex,
+                        raw2 = w2.current.uvIndex,
                     )
                     CompareRow("Pressure",
                         WeatherFormatter.formatPressure(w1.current.pressure, s),
                         WeatherFormatter.formatPressure(w2.current.pressure, s),
+                    )
+                    CompareRow("Visibility",
+                        WeatherFormatter.formatVisibility(w1.current.visibility, s),
+                        WeatherFormatter.formatVisibility(w2.current.visibility, s),
+                    )
+                    CompareRow("Cloud Cover",
+                        "${w1.current.cloudCover}%",
+                        "${w2.current.cloudCover}%",
+                        highlightLower = true,
                     )
                     CompareRow("High / Low",
                         "${WeatherFormatter.formatTemperature(w1.current.dailyHigh, s)} / ${WeatherFormatter.formatTemperature(w1.current.dailyLow, s)}",
@@ -188,7 +248,11 @@ fun CompareScreen(
 
                     val precip1 = w1.daily.firstOrNull()?.precipitationProbability ?: 0
                     val precip2 = w2.daily.firstOrNull()?.precipitationProbability ?: 0
-                    CompareRow("Rain Chance", "$precip1%", "$precip2%")
+                    CompareRow("Rain Chance", "$precip1%", "$precip2%",
+                        highlightLower = true,
+                        raw1 = precip1.toDouble(),
+                        raw2 = precip2.toDouble(),
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -240,8 +304,25 @@ private fun LocationSelector(
     }
 }
 
+/**
+ * Comparison row with optional value highlighting.
+ * When [highlightLower] is true, the lower numeric value gets an accent color
+ * (useful for UV, humidity, rain chance where lower is better).
+ * When [raw1]/[raw2] are provided, they're used for comparison instead of parsing strings.
+ */
 @Composable
-private fun CompareRow(label: String, value1: String, value2: String) {
+private fun CompareRow(
+    label: String,
+    value1: String,
+    value2: String,
+    highlightLower: Boolean = false,
+    raw1: Double = 0.0,
+    raw2: Double = 0.0,
+) {
+    val shouldHighlight = highlightLower && raw1 != raw2
+    val color1 = if (shouldHighlight && raw1 < raw2) NimbusBlueAccent else NimbusTextPrimary
+    val color2 = if (shouldHighlight && raw2 < raw1) NimbusBlueAccent else NimbusTextPrimary
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -257,7 +338,7 @@ private fun CompareRow(label: String, value1: String, value2: String) {
             Text(
                 text = value1,
                 style = MaterialTheme.typography.bodyMedium,
-                color = NimbusTextPrimary,
+                color = color1,
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
             )
@@ -271,7 +352,7 @@ private fun CompareRow(label: String, value1: String, value2: String) {
             Text(
                 text = value2,
                 style = MaterialTheme.typography.bodyMedium,
-                color = NimbusTextPrimary,
+                color = color2,
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
             )
