@@ -1,8 +1,10 @@
 package com.sysadmindoc.nimbus.ui.screen.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,9 +17,13 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,9 +40,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sysadmindoc.nimbus.data.model.IconPack
 import com.sysadmindoc.nimbus.data.repository.*
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.theme.*
@@ -51,18 +60,22 @@ fun SettingsScreen(
     SettingsContent(
         settings = settings,
         onBack = onBack,
+        availableIconPacks = viewModel.availableIconPacks,
         onTempUnit = { viewModel.setTempUnit(it) },
         onWindUnit = { viewModel.setWindUnit(it) },
         onPressureUnit = { viewModel.setPressureUnit(it) },
         onPrecipUnit = { viewModel.setPrecipUnit(it) },
         onTimeFormat = { viewModel.setTimeFormat(it) },
+        onVisibilityUnit = { viewModel.setVisibilityUnit(it) },
         onParticlesEnabled = { viewModel.setParticlesEnabled(it) },
         onAlertNotificationsEnabled = { viewModel.setAlertNotificationsEnabled(it) },
         onAlertMinSeverity = { viewModel.setAlertMinSeverity(it) },
         onAlertCheckAllLocations = { viewModel.setAlertCheckAllLocations(it) },
+        onAlertSourcePref = { viewModel.setAlertSourcePref(it) },
         // Display
         onRadarProvider = { viewModel.setRadarProvider(it) },
         onIconStyle = { viewModel.setIconStyle(it) },
+        onCustomIconPackId = { viewModel.setCustomIconPackId(it) },
         onThemeMode = { viewModel.setThemeMode(it) },
         onSummaryStyle = { viewModel.setSummaryStyle(it) },
         // Card config
@@ -80,10 +93,22 @@ fun SettingsScreen(
         onShowBeaufortColors = { viewModel.setShowBeaufortColors(it) },
         onShowOutdoorScore = { viewModel.setShowOutdoorScore(it) },
         onShowYesterdayComparison = { viewModel.setShowYesterdayComparison(it) },
+        onHourlyForecastHours = { viewModel.setHourlyForecastHours(it) },
         // Health
         onMigraineAlerts = { viewModel.setMigraineAlerts(it) },
+        onMigrainePressureThreshold = { viewModel.setMigrainePressureThreshold(it) },
         // Haptics
         onHapticFeedbackForAlerts = { viewModel.setHapticFeedbackForAlerts(it) },
+        onCacheTtlMinutes = { viewModel.setCacheTtlMinutes(it) },
+        // Data sources
+        onSourceForecast = { viewModel.setSourceForecast(it) },
+        onSourceForecastFallback = { viewModel.setSourceForecastFallback(it) },
+        onSourceAlerts = { viewModel.setSourceAlerts(it) },
+        onSourceAlertsFallback = { viewModel.setSourceAlertsFallback(it) },
+        onSourceAirQuality = { viewModel.setSourceAirQuality(it) },
+        onSourceMinutely = { viewModel.setSourceMinutely(it) },
+        onOwmApiKey = { viewModel.setOwmApiKey(it) },
+        onPirateWeatherApiKey = { viewModel.setPirateWeatherApiKey(it) },
     )
 }
 
@@ -96,13 +121,17 @@ internal fun SettingsContent(
     onPressureUnit: (PressureUnit) -> Unit = {},
     onPrecipUnit: (PrecipUnit) -> Unit = {},
     onTimeFormat: (TimeFormat) -> Unit = {},
+    onVisibilityUnit: (VisibilityUnit) -> Unit = {},
     onParticlesEnabled: (Boolean) -> Unit = {},
     onAlertNotificationsEnabled: (Boolean) -> Unit = {},
     onAlertMinSeverity: (AlertMinSeverity) -> Unit = {},
     onAlertCheckAllLocations: (Boolean) -> Unit = {},
+    onAlertSourcePref: (AlertSourcePreference) -> Unit = {},
     // Display
     onRadarProvider: (RadarProvider) -> Unit = {},
     onIconStyle: (IconStyle) -> Unit = {},
+    onCustomIconPackId: (String) -> Unit = {},
+    availableIconPacks: List<IconPack> = emptyList(),
     onThemeMode: (ThemeMode) -> Unit = {},
     onSummaryStyle: (SummaryStyle) -> Unit = {},
     // Card config
@@ -120,10 +149,22 @@ internal fun SettingsContent(
     onShowBeaufortColors: (Boolean) -> Unit = {},
     onShowOutdoorScore: (Boolean) -> Unit = {},
     onShowYesterdayComparison: (Boolean) -> Unit = {},
+    onHourlyForecastHours: (Int) -> Unit = {},
     // Health
     onMigraineAlerts: (Boolean) -> Unit = {},
+    onMigrainePressureThreshold: (Double) -> Unit = {},
     // Haptics
     onHapticFeedbackForAlerts: (Boolean) -> Unit = {},
+    onCacheTtlMinutes: (Int) -> Unit = {},
+    // Data sources
+    onSourceForecast: (WeatherSourceProvider) -> Unit = {},
+    onSourceForecastFallback: (WeatherSourceProvider?) -> Unit = {},
+    onSourceAlerts: (WeatherSourceProvider) -> Unit = {},
+    onSourceAlertsFallback: (WeatherSourceProvider?) -> Unit = {},
+    onSourceAirQuality: (WeatherSourceProvider) -> Unit = {},
+    onSourceMinutely: (WeatherSourceProvider) -> Unit = {},
+    onOwmApiKey: (String) -> Unit = {},
+    onPirateWeatherApiKey: (String) -> Unit = {},
 ) {
     PredictiveBackScaffold(onBack = onBack) {
         Column(
@@ -183,6 +224,14 @@ internal fun SettingsContent(
                     label = style.label,
                     selected = settings.iconStyle == style,
                     onClick = { onIconStyle(style) },
+                )
+            }
+            // Show icon pack picker when CUSTOM is selected
+            if (settings.iconStyle == IconStyle.CUSTOM) {
+                IconPackSelector(
+                    packs = availableIconPacks,
+                    selectedPackId = settings.customIconPackId,
+                    onPackSelected = onCustomIconPackId,
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
@@ -285,6 +334,17 @@ internal fun SettingsContent(
             }
         }
 
+        // Visibility
+        SettingSection("Visibility") {
+            VisibilityUnit.entries.forEach { unit ->
+                SettingRadio(
+                    label = unit.label,
+                    selected = settings.visibilityUnit == unit,
+                    onClick = { onVisibilityUnit(unit) },
+                )
+            }
+        }
+
         // ── Notifications ────────────────────────────────────
         SettingSection("Notifications") {
             SettingToggle(
@@ -314,6 +374,20 @@ internal fun SettingsContent(
                     sublabel = "Check alerts for all your locations, not just the current one",
                     checked = settings.alertCheckAllLocations,
                     onCheckedChange = { onAlertCheckAllLocations(it) },
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Alert source",
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+            )
+            AlertSourcePreference.entries.forEach { pref ->
+                SettingRadio(
+                    label = pref.label,
+                    selected = settings.alertSourcePref == pref,
+                    onClick = { onAlertSourcePref(pref) },
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
@@ -380,6 +454,22 @@ internal fun SettingsContent(
                 checked = settings.showYesterdayComparison,
                 onCheckedChange = { onShowYesterdayComparison(it) },
             )
+
+            // Hourly forecast range
+            Text(
+                text = "Hourly forecast range",
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+                modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp),
+            )
+            listOf(48, 72).forEach { hours ->
+                SettingRadio(
+                    label = "${hours}h",
+                    sublabel = if (hours == 72) "More data, slightly larger API response" else null,
+                    selected = settings.hourlyForecastHours == hours,
+                    onClick = { onHourlyForecastHours(hours) },
+                )
+            }
         }
 
         // ── Health ───────────────────────────────────────────
@@ -391,10 +481,27 @@ internal fun SettingsContent(
                     checked = settings.migraineAlerts,
                     onCheckedChange = { onMigraineAlerts(it) },
                 )
-                SettingInfo(
-                    label = "Migraine Pressure Threshold",
-                    value = "${settings.migrainePressureThreshold} hPa/3h",
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Pressure change threshold",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
                 )
+                listOf(3.0, 5.0, 7.0, 10.0).forEach { threshold ->
+                    SettingRadio(
+                        label = "$threshold hPa/3h",
+                        sublabel = when (threshold) {
+                            3.0 -> "Very sensitive"
+                            5.0 -> "Moderate (default)"
+                            7.0 -> "Less sensitive"
+                            10.0 -> "Only major changes"
+                            else -> null
+                        },
+                        selected = settings.migrainePressureThreshold == threshold,
+                        onClick = { onMigrainePressureThreshold(threshold) },
+                    )
+                }
             }
         }
 
@@ -418,10 +525,129 @@ internal fun SettingsContent(
             )
         }
 
+        // ── Data Sources ─────────────────────────────────────────
+        SettingSection("Data Sources") {
+            val sourceConfig = settings.sourceConfig
+
+            // Forecast source
+            SourceDropdown(
+                label = "Forecast Source",
+                selected = sourceConfig.forecast,
+                options = WeatherSourceProvider.forType(WeatherDataType.FORECAST),
+                onSelected = onSourceForecast,
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Forecast fallback
+            SourceDropdownNullable(
+                label = "Forecast Fallback",
+                selected = sourceConfig.forecastFallback,
+                options = WeatherSourceProvider.forType(WeatherDataType.FORECAST)
+                    .filter { it != sourceConfig.forecast },
+                onSelected = onSourceForecastFallback,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Alert source
+            SourceDropdown(
+                label = "Alert Source",
+                selected = sourceConfig.alerts,
+                options = WeatherSourceProvider.forType(WeatherDataType.ALERTS),
+                onSelected = onSourceAlerts,
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Alert fallback
+            SourceDropdownNullable(
+                label = "Alert Fallback",
+                selected = sourceConfig.alertsFallback,
+                options = WeatherSourceProvider.forType(WeatherDataType.ALERTS)
+                    .filter { it != sourceConfig.alerts },
+                onSelected = onSourceAlertsFallback,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Air quality source
+            SourceDropdown(
+                label = "Air Quality Source",
+                selected = sourceConfig.airQuality,
+                options = WeatherSourceProvider.forType(WeatherDataType.AIR_QUALITY),
+                onSelected = onSourceAirQuality,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Minutely source
+            SourceDropdown(
+                label = "Minutely Precipitation Source",
+                selected = sourceConfig.minutely,
+                options = WeatherSourceProvider.forType(WeatherDataType.MINUTELY),
+                onSelected = onSourceMinutely,
+            )
+
+            // API key fields — shown conditionally
+            val needsOwmKey = sourceConfig.forecast == WeatherSourceProvider.OPEN_WEATHER_MAP ||
+                sourceConfig.forecastFallback == WeatherSourceProvider.OPEN_WEATHER_MAP ||
+                sourceConfig.alerts == WeatherSourceProvider.OPEN_WEATHER_MAP ||
+                sourceConfig.alertsFallback == WeatherSourceProvider.OPEN_WEATHER_MAP ||
+                sourceConfig.airQuality == WeatherSourceProvider.OPEN_WEATHER_MAP
+
+            val needsPirateKey = sourceConfig.forecast == WeatherSourceProvider.PIRATE_WEATHER ||
+                sourceConfig.forecastFallback == WeatherSourceProvider.PIRATE_WEATHER
+
+            if (needsOwmKey || needsPirateKey) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "API Keys",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+                )
+            }
+
+            if (needsOwmKey) {
+                ApiKeyField(
+                    label = "OpenWeatherMap API Key",
+                    value = settings.owmApiKey,
+                    onValueChange = onOwmApiKey,
+                )
+            }
+
+            if (needsPirateKey) {
+                ApiKeyField(
+                    label = "Pirate Weather API Key",
+                    value = settings.pirateWeatherApiKey,
+                    onValueChange = onPirateWeatherApiKey,
+                )
+            }
+        }
+
+        // ── Advanced ───────────────────────────────────────────
+        SettingSection("Advanced") {
+            Text(
+                "Cache Duration",
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+            )
+            listOf(15, 30, 60, 120).forEach { minutes ->
+                val label = if (minutes < 60) "${minutes} minutes" else "${minutes / 60} hour${if (minutes > 60) "s" else ""}"
+                SettingRadio(
+                    label = label,
+                    selected = settings.cacheTtlMinutes == minutes,
+                    onClick = { onCacheTtlMinutes(minutes) },
+                )
+            }
+        }
+
         // ── About ────────────────────────────────────────────
         SettingSection("About") {
             SettingInfo("Version", com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME)
-            SettingInfo("Data Source", "Open-Meteo.com")
+            SettingInfo("Data Sources", "Open-Meteo, NWS, and more")
             SettingInfo("License", "LGPL-3.0")
         }
 
@@ -526,5 +752,224 @@ private fun SettingInfo(label: String, value: String) {
     ) {
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
         Text(text = value, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+// ── Data Source Composables ─────────────────────────────────────────────
+
+@Composable
+private fun SourceDropdown(
+    label: String,
+    selected: WeatherSourceProvider,
+    options: List<WeatherSourceProvider>,
+    onSelected: (WeatherSourceProvider) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+        )
+        Box {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
+                    .clickable { expanded = true }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = selected.displayName,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = if (expanded) "\u25B2" else "\u25BC",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                options.forEach { provider ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = provider.displayName,
+                                style = if (provider == selected) MaterialTheme.typography.bodyLarge
+                                else MaterialTheme.typography.bodyMedium,
+                            )
+                        },
+                        onClick = {
+                            onSelected(provider)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SourceDropdownNullable(
+    label: String,
+    selected: WeatherSourceProvider?,
+    options: List<WeatherSourceProvider>,
+    onSelected: (WeatherSourceProvider?) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+        )
+        Box {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
+                    .clickable { expanded = true }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = selected?.displayName ?: "None",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (selected == null) NimbusTextTertiary else NimbusTextPrimary,
+                )
+                Text(
+                    text = if (expanded) "\u25B2" else "\u25BC",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                // "None" option
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = "None",
+                            style = if (selected == null) MaterialTheme.typography.bodyLarge
+                            else MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        onSelected(null)
+                        expanded = false
+                    },
+                )
+                options.forEach { provider ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = provider.displayName,
+                                style = if (provider == selected) MaterialTheme.typography.bodyLarge
+                                else MaterialTheme.typography.bodyMedium,
+                            )
+                        },
+                        onClick = {
+                            onSelected(provider)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ApiKeyField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
+    var text by remember(value) { mutableStateOf(value) }
+
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+        )
+        BasicTextField(
+            value = text,
+            onValueChange = {
+                text = it
+                onValueChange(it)
+            },
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(color = NimbusTextPrimary),
+            cursorBrush = SolidColor(NimbusBlueAccent),
+            visualTransformation = PasswordVisualTransformation(),
+            decorationBox = { innerTextField ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                ) {
+                    if (text.isEmpty()) {
+                        Text(
+                            text = "Enter API key...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = NimbusTextTertiary,
+                        )
+                    }
+                    innerTextField()
+                }
+            },
+        )
+    }
+}
+
+// ── Icon Pack Selector ────────────────────────────────────────────────
+
+@Composable
+private fun IconPackSelector(
+    packs: List<IconPack>,
+    selectedPackId: String,
+    onPackSelected: (String) -> Unit,
+) {
+    if (packs.isEmpty()) {
+        Text(
+            text = "No icon packs installed. Place packs in assets/iconpacks/ or install an app with the com.sysadmindoc.nimbus.ICON_PACK intent.",
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextTertiary,
+            modifier = Modifier.padding(start = 40.dp, top = 4.dp, end = 16.dp),
+        )
+        return
+    }
+
+    Column(modifier = Modifier.padding(start = 24.dp, top = 4.dp)) {
+        Text(
+            text = "Select Icon Pack",
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+        )
+        packs.forEach { pack ->
+            SettingRadio(
+                label = pack.name,
+                sublabel = if (pack.author.isNotBlank()) "by ${pack.author}" else null,
+                selected = selectedPackId == pack.id,
+                onClick = { onPackSelected(pack.id) },
+            )
+        }
     }
 }

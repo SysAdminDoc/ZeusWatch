@@ -11,7 +11,7 @@
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.sysadmindoc.nimbus"
             android:targetClass="com.sysadmindoc.nimbus.MainActivity"
-            android:data="nimbus://locations" />
+            android:data="zeuswatch://locations" />
     </shortcut>
 
     <shortcut
@@ -24,7 +24,7 @@
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.sysadmindoc.nimbus"
             android:targetClass="com.sysadmindoc.nimbus.MainActivity"
-            android:data="nimbus://radar" />
+            android:data="zeuswatch://radar" />
     </shortcut>
 
     <shortcut
@@ -37,7 +37,7 @@
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.sysadmindoc.nimbus"
             android:targetClass="com.sysadmindoc.nimbus.MainActivity"
-            android:data="nimbus://settings" />
+            android:data="zeuswatch://settings" />
     </shortcut>
 
     <shortcut

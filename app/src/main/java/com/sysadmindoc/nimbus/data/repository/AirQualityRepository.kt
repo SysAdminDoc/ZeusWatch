@@ -5,6 +5,7 @@ import com.sysadmindoc.nimbus.data.api.AqHourly
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.AqiLevel
 import com.sysadmindoc.nimbus.data.model.AstronomyData
+import com.sysadmindoc.nimbus.data.model.DailyAqi
 import com.sysadmindoc.nimbus.data.model.HourlyAqi
 import com.sysadmindoc.nimbus.data.model.MoonPhase
 import com.sysadmindoc.nimbus.data.model.PollenData
@@ -49,26 +50,50 @@ class AirQualityRepository @Inject constructor(
 
                 // Pollen: fall back to hourly data if current returns no pollen
                 val pollen = if (!pollenFromCurrent.hasData && response.hourly != null) {
-                    extractCurrentHourPollen(response.hourly!!, now)
+                    extractCurrentHourPollen(response.hourly, now)
                 } else {
                     pollenFromCurrent
                 }
                 val hourlyAqi = mutableListOf<HourlyAqi>()
+                // Also collect daily max AQI by grouping hourly data by date
+                val dailyAqiMap = mutableMapOf<java.time.LocalDate, Int>()
                 response.hourly?.let { h ->
                     for (i in h.time.indices) {
                         val t = try {
                             LocalDateTime.parse(h.time[i], DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                         } catch (_: Exception) { continue }
-                        if (t.isBefore(now.minusHours(1))) continue
-                        if (hourlyAqi.size >= 24) break
+
                         val aqi = h.usAqi?.getOrNull(i) ?: continue
-                        hourlyAqi.add(HourlyAqi(
-                            hour = WeatherFormatter.formatHourLabel(t),
-                            aqi = aqi,
-                            level = AqiLevel.fromAqi(aqi),
-                        ))
+
+                        // Hourly AQI (next 24h)
+                        if (!t.isBefore(now.minusHours(1)) && hourlyAqi.size < 24) {
+                            hourlyAqi.add(HourlyAqi(
+                                hour = WeatherFormatter.formatHourLabel(t),
+                                aqi = aqi,
+                                level = AqiLevel.fromAqi(aqi),
+                            ))
+                        }
+
+                        // Daily max aggregation (all available days)
+                        val date = t.toLocalDate()
+                        dailyAqiMap[date] = maxOf(dailyAqiMap[date] ?: 0, aqi)
                     }
                 }
+
+                // Build daily AQI forecast from today onwards (up to 5 days)
+                val today = now.toLocalDate()
+                val dailyAqi = dailyAqiMap
+                    .filter { it.key >= today }
+                    .toSortedMap()
+                    .entries
+                    .take(5)
+                    .map { (date, maxAqi) ->
+                        DailyAqi(
+                            dayLabel = WeatherFormatter.formatDayLabel(date),
+                            maxAqi = maxAqi,
+                            level = AqiLevel.fromAqi(maxAqi),
+                        )
+                    }
 
                 Result.success(AirQualityData(
                     usAqi = usAqi,
@@ -82,6 +107,7 @@ class AirQualityRepository @Inject constructor(
                     carbonMonoxide = current.carbonMonoxide ?: 0.0,
                     pollen = pollen,
                     hourlyAqi = hourlyAqi,
+                    dailyAqi = dailyAqi,
                 ))
             } catch (e: Exception) {
                 Result.failure(e)

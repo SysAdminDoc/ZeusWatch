@@ -2,6 +2,98 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.3.4] - 2026-03-26
+
+### Fixed
+- Removed unsafe `!!` assertion in AirQualityRepository pollen fallback path
+- Added NaN guard for temperature normals band to prevent rendering artifacts
+- Added safety check for uninitialized `sourceManager` in WeatherRepository
+- Added contentDescriptions to alert, health, pet safety, driving, and severe weather icons
+- Added missing ProGuard rules for Firebase, Coroutines, DataStore, WorkManager, and Hilt
+
+## [1.3.3] - 2026-03-26
+
+### Added
+- "Warmer/cooler than yesterday" comparison label in current conditions header
+- Temperature normals band on temperature graph (shaded region showing forecast average range)
+- Drag-to-reorder saved locations with long-press drag handles
+- Batch sort order persistence for reordered locations via Room DAO
+
+### Changed
+- SavedLocationDao now supports `updateSortOrder()` for efficient reordering
+- TemperatureGraph accepts optional `normalHigh`/`normalLow` parameters for normals band
+
+## [1.3.2] - 2026-03-26
+
+### Added
+- Dew point comfort descriptor ("Comfortable", "Muggy", "Oppressive") in Today's Details
+- Feels-like explanation in header ("Wind chill", "Heat index") when differs from actual temp
+- Pressure trend indicator (Rising/Falling/Steady) using hourly surface pressure data
+- Saved location temperature preview shows cached temps in the location list
+- 5-day daily AQI forecast bars in Air Quality card with color-coded severity
+- Feels-like temperature shown in hourly strip when 3+ degrees different from actual
+
+### Changed
+- Open-Meteo hourly params now include `surface_pressure` for trend analysis
+- WeatherDetailsGrid accepts hourly data for pressure trend computation
+
+## [1.3.1] - 2026-03-26
+
+### Added
+- "What to Wear" clothing suggestions card based on temperature, wind, rain, and UV
+- Pet Safety card with pavement temperature estimates, heat stress, cold exposure, and storm anxiety alerts
+- 72-hour hourly forecast option (configurable in Settings > Data Display)
+- Dominant pollutant highlighting in Air Quality card (worst contributor gets amber badge)
+
+## [1.3.0] - 2026-03-26
+
+### Added
+- Visibility unit setting (miles/km) now configurable in Settings
+- Alert source preference UI (Auto-detect, NWS, MeteoAlarm, JMA, Environment Canada, All)
+- Configurable migraine pressure threshold (3.0/5.0/7.0/10.0 hPa/3h)
+- Per-widget location configuration with config activity
+- Radar map layer selector (Radar, Temperature, Wind, Clouds, Precipitation)
+- Per-widget weather data fetching in WidgetRefreshWorker
+- Radar layer overlay rendering in RadarMapView
+
+### Fixed
+- Removed stale TODO comment about freenet LocationManager (already implemented)
+- Widget per-location data loading with fallback to global data
+
+## [1.2.0] - 2025-12-15
+
+### Added
+- Real-time lightning strike overlay via Blitzortung WebSocket
+- Gemini Nano on-device weather summaries (with template fallback)
+- Live weather wallpaper with particle effects (rain, snow, thunder, sun rays, fog)
+- Community weather reports via Firebase Firestore with rate limiting
+- Multi-source forecast fallback system (Open-Meteo, NWS, OWM, Pirate Weather, Bright Sky, Environment Canada)
+- Custom icon pack support (bundled assets + external APK discovery)
+- International alert sources: MeteoAlarm (EU), JMA (Japan), Environment Canada
+- Tablet two-pane layout (weather + radar side-by-side at 840dp+)
+- Data source configuration UI with dropdown selectors and API key fields
+
+### Changed
+- Deep link scheme unified to `zeuswatch://` across all shortcuts
+- Persistent weather notification now also updates from MainViewModel on weather load
+- Share helpers consolidated into single ShareWeatherHelper (text + image)
+
+## [1.1.0] - 2025-06-20
+
+### Added
+- CAPE field fully wired through API, response models, and SevereWeatherCard
+- 5-day AQI forecast (increased from 3 days)
+- Interactive temperature graph with drag-to-inspect and precipitation overlay bars
+- Compact 4x1 forecast strip widget (NimbusForecastStripWidget)
+- Beaufort color ring on WindCompass
+- Dynamic version display using BuildConfig.VERSION_NAME
+- Meteocons graceful fallback when Lottie assets missing
+- Compare screen deep link shortcut
+- ProGuard rules for Room, Lottie, and Coil
+
+### Changed
+- Version bump from 1.0.0 to 1.1.0 (versionCode 40→50)
+
 ## [1.0.0] - 2025-02-21
 
 ### Added

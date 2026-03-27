@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
+import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -19,6 +20,7 @@ class LocationsViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var locationRepository: LocationRepository
+    private lateinit var weatherRepository: WeatherRepository
     private lateinit var viewModel: LocationsViewModel
 
     private val testResults = listOf(
@@ -47,7 +49,10 @@ class LocationsViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         locationRepository = mockk(relaxed = true)
+        weatherRepository = mockk(relaxed = true)
+        coEvery { weatherRepository.getCachedWeather(any(), any()) } returns null
         every { locationRepository.savedLocations } returns flowOf(savedLocations)
+        coEvery { locationRepository.search(any()) } returns Result.success(testResults)
     }
 
     @After
@@ -56,7 +61,7 @@ class LocationsViewModelTest {
     }
 
     private fun createViewModel(): LocationsViewModel {
-        return LocationsViewModel(locationRepository)
+        return LocationsViewModel(locationRepository, weatherRepository)
     }
 
     @Test
@@ -124,9 +129,10 @@ class LocationsViewModelTest {
 
         viewModel = createViewModel()
         viewModel.onSearchQueryChanged("Denver")
-        viewModel.addLocation(testResults[0])
+        advanceUntilIdle() // Let search complete
 
-        advanceUntilIdle()
+        viewModel.addLocation(testResults[0])
+        advanceUntilIdle() // Let addLocation complete (clears search)
 
         coVerify { locationRepository.addLocation(testResults[0]) }
 

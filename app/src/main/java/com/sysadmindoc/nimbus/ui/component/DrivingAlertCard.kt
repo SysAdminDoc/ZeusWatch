@@ -50,7 +50,7 @@ fun DrivingAlertCard(
             ) {
                 Icon(
                     Icons.Filled.DirectionsCar,
-                    contentDescription = null,
+                    contentDescription = "${alert.type.label} driving alert",
                     tint = alert.severity.color,
                     modifier = Modifier.size(20.dp),
                 )

@@ -60,7 +60,7 @@ fun SevereWeatherCard(
         ) {
             Icon(
                 Icons.Filled.Thunderstorm,
-                contentDescription = null,
+                contentDescription = "Severe weather potential",
                 tint = color,
                 modifier = Modifier.size(28.dp),
             )

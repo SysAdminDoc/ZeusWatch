@@ -44,6 +44,7 @@ data class CurrentWeather(
     @SerialName("dew_point_2m") val dewPoint: Double? = null,
     @SerialName("snowfall") val snowfall: Double? = null,
     @SerialName("snow_depth") val snowDepth: Double? = null,
+    @SerialName("cape") val cape: Double? = null,
 )
 
 @Serializable
@@ -65,6 +66,8 @@ data class HourlyWeather(
     @SerialName("snow_depth") val snowDepth: List<Double?>? = null,
     @SerialName("wind_gusts_10m") val windGusts: List<Double?>? = null,
     @SerialName("sunshine_duration") val sunshineDuration: List<Double?>? = null,
+    @SerialName("cape") val cape: List<Double?>? = null,
+    @SerialName("surface_pressure") val surfacePressure: List<Double?>? = null,
 )
 
 @Serializable

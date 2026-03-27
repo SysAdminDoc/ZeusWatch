@@ -84,6 +84,15 @@ fun UvIndexBar(
                         color = NimbusTextTertiary,
                     )
                 }
+                // Safe sun exposure estimate (average skin type, SPF-free)
+                if (uvIndex >= 1) {
+                    val safeMinutes = (200.0 / (uvIndex * 3.0)).toInt().coerceIn(5, 120)
+                    Text(
+                        text = "~${safeMinutes} min safe exposure without SPF",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NimbusTextTertiary,
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Gradient bar with marker

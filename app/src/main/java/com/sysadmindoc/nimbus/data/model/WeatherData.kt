@@ -42,6 +42,7 @@ data class CurrentConditions(
     val precipitation: Double,
     val snowfall: Double? = null,
     val snowDepth: Double? = null,
+    val cape: Double? = null,
     val dailyHigh: Double,
     val dailyLow: Double,
     val sunrise: String?,
@@ -66,6 +67,7 @@ data class HourlyConditions(
     val snowfall: Double? = null,
     val windGusts: Double? = null,
     val sunshineDuration: Double? = null,
+    val surfacePressure: Double? = null,
 )
 
 @Stable

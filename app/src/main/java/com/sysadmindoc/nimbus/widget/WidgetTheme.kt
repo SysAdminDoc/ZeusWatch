@@ -1,38 +1,16 @@
 package com.sysadmindoc.nimbus.widget
 
-import android.content.Context
-import android.content.Intent
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
-import androidx.glance.ImageProvider
-import androidx.glance.action.actionStartActivity
-import androidx.glance.appwidget.cornerRadius
-import androidx.glance.background
-import androidx.glance.color.ColorProvider
-import androidx.glance.layout.Alignment
-import androidx.glance.layout.Column
-import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
-import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
-import androidx.glance.Image
-import androidx.glance.ColorFilter
 import androidx.compose.ui.graphics.Color
-import com.sysadmindoc.nimbus.MainActivity
+import androidx.glance.color.ColorProvider
+import androidx.glance.text.FontWeight
+import androidx.glance.text.TextStyle
+import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
-import com.sysadmindoc.nimbus.data.model.WeatherCode
 
 /**
  * Shared Glance widget styling constants and helpers.
+ * Uses ColorProvider for day/night adaptation.
+ * Widgets wrap content in GlanceTheme {} for Material You support.
  */
 object WidgetTheme {
     // Dark background matching app theme
@@ -102,15 +80,17 @@ object WidgetTheme {
 
 /**
  * Map WMO weather code to drawable resource for Glance widgets.
+ * Covers all major condition groups with day/night variants for clear skies.
  */
 fun weatherIconRes(code: Int, isDay: Boolean): Int = when {
     code == 0 || code == 1 -> if (isDay) R.drawable.ic_w_sunny else R.drawable.ic_w_night
     code in 2..3 -> R.drawable.ic_w_cloudy
     code in 45..48 -> R.drawable.ic_w_cloudy // fog
-    code in 51..67 -> R.drawable.ic_w_rain
-    code in 71..77 -> R.drawable.ic_w_snow
-    code in 80..82 -> R.drawable.ic_w_rain
-    code in 85..86 -> R.drawable.ic_w_snow
-    code in 95..99 -> R.drawable.ic_w_rain // storm
+    code in 51..57 -> R.drawable.ic_w_rain   // drizzle
+    code in 61..67 -> R.drawable.ic_w_rain   // rain + freezing rain
+    code in 71..77 -> R.drawable.ic_w_snow   // snow + snow grains
+    code in 80..82 -> R.drawable.ic_w_rain   // rain showers
+    code in 85..86 -> R.drawable.ic_w_snow   // snow showers
+    code in 95..99 -> R.drawable.ic_w_rain   // thunderstorms
     else -> R.drawable.ic_w_cloudy
 }

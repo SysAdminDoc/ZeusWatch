@@ -67,6 +67,16 @@ private fun HourlyItem(hour: HourlyConditions) {
             style = MaterialTheme.typography.titleSmall,
         )
 
+        // Feels-like when significantly different (3+ degrees)
+        val feelsLike = hour.feelsLike
+        if (feelsLike != null && kotlin.math.abs(feelsLike - hour.temperature) >= 3) {
+            Text(
+                text = WeatherFormatter.formatTemperature(feelsLike, s),
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextTertiary,
+            )
+        }
+
         Spacer(modifier = Modifier.height(6.dp))
 
         // Weather icon (supports Meteocons Lottie when enabled)

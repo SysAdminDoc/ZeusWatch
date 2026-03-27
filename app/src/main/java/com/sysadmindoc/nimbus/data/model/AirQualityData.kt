@@ -19,12 +19,20 @@ data class AirQualityData(
     val carbonMonoxide: Double,
     val pollen: PollenData,
     val hourlyAqi: List<HourlyAqi> = emptyList(),
+    val dailyAqi: List<DailyAqi> = emptyList(),
 )
 
 @Stable
 data class HourlyAqi(
     val hour: String,
     val aqi: Int,
+    val level: AqiLevel,
+)
+
+@Stable
+data class DailyAqi(
+    val dayLabel: String,
+    val maxAqi: Int,
     val level: AqiLevel,
 )
 

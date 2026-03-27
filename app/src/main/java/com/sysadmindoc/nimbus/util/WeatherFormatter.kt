@@ -8,6 +8,7 @@ import com.sysadmindoc.nimbus.data.repository.TimeFormat
 import com.sysadmindoc.nimbus.data.repository.VisibilityUnit
 import com.sysadmindoc.nimbus.data.repository.WindUnit
 import java.time.LocalDateTime
+import kotlin.math.roundToInt
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
@@ -23,13 +24,13 @@ object WeatherFormatter {
     /** Convert metric celsius to user unit and format as "72°" */
     fun formatTemperature(celsius: Double, s: NimbusSettings = NimbusSettings()): String {
         val value = convertTemp(celsius, s.tempUnit)
-        return "${value.toInt()}\u00B0"
+        return "${value.roundToInt()}\u00B0"
     }
 
     /** Format with unit suffix: "72°F" */
     fun formatTemperatureUnit(celsius: Double, s: NimbusSettings = NimbusSettings()): String {
         val value = convertTemp(celsius, s.tempUnit)
-        return "${value.toInt()}${s.tempUnit.symbol}"
+        return "${value.roundToInt()}${s.tempUnit.symbol}"
     }
 
     private fun convertTemp(celsius: Double, unit: TempUnit): Double = when (unit) {
@@ -104,6 +105,43 @@ object WeatherFormatter {
     fun formatDewPoint(celsius: Double, s: NimbusSettings = NimbusSettings()): String {
         val value = convertTemp(celsius, s.tempUnit)
         return "${value.toInt()}\u00B0"
+    }
+
+    /** Dew point comfort descriptor based on Celsius value. */
+    fun dewPointComfort(dewPointCelsius: Double): String = when {
+        dewPointCelsius < 10 -> "Dry"
+        dewPointCelsius < 16 -> "Comfortable"
+        dewPointCelsius < 18 -> "Pleasant"
+        dewPointCelsius < 21 -> "Slightly humid"
+        dewPointCelsius < 24 -> "Muggy"
+        else -> "Oppressive"
+    }
+
+    /** Explain why feels-like differs from actual temperature. */
+    fun feelsLikeReason(tempCelsius: Double, feelsLikeCelsius: Double, windKmh: Double, humidity: Int): String? {
+        val diff = feelsLikeCelsius - tempCelsius
+        if (kotlin.math.abs(diff) < 2) return null
+        return when {
+            diff < -2 && windKmh > 10 -> "Wind chill"
+            diff < -2 -> "Cold exposure"
+            diff > 2 && humidity > 50 -> "Heat index"
+            diff > 2 -> "Solar heating"
+            else -> null
+        }
+    }
+
+    /** Compute pressure trend from hourly surface pressure data (hPa). */
+    fun pressureTrend(hourly: List<com.sysadmindoc.nimbus.data.model.HourlyConditions>): String? {
+        val pressures = hourly.take(6).mapNotNull { it.surfacePressure }
+        if (pressures.size < 3) return null
+        val delta = pressures.last() - pressures.first()
+        return when {
+            delta > 2.0 -> "\u2197 Rising"
+            delta > 0.5 -> "\u2197 Slowly rising"
+            delta < -2.0 -> "\u2198 Falling"
+            delta < -0.5 -> "\u2198 Slowly falling"
+            else -> "\u2192 Steady"
+        }
     }
 
     // ── Unit-independent formatters ──────────────────────────────────────

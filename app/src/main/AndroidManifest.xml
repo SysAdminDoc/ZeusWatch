@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Allow aicore (Gemini Nano) library which requires minSdk 31 — runtime checks guard usage -->
+    <uses-sdk tools:overrideLibrary="com.google.ai.edge.aicore" />
+
     <!-- Network -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -63,6 +66,16 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Widget Configuration Activity -->
+        <activity
+            android:name=".widget.WidgetConfigActivity"
+            android:exported="true"
+            android:theme="@style/Theme.ZeusWatch">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
 
         <!-- Disable default WorkManager initializer (custom Configuration.Provider) -->
         <provider
@@ -127,6 +140,20 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_forecast_strip_info" />
         </receiver>
+
+        <!-- Live Weather Wallpaper -->
+        <service
+            android:name=".wallpaper.WeatherWallpaperService"
+            android:label="@string/wallpaper_label"
+            android:permission="android.permission.BIND_WALLPAPER"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/weather_wallpaper" />
+        </service>
 
     </application>
 

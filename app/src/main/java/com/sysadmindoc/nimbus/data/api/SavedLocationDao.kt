@@ -41,4 +41,7 @@ interface SavedLocationDao {
 
     @Query("SELECT MAX(sortOrder) FROM saved_locations")
     suspend fun maxSortOrder(): Int?
+
+    @Query("UPDATE saved_locations SET sortOrder = :order WHERE id = :id")
+    suspend fun updateSortOrder(id: Long, order: Int)
 }

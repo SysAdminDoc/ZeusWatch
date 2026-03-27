@@ -12,6 +12,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
+import com.sysadmindoc.nimbus.data.api.SavedLocationDao
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
@@ -36,6 +37,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
     private val prefs: UserPreferences,
     private val weatherRepository: WeatherRepository,
     private val locationRepository: LocationRepository,
+    private val savedLocationDao: SavedLocationDao,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
@@ -117,6 +119,90 @@ class WidgetRefreshWorker @AssistedInject constructor(
             )
 
             WidgetDataProvider.save(applicationContext, data)
+
+            // Fetch per-widget location weather data
+            try {
+                val widgetMappings = WidgetLocationPrefs.getAllMappings(applicationContext)
+                if (widgetMappings.isNotEmpty()) {
+                    // Group widgets by locationId to avoid duplicate API calls
+                    val locationToWidgets = mutableMapOf<Long, MutableList<Int>>()
+                    for ((widgetId, locId) in widgetMappings) {
+                        locationToWidgets.getOrPut(locId) { mutableListOf() }.add(widgetId)
+                    }
+
+                    for ((locId, widgetIds) in locationToWidgets) {
+                        val loc = savedLocationDao.getById(locId) ?: continue
+                        val locResponse = weatherApi.getForecast(loc.latitude, loc.longitude)
+                        val locCurrent = locResponse.current ?: continue
+                        val locHourly = locResponse.hourly
+                        val locDaily = locResponse.daily
+
+                        val locNow = LocalDateTime.now()
+
+                        // Build hourly list (next 12 hours)
+                        val locHourlyItems = mutableListOf<WidgetHourly>()
+                        if (locHourly != null) {
+                            val times = locHourly.time
+                            for (i in times.indices) {
+                                val t = try {
+                                    LocalDateTime.parse(times[i], DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                                } catch (_: Exception) { continue }
+                                if (t.isBefore(locNow.minusHours(1))) continue
+                                if (locHourlyItems.size >= 12) break
+                                locHourlyItems.add(WidgetHourly(
+                                    hour = WeatherFormatter.formatHourLabel(t),
+                                    temp = convertTemp(locHourly.temperature?.getOrNull(i) ?: 0.0).toInt(),
+                                    code = locHourly.weatherCode?.getOrNull(i) ?: 0,
+                                    isDay = (locHourly.isDay?.getOrNull(i) ?: 1) == 1,
+                                    precipChance = locHourly.precipitationProbability?.getOrNull(i) ?: 0,
+                                ))
+                            }
+                        }
+
+                        // Build daily list (next 7 days)
+                        val locDailyItems = mutableListOf<WidgetDaily>()
+                        if (locDaily != null) {
+                            val today = LocalDate.now()
+                            for (i in locDaily.time.indices) {
+                                if (locDailyItems.size >= 7) break
+                                val d = try {
+                                    LocalDate.parse(locDaily.time[i], DateTimeFormatter.ISO_LOCAL_DATE)
+                                } catch (_: Exception) { continue }
+                                val label = when (d) {
+                                    today -> "Today"
+                                    today.plusDays(1) -> "Tmrw"
+                                    else -> d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.US)
+                                }
+                                locDailyItems.add(WidgetDaily(
+                                    day = label,
+                                    high = convertTemp(locDaily.temperatureMax?.getOrNull(i) ?: 0.0).toInt(),
+                                    low = convertTemp(locDaily.temperatureMin?.getOrNull(i) ?: 0.0).toInt(),
+                                    code = locDaily.weatherCode?.getOrNull(i) ?: 0,
+                                    precipChance = locDaily.precipitationProbabilityMax?.getOrNull(i) ?: 0,
+                                ))
+                            }
+                        }
+
+                        val locData = WidgetWeatherData(
+                            locationName = loc.name,
+                            temperature = convertTemp(locCurrent.temperature ?: 0.0),
+                            feelsLike = convertTemp(locCurrent.apparentTemperature ?: locCurrent.temperature ?: 0.0),
+                            high = convertTemp(locDaily?.temperatureMax?.getOrNull(0) ?: locCurrent.temperature ?: 0.0),
+                            low = convertTemp(locDaily?.temperatureMin?.getOrNull(0) ?: locCurrent.temperature ?: 0.0),
+                            weatherCode = locCurrent.weatherCode ?: 0,
+                            isDay = (locCurrent.isDay ?: 1) == 1,
+                            humidity = locCurrent.humidity ?: 0,
+                            windSpeed = locCurrent.windSpeed ?: 0.0,
+                            hourly = locHourlyItems,
+                            daily = locDailyItems,
+                        )
+
+                        for (widgetId in widgetIds) {
+                            WidgetDataProvider.save(applicationContext, locData, widgetId)
+                        }
+                    }
+                }
+            } catch (_: Exception) { /* Non-fatal; global data already saved */ }
 
             // Trigger all widget updates
             NimbusSmallWidget().updateAll(applicationContext)

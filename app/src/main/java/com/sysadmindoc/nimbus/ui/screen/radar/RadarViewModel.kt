@@ -2,6 +2,12 @@ package com.sysadmindoc.nimbus.ui.screen.radar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.util.Log
+import com.sysadmindoc.nimbus.data.api.BlitzortungService
+import com.sysadmindoc.nimbus.data.api.LightningStrike
+import com.sysadmindoc.nimbus.data.model.CommunityReport
+import com.sysadmindoc.nimbus.data.model.ReportCondition
+import com.sysadmindoc.nimbus.data.repository.CommunityReportRepository
 import com.sysadmindoc.nimbus.data.repository.RadarFrameSet
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.TimedTileUrl
@@ -22,6 +28,8 @@ import javax.inject.Inject
 class RadarViewModel @Inject constructor(
     private val radarRepository: RadarRepository,
     private val prefs: UserPreferences,
+    private val blitzortungService: BlitzortungService,
+    private val communityReportRepository: CommunityReportRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RadarUiState())
@@ -29,6 +37,17 @@ class RadarViewModel @Inject constructor(
 
     /** Settings flow for radar provider selection. */
     val settings = prefs.settings
+
+    /** Real-time lightning strikes from Blitzortung WebSocket. */
+    val lightningStrikes: StateFlow<List<LightningStrike>> = blitzortungService.recentStrikes
+
+    /** Nearby community weather reports. */
+    private val _nearbyReports = MutableStateFlow<List<CommunityReport>>(emptyList())
+    val nearbyReports: StateFlow<List<CommunityReport>> = _nearbyReports.asStateFlow()
+
+    /** State for the report submission bottom sheet. */
+    private val _reportSubmitState = MutableStateFlow(ReportSubmitState())
+    val reportSubmitState: StateFlow<ReportSubmitState> = _reportSubmitState.asStateFlow()
 
     private var playbackJob: Job? = null
 
@@ -134,9 +153,65 @@ class RadarViewModel @Inject constructor(
         return if (saved != null) Pair(saved.latitude, saved.longitude) else Pair(39.8, -98.5)
     }
 
+    /** Start the Blitzortung WebSocket connection for lightning data. */
+    fun connectLightning() {
+        blitzortungService.connect()
+    }
+
+    /** Stop the Blitzortung WebSocket connection. */
+    fun disconnectLightning() {
+        blitzortungService.disconnect()
+    }
+
+    /** Load community reports near the given location. */
+    fun loadNearbyReports(lat: Double, lon: Double) {
+        viewModelScope.launch {
+            communityReportRepository.getReportsNearby(lat, lon).fold(
+                onSuccess = { reports ->
+                    _nearbyReports.value = reports
+                },
+                onFailure = { e ->
+                    Log.e("RadarViewModel", "Failed to load community reports", e)
+                    _nearbyReports.value = emptyList()
+                }
+            )
+        }
+    }
+
+    /** Submit a community weather report at the given location. */
+    fun submitReport(lat: Double, lon: Double, condition: ReportCondition, note: String) {
+        _reportSubmitState.update { it.copy(isSubmitting = true, result = null) }
+        viewModelScope.launch {
+            val report = CommunityReport(
+                latitude = lat,
+                longitude = lon,
+                condition = condition,
+                note = note,
+            )
+            communityReportRepository.submitReport(report).fold(
+                onSuccess = {
+                    _reportSubmitState.update { it.copy(isSubmitting = false, result = "success") }
+                    // Refresh nearby reports after submission
+                    loadNearbyReports(lat, lon)
+                },
+                onFailure = { e ->
+                    _reportSubmitState.update {
+                        it.copy(isSubmitting = false, result = e.message ?: "Submission failed")
+                    }
+                }
+            )
+        }
+    }
+
+    /** Reset the report submission state (e.g. when sheet is dismissed). */
+    fun resetReportState() {
+        _reportSubmitState.value = ReportSubmitState()
+    }
+
     override fun onCleared() {
         super.onCleared()
         playbackJob?.cancel()
+        blitzortungService.disconnect()
     }
 }
 
@@ -161,3 +236,9 @@ data class RadarUiState(
     val isCurrentFrameForecast: Boolean
         get() = frameSet?.let { currentFrameIndex >= it.past.size } ?: false
 }
+
+@Stable
+data class ReportSubmitState(
+    val isSubmitting: Boolean = false,
+    val result: String? = null, // null = idle, "success" = done, else error message
+)

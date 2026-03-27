@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Search
@@ -40,13 +42,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
@@ -71,16 +81,19 @@ fun LocationsScreen(
 ) {
     val saved by viewModel.savedLocations.collectAsStateWithLifecycle()
     val search by viewModel.searchState.collectAsStateWithLifecycle()
+    val locationTemps by viewModel.locationTemps.collectAsStateWithLifecycle()
 
     LocationsContent(
         saved = saved,
         search = search,
+        locationTemps = locationTemps,
         onBack = onBack,
         onLocationSelected = onLocationSelected,
         onSearchQueryChanged = { viewModel.onSearchQueryChanged(it) },
         onClearSearch = { viewModel.clearSearch() },
         onAddLocation = { viewModel.addLocation(it) },
         onRemoveLocation = { viewModel.removeLocation(it) },
+        onMoveLocation = { from, to -> viewModel.moveLocation(from, to) },
     )
 }
 
@@ -88,12 +101,14 @@ fun LocationsScreen(
 internal fun LocationsContent(
     saved: List<SavedLocationEntity>,
     search: SearchState,
+    locationTemps: Map<Long, Double> = emptyMap(),
     onBack: () -> Unit,
     onLocationSelected: (Long) -> Unit = {},
     onSearchQueryChanged: (String) -> Unit = {},
     onClearSearch: () -> Unit = {},
     onAddLocation: (GeocodingResult) -> Unit = {},
     onRemoveLocation: (Long) -> Unit = {},
+    onMoveLocation: (Int, Int) -> Unit = { _, _ -> },
 ) {
     PredictiveBackScaffold(onBack = onBack) {
         Column(
@@ -130,66 +145,113 @@ internal fun LocationsContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            // Search results (shown when query active)
-            if (search.query.length >= 2) {
-                if (search.results.isNotEmpty()) {
-                    item {
-                        Text(
-                            "Search Results",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = NimbusTextTertiary,
-                            modifier = Modifier.padding(vertical = 4.dp),
-                        )
-                    }
-                    items(search.results, key = { it.id }) { result ->
-                        SearchResultItem(
-                            result = result,
-                            onAdd = { onAddLocation(result) },
-                        )
-                    }
-                    item { Spacer(modifier = Modifier.height(12.dp)) }
-                } else if (!search.isSearching) {
-                    item {
-                        Text(
-                            search.error ?: "No results found",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (search.error != null) NimbusError else NimbusTextTertiary,
-                            modifier = Modifier.padding(vertical = 16.dp),
-                        )
-                    }
-                }
-            }
+        LocationsList(
+            saved = saved,
+            search = search,
+            locationTemps = locationTemps,
+            onLocationSelected = onLocationSelected,
+            onAddLocation = onAddLocation,
+            onRemoveLocation = onRemoveLocation,
+            onMoveLocation = onMoveLocation,
+        )
+        }
+    }
+}
 
-            // Saved locations
-            if (saved.isNotEmpty()) {
+@Composable
+private fun LocationsList(
+    saved: List<SavedLocationEntity>,
+    search: SearchState,
+    locationTemps: Map<Long, Double> = emptyMap(),
+    onLocationSelected: (Long) -> Unit,
+    onAddLocation: (GeocodingResult) -> Unit,
+    onRemoveLocation: (Long) -> Unit,
+    onMoveLocation: (Int, Int) -> Unit = { _, _ -> },
+) {
+    // Track drag state for reordering
+    var draggedIndex by remember { mutableIntStateOf(-1) }
+    var dragOffsetY by remember { mutableFloatStateOf(0f) }
+    val itemHeight = 62f // Approximate dp height of each location row
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        // Search results (shown when query active)
+        if (search.query.length >= 2) {
+            if (search.results.isNotEmpty()) {
                 item {
                     Text(
-                        "Saved Locations",
+                        "Search Results",
                         style = MaterialTheme.typography.labelMedium,
                         color = NimbusTextTertiary,
                         modifier = Modifier.padding(vertical = 4.dp),
                     )
                 }
-                items(saved, key = { it.id }) { loc ->
-                    SavedLocationItem(
-                        location = loc,
-                        onClick = { onLocationSelected(loc.id) },
-                        onRemove = {
-                            if (!loc.isCurrentLocation) onRemoveLocation(loc.id)
-                        },
+                items(search.results, key = { it.id }) { result ->
+                    SearchResultItem(
+                        result = result,
+                        onAdd = { onAddLocation(result) },
+                    )
+                }
+                item { Spacer(modifier = Modifier.height(12.dp)) }
+            } else if (!search.isSearching) {
+                item {
+                    Text(
+                        search.error ?: "No results found",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (search.error != null) NimbusError else NimbusTextTertiary,
+                        modifier = Modifier.padding(vertical = 16.dp),
                     )
                 }
             }
+        }
 
-            item { Spacer(modifier = Modifier.height(32.dp)) }
+        // Saved locations
+        if (saved.isNotEmpty()) {
+            item {
+                Text(
+                    "Saved Locations",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = NimbusTextTertiary,
+                    modifier = Modifier.padding(vertical = 4.dp),
+                )
+            }
+            items(saved.size, key = { saved[it].id }) { index ->
+                val loc = saved[index]
+                val isDragged = draggedIndex == index
+                SavedLocationItem(
+                    location = loc,
+                    temperature = locationTemps[loc.id],
+                    onClick = { onLocationSelected(loc.id) },
+                    onRemove = {
+                        if (!loc.isCurrentLocation) onRemoveLocation(loc.id)
+                    },
+                    showDragHandle = !loc.isCurrentLocation,
+                    modifier = if (isDragged) {
+                        Modifier
+                            .zIndex(1f)
+                            .graphicsLayer { translationY = dragOffsetY }
+                    } else Modifier,
+                    onDragStart = { draggedIndex = index; dragOffsetY = 0f },
+                    onDrag = { delta ->
+                        dragOffsetY += delta
+                        val targetIndex = (index + (dragOffsetY / itemHeight).toInt())
+                            .coerceIn(0, saved.lastIndex)
+                        if (targetIndex != index && targetIndex != draggedIndex) {
+                            onMoveLocation(draggedIndex, targetIndex)
+                            draggedIndex = targetIndex
+                            dragOffsetY = 0f
+                        }
+                    },
+                    onDragEnd = { draggedIndex = -1; dragOffsetY = 0f },
+                )
+            }
         }
-        }
+
+        item { Spacer(modifier = Modifier.height(32.dp)) }
     }
 }
 
@@ -292,11 +354,19 @@ private fun SearchResultItem(
 @Composable
 private fun SavedLocationItem(
     location: SavedLocationEntity,
+    temperature: Double? = null,
     onClick: () -> Unit,
     onRemove: () -> Unit,
+    showDragHandle: Boolean = false,
+    modifier: Modifier = Modifier,
+    onDragStart: () -> Unit = {},
+    onDrag: (Float) -> Unit = {},
+    onDragEnd: () -> Unit = {},
 ) {
+    val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
+
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(NimbusSurfaceVariant)
@@ -304,13 +374,35 @@ private fun SavedLocationItem(
             .padding(horizontal = 14.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            if (location.isCurrentLocation) Icons.Filled.MyLocation else Icons.Filled.LocationOn,
-            contentDescription = null,
-            tint = if (location.isCurrentLocation) NimbusBlueAccent else NimbusTextSecondary,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(modifier = Modifier.width(10.dp))
+        if (showDragHandle) {
+            Icon(
+                Icons.Filled.DragHandle,
+                contentDescription = "Drag to reorder",
+                tint = NimbusTextTertiary,
+                modifier = Modifier
+                    .size(20.dp)
+                    .pointerInput(Unit) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = { onDragStart() },
+                            onDrag = { change, offset ->
+                                change.consume()
+                                onDrag(offset.y)
+                            },
+                            onDragEnd = { onDragEnd() },
+                            onDragCancel = { onDragEnd() },
+                        )
+                    },
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        } else {
+            Icon(
+                Icons.Filled.MyLocation,
+                contentDescription = null,
+                tint = NimbusBlueAccent,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 if (location.isCurrentLocation) "My Location" else location.name,
@@ -330,6 +422,14 @@ private fun SavedLocationItem(
             if (sub.isNotEmpty()) {
                 Text(sub, style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary)
             }
+        }
+        if (temperature != null) {
+            Text(
+                text = com.sysadmindoc.nimbus.util.WeatherFormatter.formatTemperature(temperature, s),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                color = NimbusTextPrimary,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
         }
         if (!location.isCurrentLocation) {
             IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {

@@ -13,6 +13,7 @@ import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -38,7 +39,8 @@ import com.sysadmindoc.nimbus.MainActivity
 class NimbusSmallWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val data = WidgetDataProvider.load(context)
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+        val data = WidgetDataProvider.load(context, appWidgetId)
         provideContent {
             GlanceTheme {
                 SmallWidgetContent(data)

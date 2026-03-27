@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.ui.component
 
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Cloud
@@ -15,14 +17,24 @@ import androidx.compose.material.icons.outlined.NightsStay
 import androidx.compose.material.icons.outlined.WbTwilight
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import com.sysadmindoc.nimbus.data.model.WeatherCode
+import com.sysadmindoc.nimbus.data.repository.IconStyle
 import com.sysadmindoc.nimbus.ui.theme.*
+import com.sysadmindoc.nimbus.util.IconPackManager
 
 /**
- * Maps WMO weather codes to Material Icons with condition-appropriate colors.
- * Phase 2+ will upgrade to animated Lottie icons.
+ * Maps WMO weather codes to icons.
+ *
+ * Supports three modes via [IconStyle]:
+ * - **MATERIAL** / **METEOCONS**: Built-in Material Icons (Meteocons handled elsewhere via Lottie).
+ * - **CUSTOM**: Loads bitmaps from a user-selected [IconPack] via [IconPackManager].
+ *   Falls back to Material Icons when the custom pack cannot provide the requested icon.
  */
 @Composable
 fun WeatherIcon(
@@ -30,7 +42,30 @@ fun WeatherIcon(
     isDay: Boolean,
     modifier: Modifier = Modifier,
     tint: Color = Color.Unspecified,
+    iconPackManager: IconPackManager? = null,
 ) {
+    val settings = LocalUnitSettings.current
+
+    // Try custom icon pack first
+    if (settings.iconStyle == IconStyle.CUSTOM && iconPackManager != null && settings.customIconPackId.isNotEmpty()) {
+        val context = LocalContext.current
+        val bitmap: Bitmap? = remember(settings.customIconPackId, weatherCode.code, isDay) {
+            val pack = iconPackManager.findPack(settings.customIconPackId, context)
+            pack?.let { iconPackManager.loadIcon(context, it, weatherCode.code, isDay) }
+        }
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = weatherCode.description,
+                modifier = modifier,
+                contentScale = ContentScale.Fit,
+            )
+            return
+        }
+        // Fall through to Material Icons if custom pack failed
+    }
+
+    // Default: Material Icons
     val (icon, defaultTint) = when (weatherCode) {
         WeatherCode.CLEAR_SKY,
         WeatherCode.MAINLY_CLEAR -> {

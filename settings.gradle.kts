@@ -17,9 +17,14 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven("https://maplibre.jfrog.io/artifactory/maplibre-native")
+        maven("https://maplibre.jfrog.io/artifactory/maplibre-native") {
+            content {
+                includeGroupByRegex("org\\.maplibre.*")
+            }
+        }
     }
 }
 
 rootProject.name = "ZeusWatch"
 include(":app")
+include(":wear")

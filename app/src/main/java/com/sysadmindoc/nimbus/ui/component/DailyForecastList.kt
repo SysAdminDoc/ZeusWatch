@@ -41,6 +41,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 @Composable
@@ -48,10 +49,18 @@ fun DailyForecastList(
     daily: List<DailyConditions>,
     modifier: Modifier = Modifier,
 ) {
+    // Find the warmest day index (within first 7 days)
+    val warmestIndex = remember(daily) {
+        daily.take(7).indices.maxByOrNull { daily[it].temperatureHigh } ?: -1
+    }
+
     WeatherCard(title = "Daily Forecast", modifier = modifier) {
         Column {
             daily.forEachIndexed { index, day ->
-                ExpandableDailyRow(day)
+                ExpandableDailyRow(
+                    day = day,
+                    isWarmest = index == warmestIndex && daily.size > 1,
+                )
                 if (index < daily.lastIndex) {
                     HorizontalDivider(color = NimbusCardBorder, modifier = Modifier.padding(vertical = 2.dp))
                 }
@@ -61,7 +70,10 @@ fun DailyForecastList(
 }
 
 @Composable
-private fun ExpandableDailyRow(day: DailyConditions) {
+private fun ExpandableDailyRow(
+    day: DailyConditions,
+    isWarmest: Boolean = false,
+) {
     val s = LocalUnitSettings.current
     var expanded by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(if (expanded) 180f else 0f, tween(200), label = "arrow")
@@ -71,7 +83,16 @@ private fun ExpandableDailyRow(day: DailyConditions) {
             modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(WeatherFormatter.formatDayLabel(day.date), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(80.dp))
+            Column(modifier = Modifier.width(80.dp)) {
+                Text(WeatherFormatter.formatDayLabel(day.date), style = MaterialTheme.typography.bodyLarge)
+                if (isWarmest) {
+                    Text(
+                        "Warmest",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NimbusWarning,
+                    )
+                }
+            }
             Spacer(Modifier.width(8.dp))
             AnimatedWeatherIcon(weatherCode = day.weatherCode, isDay = true, iconStyle = s.iconStyle, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(12.dp))

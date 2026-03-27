@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
@@ -34,6 +35,7 @@ fun WeatherCard(
             .clip(shape)
             .background(NimbusCardBg)
             .border(1.dp, NimbusCardBorder, shape)
+            .semantics(mergeDescendants = true) {}
     ) {
         Column(
             modifier = Modifier

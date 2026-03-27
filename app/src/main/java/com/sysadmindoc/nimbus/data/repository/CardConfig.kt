@@ -18,6 +18,8 @@ enum class CardType(val label: String, val defaultEnabled: Boolean = true) {
     SUNSHINE("Sunshine Duration", false),
     DRIVING_CONDITIONS("Driving Conditions", false),
     HEALTH_ALERTS("Health Alerts", false),
+    CLOTHING("What to Wear", false),
+    PET_SAFETY("Pet Safety", false),
     MOON_PHASE("Moon Phase", true),
     DETAILS_GRID("Today's Details", true),
 }

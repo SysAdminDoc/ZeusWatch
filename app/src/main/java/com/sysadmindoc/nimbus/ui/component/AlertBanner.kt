@@ -30,6 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
@@ -62,7 +66,16 @@ fun AlertBanner(
         }
     }
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    val alertDescription = alerts.joinToString(". ") { "${it.severity.label}: ${it.event}" }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics {
+                liveRegion = LiveRegionMode.Assertive
+                contentDescription = "$alertDescription. Tap for details."
+            },
+    ) {
         alerts.forEach { alert ->
             AlertBannerItem(alert = alert, onClick = { onAlertClick(alert) })
             Spacer(modifier = Modifier.height(6.dp))
@@ -108,7 +121,7 @@ private fun AlertBannerItem(
     ) {
         Icon(
             Icons.Filled.Warning,
-            contentDescription = null,
+            contentDescription = "Weather alert: ${alert.event}",
             tint = severityColor,
             modifier = Modifier.size(22.dp),
         )

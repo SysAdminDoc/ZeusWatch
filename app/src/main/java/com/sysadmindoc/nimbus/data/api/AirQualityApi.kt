@@ -19,7 +19,7 @@ interface AirQualityApi {
         @Query("current") current: String = CURRENT_PARAMS,
         @Query("hourly") hourly: String = HOURLY_PARAMS,
         @Query("timezone") timezone: String = "auto",
-        @Query("forecast_days") forecastDays: Int = 3,
+        @Query("forecast_days") forecastDays: Int = 5,
     ): AirQualityResponse
 
     companion object {

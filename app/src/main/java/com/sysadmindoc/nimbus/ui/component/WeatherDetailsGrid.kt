@@ -35,6 +35,7 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 fun WeatherDetailsGrid(
     current: CurrentConditions,
     modifier: Modifier = Modifier,
+    hourly: List<com.sysadmindoc.nimbus.data.model.HourlyConditions> = emptyList(),
 ) {
     val s = LocalUnitSettings.current
 
@@ -53,12 +54,20 @@ fun WeatherDetailsGrid(
         Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
             left = DetailItem(Icons.Outlined.WbSunny, "UV Index", WeatherFormatter.formatUvIndex(current.uvIndex), WeatherFormatter.uvDescription(current.uvIndex)),
-            right = DetailItem(Icons.Filled.Compress, "Pressure", WeatherFormatter.formatPressure(current.pressure, s)),
+            right = DetailItem(
+                Icons.Filled.Compress, "Pressure",
+                WeatherFormatter.formatPressure(current.pressure, s),
+                subtitle = WeatherFormatter.pressureTrend(hourly),
+            ),
         )
         Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
             left = DetailItem(Icons.Filled.Visibility, "Visibility", WeatherFormatter.formatVisibility(current.visibility, s)),
-            right = DetailItem(Icons.Outlined.Thermostat, "Dew Point", if (current.dewPoint != null) WeatherFormatter.formatDewPoint(current.dewPoint, s) else "--"),
+            right = DetailItem(
+                Icons.Outlined.Thermostat, "Dew Point",
+                if (current.dewPoint != null) WeatherFormatter.formatDewPoint(current.dewPoint, s) else "--",
+                subtitle = current.dewPoint?.let { WeatherFormatter.dewPointComfort(it) },
+            ),
         )
         Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
