@@ -234,7 +234,6 @@ fun MainScreen(
 
         Scaffold(
             containerColor = NimbusNavyDark,
-            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
                 ZeusWatchBottomNav(
                     selectedTab = selectedTab,
@@ -246,7 +245,7 @@ fun MainScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = innerPadding.calculateBottomPadding()),
+                    .padding(innerPadding),
             ) {
                 when {
                     state.isLoading && state.weatherData == null -> ShimmerLoadingSkeleton()
@@ -477,7 +476,6 @@ private fun WeatherContent(
             modifier = Modifier
                 .fillMaxSize()
                 .background(bgBrush)
-                .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(bottom = 8.dp),
         ) {
             // ── Toolbar ─────────────────────────────────────────────
