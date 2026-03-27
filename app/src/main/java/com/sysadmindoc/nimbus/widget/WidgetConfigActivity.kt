@@ -49,6 +49,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -96,8 +97,7 @@ class WidgetConfigActivity : ComponentActivity() {
     }
 
     private fun confirmWidget(locationId: Long?) {
-        val scope = kotlinx.coroutines.MainScope()
-        scope.launch {
+        lifecycleScope.launch {
             WidgetLocationPrefs.setLocationId(this@WidgetConfigActivity, appWidgetId, locationId)
 
             // Trigger widget update
@@ -118,7 +118,7 @@ private fun WidgetConfigScreen(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        locations = locationDao.getAll()
+        locations = try { locationDao.getAll() } catch (_: Exception) { emptyList() }
     }
 
     Column(
