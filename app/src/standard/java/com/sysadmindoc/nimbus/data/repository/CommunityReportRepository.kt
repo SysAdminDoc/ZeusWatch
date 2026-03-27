@@ -30,7 +30,7 @@ class CommunityReportRepository @Inject constructor(
     private val collection get() = firestore.collection(COLLECTION_NAME)
 
     /** Hashed device ID for anonymous attribution (no user accounts needed). */
-    val deviceId: String by lazy { hashDeviceId(context) }
+    override val deviceId: String by lazy { hashDeviceId(context) }
 
     /** Timestamp of last successful submission for local rate limiting. */
     @Volatile
@@ -40,7 +40,7 @@ class CommunityReportRepository @Inject constructor(
      * Submit a community weather report.
      * Rate limited to 1 report per device per 5 minutes (enforced locally).
      */
-    suspend fun submitReport(report: CommunityReport): Result<String> {
+    override suspend fun submitReport(report: CommunityReport): Result<String> {
         // Local rate limit: 1 report per 5 minutes
         val now = System.currentTimeMillis()
         if (now - lastSubmitTimestamp < RATE_LIMIT_MS) {
@@ -71,10 +71,10 @@ class CommunityReportRepository @Inject constructor(
      * Query community reports near a location within the last 2 hours.
      * Uses a bounding box approximation since Firestore lacks native geo-queries.
      */
-    suspend fun getReportsNearby(
+    override suspend fun getReportsNearby(
         lat: Double,
         lon: Double,
-        radiusKm: Double = 50.0,
+        radiusKm: Double,
     ): Result<List<CommunityReport>> {
         return try {
             val twoHoursAgo = System.currentTimeMillis() - TWO_HOURS_MS
@@ -117,7 +117,7 @@ class CommunityReportRepository @Inject constructor(
      * Delete a report by ID. Only allows deletion if the report was submitted
      * by this device (matched by deviceId).
      */
-    suspend fun deleteReport(id: String): Result<Unit> {
+    override suspend fun deleteReport(id: String): Result<Unit> {
         return try {
             val doc = collection.document(id).get().await()
             val reportDeviceId = doc.getString("deviceId") ?: ""
