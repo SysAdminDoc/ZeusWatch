@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
+import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,6 +38,10 @@ class LocationsViewModel @Inject constructor(
     private val _locationTemps = MutableStateFlow<Map<Long, Double>>(emptyMap())
     val locationTemps: StateFlow<Map<Long, Double>> = _locationTemps.asStateFlow()
 
+    /** Cached weather codes keyed by location ID. */
+    private val _locationConditions = MutableStateFlow<Map<Long, Pair<WeatherCode, Boolean>>>(emptyMap())
+    val locationConditions: StateFlow<Map<Long, Pair<WeatherCode, Boolean>>> = _locationConditions.asStateFlow()
+
     private var searchJob: Job? = null
 
     init {
@@ -50,13 +55,16 @@ class LocationsViewModel @Inject constructor(
 
     private suspend fun loadCachedTemps(locations: List<SavedLocationEntity>) {
         val temps = mutableMapOf<Long, Double>()
+        val conditions = mutableMapOf<Long, Pair<WeatherCode, Boolean>>()
         locations.forEach { loc ->
             val cached = weatherRepository.getCachedWeather(loc.latitude, loc.longitude)
             if (cached != null) {
                 temps[loc.id] = cached.current.temperature
+                conditions[loc.id] = cached.current.weatherCode to cached.current.isDay
             }
         }
         _locationTemps.value = temps
+        _locationConditions.value = conditions
     }
 
     fun onSearchQueryChanged(query: String) {
