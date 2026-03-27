@@ -146,6 +146,10 @@ fun MainScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
+    // Track whether we've already prompted in this session
+    var hasPromptedPermissions by rememberSaveable { mutableStateOf(false) }
+
+    // Location permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -154,25 +158,57 @@ fun MainScreen(
         else viewModel.onPermissionDenied()
     }
 
-    // Request notification permission on Android 13+ (one-shot)
+    // Notification permission launcher (Android 13+)
     val notifPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { /* No action needed — system handles the grant/deny */ }
+    ) { /* System handles the grant/deny visual */ }
 
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
+    // Background location launcher (Android 11+, requested AFTER foreground granted)
+    val bgLocationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { /* Background location is optional — no action needed on deny */ }
 
+    // Sequential permission flow on first launch:
+    // 1. Location (required) -> 2. Notifications (Android 13+) -> 3. Background location (optional)
     LaunchedEffect(state.needsLocationPermission) {
-        if (state.needsLocationPermission) {
+        if (state.needsLocationPermission && !hasPromptedPermissions) {
+            hasPromptedPermissions = true
             permissionLauncher.launch(
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION,
                 )
             )
+        }
+    }
+
+    // After location is granted, request notification + background location permissions
+    val permContext = LocalContext.current
+    LaunchedEffect(state.weatherData) {
+        if (state.weatherData != null && hasPromptedPermissions) {
+            // Small delay so location permission dialog fully dismisses
+            kotlinx.coroutines.delay(500)
+
+            // Request notification permission on Android 13+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val notifGranted = androidx.core.content.ContextCompat.checkSelfPermission(
+                    permContext, Manifest.permission.POST_NOTIFICATIONS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                if (!notifGranted) {
+                    notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    kotlinx.coroutines.delay(500)
+                }
+            }
+
+            // Request background location on Android 11+ (for widgets/alert worker)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val bgGranted = androidx.core.content.ContextCompat.checkSelfPermission(
+                    permContext, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                if (!bgGranted) {
+                    bgLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                }
+            }
         }
     }
 
