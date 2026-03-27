@@ -78,6 +78,57 @@ object WidgetDataProvider {
             updatedAt = prefs[KEY_UPDATED_AT] ?: 0L,
         )
     }
+
+    // ---- Per-widget keyed variants ----
+
+    private fun wKey(appWidgetId: Int, base: String) = "w_${appWidgetId}_$base"
+
+    /** Save weather data scoped to a specific widget instance. */
+    suspend fun save(context: Context, data: WidgetWeatherData, appWidgetId: Int) {
+        context.widgetDataStore.edit { prefs ->
+            prefs[stringPreferencesKey(wKey(appWidgetId, "location"))] = data.locationName
+            prefs[doublePreferencesKey(wKey(appWidgetId, "temp"))] = data.temperature
+            prefs[doublePreferencesKey(wKey(appWidgetId, "feels_like"))] = data.feelsLike
+            prefs[doublePreferencesKey(wKey(appWidgetId, "high"))] = data.high
+            prefs[doublePreferencesKey(wKey(appWidgetId, "low"))] = data.low
+            prefs[intPreferencesKey(wKey(appWidgetId, "code"))] = data.weatherCode
+            prefs[intPreferencesKey(wKey(appWidgetId, "is_day"))] = if (data.isDay) 1 else 0
+            prefs[intPreferencesKey(wKey(appWidgetId, "humidity"))] = data.humidity
+            prefs[doublePreferencesKey(wKey(appWidgetId, "wind"))] = data.windSpeed
+            prefs[stringPreferencesKey(wKey(appWidgetId, "hourly"))] = json.encodeToString(WidgetHourlyList.serializer(), WidgetHourlyList(data.hourly))
+            prefs[stringPreferencesKey(wKey(appWidgetId, "daily"))] = json.encodeToString(WidgetDailyList.serializer(), WidgetDailyList(data.daily))
+            prefs[longPreferencesKey(wKey(appWidgetId, "updated"))] = System.currentTimeMillis()
+        }
+    }
+
+    /** Load weather data for a specific widget, falling back to global data if not found. */
+    suspend fun load(context: Context, appWidgetId: Int): WidgetWeatherData? {
+        val prefs = context.widgetDataStore.data.first()
+        val location = prefs[stringPreferencesKey(wKey(appWidgetId, "location"))]
+            ?: return load(context) // fallback to global
+
+        val hourlyJson = prefs[stringPreferencesKey(wKey(appWidgetId, "hourly"))]
+        val dailyJson = prefs[stringPreferencesKey(wKey(appWidgetId, "daily"))]
+
+        return WidgetWeatherData(
+            locationName = location,
+            temperature = prefs[doublePreferencesKey(wKey(appWidgetId, "temp"))] ?: 0.0,
+            feelsLike = prefs[doublePreferencesKey(wKey(appWidgetId, "feels_like"))] ?: 0.0,
+            high = prefs[doublePreferencesKey(wKey(appWidgetId, "high"))] ?: 0.0,
+            low = prefs[doublePreferencesKey(wKey(appWidgetId, "low"))] ?: 0.0,
+            weatherCode = prefs[intPreferencesKey(wKey(appWidgetId, "code"))] ?: 0,
+            isDay = (prefs[intPreferencesKey(wKey(appWidgetId, "is_day"))] ?: 1) == 1,
+            humidity = prefs[intPreferencesKey(wKey(appWidgetId, "humidity"))] ?: 0,
+            windSpeed = prefs[doublePreferencesKey(wKey(appWidgetId, "wind"))] ?: 0.0,
+            hourly = hourlyJson?.let {
+                try { json.decodeFromString(WidgetHourlyList.serializer(), it).items } catch (_: Exception) { emptyList() }
+            } ?: emptyList(),
+            daily = dailyJson?.let {
+                try { json.decodeFromString(WidgetDailyList.serializer(), it).items } catch (_: Exception) { emptyList() }
+            } ?: emptyList(),
+            updatedAt = prefs[longPreferencesKey(wKey(appWidgetId, "updated"))] ?: 0L,
+        )
+    }
 }
 
 data class WidgetWeatherData(

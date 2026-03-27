@@ -57,5 +57,15 @@ fun AnimatedWeatherIcon(
                 )
             }
         }
+        IconStyle.CUSTOM -> {
+            // Custom icon packs handled in WeatherIcon via IconPackManager
+            // Falls back to Material Icons if pack can't load the icon
+            WeatherIcon(
+                weatherCode = weatherCode,
+                isDay = isDay,
+                modifier = modifier,
+                tint = tint,
+            )
+        }
     }
 }

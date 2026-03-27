@@ -39,6 +39,7 @@ class UserPreferences @Inject constructor(
         // Display
         val RADAR_PROVIDER = stringPreferencesKey("radar_provider")
         val ICON_STYLE = stringPreferencesKey("icon_style")
+        val CUSTOM_ICON_PACK_ID = stringPreferencesKey("custom_icon_pack_id")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val SUMMARY_STYLE = stringPreferencesKey("summary_style")
 
@@ -68,6 +69,27 @@ class UserPreferences @Inject constructor(
         // Haptics
         val HAPTIC_FEEDBACK_FOR_ALERTS = booleanPreferencesKey("haptic_alerts")
 
+        // Forecast range
+        val HOURLY_FORECAST_HOURS = stringPreferencesKey("hourly_forecast_hours")
+
+        // Cache
+        val CACHE_TTL_MINUTES = stringPreferencesKey("cache_ttl_minutes")
+
+        // Alert source selection (international)
+        val ALERT_SOURCE_PREF = stringPreferencesKey("alert_source_pref")
+
+        // Data sources
+        val SOURCE_FORECAST = stringPreferencesKey("source_forecast")
+        val SOURCE_FORECAST_FALLBACK = stringPreferencesKey("source_forecast_fallback")
+        val SOURCE_ALERTS = stringPreferencesKey("source_alerts")
+        val SOURCE_ALERTS_FALLBACK = stringPreferencesKey("source_alerts_fallback")
+        val SOURCE_AIR_QUALITY = stringPreferencesKey("source_air_quality")
+        val SOURCE_MINUTELY = stringPreferencesKey("source_minutely")
+
+        // API keys for third-party providers
+        val OWM_API_KEY = stringPreferencesKey("owm_api_key")
+        val PIRATE_WEATHER_API_KEY = stringPreferencesKey("pirate_weather_api_key")
+
         val SEEN_ALERT_IDS = stringSetPreferencesKey("seen_alert_ids")
         val LAST_LAT = stringPreferencesKey("last_lat")
         val LAST_LON = stringPreferencesKey("last_lon")
@@ -88,9 +110,13 @@ class UserPreferences @Inject constructor(
                 prefs[Keys.ALERT_MIN_SEVERITY] ?: AlertMinSeverity.SEVERE.name
             ),
             alertCheckAllLocations = prefs[Keys.ALERT_CHECK_ALL_LOCATIONS] ?: false,
+            alertSourcePref = AlertSourcePreference.valueOf(
+                prefs[Keys.ALERT_SOURCE_PREF] ?: AlertSourcePreference.AUTO.name
+            ),
             // Display
             radarProvider = RadarProvider.valueOf(prefs[Keys.RADAR_PROVIDER] ?: RadarProvider.WINDY_WEBVIEW.name),
             iconStyle = IconStyle.valueOf(prefs[Keys.ICON_STYLE] ?: IconStyle.MATERIAL.name),
+            customIconPackId = prefs[Keys.CUSTOM_ICON_PACK_ID] ?: "",
             themeMode = ThemeMode.valueOf(prefs[Keys.THEME_MODE] ?: ThemeMode.STATIC_DARK.name),
             summaryStyle = SummaryStyle.valueOf(prefs[Keys.SUMMARY_STYLE] ?: SummaryStyle.TEMPLATE.name),
             // Card config
@@ -119,10 +145,29 @@ class UserPreferences @Inject constructor(
             showBeaufortColors = prefs[Keys.SHOW_BEAUFORT_COLORS] ?: true,
             showOutdoorScore = prefs[Keys.SHOW_OUTDOOR_SCORE] ?: true,
             showYesterdayComparison = prefs[Keys.SHOW_YESTERDAY_COMPARISON] ?: true,
+            // Forecast range
+            hourlyForecastHours = prefs[Keys.HOURLY_FORECAST_HOURS]?.toIntOrNull() ?: 48,
+            // Cache
+            cacheTtlMinutes = prefs[Keys.CACHE_TTL_MINUTES]?.toIntOrNull() ?: 30,
             // Health
             migrainePressureThreshold = prefs[Keys.MIGRAINE_PRESSURE_THRESHOLD]?.toDoubleOrNull() ?: 5.0,
             // Haptics
             hapticFeedbackForAlerts = prefs[Keys.HAPTIC_FEEDBACK_FOR_ALERTS] ?: true,
+            // Data sources
+            sourceConfig = SourceConfig(
+                forecast = prefs[Keys.SOURCE_FORECAST]?.let { safeValueOf<WeatherSourceProvider>(it) }
+                    ?: WeatherSourceProvider.OPEN_METEO,
+                forecastFallback = prefs[Keys.SOURCE_FORECAST_FALLBACK]?.let { safeValueOf<WeatherSourceProvider>(it) },
+                alerts = prefs[Keys.SOURCE_ALERTS]?.let { safeValueOf<WeatherSourceProvider>(it) }
+                    ?: WeatherSourceProvider.NWS,
+                alertsFallback = prefs[Keys.SOURCE_ALERTS_FALLBACK]?.let { safeValueOf<WeatherSourceProvider>(it) },
+                airQuality = prefs[Keys.SOURCE_AIR_QUALITY]?.let { safeValueOf<WeatherSourceProvider>(it) }
+                    ?: WeatherSourceProvider.OPEN_METEO,
+                minutely = prefs[Keys.SOURCE_MINUTELY]?.let { safeValueOf<WeatherSourceProvider>(it) }
+                    ?: WeatherSourceProvider.OPEN_METEO,
+            ),
+            owmApiKey = prefs[Keys.OWM_API_KEY] ?: "",
+            pirateWeatherApiKey = prefs[Keys.PIRATE_WEATHER_API_KEY] ?: "",
         )
     }
 
@@ -143,10 +188,12 @@ class UserPreferences @Inject constructor(
     suspend fun setAlertNotificationsEnabled(enabled: Boolean) = store.edit { it[Keys.ALERT_NOTIFICATIONS_ENABLED] = enabled }
     suspend fun setAlertMinSeverity(severity: AlertMinSeverity) = store.edit { it[Keys.ALERT_MIN_SEVERITY] = severity.name }
     suspend fun setAlertCheckAllLocations(enabled: Boolean) = store.edit { it[Keys.ALERT_CHECK_ALL_LOCATIONS] = enabled }
+    suspend fun setAlertSourcePref(pref: AlertSourcePreference) = store.edit { it[Keys.ALERT_SOURCE_PREF] = pref.name }
 
     // Display
     suspend fun setRadarProvider(provider: RadarProvider) = store.edit { it[Keys.RADAR_PROVIDER] = provider.name }
     suspend fun setIconStyle(style: IconStyle) = store.edit { it[Keys.ICON_STYLE] = style.name }
+    suspend fun setCustomIconPackId(id: String) = store.edit { it[Keys.CUSTOM_ICON_PACK_ID] = id }
     suspend fun setThemeMode(mode: ThemeMode) = store.edit { it[Keys.THEME_MODE] = mode.name }
     suspend fun setSummaryStyle(style: SummaryStyle) = store.edit { it[Keys.SUMMARY_STYLE] = style.name }
 
@@ -176,8 +223,30 @@ class UserPreferences @Inject constructor(
     // Health
     suspend fun setMigrainePressureThreshold(threshold: Double) = store.edit { it[Keys.MIGRAINE_PRESSURE_THRESHOLD] = threshold.toString() }
 
+    // Forecast range
+    suspend fun setHourlyForecastHours(hours: Int) = store.edit { it[Keys.HOURLY_FORECAST_HOURS] = hours.toString() }
+
     // Haptics
     suspend fun setHapticFeedbackForAlerts(enabled: Boolean) = store.edit { it[Keys.HAPTIC_FEEDBACK_FOR_ALERTS] = enabled }
+    suspend fun setCacheTtlMinutes(minutes: Int) = store.edit { it[Keys.CACHE_TTL_MINUTES] = minutes.toString() }
+
+    // Data sources
+    suspend fun setSourceForecast(provider: WeatherSourceProvider) = store.edit { it[Keys.SOURCE_FORECAST] = provider.name }
+    suspend fun setSourceForecastFallback(provider: WeatherSourceProvider?) = store.edit {
+        if (provider != null) it[Keys.SOURCE_FORECAST_FALLBACK] = provider.name
+        else it.remove(Keys.SOURCE_FORECAST_FALLBACK)
+    }
+    suspend fun setSourceAlerts(provider: WeatherSourceProvider) = store.edit { it[Keys.SOURCE_ALERTS] = provider.name }
+    suspend fun setSourceAlertsFallback(provider: WeatherSourceProvider?) = store.edit {
+        if (provider != null) it[Keys.SOURCE_ALERTS_FALLBACK] = provider.name
+        else it.remove(Keys.SOURCE_ALERTS_FALLBACK)
+    }
+    suspend fun setSourceAirQuality(provider: WeatherSourceProvider) = store.edit { it[Keys.SOURCE_AIR_QUALITY] = provider.name }
+    suspend fun setSourceMinutely(provider: WeatherSourceProvider) = store.edit { it[Keys.SOURCE_MINUTELY] = provider.name }
+
+    // API keys
+    suspend fun setOwmApiKey(key: String) = store.edit { it[Keys.OWM_API_KEY] = key }
+    suspend fun setPirateWeatherApiKey(key: String) = store.edit { it[Keys.PIRATE_WEATHER_API_KEY] = key }
 
     /** Returns the set of alert IDs the user has already been notified about. */
     suspend fun getSeenAlertIds(): Set<String> = store.data.map { it[Keys.SEEN_ALERT_IDS] ?: emptySet() }.first()
@@ -210,9 +279,11 @@ data class NimbusSettings(
     val alertNotificationsEnabled: Boolean = true,
     val alertMinSeverity: AlertMinSeverity = AlertMinSeverity.SEVERE,
     val alertCheckAllLocations: Boolean = false,
+    val alertSourcePref: AlertSourcePreference = AlertSourcePreference.AUTO,
     // Display
     val radarProvider: RadarProvider = RadarProvider.WINDY_WEBVIEW,
     val iconStyle: IconStyle = IconStyle.MATERIAL,
+    val customIconPackId: String = "",
     val themeMode: ThemeMode = ThemeMode.STATIC_DARK,
     val summaryStyle: SummaryStyle = SummaryStyle.TEMPLATE,
     // Card config
@@ -232,11 +303,22 @@ data class NimbusSettings(
     val showBeaufortColors: Boolean = true,
     val showOutdoorScore: Boolean = true,
     val showYesterdayComparison: Boolean = true,
+    // Forecast range
+    val hourlyForecastHours: Int = 48,
     // Health
     val migrainePressureThreshold: Double = 5.0,
     // Haptics
     val hapticFeedbackForAlerts: Boolean = true,
-)
+    // Cache
+    val cacheTtlMinutes: Int = 30,
+    // Data sources
+    val sourceConfig: SourceConfig = SourceConfig(),
+    val owmApiKey: String = "",
+    val pirateWeatherApiKey: String = "",
+) {
+    /** Cache TTL in milliseconds. */
+    val cacheTtlMs: Long get() = cacheTtlMinutes * 60 * 1000L
+}
 
 enum class TempUnit(val label: String, val symbol: String) {
     FAHRENHEIT("Fahrenheit", "\u00B0F"),
@@ -278,6 +360,19 @@ enum class AlertMinSeverity(val label: String, val maxSortOrder: Int) {
     ALL("All alerts", 4),
 }
 
+/**
+ * Controls which international alert sources are queried.
+ * AUTO detects the user's country from coordinates and selects the best source.
+ */
+enum class AlertSourcePreference(val label: String) {
+    AUTO("Auto-detect by country"),
+    NWS_ONLY("NWS only (US)"),
+    METEOALARM_ONLY("MeteoAlarm only (Europe)"),
+    JMA_ONLY("JMA only (Japan)"),
+    ECCC_ONLY("Environment Canada only"),
+    ALL_SOURCES("All available sources"),
+}
+
 enum class RadarProvider(val label: String) {
     WINDY_WEBVIEW("Windy (WebView)"),
     NATIVE_MAPLIBRE("Native Map (MapLibre)"),
@@ -286,6 +381,7 @@ enum class RadarProvider(val label: String) {
 enum class IconStyle(val label: String) {
     MATERIAL("Material Icons"),
     METEOCONS("Animated (Meteocons)"),
+    CUSTOM("Custom Icon Pack"),
 }
 
 enum class ThemeMode(val label: String) {
@@ -303,3 +399,7 @@ data class SavedLocation(
     val longitude: Double,
     val name: String,
 )
+
+/** Safe enum valueOf that returns null instead of throwing. */
+private inline fun <reified T : Enum<T>> safeValueOf(name: String): T? =
+    try { enumValueOf<T>(name) } catch (_: IllegalArgumentException) { null }

@@ -13,4 +13,5 @@
     android:initialLayout="@layout/widget_loading"
     android:description="@string/widget_large_desc"
     android:previewLayout="@layout/widget_loading"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen"
+    android:configure="com.sysadmindoc.nimbus.widget.WidgetConfigActivity" />

@@ -46,3 +46,23 @@
 
 # Coil Image Loading
 -dontwarn coil3.**
+
+# Firebase Firestore
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+
+# Coroutines
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
+-keepclassmembers class kotlinx.coroutines.** { volatile <fields>; }
+
+# DataStore Preferences
+-keepclassmembers class * extends androidx.datastore.preferences.protobuf.GeneratedMessageLite { <fields>; }
+
+# WorkManager
+-keep class * extends androidx.work.Worker
+-keep class * extends androidx.work.ListenableWorker { public <init>(android.content.Context, androidx.work.WorkerParameters); }
+
+# Hilt generated components
+-keep class **_HiltModules* { *; }
+-keep class dagger.hilt.** { *; }

@@ -6,6 +6,7 @@ import com.sysadmindoc.nimbus.data.api.WeatherDao
 import com.sysadmindoc.nimbus.data.location.ReverseGeocoder
 import com.sysadmindoc.nimbus.data.model.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.time.LocalDate
@@ -20,16 +21,42 @@ class WeatherRepository @Inject constructor(
     private val geocodingApi: GeocodingApi,
     private val reverseGeocoder: ReverseGeocoder,
     private val weatherDao: WeatherDao,
+    private val userPreferences: UserPreferences,
 ) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true }
 
+    @Inject
+    lateinit var sourceManager: WeatherSourceManager
+
+    /**
+     * Public entry point — delegates through [WeatherSourceManager] which handles
+     * primary/fallback source selection. Falls back to direct Open-Meteo fetching
+     * if sourceManager is not yet injected (e.g. in tests).
+     */
     suspend fun getWeather(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> {
+        return if (::sourceManager.isInitialized) {
+            sourceManager.getWeather(latitude, longitude, locationName)
+        } else {
+            getWeatherDirect(latitude, longitude, locationName)
+        }
+    }
+
+    /**
+     * Direct Open-Meteo forecast fetch — used by the [OpenMeteoForecastAdapter].
+     * Bypasses the source manager to avoid circular delegation.
+     */
+    suspend fun getWeatherDirect(
         latitude: Double,
         longitude: Double,
         locationName: String? = null,
     ): Result<WeatherData> = withContext(Dispatchers.IO) {
         try {
-            val response = weatherApi.getForecast(latitude, longitude)
+            val forecastHours = userPreferences.settings.first().hourlyForecastHours
+            val response = weatherApi.getForecast(latitude, longitude, forecastHours = forecastHours)
             val location = resolveLocationName(latitude, longitude, locationName)
             val weatherData = mapToWeatherData(response, location)
 
@@ -164,6 +191,7 @@ class WeatherRepository @Inject constructor(
                 precipitation = current.precipitation ?: 0.0,
                 snowfall = current.snowfall,
                 snowDepth = current.snowDepth,
+                cape = current.cape,
                 dailyHigh = dailyHigh,
                 dailyLow = dailyLow,
                 sunrise = daily?.sunrise?.getOrNull(todayIndex),
@@ -197,6 +225,7 @@ class WeatherRepository @Inject constructor(
                 snowfall = hourly.snowfall?.getOrNull(i),
                 windGusts = hourly.windGusts?.getOrNull(i),
                 sunshineDuration = hourly.sunshineDuration?.getOrNull(i),
+                surfacePressure = hourly.surfacePressure?.getOrNull(i),
             )
         }
     }
@@ -225,7 +254,20 @@ class WeatherRepository @Inject constructor(
         }
     }
 
+    /**
+     * Public entry point for minutely precipitation — delegates through the source manager.
+     */
     suspend fun getMinutelyPrecipitation(
+        latitude: Double,
+        longitude: Double,
+    ): Result<List<MinutelyPrecipitation>> {
+        return sourceManager.getMinutelyPrecipitation(latitude, longitude)
+    }
+
+    /**
+     * Direct Open-Meteo minutely fetch — used by [OpenMeteoMinutelyAdapter].
+     */
+    suspend fun getMinutelyPrecipitationDirect(
         latitude: Double,
         longitude: Double,
     ): Result<List<MinutelyPrecipitation>> = withContext(Dispatchers.IO) {

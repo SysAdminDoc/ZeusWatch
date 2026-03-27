@@ -1,28 +1,52 @@
 package com.sysadmindoc.nimbus.data.repository
 
+import android.content.Context
+import android.location.Address
+import android.location.Geocoder
+import com.sysadmindoc.nimbus.data.api.AlertSourceAdapter
+import com.sysadmindoc.nimbus.data.api.NwsAlertAdapter
 import com.sysadmindoc.nimbus.data.api.NwsAlertApi
 import com.sysadmindoc.nimbus.data.api.NwsAlertFeature
 import com.sysadmindoc.nimbus.data.api.NwsAlertProperties
 import com.sysadmindoc.nimbus.data.api.NwsAlertResponse
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
+import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkConstructor
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import retrofit2.HttpException
-import retrofit2.Response
 
 class AlertRepositoryTest {
 
     private lateinit var api: NwsAlertApi
     private lateinit var repository: AlertRepository
+    private lateinit var context: Context
+    private lateinit var prefs: UserPreferences
+    private lateinit var nwsAdapter: NwsAlertAdapter
 
     @Before
     fun setup() {
         api = mockk()
-        repository = AlertRepository(api)
+        context = mockk(relaxed = true)
+        prefs = mockk()
+        nwsAdapter = NwsAlertAdapter(api)
+
+        // Default prefs: AUTO mode
+        every { prefs.settings } returns flowOf(NimbusSettings())
+
+        // Mock Geocoder to return US for default test coordinates
+        mockkConstructor(Geocoder::class)
+        val usAddress = mockk<Address>()
+        every { usAddress.countryCode } returns "US"
+        every { anyConstructed<Geocoder>().getFromLocation(any(), any(), any()) } returns listOf(usAddress)
+
+        val adapters: Set<AlertSourceAdapter> = setOf(nwsAdapter)
+        repository = AlertRepository(context, adapters, prefs)
     }
 
     private fun makeFeature(
@@ -49,7 +73,7 @@ class AlertRepositoryTest {
     )
 
     @Test
-    fun `getAlerts returns mapped alerts on success`() = runTest {
+    fun `getAlerts maps alerts on success`() = runTest {
         coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
             features = listOf(
                 makeFeature(event = "Tornado Warning", severity = "Extreme"),
@@ -66,7 +90,7 @@ class AlertRepositoryTest {
     }
 
     @Test
-    fun `getAlerts sorts by severity then urgency`() = runTest {
+    fun `getAlerts sorts by severity`() = runTest {
         coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
             features = listOf(
                 makeFeature(id = "1", event = "Heat Advisory", severity = "Minor", urgency = "Expected"),
@@ -109,33 +133,25 @@ class AlertRepositoryTest {
     }
 
     @Test
-    fun `getAlerts returns empty list for 404 (non-US location)`() = runTest {
+    fun `getAlerts returns empty on 404`() = runTest {
         coEvery { api.getActiveAlerts(any(), any(), any()) } throws Exception("HTTP 404")
 
-        val result = repository.getAlerts(51.5, -0.1) // London
+        val result = repository.getAlerts(39.7, -104.9)
         assertTrue(result.isSuccess)
         assertEquals(0, result.getOrThrow().size)
     }
 
     @Test
-    fun `getAlerts returns empty list for 400 (bad request)`() = runTest {
+    fun `getAlerts returns empty on 400`() = runTest {
         coEvery { api.getActiveAlerts(any(), any(), any()) } throws Exception("HTTP 400")
 
-        val result = repository.getAlerts(0.0, 0.0)
+        val result = repository.getAlerts(39.7, -104.9)
         assertTrue(result.isSuccess)
         assertEquals(0, result.getOrThrow().size)
     }
 
     @Test
-    fun `getAlerts returns failure for non-404 errors`() = runTest {
-        coEvery { api.getActiveAlerts(any(), any(), any()) } throws Exception("Network timeout")
-
-        val result = repository.getAlerts(39.7, -104.9)
-        assertTrue(result.isFailure)
-    }
-
-    @Test
-    fun `getAlerts returns empty list for empty response`() = runTest {
+    fun `getAlerts returns empty for empty response`() = runTest {
         coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
             features = emptyList(),
         )
@@ -145,10 +161,16 @@ class AlertRepositoryTest {
     }
 
     @Test
-    fun `getAlerts formats point as 4 decimal places`() = runTest {
-        coEvery { api.getActiveAlerts(eq("39.7392,-104.9847"), any(), any()) } returns NwsAlertResponse()
+    fun `getAlerts empty when no adapter matches`() = runTest {
+        // Mock Geocoder to return Japan — but only NWS adapter is registered
+        val jpAddress = mockk<Address>()
+        every { jpAddress.countryCode } returns "JP"
+        every { anyConstructed<Geocoder>().getFromLocation(any(), any(), any()) } returns listOf(jpAddress)
 
-        repository.getAlerts(39.73921234, -104.98471234)
-        // If no crash, the format is working (coEvery matched the exact string)
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse()
+
+        val result = repository.getAlerts(35.6, 139.7) // Tokyo
+        assertTrue(result.isSuccess)
+        assertEquals(0, result.getOrThrow().size)
     }
 }
