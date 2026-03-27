@@ -147,7 +147,7 @@ private fun DayColumn(day: WidgetDaily, modifier: GlanceModifier = GlanceModifie
         Spacer(modifier = GlanceModifier.height(2.dp))
         Image(
             provider = ImageProvider(weatherIconRes(day.code, true)),
-            contentDescription = WidgetUtils.weatherDescription(day.code),
+            contentDescription = WidgetUtils.weatherDescription(day.code, true),
             modifier = GlanceModifier.size(20.dp),
         )
         Spacer(modifier = GlanceModifier.height(2.dp))
