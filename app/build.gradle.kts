@@ -8,7 +8,6 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     id("com.google.gms.google-services")
-    id("com.google.firebase.crashlytics")
 }
 
 android {
@@ -183,7 +182,7 @@ dependencies {
     // Configure at https://console.firebase.google.com and download the config file.
     "standardImplementation"(platform("com.google.firebase:firebase-bom:33.7.0"))
     "standardImplementation"("com.google.firebase:firebase-firestore-ktx")
-    "standardImplementation"("com.google.firebase:firebase-crashlytics-ktx")
+    // Crashlytics removed
 
     // Desugaring
     coreLibraryDesugaring(libs.desugar)

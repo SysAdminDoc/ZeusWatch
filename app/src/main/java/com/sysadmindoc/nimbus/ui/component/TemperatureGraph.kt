@@ -198,6 +198,40 @@ fun TemperatureGraph(
                     style = Stroke(width = 2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round),
                 )
 
+                // ── Feels-like overlay (dashed, only if significantly different) ──
+                val feelsLikeTemps = data.mapNotNull { it.feelsLike }
+                if (feelsLikeTemps.size == data.size) {
+                    val maxDiff = data.indices.maxOfOrNull {
+                        kotlin.math.abs((data[it].feelsLike ?: data[it].temperature) - data[it].temperature)
+                    } ?: 0.0
+                    if (maxDiff >= 3.0) {
+                        val feelsPath = Path()
+                        data.forEachIndexed { i, hour ->
+                            val fl = hour.feelsLike ?: hour.temperature
+                            val x = i * stepX
+                            val y = paddingTop + graphHeight * (1f - (fl.toFloat() - minTemp) / tempRange)
+                            if (i == 0) feelsPath.moveTo(x, y)
+                            else {
+                                val prevFl = data[i - 1].feelsLike ?: data[i - 1].temperature
+                                val prevY = paddingTop + graphHeight * (1f - (prevFl.toFloat() - minTemp) / tempRange)
+                                val prevX = (i - 1) * stepX
+                                val cx = (prevX + x) / 2f
+                                feelsPath.cubicTo(cx, prevY, cx, y, x, y)
+                            }
+                        }
+                        drawPath(
+                            path = feelsPath,
+                            color = Color(0xFFFF9800).copy(alpha = 0.6f),
+                            style = Stroke(
+                                width = 1.5f,
+                                cap = StrokeCap.Round,
+                                join = StrokeJoin.Round,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)),
+                            ),
+                        )
+                    }
+                }
+
                 // ── High/Low dot markers ─────────────────────────────
                 val maxIdx = temps.indices.maxByOrNull { temps[it] } ?: 0
                 val minIdx = temps.indices.minByOrNull { temps[it] } ?: 0
