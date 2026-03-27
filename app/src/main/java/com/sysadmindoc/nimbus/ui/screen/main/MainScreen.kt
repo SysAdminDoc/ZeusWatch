@@ -751,6 +751,7 @@ private fun RenderCard(
             snowfall = data.current.snowfall,
             snowDepth = data.current.snowDepth,
             modifier = modifier,
+            dailySnowfallSum = data.daily.firstOrNull()?.snowfallSum,
         )
         CardType.SEVERE_WEATHER -> {
             data.current.cape?.let { cape ->
