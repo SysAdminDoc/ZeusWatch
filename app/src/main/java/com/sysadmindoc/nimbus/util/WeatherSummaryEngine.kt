@@ -54,6 +54,18 @@ object WeatherSummaryEngine {
             parts.add("with $windDesc")
         }
 
+        // UV warning
+        if (current.isDay && current.uvIndex >= 8) {
+            parts.add("UV index is very high")
+        } else if (current.isDay && current.uvIndex >= 6) {
+            parts.add("UV index is high")
+        }
+
+        // Humidity warning
+        if (current.humidity >= 80 && current.temperature > 25) {
+            parts.add("and it will feel muggy")
+        }
+
         // Temperature sentence
         val tempStr = WeatherFormatter.formatTemperature(
             if (current.isDay) (today?.temperatureHigh ?: current.temperature) else (today?.temperatureLow ?: current.temperature),
@@ -62,9 +74,11 @@ object WeatherSummaryEngine {
         val tempLabel = if (current.isDay) "Highs" else "Lows"
         val tempSentence = "$tempLabel near $tempStr."
 
-        // Yesterday comparison
+        // Yesterday comparison (convert to user's unit for correct degree diff)
         val comparisonStr = if (yesterdayHigh != null && today != null) {
-            val diff = (today.temperatureHigh - yesterdayHigh).toInt()
+            val todayConverted = WeatherFormatter.convertedTemp(today.temperatureHigh, s)
+            val yesterdayConverted = WeatherFormatter.convertedTemp(yesterdayHigh, s)
+            val diff = (todayConverted - yesterdayConverted).toInt()
             when {
                 diff > 2 -> " ${diff}\u00B0 warmer than yesterday."
                 diff < -2 -> " ${-diff}\u00B0 cooler than yesterday."
