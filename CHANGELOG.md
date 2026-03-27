@@ -2,6 +2,52 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.5.0] - 2026-03-27
+
+### Added
+- **Humidity & Comfort card** — humidity gauge with comfort level, dew point, and zone markers
+- **Precipitation Forecast card** — 24h probability bars with peak callout and total accumulation
+- **Pressure Trend card** — 24h barometric pressure line graph with trend direction and delta
+- **Wind Forecast card** — 24h wind speed line graph with gust overlay bars and peak callout
+- Feels-like temperature overlay (orange dashed line) on Temperature Graph
+- Temperature range bars in Daily Forecast rows (color-coded cold-to-warm)
+- Alert expiry countdown on alert banners ("3h 15m left")
+- Pull-to-refresh on Hourly and Daily tabs
+- HourlyTab shows feels-like temperature and wind speed per row
+- Compare screen: weather condition icons, visibility/cloud cover rows, value highlighting
+- Outdoor Activity Score: factor breakdown bars (temp/wind/rain/UV/humidity)
+- Location screen: weather condition icons next to cached temperatures
+- Collapsible settings sections with tap-to-toggle arrows
+- Snowfall card: daily total accumulation
+- Hourly strip respects 48/72h forecast hours setting
+
+### Fixed
+- Yesterday comparison now converts to user's temperature unit (was raw Celsius diff)
+- `Icons.Filled.CompareArrows` migrated to `Icons.AutoMirrored.Filled.CompareArrows`
+- `statusBarColor`/`navigationBarColor` replaced with `WindowCompat.setDecorFitsSystemWindows`
+- DailyForecast snow detail used sun icon instead of AcUnit
+- SunArc and NowcastCard respect user's 12h/24h time format setting
+- HourlyTab time format respects 12h/24h preference
+- RadarViewModel/RadarScreen coordinate check `||` -> `&&` (equator/meridian locations)
+- WeatherWallpaperService catches all exceptions in unlockCanvasAndPost
+- Frame counter overflow prevention in wallpaper particle system
+- WidgetConfigActivity leaked MainScope replaced with lifecycleScope
+- NimbusLargeWidget missing isDay param for daily weather descriptions
+- NimbusForecastStripWidget guarded against < 6 hourly items
+- Radar layer URLs: removed broken OWM tile endpoints, replaced with RainViewer satellite
+
+### Changed
+- Today tab converted from Column+verticalScroll to single LazyColumn (cards now truly lazy-loaded)
+- WeatherSummaryCard, AqiCard, MoonPhaseCard use WeatherCard wrapper for consistent styling
+- AqiCard uses gradient AqiGauge from separate file (deleted inline duplicate)
+- Data Sources and Advanced settings sections start collapsed
+
+### Removed
+- Firebase Crashlytics (plugin, dependency, ProGuard rules)
+- Dead `MainScreenContent` wrapper function
+- Dead `ReorderableCardColumn.kt` (MainScreen inlines card rendering)
+- Unused FlowRow/ExperimentalLayoutApi imports
+
 ## [1.4.0] - 2026-03-27
 
 ### Security
