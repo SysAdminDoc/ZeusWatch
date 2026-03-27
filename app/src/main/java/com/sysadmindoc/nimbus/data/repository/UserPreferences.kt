@@ -109,16 +109,16 @@ class UserPreferences @Inject constructor(
             alertMinSeverity = safeValueOf<AlertMinSeverity>(
                 prefs[Keys.ALERT_MIN_SEVERITY] ?: AlertMinSeverity.SEVERE.name
             ) ?: AlertMinSeverity.SEVERE,
-            alertCheckAllLocations = prefs[Keys.ALERT_CHECK_ALL_LOCATIONS] ?: false,
+            alertCheckAllLocations = prefs[Keys.ALERT_CHECK_ALL_LOCATIONS] ?: true,
             alertSourcePref = safeValueOf<AlertSourcePreference>(
                 prefs[Keys.ALERT_SOURCE_PREF] ?: AlertSourcePreference.AUTO.name
             ) ?: AlertSourcePreference.AUTO,
             // Display
             radarProvider = safeValueOf<RadarProvider>(prefs[Keys.RADAR_PROVIDER] ?: RadarProvider.WINDY_WEBVIEW.name) ?: RadarProvider.WINDY_WEBVIEW,
-            iconStyle = safeValueOf<IconStyle>(prefs[Keys.ICON_STYLE] ?: IconStyle.MATERIAL.name) ?: IconStyle.MATERIAL,
+            iconStyle = safeValueOf<IconStyle>(prefs[Keys.ICON_STYLE] ?: IconStyle.METEOCONS.name) ?: IconStyle.METEOCONS,
             customIconPackId = prefs[Keys.CUSTOM_ICON_PACK_ID] ?: "",
             themeMode = safeValueOf<ThemeMode>(prefs[Keys.THEME_MODE] ?: ThemeMode.STATIC_DARK.name) ?: ThemeMode.STATIC_DARK,
-            summaryStyle = safeValueOf<SummaryStyle>(prefs[Keys.SUMMARY_STYLE] ?: SummaryStyle.TEMPLATE.name) ?: SummaryStyle.TEMPLATE,
+            summaryStyle = safeValueOf<SummaryStyle>(prefs[Keys.SUMMARY_STYLE] ?: SummaryStyle.AI_GENERATED.name) ?: SummaryStyle.AI_GENERATED,
             // Card config
             cardOrder = (prefs[Keys.CARD_ORDER] ?: "").let { orderStr ->
                 if (orderStr.isBlank()) DEFAULT_CARD_ORDER
@@ -132,8 +132,8 @@ class UserPreferences @Inject constructor(
             },
             disabledCards = prefs[Keys.DISABLED_CARDS] ?: emptySet(),
             // Notifications
-            persistentWeatherNotif = prefs[Keys.PERSISTENT_WEATHER_NOTIF] ?: false,
-            nowcastingAlerts = prefs[Keys.NOWCASTING_ALERTS] ?: false,
+            persistentWeatherNotif = prefs[Keys.PERSISTENT_WEATHER_NOTIF] ?: true,
+            nowcastingAlerts = prefs[Keys.NOWCASTING_ALERTS] ?: true,
             drivingAlerts = prefs[Keys.DRIVING_ALERTS] ?: false,
             healthAlertsEnabled = prefs[Keys.HEALTH_ALERTS_ENABLED] ?: false,
             migraineAlerts = prefs[Keys.MIGRAINE_ALERTS] ?: false,
@@ -146,7 +146,7 @@ class UserPreferences @Inject constructor(
             showOutdoorScore = prefs[Keys.SHOW_OUTDOOR_SCORE] ?: true,
             showYesterdayComparison = prefs[Keys.SHOW_YESTERDAY_COMPARISON] ?: true,
             // Forecast range
-            hourlyForecastHours = prefs[Keys.HOURLY_FORECAST_HOURS]?.toIntOrNull() ?: 48,
+            hourlyForecastHours = prefs[Keys.HOURLY_FORECAST_HOURS]?.toIntOrNull() ?: 72,
             // Cache
             cacheTtlMinutes = prefs[Keys.CACHE_TTL_MINUTES]?.toIntOrNull() ?: 30,
             // Health
@@ -278,20 +278,20 @@ data class NimbusSettings(
     val particlesEnabled: Boolean = true,
     val alertNotificationsEnabled: Boolean = true,
     val alertMinSeverity: AlertMinSeverity = AlertMinSeverity.SEVERE,
-    val alertCheckAllLocations: Boolean = false,
+    val alertCheckAllLocations: Boolean = true,
     val alertSourcePref: AlertSourcePreference = AlertSourcePreference.AUTO,
     // Display
     val radarProvider: RadarProvider = RadarProvider.WINDY_WEBVIEW,
-    val iconStyle: IconStyle = IconStyle.MATERIAL,
+    val iconStyle: IconStyle = IconStyle.METEOCONS,
     val customIconPackId: String = "",
     val themeMode: ThemeMode = ThemeMode.STATIC_DARK,
-    val summaryStyle: SummaryStyle = SummaryStyle.TEMPLATE,
+    val summaryStyle: SummaryStyle = SummaryStyle.AI_GENERATED,
     // Card config
     val disabledCards: Set<String> = emptySet(),
     val cardOrder: List<CardType> = DEFAULT_CARD_ORDER,
     // Notifications
-    val persistentWeatherNotif: Boolean = false,
-    val nowcastingAlerts: Boolean = false,
+    val persistentWeatherNotif: Boolean = true,
+    val nowcastingAlerts: Boolean = true,
     val drivingAlerts: Boolean = false,
     val healthAlertsEnabled: Boolean = false,
     val migraineAlerts: Boolean = false,
@@ -304,7 +304,7 @@ data class NimbusSettings(
     val showOutdoorScore: Boolean = true,
     val showYesterdayComparison: Boolean = true,
     // Forecast range
-    val hourlyForecastHours: Int = 48,
+    val hourlyForecastHours: Int = 72,
     // Health
     val migrainePressureThreshold: Double = 5.0,
     // Haptics
