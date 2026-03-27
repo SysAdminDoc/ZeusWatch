@@ -82,11 +82,13 @@ fun LocationsScreen(
     val saved by viewModel.savedLocations.collectAsStateWithLifecycle()
     val search by viewModel.searchState.collectAsStateWithLifecycle()
     val locationTemps by viewModel.locationTemps.collectAsStateWithLifecycle()
+    val locationConditions by viewModel.locationConditions.collectAsStateWithLifecycle()
 
     LocationsContent(
         saved = saved,
         search = search,
         locationTemps = locationTemps,
+        locationConditions = locationConditions,
         onBack = onBack,
         onLocationSelected = onLocationSelected,
         onSearchQueryChanged = { viewModel.onSearchQueryChanged(it) },
@@ -102,6 +104,7 @@ internal fun LocationsContent(
     saved: List<SavedLocationEntity>,
     search: SearchState,
     locationTemps: Map<Long, Double> = emptyMap(),
+    locationConditions: Map<Long, Pair<com.sysadmindoc.nimbus.data.model.WeatherCode, Boolean>> = emptyMap(),
     onBack: () -> Unit,
     onLocationSelected: (Long) -> Unit = {},
     onSearchQueryChanged: (String) -> Unit = {},
@@ -149,6 +152,7 @@ internal fun LocationsContent(
             saved = saved,
             search = search,
             locationTemps = locationTemps,
+            locationConditions = locationConditions,
             onLocationSelected = onLocationSelected,
             onAddLocation = onAddLocation,
             onRemoveLocation = onRemoveLocation,
@@ -163,6 +167,7 @@ private fun LocationsList(
     saved: List<SavedLocationEntity>,
     search: SearchState,
     locationTemps: Map<Long, Double> = emptyMap(),
+    locationConditions: Map<Long, Pair<com.sysadmindoc.nimbus.data.model.WeatherCode, Boolean>> = emptyMap(),
     onLocationSelected: (Long) -> Unit,
     onAddLocation: (GeocodingResult) -> Unit,
     onRemoveLocation: (Long) -> Unit,
@@ -222,9 +227,12 @@ private fun LocationsList(
             items(saved.size, key = { saved[it].id }) { index ->
                 val loc = saved[index]
                 val isDragged = draggedIndex == index
+                val condition = locationConditions[loc.id]
                 SavedLocationItem(
                     location = loc,
                     temperature = locationTemps[loc.id],
+                    weatherCode = condition?.first,
+                    isDay = condition?.second ?: true,
                     onClick = { onLocationSelected(loc.id) },
                     onRemove = {
                         if (!loc.isCurrentLocation) onRemoveLocation(loc.id)
@@ -355,6 +363,8 @@ private fun SearchResultItem(
 private fun SavedLocationItem(
     location: SavedLocationEntity,
     temperature: Double? = null,
+    weatherCode: com.sysadmindoc.nimbus.data.model.WeatherCode? = null,
+    isDay: Boolean = true,
     onClick: () -> Unit,
     onRemove: () -> Unit,
     showDragHandle: Boolean = false,
@@ -422,6 +432,14 @@ private fun SavedLocationItem(
             if (sub.isNotEmpty()) {
                 Text(sub, style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary)
             }
+        }
+        if (weatherCode != null) {
+            com.sysadmindoc.nimbus.ui.component.WeatherIcon(
+                weatherCode = weatherCode,
+                isDay = isDay,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
         }
         if (temperature != null) {
             Text(
