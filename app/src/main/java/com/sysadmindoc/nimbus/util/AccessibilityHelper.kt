@@ -19,16 +19,16 @@ import java.util.Locale
 object AccessibilityHelper {
 
     /** Full current conditions description for the hero header area. */
-    fun currentConditions(current: CurrentConditions, locationName: String): String {
-        val temp = current.temperature.toInt()
-        val feelsLike = current.feelsLike.toInt()
+    fun currentConditions(current: CurrentConditions, locationName: String, s: NimbusSettings = NimbusSettings()): String {
+        val temp = WeatherFormatter.formatTemperature(current.temperature, s)
+        val feelsLike = WeatherFormatter.formatTemperature(current.feelsLike, s)
         val condition = current.weatherCode.description
-        val high = current.dailyHigh.toInt()
-        val low = current.dailyLow.toInt()
+        val high = WeatherFormatter.formatTemperature(current.dailyHigh, s)
+        val low = WeatherFormatter.formatTemperature(current.dailyLow, s)
         return buildString {
             append("$locationName. ")
-            append("Currently $temp degrees, $condition. ")
-            append("Feels like $feelsLike degrees. ")
+            append("Currently $temp, $condition. ")
+            append("Feels like $feelsLike. ")
             append("High $high, low $low.")
         }
     }
@@ -46,15 +46,16 @@ object AccessibilityHelper {
     }
 
     /** Temperature graph Canvas description. */
-    fun temperatureGraph(hourly: List<HourlyConditions>): String {
+    fun temperatureGraph(hourly: List<HourlyConditions>, s: NimbusSettings = NimbusSettings()): String {
         val data = hourly.take(24)
         if (data.size < 2) return "Temperature trend graph, insufficient data."
         val temps = data.map { it.temperature }
-        val high = temps.max().toInt()
-        val low = temps.min().toInt()
+        val high = WeatherFormatter.formatTemperature(temps.max(), s)
+        val low = WeatherFormatter.formatTemperature(temps.min(), s)
+        val current = WeatherFormatter.formatTemperature(temps.first(), s)
         return "24-hour temperature trend. " +
-            "Ranges from $low to $high degrees. " +
-            "Currently ${temps.first().toInt()} degrees."
+            "Ranges from $low to $high. " +
+            "Currently $current."
     }
 
     /** UV index bar Canvas description. */
@@ -103,16 +104,15 @@ object AccessibilityHelper {
     }
 
     /** Hourly forecast strip description (summarizes key points). */
-    fun hourlyForecast(hourly: List<HourlyConditions>): String {
+    fun hourlyForecast(hourly: List<HourlyConditions>, s: NimbusSettings = NimbusSettings()): String {
         val data = hourly.take(12)
         if (data.isEmpty()) return "Hourly forecast unavailable."
-        val first = data.first()
-        val maxTemp = data.maxOf { it.temperature }.toInt()
-        val minTemp = data.minOf { it.temperature }.toInt()
+        val maxTemp = WeatherFormatter.formatTemperature(data.maxOf { it.temperature }, s)
+        val minTemp = WeatherFormatter.formatTemperature(data.minOf { it.temperature }, s)
         val maxPrecip = data.maxOf { it.precipitationProbability }
         return buildString {
             append("Hourly forecast for next ${data.size} hours. ")
-            append("Temperatures range from $minTemp to $maxTemp degrees. ")
+            append("Temperatures range from $minTemp to $maxTemp. ")
             if (maxPrecip > 0) {
                 append("Precipitation chance up to $maxPrecip percent.")
             }
@@ -120,14 +120,16 @@ object AccessibilityHelper {
     }
 
     /** Daily forecast list description. */
-    fun dailyForecast(daily: List<DailyConditions>): String {
+    fun dailyForecast(daily: List<DailyConditions>, s: NimbusSettings = NimbusSettings()): String {
         if (daily.isEmpty()) return "Daily forecast unavailable."
         return buildString {
             append("${daily.size}-day forecast. ")
             daily.take(3).forEach { day ->
                 val label = WeatherFormatter.formatDayLabel(day.date)
+                val high = WeatherFormatter.formatTemperature(day.temperatureHigh, s)
+                val low = WeatherFormatter.formatTemperature(day.temperatureLow, s)
                 append("$label: ${day.weatherCode.description}, ")
-                append("high ${day.temperatureHigh.toInt()}, low ${day.temperatureLow.toInt()}. ")
+                append("high $high, low $low. ")
             }
             if (daily.size > 3) append("And ${daily.size - 3} more days.")
         }
@@ -150,13 +152,13 @@ object AccessibilityHelper {
     }
 
     /** Full weather summary for share functionality. */
-    fun weatherSummary(data: WeatherData): String {
+    fun weatherSummary(data: WeatherData, s: NimbusSettings = NimbusSettings()): String {
         return buildString {
             appendLine("Weather for ${data.location.name}")
-            appendLine("${data.current.temperature.toInt()}\u00B0 - ${data.current.weatherCode.description}")
-            appendLine("Feels like ${data.current.feelsLike.toInt()}\u00B0")
-            appendLine("High ${data.current.dailyHigh.toInt()}\u00B0 / Low ${data.current.dailyLow.toInt()}\u00B0")
-            appendLine("Wind: ${WeatherFormatter.formatWindSpeed(data.current.windSpeed, data.current.windDirection)}")
+            appendLine("${WeatherFormatter.formatTemperature(data.current.temperature, s)} - ${data.current.weatherCode.description}")
+            appendLine("Feels like ${WeatherFormatter.formatTemperature(data.current.feelsLike, s)}")
+            appendLine("High ${WeatherFormatter.formatTemperature(data.current.dailyHigh, s)} / Low ${WeatherFormatter.formatTemperature(data.current.dailyLow, s)}")
+            appendLine("Wind: ${WeatherFormatter.formatWindSpeed(data.current.windSpeed, data.current.windDirection, s)}")
             appendLine("Humidity: ${data.current.humidity}%")
         }.trimEnd()
     }

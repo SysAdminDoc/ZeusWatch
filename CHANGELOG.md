@@ -2,6 +2,85 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.4.0] - 2026-03-27
+
+### Security
+- Set `allowBackup="false"` and added data extraction rules to prevent sensitive data leakage
+- WebView mixed content changed to `MIXED_CONTENT_NEVER_ALLOW` with domain whitelist (embed.windy.com, openstreetmap.org, cartocdn.com)
+- HTTP logging interceptor now gated behind `BuildConfig.DEBUG` (no longer logs in release builds)
+- Added `network_security_config.xml` blocking cleartext traffic
+- Added Firestore Security Rules (`firestore.rules`) with validated writes, rate limiting, and device-scoped deletes
+- Replaced all unsafe `enum.valueOf()` calls with `safeValueOf()` in UserPreferences settings mapping
+
+### Added
+- Firebase Crashlytics integration for production crash reporting
+- Offline detection with `ConnectivityObserver` and persistent "You're offline" banner
+- Radar screen offline guard (shows empty state instead of blank WebView)
+- Reduced motion support — particles and shimmer animations respect system `ANIMATOR_DURATION_SCALE`
+- Tab switch crossfade animation (300ms fade between Today/Hourly/Daily/Radar)
+- Reactive "Updated Xm ago" timestamp that refreshes every 60 seconds
+- Context-aware error icons (LocationOff, CloudOff, ErrorOutline) based on error type
+- Staleness timestamp on small widget
+- `contentDescription` on all widget weather images via shared `WidgetUtils.weatherDescription()`
+- Semantics on WindCompass and AqiGauge Canvas elements for screen readers
+- `kotlinx-collections-immutable` dependency for Compose stability
+- ConnectivityObserver utility for reactive network state
+- ReducedMotion utility composable
+- WeatherRepository unit tests (11 tests)
+- UserPreferences unit tests (26 tests)
+- NwsAlertAdapter unit tests (23 tests)
+- WidgetDataProvider unit tests (14 tests)
+
+### Changed
+- `ReorderableCardColumn` converted from `Column` to `LazyColumn` (only visible cards composed)
+- All `List<>` fields in `MainUiState` changed to `ImmutableList<>` (prevents unnecessary recompositions)
+- Extracted shared `RenderCard` composable — eliminated ~260 lines of duplicate card rendering code
+- `WeatherRepository.sourceManager` changed from field injection to constructor injection with `dagger.Lazy`
+- Weather cache auto-evicts entries older than 6 hours
+- `BlitzortungService.isConnected` made `@Volatile` with `@Synchronized` connect/disconnect
+- OkHttp retry interceptor added (2 retries with exponential backoff on IOException)
+- Independent sub-fetches (alerts, AQI, astronomy, radar, nowcast) now run in parallel
+- User-friendly error messages replace raw exception text
+- `WidgetRefreshWorker` extracted `buildHourlyItems`/`buildDailyItems`/`buildWidgetData` helpers (eliminated 70-line copy-paste)
+- Per-widget try/catch moved inside loop (one failure no longer skips all widgets)
+- `AccessibilityHelper` methods now format temperatures using user-preferred units
+- Touch targets on DailyForecast rows and location chips increased to 48dp minimum
+- `Locale.US` replaced with `Locale.getDefault()` in user-facing date/time formatters
+- User-Agent string now uses `BuildConfig.VERSION_NAME` instead of hardcoded version
+- Room indices added to `SavedLocationEntity` on `isCurrentLocation` and `sortOrder`
+- `reorderLocations` wrapped in `@Transaction` (eliminates N+1 query pattern)
+- ProGuard rules added for `@HiltWorker`, widget serializables, Crashlytics, and log stripping
+- WidgetRefreshWorker skips refresh when battery ≤ 15%
+- Coil ImageLoader configured with 25% memory cache and 50MB disk cache
+
+## [1.3.6] - 2026-03-26
+
+### Added
+- Coil ImageLoader configuration with 25% memory cache and 50MB disk cache
+- WeatherSourceManager unit tests (12 tests covering fallback, alerts, AQI, minutely)
+
+### Changed
+- WidgetRefreshWorker skips refresh when battery ≤ 15% to preserve device life
+
+## [1.3.5] - 2026-03-26
+
+### Security
+- Moved release signing credentials from build.gradle.kts to local.properties (no longer committed)
+
+### Fixed
+- WeatherParticles animations now stop when app is backgrounded (battery drain fix)
+- Empty catch blocks in MainViewModel now log warnings for debuggability
+- Added stable keys to HourlyTab, DailyTab, HourlyForecastStrip LazyLists (fixes animation glitches)
+- Removed `fallbackToDestructiveMigration()` from Room database (prevents silent data loss)
+- Yesterday comparison no longer blocks derived data computation (clothing, health, driving alerts load instantly)
+- Unimplemented weather source adapters (OWM, Pirate Weather, Bright Sky) hidden from Settings UI
+
+### Added
+- ClothingSuggestionEvaluator unit tests (15 tests)
+- PetSafetyEvaluator unit tests (17 tests)
+- DrivingConditionEvaluator unit tests (17 tests)
+- HealthAlertEvaluator unit tests (13 tests)
+
 ## [1.3.4] - 2026-03-26
 
 ### Fixed

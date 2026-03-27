@@ -39,7 +39,7 @@ fun HourlyForecastStrip(
             contentPadding = PaddingValues(horizontal = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            items(hourly.take(24)) { hour ->
+            items(hourly.take(24), key = { it.time }) { hour ->
                 HourlyItem(hour)
             }
         }

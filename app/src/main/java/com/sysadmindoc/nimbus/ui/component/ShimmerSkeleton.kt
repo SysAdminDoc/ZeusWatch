@@ -29,32 +29,44 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
+import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
 
 /**
  * Shimmer loading skeleton matching the main screen layout.
  */
 @Composable
 fun ShimmerLoadingSkeleton(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateX by transition.animateFloat(
-        initialValue = -500f,
-        targetValue = 1500f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
-        label = "shimmerX",
-    )
+    val reducedMotion = isReducedMotionEnabled()
 
-    val shimmerBrush = Brush.linearGradient(
-        colors = listOf(
-            Color.White.copy(alpha = 0.05f),
-            Color.White.copy(alpha = 0.12f),
-            Color.White.copy(alpha = 0.05f),
-        ),
-        start = Offset(translateX, 0f),
-        end = Offset(translateX + 400f, 0f),
-    )
+    // When reduced motion is enabled, use a static gray brush instead of animating
+    val shimmerBrush = if (reducedMotion) {
+        Brush.linearGradient(
+            colors = listOf(
+                Color.White.copy(alpha = 0.08f),
+                Color.White.copy(alpha = 0.08f),
+            ),
+        )
+    } else {
+        val transition = rememberInfiniteTransition(label = "shimmer")
+        val translateX by transition.animateFloat(
+            initialValue = -500f,
+            targetValue = 1500f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+            label = "shimmerX",
+        )
+        Brush.linearGradient(
+            colors = listOf(
+                Color.White.copy(alpha = 0.05f),
+                Color.White.copy(alpha = 0.12f),
+                Color.White.copy(alpha = 0.05f),
+            ),
+            start = Offset(translateX, 0f),
+            end = Offset(translateX + 400f, 0f),
+        )
+    }
 
     Column(
         modifier = modifier

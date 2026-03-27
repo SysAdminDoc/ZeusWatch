@@ -62,9 +62,7 @@ class LocationRepository @Inject constructor(
     suspend fun getAll(): List<SavedLocationEntity> = dao.getAll()
 
     suspend fun reorderLocations(orderedIds: List<Long>) {
-        orderedIds.forEachIndexed { index, id ->
-            dao.updateSortOrder(id, index)
-        }
+        dao.reorderAll(orderedIds)
     }
 
     suspend fun ensureCurrentLocation(lat: Double, lon: Double, name: String) {
