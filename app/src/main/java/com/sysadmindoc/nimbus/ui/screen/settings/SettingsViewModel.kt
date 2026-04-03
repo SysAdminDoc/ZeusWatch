@@ -42,6 +42,7 @@ class SettingsViewModel @Inject constructor(
     // Card config
     fun setCardOrder(order: List<CardType>) = viewModelScope.launch { prefs.setCardOrder(order) }
     fun setCardEnabled(card: CardType, enabled: Boolean) = viewModelScope.launch { prefs.setCardEnabled(card, enabled) }
+    fun resetCardPreferences() = viewModelScope.launch { prefs.resetCardPreferences() }
 
     // Notifications
     fun setPersistentWeatherNotif(enabled: Boolean) = viewModelScope.launch { prefs.setPersistentWeatherNotif(enabled) }

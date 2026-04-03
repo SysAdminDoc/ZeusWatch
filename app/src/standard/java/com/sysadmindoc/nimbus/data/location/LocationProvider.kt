@@ -21,6 +21,7 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 
 private const val TAG = "LocationProvider"
+private const val LOCATION_REQUEST_TIMEOUT_MS = 6_000L
 
 @Singleton
 class LocationProvider @Inject constructor(
@@ -54,7 +55,7 @@ class LocationProvider @Inject constructor(
 
             // 2) Try fresh fused location with timeout
             Log.d(TAG, "getCurrentLocation: requesting fresh fused location...")
-            val fresh = withTimeoutOrNull(10_000L) { getFusedLocation() }
+            val fresh = withTimeoutOrNull(LOCATION_REQUEST_TIMEOUT_MS) { getFusedLocation() }
             if (fresh != null) {
                 Log.d(TAG, "getCurrentLocation: got fresh fused ${fresh.latitude}, ${fresh.longitude}")
                 return@withContext Result.success(fresh)

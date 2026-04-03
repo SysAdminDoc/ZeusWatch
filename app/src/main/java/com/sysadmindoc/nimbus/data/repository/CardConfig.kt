@@ -31,3 +31,7 @@ enum class CardType(val label: String, val defaultEnabled: Boolean = true) {
 }
 
 val DEFAULT_CARD_ORDER: List<CardType> = CardType.entries.toList()
+val DEFAULT_DISABLED_CARDS: Set<String> = CardType.entries
+    .filterNot { it.defaultEnabled }
+    .map { it.name }
+    .toSet()

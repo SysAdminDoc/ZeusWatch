@@ -123,7 +123,8 @@ private fun DailyDetailRow(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.78f),
+                        NimbusGlassTop.copy(alpha = 0.52f),
+                        NimbusCardBg,
                         NimbusGlassBottom,
                     ),
                 ),

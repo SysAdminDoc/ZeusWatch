@@ -81,7 +81,7 @@ fun CurrentConditionsHeader(
                 Brush.verticalGradient(
                     colors = listOf(
                         NimbusGlassTop,
-                        Color.White.copy(alpha = 0.08f),
+                        Color.White.copy(alpha = 0.03f),
                         NimbusGlassBottom,
                     ),
                 ),
@@ -150,7 +150,7 @@ fun CurrentConditionsHeader(
                         Brush.radialGradient(
                             colors = listOf(
                                 NimbusHeroGlow,
-                                Color.White.copy(alpha = 0.14f),
+                                Color.White.copy(alpha = 0.04f),
                                 Color.Transparent,
                             ),
                         ),
@@ -204,8 +204,8 @@ private fun HeroPill(
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(18.dp))
-            .background(Color.White.copy(alpha = 0.08f))
-            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(18.dp))
+            .background(Color.White.copy(alpha = 0.04f))
+            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(18.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -231,8 +231,8 @@ private fun HeroMetricChip(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(22.dp))
-            .background(Color.White.copy(alpha = 0.06f))
-            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
+            .background(Color.White.copy(alpha = 0.04f))
+            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(22.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp),
     ) {
         Text(
