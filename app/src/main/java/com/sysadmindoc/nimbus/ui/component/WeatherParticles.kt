@@ -31,6 +31,8 @@ import kotlin.random.Random
 /**
  * Canvas-drawn weather particle effects overlaid on the header.
  * Rain: angled droplets falling. Snow: drifting flakes. Clear: sun rays / star twinkle.
+ * Gravity sensor support: particles respond to device tilt for parallax effect.
+ * Inspired by breezy-weather's MaterialPainterView + DelayRotateController.
  */
 @Composable
 fun WeatherParticles(
@@ -47,6 +49,9 @@ fun WeatherParticles(
 
     // Respect system reduced motion / animation off setting
     if (isReducedMotionEnabled()) return
+
+    // Gravity sensor for gyroscopic parallax
+    val gravity = rememberGravityTilt()
 
     val transition = rememberInfiniteTransition(label = "particles")
 
@@ -84,22 +89,29 @@ fun WeatherParticles(
         generateParticles(weatherCode, count = 40)
     }
 
+    // Gravity-based pixel offset for parallax (max ~20px shift)
+    val gx = gravity.x
+    val gy = gravity.y
+
     Canvas(modifier = modifier.fillMaxSize()) {
+        // Apply gravity offset as a translation for parallax
+        val offsetX = gx * 20f
+        val offsetY = gy * 12f
+
         when {
-            weatherCode.isRainy -> drawRain(particles, phase)
-            weatherCode.isSnowy -> drawSnow(particles, slowPhase)
+            weatherCode.isRainy -> drawRain(particles, phase, offsetX, offsetY)
+            weatherCode.isSnowy -> drawSnow(particles, slowPhase, offsetX, offsetY)
             weatherCode.isStormy -> {
-                drawRain(particles, phase)
-                // Storm flash effect on certain phase values
+                drawRain(particles, phase, offsetX, offsetY)
                 if (phase in 0.48f..0.52f) {
                     drawRect(Color.White.copy(alpha = 0.03f))
                 }
             }
             weatherCode == WeatherCode.CLEAR_SKY || weatherCode == WeatherCode.MAINLY_CLEAR -> {
-                if (isDay) drawSunRays(rotationPhase)
-                else drawStars(particles, slowPhase)
+                if (isDay) drawSunRays(rotationPhase, offsetX, offsetY)
+                else drawStars(particles, slowPhase, offsetX, offsetY)
             }
-            weatherCode.isFoggy -> drawFog(slowPhase)
+            weatherCode.isFoggy -> drawFog(slowPhase, offsetY)
             // Cloudy/partly cloudy - no particles
         }
     }
@@ -128,36 +140,36 @@ private fun generateParticles(code: WeatherCode, count: Int): List<Particle> {
     }
 }
 
-private fun DrawScope.drawRain(particles: List<Particle>, phase: Float) {
+private fun DrawScope.drawRain(particles: List<Particle>, phase: Float, gx: Float = 0f, gy: Float = 0f) {
     val w = size.width
     val h = size.height
     val rainColor = Color(0xFF64B5F6)
 
     particles.forEach { p ->
         val y = ((p.y + phase * p.speed) % 1f) * h
-        val x = (p.x + phase * 0.05f) % 1f * w
+        val x = (p.x + phase * 0.05f) % 1f * w + gx * p.speed
         val length = 12f + p.size * 16f
-        val angle = 0.15f // slight angle
+        val angle = 0.15f + gx * 0.03f // tilt rain angle with gravity
 
         drawLine(
             color = rainColor.copy(alpha = p.alpha),
-            start = Offset(x, y),
-            end = Offset(x + length * angle, y + length),
+            start = Offset(x, y + gy),
+            end = Offset(x + length * angle, y + length + gy),
             strokeWidth = 1.5f + p.size * 0.5f,
             cap = StrokeCap.Round,
         )
     }
 }
 
-private fun DrawScope.drawSnow(particles: List<Particle>, phase: Float) {
+private fun DrawScope.drawSnow(particles: List<Particle>, phase: Float, gx: Float = 0f, gy: Float = 0f) {
     val w = size.width
     val h = size.height
     val snowColor = Color(0xFFE8EAF6)
 
     particles.forEach { p ->
-        val y = ((p.y + phase * p.speed * 0.5f) % 1f) * h
+        val y = ((p.y + phase * p.speed * 0.5f) % 1f) * h + gy
         val drift = sin((phase + p.x) * 2 * PI.toFloat()) * 20f * p.drift * 10f
-        val x = (p.x * w) + drift
+        val x = (p.x * w) + drift + gx * p.speed * 2f
 
         val radius = 1.5f + p.size * 2.5f
         drawCircle(
@@ -168,9 +180,9 @@ private fun DrawScope.drawSnow(particles: List<Particle>, phase: Float) {
     }
 }
 
-private fun DrawScope.drawSunRays(rotation: Float) {
-    val cx = size.width * 0.75f
-    val cy = size.height * 0.2f
+private fun DrawScope.drawSunRays(rotation: Float, gx: Float = 0f, gy: Float = 0f) {
+    val cx = size.width * 0.75f + gx * 2f
+    val cy = size.height * 0.2f + gy * 1.5f
     val rayCount = 12
     val innerRadius = 30f
     val outerRadius = 80f
@@ -201,7 +213,7 @@ private fun DrawScope.drawSunRays(rotation: Float) {
     }
 }
 
-private fun DrawScope.drawStars(particles: List<Particle>, phase: Float) {
+private fun DrawScope.drawStars(particles: List<Particle>, phase: Float, gx: Float = 0f, gy: Float = 0f) {
     val w = size.width
     val h = size.height
 
@@ -213,17 +225,17 @@ private fun DrawScope.drawStars(particles: List<Particle>, phase: Float) {
         drawCircle(
             color = Color.White.copy(alpha = alpha),
             radius = radius,
-            center = Offset(p.x * w, p.y * h * 0.6f),
+            center = Offset(p.x * w + gx * 1.5f, p.y * h * 0.6f + gy),
         )
     }
 }
 
-private fun DrawScope.drawFog(phase: Float) {
+private fun DrawScope.drawFog(phase: Float, gy: Float = 0f) {
     val w = size.width
     val h = size.height
 
     for (i in 0..3) {
-        val y = h * (0.3f + i * 0.15f) + sin(phase * 2 * PI.toFloat() + i) * 10f
+        val y = h * (0.3f + i * 0.15f) + sin(phase * 2 * PI.toFloat() + i) * 10f + gy
         val alpha = 0.04f + (sin(phase * PI.toFloat() + i * 0.5f) + 1f) * 0.02f
 
         drawLine(

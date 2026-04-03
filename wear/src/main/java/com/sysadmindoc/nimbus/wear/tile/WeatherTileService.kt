@@ -1,20 +1,17 @@
 package com.sysadmindoc.nimbus.wear.tile
 
-import androidx.wear.protolayout.ActionBuilders
+import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.wear.protolayout.ColorBuilders.argb
 import androidx.wear.protolayout.DimensionBuilders.dp
 import androidx.wear.protolayout.DimensionBuilders.sp
 import androidx.wear.protolayout.LayoutElementBuilders
 import androidx.wear.protolayout.LayoutElementBuilders.Column
-import androidx.wear.protolayout.LayoutElementBuilders.Row
 import androidx.wear.protolayout.LayoutElementBuilders.Spacer
 import androidx.wear.protolayout.LayoutElementBuilders.Text
-import androidx.wear.protolayout.ModifiersBuilders
 import androidx.wear.protolayout.ResourceBuilders
 import androidx.wear.protolayout.TimelineBuilders
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.TileBuilders
-import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.runBlocking
@@ -32,7 +29,8 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
     lateinit var repository: WearWeatherRepository
 
     override fun onTileRequest(requestParams: RequestBuilders.TileRequest) =
-        runBlocking {
+        CallbackToFutureAdapter.getFuture { completer ->
+            val tile = runBlocking {
             val data = repository.getCurrentWeather().getOrNull()
 
             val layout = Column.Builder()
@@ -94,10 +92,18 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
                 .setTileTimeline(timeline)
                 .setFreshnessIntervalMillis(30 * 60 * 1000L) // 30 min refresh
                 .build()
+            }
+            completer.set(tile)
+            "weather-tile"
         }
 
     override fun onTileResourcesRequest(requestParams: RequestBuilders.ResourcesRequest) =
-        ResourceBuilders.Resources.Builder()
-            .setVersion("1")
-            .build()
+        CallbackToFutureAdapter.getFuture { completer ->
+            completer.set(
+                ResourceBuilders.Resources.Builder()
+                    .setVersion("1")
+                    .build()
+            )
+            "weather-tile-resources"
+        }
 }
