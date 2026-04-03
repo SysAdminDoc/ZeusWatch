@@ -10,6 +10,7 @@ import com.sysadmindoc.nimbus.data.model.ReportCondition
 import com.sysadmindoc.nimbus.data.repository.CommunityReportSource
 import com.sysadmindoc.nimbus.data.repository.RadarFrameSet
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
+import com.sysadmindoc.nimbus.data.repository.RadarProvider
 import com.sysadmindoc.nimbus.data.repository.TimedTileUrl
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.util.ConnectivityObserver
@@ -216,6 +217,12 @@ class RadarViewModel @Inject constructor(
     /** Reset the report submission state (e.g. when sheet is dismissed). */
     fun resetReportState() {
         _reportSubmitState.value = ReportSubmitState()
+    }
+
+    fun setRadarProvider(provider: RadarProvider) {
+        viewModelScope.launch {
+            prefs.setRadarProvider(provider)
+        }
     }
 
     override fun onCleared() {

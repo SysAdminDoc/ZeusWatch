@@ -69,6 +69,7 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 @Composable
 fun CompareScreen(
     onBack: () -> Unit,
+    onNavigateToLocations: () -> Unit = {},
     viewModel: CompareViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -76,7 +77,7 @@ fun CompareScreen(
 
     PredictiveBackScaffold(onBack = onBack) {
         when {
-            state.isLoading -> Box(
+            state.isLoading && state.savedLocations.isEmpty() -> Box(
                 Modifier.fillMaxSize().background(NimbusBackgroundGradient),
                 contentAlignment = Alignment.Center,
             ) {
@@ -158,46 +159,70 @@ fun CompareScreen(
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    NimbusGlassTop.copy(alpha = 0.78f),
-                                    NimbusGlassBottom,
+                if (state.savedLocations.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .clip(RoundedCornerShape(28.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        NimbusGlassTop.copy(alpha = 0.78f),
+                                        NimbusGlassBottom,
+                                    ),
                                 ),
-                            ),
-                        )
-                        .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
-                        .padding(horizontal = 18.dp, vertical = 18.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            )
+                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
+                            .padding(horizontal = 18.dp, vertical = 18.dp),
                     ) {
-                        LocationSelector(
-                            label = "Location 1",
-                            selected = state.location1,
-                            locations = state.savedLocations,
-                            onSelect = { viewModel.selectLocation1(it) },
-                            modifier = Modifier.weight(1f),
-                        )
-                        LocationSelector(
-                            label = "Location 2",
-                            selected = state.location2,
-                            locations = state.savedLocations,
-                            onSelect = { viewModel.selectLocation2(it) },
-                            modifier = Modifier.weight(1f),
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            LocationSelector(
+                                label = "Primary",
+                                selected = state.location1,
+                                locations = state.savedLocations,
+                                onSelect = { viewModel.selectLocation1(it) },
+                                modifier = Modifier.weight(1f),
+                            )
+                            LocationSelector(
+                                label = "Compare Against",
+                                selected = state.location2,
+                                locations = state.savedLocations,
+                                onSelect = { viewModel.selectLocation2(it) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Comparison table
-                if (state.weather1 != null && state.weather2 != null) {
+                when {
+                    state.savedLocations.isEmpty() -> {
+                        CompareEmptyState(
+                            title = "Add a Location to Start Comparing",
+                            message = "Save at least two places to see side-by-side weather, travel differences, and rain risk in one glance.",
+                            actionLabel = "Open Locations",
+                            onAction = onNavigateToLocations,
+                        )
+                    }
+                    state.savedLocations.size == 1 -> {
+                        CompareEmptyState(
+                            title = "Add One More Location",
+                            message = "${state.location1?.name ?: "Your current location"} is ready. Save one more place to unlock side-by-side comparisons.",
+                            actionLabel = "Add Another Location",
+                            onAction = onNavigateToLocations,
+                        )
+                    }
+                    state.weather1 == null || state.weather2 == null -> {
+                        CompareEmptyState(
+                            title = "Loading Comparison",
+                            message = "Pulling fresh forecast data for both locations now.",
+                        )
+                    }
+                    else -> {
                     val w1 = state.weather1!!
                     val w2 = state.weather2!!
 
@@ -312,8 +337,55 @@ fun CompareScreen(
                         raw2 = precip2.toDouble(),
                     )
                 }
+                }
 
                 Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompareEmptyState(
+    title: String,
+    message: String,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.74f),
+                        NimbusGlassBottom,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
+            .padding(horizontal = 24.dp, vertical = 28.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            color = NimbusTextPrimary,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = NimbusTextSecondary,
+            textAlign = TextAlign.Center,
+        )
+        if (actionLabel != null && onAction != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onAction) {
+                Text(actionLabel)
             }
         }
     }

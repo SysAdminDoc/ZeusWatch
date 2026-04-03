@@ -3,6 +3,7 @@ package com.sysadmindoc.nimbus.ui.screen.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -34,6 +38,7 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -84,6 +89,7 @@ fun SettingsScreen(
         // Card config
         onCardEnabled = { card, enabled -> viewModel.setCardEnabled(card, enabled) },
         onCardOrder = { viewModel.setCardOrder(it) },
+        onResetCardPreferences = { viewModel.resetCardPreferences() },
         // Notifications
         onPersistentWeatherNotif = { viewModel.setPersistentWeatherNotif(it) },
         onNowcastingAlerts = { viewModel.setNowcastingAlerts(it) },
@@ -116,6 +122,13 @@ fun SettingsScreen(
     )
 }
 
+private enum class SettingsCategory(val label: String, val summary: String) {
+    APPEARANCE("Appearance", "Theme, icons, radar, motion"),
+    FORECAST("Forecast", "Cards, units, detail density"),
+    ALERTS("Alerts", "Notifications, thresholds, haptics"),
+    ADVANCED("Advanced", "Sources, cache, app info"),
+}
+
 @Composable
 internal fun SettingsContent(
     settings: NimbusSettings,
@@ -141,6 +154,7 @@ internal fun SettingsContent(
     // Card config
     onCardEnabled: (CardType, Boolean) -> Unit = { _, _ -> },
     onCardOrder: (List<CardType>) -> Unit = {},
+    onResetCardPreferences: () -> Unit = {},
     // Notifications
     onPersistentWeatherNotif: (Boolean) -> Unit = {},
     onNowcastingAlerts: (Boolean) -> Unit = {},
@@ -172,12 +186,19 @@ internal fun SettingsContent(
     onPirateWeatherApiKey: (String) -> Unit = {},
 ) {
     PredictiveBackScaffold(onBack = onBack) {
+        val scrollState = rememberScrollState()
+        var selectedCategory by remember { mutableStateOf(SettingsCategory.APPEARANCE) }
+
+        LaunchedEffect(selectedCategory) {
+            scrollState.scrollTo(0)
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(NimbusBackgroundGradient)
                 .windowInsetsPadding(WindowInsets.safeDrawing)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState),
         ) {
         // Header
         Row(
@@ -224,7 +245,15 @@ internal fun SettingsContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        SettingsCategoryPicker(
+            selectedCategory = selectedCategory,
+            onSelectedCategory = { selectedCategory = it },
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         // ── Display ──────────────────────────────────────────
+        if (selectedCategory == SettingsCategory.APPEARANCE) {
         SettingSection("Display") {
             Text(
                 text = "Radar Provider",
@@ -290,15 +319,29 @@ internal fun SettingsContent(
                 )
             }
         }
+        }
 
         // ── Cards (ordered, with move up/down) ─────────────
-        SettingSection("Cards") {
-            Text(
-                "Tap arrows to reorder. Toggle to show/hide.",
-                style = MaterialTheme.typography.labelSmall,
-                color = NimbusTextTertiary,
-                modifier = Modifier.padding(bottom = 4.dp),
-            )
+        if (selectedCategory == SettingsCategory.FORECAST) {
+        SettingSection("Home Cards") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Turn cards on or off, then nudge favorites higher.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NimbusTextTertiary,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "Reset",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = NimbusBlueAccent,
+                    modifier = Modifier.clickable(onClick = onResetCardPreferences),
+                )
+            }
             settings.cardOrder.forEachIndexed { index, card ->
                 val enabled = card.name !in settings.disabledCards
                 Row(
@@ -308,42 +351,39 @@ internal fun SettingsContent(
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Move up/down arrows
-                    Column {
-                        if (index > 0) {
-                            Text(
-                                "\u25B2",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = NimbusBlueAccent,
-                                modifier = Modifier
-                                    .clickable {
-                                        val newOrder = settings.cardOrder.toMutableList()
-                                        val item = newOrder.removeAt(index)
-                                        newOrder.add(index - 1, item)
-                                        onCardOrder(newOrder)
-                                    }
-                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                    Row {
+                        IconButton(
+                            onClick = {
+                                val newOrder = settings.cardOrder.toMutableList()
+                                val item = newOrder.removeAt(index)
+                                newOrder.add(index - 1, item)
+                                onCardOrder(newOrder)
+                            },
+                            enabled = index > 0,
+                        ) {
+                            Icon(
+                                Icons.Filled.KeyboardArrowUp,
+                                contentDescription = "Move ${card.label} up",
+                                tint = if (index > 0) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.4f),
                             )
-                        } else {
-                            Spacer(Modifier.padding(horizontal = 8.dp, vertical = 6.dp))
                         }
-                        if (index < settings.cardOrder.lastIndex) {
-                            Text(
-                                "\u25BC",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = NimbusBlueAccent,
-                                modifier = Modifier
-                                    .clickable {
-                                        val newOrder = settings.cardOrder.toMutableList()
-                                        val item = newOrder.removeAt(index)
-                                        newOrder.add(index + 1, item)
-                                        onCardOrder(newOrder)
-                                    }
-                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                        IconButton(
+                            onClick = {
+                                val newOrder = settings.cardOrder.toMutableList()
+                                val item = newOrder.removeAt(index)
+                                newOrder.add(index + 1, item)
+                                onCardOrder(newOrder)
+                            },
+                            enabled = index < settings.cardOrder.lastIndex,
+                        ) {
+                            Icon(
+                                Icons.Filled.KeyboardArrowDown,
+                                contentDescription = "Move ${card.label} down",
+                                tint = if (index < settings.cardOrder.lastIndex) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.4f),
                             )
                         }
                     }
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(2.dp))
                     Text(
                         text = card.label,
                         style = MaterialTheme.typography.bodyLarge,
@@ -434,6 +474,8 @@ internal fun SettingsContent(
         }
 
         // ── Notifications ────────────────────────────────────
+        }
+        if (selectedCategory == SettingsCategory.ALERTS) {
         SettingSection("Notifications") {
             SettingToggle(
                 label = "Alert Notifications",
@@ -506,7 +548,45 @@ internal fun SettingsContent(
         }
 
         // ── Data Display ─────────────────────────────────────
+        }
+        if (selectedCategory == SettingsCategory.FORECAST) {
         SettingSection("Data Display") {
+            SettingToggle(
+                label = "Yesterday Comparison",
+                sublabel = "Show warmer/cooler trend in the hero header",
+                checked = settings.showYesterdayComparison,
+                onCheckedChange = { onShowYesterdayComparison(it) },
+            )
+            SettingToggle(
+                label = "Outdoor Activity Score",
+                sublabel = "Show the blended comfort score card",
+                checked = settings.showOutdoorScore,
+                onCheckedChange = { onShowOutdoorScore(it) },
+            )
+            SettingToggle(
+                label = "Snowfall Insights",
+                sublabel = "Show snowfall rate and depth cards when available",
+                checked = settings.showSnowfall,
+                onCheckedChange = { onShowSnowfall(it) },
+            )
+            SettingToggle(
+                label = "Storm Potential",
+                sublabel = "Show thunderstorm instability and CAPE cards",
+                checked = settings.showCape,
+                onCheckedChange = { onShowCape(it) },
+            )
+            SettingToggle(
+                label = "Golden Hour Times",
+                sublabel = "Include photography-friendly sunrise and sunset windows",
+                checked = settings.showGoldenHour,
+                onCheckedChange = { onShowGoldenHour(it) },
+            )
+            SettingToggle(
+                label = "Sunshine Duration",
+                sublabel = "Show total sunshine progress when forecast data supports it",
+                checked = settings.showSunshineDuration,
+                onCheckedChange = { onShowSunshineDuration(it) },
+            )
             SettingToggle(
                 label = "Show Beaufort Wind Colors",
                 checked = settings.showBeaufortColors,
@@ -529,9 +609,10 @@ internal fun SettingsContent(
                 )
             }
         }
+        }
 
         // ── Health ───────────────────────────────────────────
-        if (settings.healthAlertsEnabled) {
+        if (selectedCategory == SettingsCategory.ALERTS && settings.healthAlertsEnabled) {
             SettingSection("Health") {
                 SettingToggle(
                     label = "Migraine Alerts",
@@ -564,6 +645,7 @@ internal fun SettingsContent(
         }
 
         // ── Accessibility ────────────────────────────────────
+        if (selectedCategory == SettingsCategory.ALERTS) {
         SettingSection("Accessibility") {
             SettingToggle(
                 label = "Haptic Feedback for Alerts",
@@ -572,8 +654,10 @@ internal fun SettingsContent(
                 onCheckedChange = { onHapticFeedbackForAlerts(it) },
             )
         }
+        }
 
         // ── Visual Effects ───────────────────────────────────
+        if (selectedCategory == SettingsCategory.APPEARANCE) {
         SettingSection("Visual Effects") {
             SettingToggle(
                 label = "Weather Particles",
@@ -582,8 +666,10 @@ internal fun SettingsContent(
                 onCheckedChange = { onParticlesEnabled(it) },
             )
         }
+        }
 
         // ── Data Sources ─────────────────────────────────────────
+        if (selectedCategory == SettingsCategory.ADVANCED) {
         SettingSection("Data Sources", initiallyExpanded = false) {
             val sourceConfig = settings.sourceConfig
 
@@ -708,8 +794,53 @@ internal fun SettingsContent(
             SettingInfo("Data Sources", "Open-Meteo, NWS, and more")
             SettingInfo("License", "LGPL-3.0")
         }
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun SettingsCategoryPicker(
+    selectedCategory: SettingsCategory,
+    onSelectedCategory: (SettingsCategory) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        SettingsCategory.entries.forEach { category ->
+            val isSelected = category == selectedCategory
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(
+                        if (isSelected) NimbusBlueAccent.copy(alpha = 0.14f)
+                        else NimbusCardBg,
+                    )
+                    .border(
+                        1.dp,
+                        if (isSelected) NimbusBlueAccent.copy(alpha = 0.34f) else NimbusCardBorder,
+                        RoundedCornerShape(22.dp),
+                    )
+                    .clickable { onSelectedCategory(category) }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                Text(
+                    text = category.label,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (isSelected) NimbusTextPrimary else NimbusTextSecondary,
+                )
+                Text(
+                    text = category.summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextTertiary,
+                )
+            }
         }
     }
 }
@@ -725,16 +856,17 @@ private fun SettingSection(
     Column(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(28.dp))
+            .clip(RoundedCornerShape(24.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.8f),
+                        NimbusGlassTop.copy(alpha = 0.65f),
+                        NimbusCardBg,
                         NimbusGlassBottom,
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(24.dp))
             .padding(horizontal = 16.dp, vertical = 16.dp),
     ) {
         Row(
