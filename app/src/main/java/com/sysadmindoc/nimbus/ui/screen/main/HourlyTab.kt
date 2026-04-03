@@ -156,8 +156,9 @@ private fun HourlyRow(
                         )
                     } else {
                         listOf(
-                            NimbusGlassTop.copy(alpha = 0.75f),
+                            NimbusGlassTop.copy(alpha = 0.5f),
                             NimbusCardBg,
+                            NimbusGlassBottom,
                         )
                     },
                 ),

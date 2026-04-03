@@ -27,7 +27,7 @@ class CompareViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             locationRepository.savedLocations.collect { locations ->
-                _uiState.update { it.copy(savedLocations = locations) }
+                syncSavedLocations(locations)
             }
         }
     }
@@ -48,6 +48,33 @@ class CompareViewModel @Inject constructor(
         val loc2 = _uiState.value.location2
         if (loc1 != null) fetchWeather(loc1, isFirst = true)
         if (loc2 != null) fetchWeather(loc2, isFirst = false)
+    }
+
+    private fun syncSavedLocations(locations: List<SavedLocationEntity>) {
+        val validIds = locations.map { it.id }.toSet()
+        val preferredPrimary = locations.firstOrNull { it.isCurrentLocation } ?: locations.firstOrNull()
+        var fetchPrimary: SavedLocationEntity? = null
+        var fetchSecondary: SavedLocationEntity? = null
+
+        _uiState.update { state ->
+            val primary = state.location1?.takeIf { it.id in validIds } ?: preferredPrimary
+            val secondary = state.location2?.takeIf { it.id in validIds && it.id != primary?.id }
+                ?: locations.firstOrNull { it.id != primary?.id }
+
+            if (state.location1?.id != primary?.id) fetchPrimary = primary
+            if (state.location2?.id != secondary?.id) fetchSecondary = secondary
+
+            state.copy(
+                savedLocations = locations,
+                location1 = primary,
+                location2 = secondary,
+                weather1 = if (state.location1?.id == primary?.id) state.weather1 else null,
+                weather2 = if (state.location2?.id == secondary?.id) state.weather2 else null,
+            )
+        }
+
+        fetchPrimary?.let { fetchWeather(it, isFirst = true) }
+        fetchSecondary?.let { fetchWeather(it, isFirst = false) }
     }
 
     private fun fetchWeather(location: SavedLocationEntity, isFirst: Boolean) {

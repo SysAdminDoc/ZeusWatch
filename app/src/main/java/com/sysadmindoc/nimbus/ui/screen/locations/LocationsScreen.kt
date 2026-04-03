@@ -25,7 +25,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -40,6 +39,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -52,7 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -225,7 +226,7 @@ private fun LocationsList(
             if (search.results.isNotEmpty()) {
                 item {
                     Text(
-                        "SEARCH RESULTS",
+                        "Search Results",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = NimbusTextTertiary,
                         modifier = Modifier.padding(vertical = 4.dp),
@@ -254,7 +255,7 @@ private fun LocationsList(
         if (saved.isNotEmpty()) {
             item {
                 Text(
-                    "SAVED LOCATIONS",
+                    "Saved Locations",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = NimbusTextTertiary,
                     modifier = Modifier.padding(vertical = 4.dp),
@@ -307,58 +308,75 @@ private fun SearchBar(
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.8f),
-                        NimbusGlassBottom,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(22.dp))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            Icons.Filled.Search,
-            contentDescription = null,
-            tint = NimbusTextTertiary,
-            modifier = Modifier.size(20.dp),
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            "Search Locations",
+            style = MaterialTheme.typography.labelLarge,
+            color = NimbusTextSecondary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
         )
-        Spacer(modifier = Modifier.width(10.dp))
-
-        Box(modifier = Modifier.weight(1f)) {
-            if (query.isEmpty()) {
+        TextField(
+            value = query,
+            onValueChange = onQueryChanged,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(22.dp))
+                .border(1.dp, NimbusCardBorder, RoundedCornerShape(22.dp)),
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(color = NimbusTextPrimary),
+            placeholder = {
                 Text(
                     "Search city or zip code...",
                     style = MaterialTheme.typography.bodyMedium,
                     color = NimbusTextTertiary,
                 )
-            }
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChanged,
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyMedium.copy(color = NimbusTextPrimary),
-                cursorBrush = SolidColor(NimbusBlueAccent),
-            )
-        }
-
-        if (isSearching) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(18.dp),
-                color = NimbusBlueAccent,
-                strokeWidth = 2.dp,
-            )
-        } else if (query.isNotEmpty()) {
-            IconButton(onClick = onClear, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.Filled.Clear, "Clear", tint = NimbusTextTertiary, modifier = Modifier.size(16.dp))
-            }
-        }
+            },
+            label = {
+                Text(
+                    "City, ZIP, or region",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Filled.Search,
+                    contentDescription = "Search",
+                    tint = NimbusTextTertiary,
+                    modifier = Modifier.size(20.dp),
+                )
+            },
+            trailingIcon = {
+                when {
+                    isSearching -> CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = NimbusBlueAccent,
+                        strokeWidth = 2.dp,
+                    )
+                    query.isNotEmpty() -> IconButton(onClick = onClear, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Filled.Clear, "Clear", tint = NimbusTextTertiary, modifier = Modifier.size(16.dp))
+                    }
+                }
+            },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = NimbusCardBg,
+                unfocusedContainerColor = NimbusCardBg,
+                disabledContainerColor = NimbusCardBg,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+                cursorColor = NimbusBlueAccent,
+                focusedTextColor = NimbusTextPrimary,
+                unfocusedTextColor = NimbusTextPrimary,
+                focusedLabelColor = NimbusBlueAccent,
+                unfocusedLabelColor = NimbusTextSecondary,
+                focusedLeadingIconColor = NimbusBlueAccent,
+                unfocusedLeadingIconColor = NimbusTextTertiary,
+                focusedTrailingIconColor = NimbusTextSecondary,
+                unfocusedTrailingIconColor = NimbusTextSecondary,
+                focusedPlaceholderColor = NimbusTextTertiary,
+                unfocusedPlaceholderColor = NimbusTextTertiary,
+            ),
+        )
     }
 }
 
