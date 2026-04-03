@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.ui.screen.radar
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,9 +25,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
+import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
@@ -52,10 +57,27 @@ fun RadarPlaybackControls(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .background(NimbusCardBg.copy(alpha = 0.9f))
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.86f),
+                        NimbusGlassBottom,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
+            .padding(horizontal = 16.dp, vertical = 14.dp),
     ) {
+        Text(
+            text = "Radar Playback",
+            style = MaterialTheme.typography.labelMedium,
+            color = NimbusTextSecondary,
+        )
+
+        Spacer(modifier = Modifier.padding(top = 6.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -66,7 +88,7 @@ fun RadarPlaybackControls(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(NimbusBlueAccent),
+                    .background(NimbusBlueAccent.copy(alpha = 0.95f)),
             ) {
                 Icon(
                     if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,

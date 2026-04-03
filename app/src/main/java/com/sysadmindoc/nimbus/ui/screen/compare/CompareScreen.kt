@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.ui.screen.compare
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -49,10 +51,12 @@ import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.ui.component.LocalUnitSettings
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.component.WeatherIcon
+import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
-import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusSurfaceVariant
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -73,16 +77,31 @@ fun CompareScreen(
     PredictiveBackScaffold(onBack = onBack) {
         when {
             state.isLoading -> Box(
-                Modifier.fillMaxSize().background(NimbusNavyDark),
+                Modifier.fillMaxSize().background(NimbusBackgroundGradient),
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator()
             }
             state.error != null -> Box(
-                Modifier.fillMaxSize().background(NimbusNavyDark),
+                Modifier.fillMaxSize().background(NimbusBackgroundGradient),
                 contentAlignment = Alignment.Center,
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    NimbusGlassTop.copy(alpha = 0.78f),
+                                    NimbusGlassBottom,
+                                ),
+                            ),
+                        )
+                        .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
+                        .padding(horizontal = 24.dp, vertical = 28.dp),
+                ) {
                     Text(
                         state.error ?: "Something went wrong",
                         style = MaterialTheme.typography.bodyLarge,
@@ -95,7 +114,7 @@ fun CompareScreen(
             else -> Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(NimbusNavyDark)
+                    .background(NimbusBackgroundGradient)
                     .windowInsetsPadding(WindowInsets.safeDrawing)
                     .verticalScroll(rememberScrollState()),
             ) {
@@ -103,47 +122,76 @@ fun CompareScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = onBack) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        NimbusGlassTop.copy(alpha = 0.76f),
+                                        NimbusGlassBottom,
+                                    ),
+                                ),
+                            )
+                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+                            .clickable(onClick = onBack),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = NimbusTextPrimary)
                     }
-                    Icon(
-                        Icons.AutoMirrored.Filled.CompareArrows,
-                        contentDescription = null,
-                        tint = NimbusBlueAccent,
-                        modifier = Modifier.size(24.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Compare Weather",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = NimbusTextPrimary,
-                    )
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column {
+                        Text(
+                            "Compare Weather",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = NimbusTextPrimary,
+                        )
+                        Text(
+                            "Live side-by-side conditions for any two saved locations.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NimbusTextSecondary,
+                        )
+                    }
                 }
 
-                // Location selectors
-                Row(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        .padding(horizontal = 16.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    NimbusGlassTop.copy(alpha = 0.78f),
+                                    NimbusGlassBottom,
+                                ),
+                            ),
+                        )
+                        .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
+                        .padding(horizontal = 18.dp, vertical = 18.dp),
                 ) {
-                    LocationSelector(
-                        label = "Location 1",
-                        selected = state.location1,
-                        locations = state.savedLocations,
-                        onSelect = { viewModel.selectLocation1(it) },
-                        modifier = Modifier.weight(1f),
-                    )
-                    LocationSelector(
-                        label = "Location 2",
-                        selected = state.location2,
-                        locations = state.savedLocations,
-                        onSelect = { viewModel.selectLocation2(it) },
-                        modifier = Modifier.weight(1f),
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        LocationSelector(
+                            label = "Location 1",
+                            selected = state.location1,
+                            locations = state.savedLocations,
+                            onSelect = { viewModel.selectLocation1(it) },
+                            modifier = Modifier.weight(1f),
+                        )
+                        LocationSelector(
+                            label = "Location 2",
+                            selected = state.location2,
+                            locations = state.savedLocations,
+                            onSelect = { viewModel.selectLocation2(it) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -157,7 +205,18 @@ fun CompareScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = 16.dp)
+                            .clip(RoundedCornerShape(30.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        NimbusGlassTop.copy(alpha = 0.82f),
+                                        NimbusGlassBottom,
+                                    ),
+                                ),
+                            )
+                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(30.dp))
+                            .padding(horizontal = 16.dp, vertical = 18.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -205,7 +264,6 @@ fun CompareScreen(
                         }
                     }
 
-                    HorizontalDivider(color = NimbusCardBorder, modifier = Modifier.padding(horizontal = 16.dp))
                     Spacer(Modifier.height(8.dp))
 
                     CompareRow("Feels Like",
@@ -275,10 +333,18 @@ private fun LocationSelector(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(NimbusSurfaceVariant)
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            NimbusGlassTop.copy(alpha = 0.72f),
+                            NimbusSurfaceVariant,
+                        ),
+                    ),
+                )
+                .border(1.dp, NimbusCardBorder, RoundedCornerShape(20.dp))
                 .clickable { expanded = true }
-                .padding(12.dp),
+                .padding(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = NimbusTextTertiary)
@@ -326,12 +392,16 @@ private fun CompareRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(NimbusCardBg)
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(22.dp))
+            .padding(horizontal = 16.dp, vertical = 2.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp),
+                .padding(vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -357,6 +427,5 @@ private fun CompareRow(
                 textAlign = TextAlign.Center,
             )
         }
-        HorizontalDivider(color = NimbusCardBorder)
     }
 }

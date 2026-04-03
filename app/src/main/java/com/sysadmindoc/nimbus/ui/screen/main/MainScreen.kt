@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -47,7 +48,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.VerticalDivider
@@ -66,6 +66,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -107,7 +109,9 @@ import com.sysadmindoc.nimbus.ui.component.SunshineDurationCard
 import com.sysadmindoc.nimbus.ui.component.RadarPreviewCard
 import com.sysadmindoc.nimbus.ui.component.SunArc
 import com.sysadmindoc.nimbus.ui.component.WeatherSummaryCard
+import com.sysadmindoc.nimbus.ui.component.VisibilityCard
 import com.sysadmindoc.nimbus.ui.component.WindTrendCard
+import com.sysadmindoc.nimbus.ui.component.CloudCoverCard
 import com.sysadmindoc.nimbus.data.repository.CardType
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.component.ShimmerLoadingSkeleton
@@ -120,11 +124,15 @@ import com.sysadmindoc.nimbus.ui.navigation.BottomTab
 import com.sysadmindoc.nimbus.ui.navigation.ZeusWatchBottomNav
 import com.sysadmindoc.nimbus.ui.screen.radar.RadarTab
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
+import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.NimbusToolbarSurface
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
 import java.time.Duration
 import java.time.LocalDateTime
@@ -133,6 +141,8 @@ import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import com.sysadmindoc.nimbus.util.ShareWeatherHelper
 // WeatherShareHelper consolidated into ShareWeatherHelper
+
+private const val LOCATION_PERMISSION_ACTION_LABEL = "Grant location"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,6 +158,7 @@ fun MainScreen(
 
     // Track whether we've already prompted in this session
     var hasPromptedPermissions by rememberSaveable { mutableStateOf(false) }
+    var hasPromptedOptionalPermissions by rememberSaveable { mutableStateOf(false) }
 
     // Location permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -163,29 +174,31 @@ fun MainScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { /* System handles the grant/deny visual */ }
 
-    // Background location launcher (Android 11+, requested AFTER foreground granted)
-    val bgLocationLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { /* Background location is optional — no action needed on deny */ }
+    val requestLocationPermissions = {
+        hasPromptedPermissions = true
+        permissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            )
+        )
+    }
 
-    // Sequential permission flow on first launch:
-    // 1. Location (required) -> 2. Notifications (Android 13+) -> 3. Background location (optional)
+    // Prompt for required location permission automatically once per session.
     LaunchedEffect(state.needsLocationPermission) {
         if (state.needsLocationPermission && !hasPromptedPermissions) {
-            hasPromptedPermissions = true
-            permissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                )
-            )
+            requestLocationPermissions()
         }
     }
 
-    // After location is granted, request notification + background location permissions
+    // Optional permissions should not disrupt the first-run flow. Request
+    // notifications once per session after weather loads and defer background
+    // location to feature-specific opt-ins such as alerts/widgets.
     val permContext = LocalContext.current
     LaunchedEffect(state.weatherData) {
-        if (state.weatherData != null && hasPromptedPermissions) {
+        if (state.weatherData != null && hasPromptedPermissions && !hasPromptedOptionalPermissions) {
+            hasPromptedOptionalPermissions = true
+
             // Small delay so location permission dialog fully dismisses
             kotlinx.coroutines.delay(500)
 
@@ -196,17 +209,6 @@ fun MainScreen(
                 ) == android.content.pm.PackageManager.PERMISSION_GRANTED
                 if (!notifGranted) {
                     notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    kotlinx.coroutines.delay(500)
-                }
-            }
-
-            // Request background location on Android 11+ (for widgets/alert worker)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val bgGranted = androidx.core.content.ContextCompat.checkSelfPermission(
-                    permContext, Manifest.permission.ACCESS_BACKGROUND_LOCATION
-                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                if (!bgGranted) {
-                    bgLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                 }
             }
         }
@@ -233,7 +235,7 @@ fun MainScreen(
         }
 
         Scaffold(
-            containerColor = NimbusNavyDark,
+            containerColor = Color.Transparent,
             bottomBar = {
                 ZeusWatchBottomNav(
                     selectedTab = selectedTab,
@@ -247,11 +249,17 @@ fun MainScreen(
                     .fillMaxSize()
                     .padding(innerPadding),
             ) {
+                val hasLocationPermissionError =
+                    state.weatherData == null && isLocationPermissionError(state.error)
+                val retryLabel = if (hasLocationPermissionError) LOCATION_PERMISSION_ACTION_LABEL else "Retry"
+                val retryIcon = if (hasLocationPermissionError) Icons.Filled.LocationOn else Icons.Filled.Refresh
+                val retryAction = if (hasLocationPermissionError) requestLocationPermissions else viewModel::loadWeather
+
                 when {
                     state.isLoading && state.weatherData == null -> ShimmerLoadingSkeleton()
                     state.error != null && state.weatherData == null -> ErrorState(
                         message = state.error!!,
-                        onRetry = { viewModel.loadWeather() },
+                        onRetry = retryAction,
                         icon = when {
                             state.error!!.contains("permission", ignoreCase = true) ||
                             state.error!!.contains("location", ignoreCase = true) -> Icons.Filled.LocationOff
@@ -261,6 +269,8 @@ fun MainScreen(
                             state.error!!.contains("internet", ignoreCase = true) -> Icons.Filled.CloudOff
                             else -> Icons.Filled.ErrorOutline
                         },
+                        actionLabel = retryLabel,
+                        actionIcon = retryIcon,
                     )
                     state.weatherData != null -> {
                         val data = state.weatherData!!
@@ -378,6 +388,8 @@ internal fun TodayContent(
                 state.error!!.contains("internet", ignoreCase = true) -> Icons.Filled.CloudOff
                 else -> Icons.Filled.ErrorOutline
             },
+            actionLabel = if (isLocationPermissionError(state.error)) LOCATION_PERMISSION_ACTION_LABEL else "Retry",
+            actionIcon = if (isLocationPermissionError(state.error)) Icons.Filled.LocationOn else Icons.Filled.Refresh,
         )
         state.weatherData != null -> WeatherContent(
             data = state.weatherData!!,
@@ -483,27 +495,22 @@ private fun WeatherContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 4.dp, top = 4.dp, end = 4.dp),
+                        .padding(horizontal = layout.contentPadding, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = onNavigateToLocations) {
-                        Icon(
-                            Icons.Filled.LocationOn,
-                            contentDescription = "Manage locations",
-                            tint = NimbusTextPrimary.copy(alpha = 0.6f),
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
-                    Row {
+                    PremiumToolbarButton(
+                        icon = Icons.Filled.LocationOn,
+                        contentDescription = "Manage locations",
+                        onClick = onNavigateToLocations,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Box {
-                            IconButton(onClick = { showShareMenu = true }) {
-                                Icon(
-                                    Icons.Filled.Share,
-                                    contentDescription = "Share weather",
-                                    tint = NimbusTextPrimary.copy(alpha = 0.6f),
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
+                            PremiumToolbarButton(
+                                icon = Icons.Filled.Share,
+                                contentDescription = "Share weather",
+                                onClick = { showShareMenu = true },
+                            )
                             DropdownMenu(
                                 expanded = showShareMenu,
                                 onDismissRequest = { showShareMenu = false },
@@ -524,22 +531,16 @@ private fun WeatherContent(
                                 )
                             }
                         }
-                        IconButton(onClick = onNavigateToCompare) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.CompareArrows,
-                                contentDescription = "Compare locations",
-                                tint = NimbusTextPrimary.copy(alpha = 0.6f),
-                                modifier = Modifier.size(22.dp),
-                            )
-                        }
-                        IconButton(onClick = onNavigateToSettings) {
-                            Icon(
-                                Icons.Filled.Settings,
-                                contentDescription = "Settings",
-                                tint = NimbusTextPrimary.copy(alpha = 0.6f),
-                                modifier = Modifier.size(22.dp),
-                            )
-                        }
+                        PremiumToolbarButton(
+                            icon = Icons.AutoMirrored.Filled.CompareArrows,
+                            contentDescription = "Compare locations",
+                            onClick = onNavigateToCompare,
+                        )
+                        PremiumToolbarButton(
+                            icon = Icons.Filled.Settings,
+                            contentDescription = "Settings",
+                            onClick = onNavigateToSettings,
+                        )
                     }
                 }
             }
@@ -620,50 +621,42 @@ private fun WeatherContent(
 
             // ── Precip chance + updated time ─────────────────────────
             item(key = "updated_row") {
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = layout.contentPadding),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
+                    contentAlignment = Alignment.Center,
                 ) {
-                    if (todayPrecipChance > 0) {
-                        Icon(
-                            Icons.Filled.WaterDrop,
-                            contentDescription = null,
-                            tint = NimbusBlueAccent,
-                            modifier = Modifier.size(14.dp),
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(
-                            text = "$todayPrecipChance% chance of rain",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NimbusBlueAccent,
-                        )
-                        Text(
-                            text = " \u2022 ",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NimbusTextTertiary,
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (todayPrecipChance > 0) {
+                            StatusBadge(
+                                icon = Icons.Filled.WaterDrop,
+                                text = "$todayPrecipChance% rain today",
+                                tint = NimbusBlueAccent,
+                            )
+                        }
+                        val stalenessColor = when {
+                            isCached -> NimbusTextTertiary.copy(alpha = 0.78f)
+                            updatedAgo == "Just now" || updatedAgo.endsWith("m ago") -> NimbusTextTertiary
+                            updatedAgo.contains("1h") -> NimbusWarning.copy(alpha = 0.7f)
+                            updatedAgo.contains("h") -> NimbusWarning
+                            else -> NimbusTextTertiary
+                        }
+                        StatusBadge(
+                            text = if (isCached) "Cached • $updatedAgo" else "Updated $updatedAgo",
+                            tint = stalenessColor,
                         )
                     }
-                    val stalenessColor = when {
-                        isCached -> NimbusTextTertiary.copy(alpha = 0.7f)
-                        updatedAgo == "Just now" || updatedAgo.endsWith("m ago") -> NimbusTextTertiary
-                        updatedAgo.contains("1h") -> NimbusWarning.copy(alpha = 0.7f)
-                        updatedAgo.contains("h") -> NimbusWarning
-                        else -> NimbusTextTertiary
-                    }
-                    Text(
-                        text = if (isCached) "Cached \u2022 $updatedAgo" else "Updated $updatedAgo",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = stalenessColor,
-                    )
                 }
             }
 
             // ── Spacer before cards ───────────────────────────────
             item(key = "pre_cards_spacer") {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(18.dp))
             }
 
             // ── Dynamic Cards (truly lazy now) ───────────────────────
@@ -701,6 +694,72 @@ private fun WeatherContent(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun PremiumToolbarButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Box(
+        modifier = modifier
+            .size(46.dp)
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusToolbarSurface,
+                        NimbusGlassBottom,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, shape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = NimbusTextPrimary.copy(alpha = 0.88f),
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
+private fun StatusBadge(
+    text: String,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Row(
+        modifier = modifier
+            .clip(shape)
+            .background(Color.White.copy(alpha = 0.08f))
+            .border(1.dp, Color.White.copy(alpha = 0.09f), shape)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(14.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+            color = tint,
+        )
     }
 }
 
@@ -862,10 +921,19 @@ private fun RenderCard(
             modifier = modifier,
             hourly = data.hourly,
         )
+        CardType.CLOUD_COVER -> CloudCoverCard(
+            hourly = data.hourly,
+            modifier = modifier,
+        )
+        CardType.VISIBILITY -> VisibilityCard(
+            visibilityMeters = data.current.visibility,
+            hourly = data.hourly,
+            modifier = modifier,
+        )
     }
 }
 
-// ── Location Selector Bar ────────────────────────────────────────────────
+// ── Location Selector Bar with Animated Dot Indicator ─────────────────────
 
 @Composable
 private fun LocationSelectorBar(
@@ -874,44 +942,119 @@ private fun LocationSelectorBar(
     onSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        locations.forEachIndexed { index, loc ->
-            val isActive = index == currentIndex
-            val bgColor = if (isActive) NimbusBlueAccent.copy(alpha = 0.2f) else NimbusCardBg.copy(alpha = 0.4f)
-            val borderColor = if (isActive) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.2f)
-
-            Row(
-                modifier = Modifier
-                    .heightIn(min = 48.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(bgColor)
-                    .clickable { onSelected(index) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (loc.isCurrentLocation) {
-                    Icon(
-                        Icons.Filled.MyLocation,
-                        contentDescription = null,
-                        tint = if (isActive) NimbusBlueAccent else NimbusTextTertiary,
-                        modifier = Modifier.size(14.dp),
+    Column(modifier = modifier.fillMaxWidth()) {
+        // Chip row (tappable location names)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            locations.forEachIndexed { index, loc ->
+                val isActive = index == currentIndex
+                val chipShape = RoundedCornerShape(22.dp)
+                val chipBrush = if (isActive) {
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            NimbusBlueAccent.copy(alpha = 0.26f),
+                            NimbusGlassBottom,
+                        ),
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                } else {
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            NimbusGlassTop.copy(alpha = 0.7f),
+                            NimbusCardBg,
+                        ),
+                    )
                 }
-                Text(
-                    text = if (loc.isCurrentLocation) "My Location" else loc.name,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                    ),
-                    color = if (isActive) NimbusBlueAccent else NimbusTextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                val borderColor = if (isActive) NimbusBlueAccent.copy(alpha = 0.65f) else NimbusCardBorder
+
+                Row(
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .clip(chipShape)
+                        .background(chipBrush)
+                        .border(1.dp, borderColor, chipShape)
+                        .clickable { onSelected(index) }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (isActive) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(NimbusBlueAccent),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    if (loc.isCurrentLocation) {
+                        Icon(
+                            Icons.Filled.MyLocation,
+                            contentDescription = null,
+                            tint = if (isActive) NimbusTextPrimary else NimbusTextTertiary,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                    Text(
+                        text = if (loc.isCurrentLocation) "My Location" else loc.name,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium,
+                        ),
+                        color = if (isActive) NimbusTextPrimary else NimbusTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+
+        // Animated dot indicator (breezy-weather InkPageIndicator style)
+        if (locations.size > 1) {
+            Spacer(modifier = Modifier.height(8.dp))
+            InkPageIndicator(
+                pageCount = locations.size,
+                currentPage = currentIndex,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+/**
+ * Animated page indicator dots inspired by breezy-weather's InkPageIndicator.
+ * Active dot is larger and colored, inactive dots are smaller and dimmed.
+ */
+@Composable
+private fun InkPageIndicator(
+    pageCount: Int,
+    currentPage: Int,
+    modifier: Modifier = Modifier,
+) {
+    val dotSize = 6.dp
+    val activeDotSize = 10.dp
+    val spacing = 8.dp
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(pageCount) { index ->
+            val isActive = index == currentPage
+            val size = if (isActive) activeDotSize else dotSize
+            val color = if (isActive) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.4f)
+
+            Box(
+                modifier = Modifier
+                    .size(size)
+                    .clip(RoundedCornerShape(size / 2))
+                    .background(color),
+            )
+            if (index < pageCount - 1) {
+                Spacer(modifier = Modifier.width(spacing))
             }
         }
     }
@@ -924,20 +1067,36 @@ private fun ErrorState(
     message: String,
     onRetry: () -> Unit,
     icon: ImageVector = Icons.Filled.ErrorOutline,
+    actionLabel: String = "Retry",
+    actionIcon: ImageVector = Icons.Filled.Refresh,
 ) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NimbusNavyDark),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.padding(32.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier
+                .padding(32.dp)
+                .clip(RoundedCornerShape(30.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            NimbusGlassTop,
+                            NimbusGlassBottom,
+                        ),
+                    ),
+                )
+                .border(1.dp, NimbusCardBorder, RoundedCornerShape(30.dp))
+                .padding(horizontal = 28.dp, vertical = 30.dp),
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(50.dp),
                 tint = NimbusTextSecondary,
             )
             Text(
@@ -949,10 +1108,16 @@ private fun ErrorState(
                 onClick = onRetry,
                 colors = ButtonDefaults.buttonColors(containerColor = NimbusBlueAccent),
             ) {
-                Icon(Icons.Filled.Refresh, null, Modifier.size(18.dp))
+                Icon(actionIcon, null, Modifier.size(18.dp))
                 Spacer(modifier = Modifier.padding(4.dp))
-                Text("Retry")
+                Text(actionLabel)
             }
         }
     }
+}
+
+private fun isLocationPermissionError(message: String?): Boolean {
+    if (message.isNullOrBlank()) return false
+    return message.contains("permission", ignoreCase = true) ||
+        message.contains("location", ignoreCase = true)
 }
