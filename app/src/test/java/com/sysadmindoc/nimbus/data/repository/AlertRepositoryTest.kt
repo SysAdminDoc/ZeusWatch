@@ -15,13 +15,25 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
+import io.mockk.coVerify
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.util.TimeZone
 
+@OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("DEPRECATION")
 class AlertRepositoryTest {
+
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var api: NwsAlertApi
     private lateinit var repository: AlertRepository
@@ -31,6 +43,7 @@ class AlertRepositoryTest {
 
     @Before
     fun setup() {
+        Dispatchers.setMain(testDispatcher)
         api = mockk()
         context = mockk(relaxed = true)
         prefs = mockk()
@@ -47,6 +60,11 @@ class AlertRepositoryTest {
 
         val adapters: Set<AlertSourceAdapter> = setOf(nwsAdapter)
         repository = AlertRepository(context, adapters, prefs)
+    }
+
+    @After
+    fun teardown() {
+        Dispatchers.resetMain()
     }
 
     private fun makeFeature(
@@ -172,5 +190,25 @@ class AlertRepositoryTest {
         val result = repository.getAlerts(35.6, 139.7) // Tokyo
         assertTrue(result.isSuccess)
         assertEquals(0, result.getOrThrow().size)
+    }
+
+    @Test
+    fun `getAlerts does not treat unsupported America timezones as US fallback`() = runTest {
+        val originalTimeZone = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("America/Mexico_City"))
+        try {
+            every { anyConstructed<Geocoder>().getFromLocation(any(), any(), any()) } throws RuntimeException("Geocoder unavailable")
+            coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+                features = listOf(makeFeature())
+            )
+
+            val result = repository.getAlerts(19.4, -99.1)
+
+            assertTrue(result.isSuccess)
+            assertTrue(result.getOrThrow().isEmpty())
+            coVerify(exactly = 0) { api.getActiveAlerts(any(), any(), any()) }
+        } finally {
+            TimeZone.setDefault(originalTimeZone)
+        }
     }
 }

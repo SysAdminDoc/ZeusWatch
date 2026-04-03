@@ -32,7 +32,7 @@ class UserPreferencesTest {
 
         assertTrue(settings.alertNotificationsEnabled)
         assertEquals(AlertMinSeverity.SEVERE, settings.alertMinSeverity)
-        assertFalse(settings.alertCheckAllLocations)
+        assertTrue(settings.alertCheckAllLocations)
         assertEquals(AlertSourcePreference.AUTO, settings.alertSourcePref)
     }
 
@@ -41,18 +41,18 @@ class UserPreferencesTest {
         val settings = NimbusSettings()
 
         assertEquals(RadarProvider.WINDY_WEBVIEW, settings.radarProvider)
-        assertEquals(IconStyle.MATERIAL, settings.iconStyle)
+        assertEquals(IconStyle.METEOCONS, settings.iconStyle)
         assertEquals("", settings.customIconPackId)
         assertEquals(ThemeMode.STATIC_DARK, settings.themeMode)
-        assertEquals(SummaryStyle.TEMPLATE, settings.summaryStyle)
+        assertEquals(SummaryStyle.AI_GENERATED, settings.summaryStyle)
     }
 
     @Test
     fun defaultSettingsHaveCorrectNotificationDefaults() {
         val settings = NimbusSettings()
 
-        assertFalse(settings.persistentWeatherNotif)
-        assertFalse(settings.nowcastingAlerts)
+        assertTrue(settings.persistentWeatherNotif)
+        assertTrue(settings.nowcastingAlerts)
         assertFalse(settings.drivingAlerts)
         assertFalse(settings.healthAlertsEnabled)
         assertFalse(settings.migraineAlerts)
@@ -75,7 +75,7 @@ class UserPreferencesTest {
     fun defaultSettingsHaveCorrectCacheAndForecastDefaults() {
         val settings = NimbusSettings()
 
-        assertEquals(48, settings.hourlyForecastHours)
+        assertEquals(72, settings.hourlyForecastHours)
         assertEquals(30, settings.cacheTtlMinutes)
         assertEquals(5.0, settings.migrainePressureThreshold, 0.01)
         assertTrue(settings.hapticFeedbackForAlerts)

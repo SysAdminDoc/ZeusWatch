@@ -41,6 +41,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -181,21 +183,43 @@ internal fun SettingsContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onBack) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                NimbusGlassTop.copy(alpha = 0.76f),
+                                NimbusGlassBottom,
+                            ),
+                        ),
+                        RoundedCornerShape(18.dp),
+                    )
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center,
+            ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
                     tint = NimbusTextPrimary,
                 )
             }
-            Text(
-                text = "Settings",
-                style = MaterialTheme.typography.headlineLarge,
-                modifier = Modifier.padding(start = 8.dp),
-            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+                Text(
+                    text = "Settings",
+                    style = MaterialTheme.typography.headlineLarge,
+                )
+                Text(
+                    text = "Tune the forecast, visuals, alerts, and data sources to your style.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -698,33 +722,45 @@ private fun SettingSection(
 ) {
     var expanded by remember { mutableStateOf(initiallyExpanded) }
 
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.8f),
+                        NimbusGlassBottom,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { expanded = !expanded }
-                .padding(bottom = 4.dp),
+                .padding(bottom = if (expanded) 10.dp else 0.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
-                color = NimbusBlueAccent,
+                color = NimbusTextPrimary,
             )
             Text(
                 text = if (expanded) "\u25B2" else "\u25BC",
                 style = MaterialTheme.typography.labelSmall,
-                color = NimbusBlueAccent.copy(alpha = 0.6f),
+                color = NimbusBlueAccent.copy(alpha = 0.8f),
             )
         }
         if (expanded) {
-            content()
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                content()
+            }
         }
-        HorizontalDivider(
-            color = NimbusCardBorder,
-            modifier = Modifier.padding(top = 8.dp),
-        )
     }
 }
 
@@ -738,8 +774,11 @@ private fun SettingRadio(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (selected) NimbusBlueAccent.copy(alpha = 0.14f) else NimbusCardBg)
+            .border(1.dp, if (selected) NimbusBlueAccent.copy(alpha = 0.35f) else NimbusCardBorder, RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 6.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(
@@ -752,9 +791,9 @@ private fun SettingRadio(
             modifier = Modifier.size(36.dp),
         )
         Column(modifier = Modifier.padding(start = 4.dp)) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge)
+            Text(text = label, style = MaterialTheme.typography.bodyLarge, color = NimbusTextPrimary)
             if (sublabel != null) {
-                Text(text = sublabel, style = MaterialTheme.typography.bodySmall)
+                Text(text = sublabel, style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary)
             }
         }
     }
@@ -770,15 +809,18 @@ private fun SettingToggle(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (checked) NimbusBlueAccent.copy(alpha = 0.12f) else NimbusCardBg)
+            .border(1.dp, if (checked) NimbusBlueAccent.copy(alpha = 0.32f) else NimbusCardBorder, RoundedCornerShape(20.dp))
             .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 6.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge)
+            Text(text = label, style = MaterialTheme.typography.bodyLarge, color = NimbusTextPrimary)
             if (sublabel != null) {
-                Text(text = sublabel, style = MaterialTheme.typography.bodySmall)
+                Text(text = sublabel, style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary)
             }
         }
         Switch(
@@ -799,11 +841,14 @@ private fun SettingInfo(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .clip(RoundedCornerShape(18.dp))
+            .background(NimbusCardBg)
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
-        Text(text = value, style = MaterialTheme.typography.bodyMedium)
+        Text(text = label, style = MaterialTheme.typography.bodyLarge, color = NimbusTextPrimary)
+        Text(text = value, style = MaterialTheme.typography.bodyMedium, color = NimbusTextSecondary)
     }
 }
 
@@ -829,9 +874,11 @@ private fun SourceDropdown(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(NimbusCardBg)
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
                     .clickable { expanded = true }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -889,9 +936,11 @@ private fun SourceDropdownNullable(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(NimbusCardBg)
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
                     .clickable { expanded = true }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -973,8 +1022,10 @@ private fun ApiKeyField(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(NimbusCardBg)
+                        .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
                 ) {
                     if (text.isEmpty()) {
                         Text(

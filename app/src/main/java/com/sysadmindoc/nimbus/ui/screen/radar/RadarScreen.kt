@@ -9,15 +9,20 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebViewClient
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -49,10 +55,15 @@ import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.RadarProvider
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.component.ReportSubmitSheet
+import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
+import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
+import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 
 @Composable
 fun RadarScreen(
@@ -112,25 +123,10 @@ fun RadarScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(NimbusNavyDark),
+                .background(NimbusBackgroundGradient),
         ) {
             if (isOffline) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Filled.CloudOff,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = NimbusTextPrimary,
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            "Radar requires an internet connection",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = NimbusTextPrimary,
-                        )
-                    }
-                }
+                RadarOfflineCard()
             } else when (settings.radarProvider) {
                 RadarProvider.NATIVE_MAPLIBRE -> {
                     val isRadarMode = selectedLayer == RadarLayer.RADAR
@@ -149,13 +145,21 @@ fun RadarScreen(
                         communityReports = nearbyReports,
                         modifier = Modifier.fillMaxSize(),
                     )
+                    RadarInfoPill(
+                        text = settings.radarProvider.label,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .windowInsetsPadding(WindowInsets.safeDrawing)
+                            .padding(top = 12.dp, end = 16.dp),
+                    )
                     // Layer selector chips (top, offset for back button)
                     RadarLayerSelector(
                         selectedLayer = selectedLayer,
                         onLayerSelected = { selectedLayer = it },
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .padding(top = 56.dp),
+                            .windowInsetsPadding(WindowInsets.safeDrawing)
+                            .padding(top = 60.dp),
                     )
                     // Playback controls overlay (bottom) - only shown in radar mode
                     if (isRadarMode) {
@@ -177,19 +181,35 @@ fun RadarScreen(
                         longitude = resolvedLon,
                         modifier = Modifier.fillMaxSize(),
                     )
+                    RadarInfoPill(
+                        text = settings.radarProvider.label,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .windowInsetsPadding(WindowInsets.safeDrawing)
+                            .padding(top = 12.dp, end = 16.dp),
+                    )
                 }
             }
 
             // Back button overlay
-            IconButton(
-                onClick = onBack,
+            Box(
                 modifier = Modifier
                     .windowInsetsPadding(WindowInsets.safeDrawing)
                     .padding(8.dp)
                     .align(Alignment.TopStart)
-                    .clip(CircleShape)
-                    .background(NimbusCardBg)
-                    .size(40.dp),
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                NimbusGlassTop.copy(alpha = 0.76f),
+                                NimbusGlassBottom,
+                            ),
+                        ),
+                    )
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
@@ -202,9 +222,9 @@ fun RadarScreen(
             // Community report FAB
             FloatingActionButton(
                 onClick = { showReportSheet = true },
-                containerColor = NimbusBlueAccent,
+                containerColor = NimbusBlueAccent.copy(alpha = 0.95f),
                 contentColor = NimbusTextPrimary,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(22.dp),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .windowInsetsPadding(WindowInsets.safeDrawing)
@@ -272,7 +292,7 @@ fun RadarTab(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NimbusNavyDark),
+            .background(NimbusBackgroundGradient),
     ) {
         var selectedLayer by remember { mutableStateOf(RadarLayer.RADAR) }
 
@@ -290,22 +310,7 @@ fun RadarTab(
         }
 
         if (isOffline) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Filled.CloudOff,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = NimbusTextPrimary,
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        "Radar requires an internet connection",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = NimbusTextPrimary,
-                    )
-                }
-            }
+            RadarOfflineCard()
         } else when (settings.radarProvider) {
             RadarProvider.NATIVE_MAPLIBRE -> {
                 val isRadarMode = selectedLayer == RadarLayer.RADAR
@@ -324,13 +329,21 @@ fun RadarTab(
                     communityReports = nearbyReports,
                     modifier = Modifier.fillMaxSize(),
                 )
+                RadarInfoPill(
+                    text = settings.radarProvider.label,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .windowInsetsPadding(WindowInsets.safeDrawing)
+                        .padding(top = 12.dp, end = 16.dp),
+                )
                 // Layer selector chips (top)
                 RadarLayerSelector(
                     selectedLayer = selectedLayer,
                     onLayerSelected = { selectedLayer = it },
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 8.dp),
+                        .windowInsetsPadding(WindowInsets.safeDrawing)
+                        .padding(top = 16.dp),
                 )
                 // Playback controls overlay (bottom) - only shown in radar mode
                 if (isRadarMode) {
@@ -351,6 +364,13 @@ fun RadarTab(
                     latitude = latitude,
                     longitude = longitude,
                     modifier = Modifier.fillMaxSize(),
+                )
+                RadarInfoPill(
+                    text = settings.radarProvider.label,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .windowInsetsPadding(WindowInsets.safeDrawing)
+                        .padding(top = 12.dp, end = 16.dp),
                 )
             }
         }
@@ -482,4 +502,75 @@ private fun buildRainViewerUrl(lat: Double, lon: Double, zoom: Int = 8): String 
         "&menu=" +
         "&forecast=12" +
         "&darkMode=true"
+}
+
+@Composable
+private fun RadarInfoPill(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.8f),
+                        NimbusGlassBottom,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = NimbusTextPrimary,
+        )
+    }
+}
+
+@Composable
+private fun RadarOfflineCard() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .padding(24.dp)
+                .clip(RoundedCornerShape(30.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            NimbusGlassTop.copy(alpha = 0.8f),
+                            NimbusGlassBottom,
+                        ),
+                    ),
+                )
+                .border(1.dp, NimbusCardBorder, RoundedCornerShape(30.dp))
+                .padding(horizontal = 28.dp, vertical = 30.dp),
+        ) {
+            Icon(
+                Icons.Filled.CloudOff,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = NimbusTextPrimary,
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "Radar requires an internet connection",
+                style = MaterialTheme.typography.bodyLarge,
+                color = NimbusTextPrimary,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Reconnect to resume live radar, lightning, and community reports.",
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
+        }
+    }
 }

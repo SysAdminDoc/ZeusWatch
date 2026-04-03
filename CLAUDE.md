@@ -1,6 +1,6 @@
 # ZeusWatch (Nimbus) - Android Weather App
 
-**Version**: v1.5.0 (versionCode 61)
+**Version**: v1.6.0 (versionCode 62)
 **Package**: `com.sysadmindoc.nimbus`
 **Stack**: Kotlin 2.1.0, Jetpack Compose (BOM 2024.12), Hilt 2.53.1, Retrofit 2.11.0, Room 2.6.1, DataStore, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.10.0, Lottie 6.6.2, Coil 3.0.4, Firebase Firestore
 **License**: LGPL-3.0
@@ -45,8 +45,8 @@
 
 ## Key Components
 
-### Card Types (25)
-WEATHER_SUMMARY, RADAR_PREVIEW, NOWCAST, HOURLY_FORECAST, TEMPERATURE_GRAPH, DAILY_FORECAST, UV_INDEX, WIND_COMPASS, AIR_QUALITY, POLLEN, OUTDOOR_SCORE, SNOWFALL, SEVERE_WEATHER, GOLDEN_HOUR, SUNSHINE, DRIVING_CONDITIONS, HEALTH_ALERTS, MOON_PHASE, HUMIDITY, PRECIPITATION_CHART, PRESSURE_TREND, WIND_TREND, DETAILS_GRID, CLOTHING, PET_SAFETY
+### Card Types (27)
+WEATHER_SUMMARY, RADAR_PREVIEW, NOWCAST, HOURLY_FORECAST, TEMPERATURE_GRAPH, DAILY_FORECAST, UV_INDEX, WIND_COMPASS, AIR_QUALITY, POLLEN, OUTDOOR_SCORE, SNOWFALL, SEVERE_WEATHER, GOLDEN_HOUR, SUNSHINE, DRIVING_CONDITIONS, HEALTH_ALERTS, MOON_PHASE, HUMIDITY, PRECIPITATION_CHART, PRESSURE_TREND, WIND_TREND, DETAILS_GRID, CLOTHING, PET_SAFETY, CLOUD_COVER, VISIBILITY
 
 ### Utility Files
 - `WeatherSummaryEngine.kt` — Template-based NLG with time-aware greetings, UV/humidity warnings + Gemini Nano AI fallback
@@ -56,6 +56,10 @@ WEATHER_SUMMARY, RADAR_PREVIEW, NOWCAST, HOURLY_FORECAST, TEMPERATURE_GRAPH, DAI
 - `MeteoconMapper.kt` — WMO code to Lottie filename mapping
 - `BlitzortungService.kt` — WebSocket for real-time lightning (thread-safe with @Volatile/@Synchronized)
 - `IconPackManager.kt` — Bundled + external APK icon pack discovery
+- `GravitySensor.kt` — Accelerometer-based tilt for parallax (smoothed low-pass filter, respects reduced motion)
+- `AnimatedTemperature.kt` — Animated rolling digit counter for header temperature
+- `CloudCoverCard.kt` — 24h cloud cover bar chart with reference threshold lines
+- `VisibilityCard.kt` — 6-tier graduated scale with hourly trend line chart
 
 ### Settings Enums (in `UserPreferences.kt`)
 - `RadarProvider`, `IconStyle`, `ThemeMode`, `SummaryStyle`, `AlertMinSeverity`, `AlertSourcePreference`, `VisibilityUnit`
@@ -95,3 +99,4 @@ WEATHER_SUMMARY, RADAR_PREVIEW, NOWCAST, HOURLY_FORECAST, TEMPERATURE_GRAPH, DAI
 - v1.3.6 — Coil ImageLoader config, WeatherSourceManager tests, battery-skip widget refresh
 - v1.4.0 — Security hardening, offline detection, reduced motion, ImmutableList perf, OkHttp retry, parallel sub-fetches, 74 new unit tests
 - **v1.5.0** — 4 new cards (humidity, precip chart, pressure trend, wind forecast — 25 total). Single-LazyColumn Today tab perf. Pull-to-refresh all tabs. Compare screen icons + value highlighting. Outdoor score factor breakdown. Location weather icons. Alert expiry countdown. Daily temp range bars. Feels-like graph overlay. Card reorder in Settings. Collapsible settings. Smart rain timeline. Sunrise/sunset countdown. Time-aware summary with UV/humidity warnings. Wind direction arrows in hourly. Dew point comfort colors. Data staleness coloring. 22 crash/bug fixes. Crashlytics removed. Dead code cleanup. README/CHANGELOG/CLAUDE.md updated.
+- **v1.6.0** — Breezy Weather-inspired features: 2 new cards (Cloud Cover with 24h bar chart, Visibility with 6-tier graduated scale + trend line — 27 total). **Tabbed Trend System** on hourly forecast (6 tabs: Temp, Feels Like, Wind, Precip, Cloud Cover, Humidity) and daily forecast (5 tabs: Overview, Temp, Wind, UV, Precip). **Enhanced Ephemeris Arc** with twilight dawn/dusk zones, solid traversed-arc, and optional moon path overlay. **Segmented AQI Arc Gauge** with per-tier colored segments and needle indicator. **Animated Temperature Counter** with smooth rolling digit animation in header. **Animated Page Indicator** dots on location selector. **Gravity Sensor Parallax** on weather particle effects (rain/snow/stars tilt with device accelerometer).

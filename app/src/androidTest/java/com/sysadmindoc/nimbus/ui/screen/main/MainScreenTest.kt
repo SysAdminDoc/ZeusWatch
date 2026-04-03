@@ -1,10 +1,15 @@
 package com.sysadmindoc.nimbus.ui.screen.main
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.sysadmindoc.nimbus.data.model.*
+import com.sysadmindoc.nimbus.ui.component.LocalUnitSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
+import com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState
+import com.sysadmindoc.nimbus.ui.theme.WeatherThemeState
 import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
@@ -105,6 +110,23 @@ class MainScreenTest {
     }
 
     @Test
+    fun permissionError_showsGrantLocationAction() {
+        composeTestRule.setContent {
+            NimbusTheme {
+                MainScreenContent(
+                    state = MainUiState(
+                        isLoading = false,
+                        weatherData = null,
+                        error = "Location permission required to show weather.",
+                    ),
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Grant location").assertIsDisplayed()
+    }
+
+    @Test
     fun weatherState_showsLocationNameAndTemperature() {
         composeTestRule.setContent {
             NimbusTheme {
@@ -170,5 +192,19 @@ class MainScreenTest {
 
         // The cached state still shows weather data
         composeTestRule.onNodeWithText("Denver").assertIsDisplayed()
+    }
+}
+
+@Composable
+private fun MainScreenContent(state: MainUiState) {
+    val weatherThemeState = WeatherThemeState(
+        weatherCode = state.weatherData?.current?.weatherCode,
+        isDay = state.weatherData?.current?.isDay ?: true,
+    )
+    CompositionLocalProvider(
+        LocalUnitSettings provides state.settings,
+        LocalWeatherThemeState provides weatherThemeState,
+    ) {
+        TodayContent(state = state)
     }
 }

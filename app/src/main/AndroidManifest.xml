@@ -22,6 +22,13 @@
 
     <!-- Widgets -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <queries>
+        <intent>
+            <action android:name="com.sysadmindoc.nimbus.ICON_PACK" />
+        </intent>
+    </queries>
 
     <application
         android:name=".NimbusApplication"

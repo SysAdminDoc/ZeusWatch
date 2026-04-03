@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
 }
@@ -64,6 +65,7 @@ dependencies {
     // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    implementation(libs.hilt.navigation.compose)
 
     // Networking (shared with phone app)
     implementation(libs.retrofit)
@@ -73,6 +75,7 @@ dependencies {
 
     // Lifecycle
     implementation(libs.lifecycle.runtime)
+    implementation("androidx.concurrent:concurrent-futures:1.2.0")
 
     // Coroutines
     implementation(libs.coroutines.android)

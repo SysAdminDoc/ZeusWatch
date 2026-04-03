@@ -6,6 +6,7 @@ import com.sysadmindoc.nimbus.data.location.LocationProvider
 import com.sysadmindoc.nimbus.data.model.*
 import com.sysadmindoc.nimbus.data.repository.*
 import com.sysadmindoc.nimbus.util.ConnectivityObserver
+import com.sysadmindoc.nimbus.util.SummaryEngine
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,7 +21,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelTest {
 
-    private val testDispatcher = StandardTestDispatcher()
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var weatherRepository: WeatherRepository
     private lateinit var alertRepository: AlertRepository
@@ -31,6 +32,7 @@ class MainViewModelTest {
     private lateinit var locationProvider: LocationProvider
     private lateinit var prefs: UserPreferences
     private lateinit var connectivityObserver: ConnectivityObserver
+    private lateinit var summaryEngine: SummaryEngine
 
     private lateinit var viewModel: MainViewModel
 
@@ -75,7 +77,13 @@ class MainViewModelTest {
         locationProvider = mockk()
         prefs = mockk(relaxed = true)
         connectivityObserver = mockk()
+        summaryEngine = mockk()
         every { connectivityObserver.isOnline } returns flowOf(true)
+        every { summaryEngine.isAvailable() } returns false
+        every { summaryEngine.close() } just Runs
+        coEvery {
+            summaryEngine.generate(any(), any(), any(), any(), any(), any(), any(), any())
+        } returns null
 
         every { prefs.settings } returns flowOf(NimbusSettings())
         every { prefs.lastLocation } returns flowOf(null)
@@ -121,7 +129,7 @@ class MainViewModelTest {
             locationRepository = locationRepository,
             locationProvider = locationProvider,
             prefs = prefs,
-            summaryEngine = mockk(relaxed = true),
+            summaryEngine = summaryEngine,
             connectivityObserver = connectivityObserver,
             savedStateHandle = savedState,
         )
@@ -136,7 +144,7 @@ class MainViewModelTest {
     // --- Success path ---
 
     @Test
-    fun `loadWeather transitions from loading to success`() = runTest(testDispatcher) {
+    fun `loadWeather transitions from loading to success`() = runTest {
         stubLocationSuccess()
         viewModel = createAndAdvance()
         val state = viewModel.uiState.value
@@ -146,7 +154,7 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `loadWeather fetches alerts and air quality after success`() = runTest(testDispatcher) {
+    fun `loadWeather fetches alerts and air quality after success`() = runTest {
         stubLocationSuccess()
         viewModel = createAndAdvance()
         val state = viewModel.uiState.value
@@ -158,7 +166,7 @@ class MainViewModelTest {
     // --- Permission flow ---
 
     @Test
-    fun `loadWeather requests permission when not granted`() = runTest(testDispatcher) {
+    fun `loadWeather requests permission when not granted`() = runTest {
         every { locationProvider.hasLocationPermission } returns false
         viewModel = createAndAdvance()
         val state = viewModel.uiState.value
@@ -167,7 +175,7 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `onPermissionGranted reloads weather`() = runTest(testDispatcher) {
+    fun `onPermissionGranted reloads weather`() = runTest {
         every { locationProvider.hasLocationPermission } returnsMany listOf(false, true)
         val mockLocation = mockk<Location>()
         every { mockLocation.latitude } returns 39.7
@@ -184,7 +192,7 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `onPermissionDenied sets error state`() = runTest(testDispatcher) {
+    fun `onPermissionDenied sets error state`() = runTest {
         every { locationProvider.hasLocationPermission } returns false
         viewModel = createAndAdvance()
         viewModel.onPermissionDenied()
@@ -199,7 +207,7 @@ class MainViewModelTest {
     // --- Error + cache fallback ---
 
     @Test
-    fun `loadWeather falls back to cache on API error`() = runTest(testDispatcher) {
+    fun `loadWeather falls back to cache on API error`() = runTest {
         stubLocationSuccess()
         coEvery { weatherRepository.getWeather(any(), any(), any()) } coAnswers { Result.failure(Exception("Network error")) }
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
@@ -212,7 +220,7 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `loadWeather shows error when API fails and no cache`() = runTest(testDispatcher) {
+    fun `loadWeather shows error when API fails and no cache`() = runTest {
         stubLocationSuccess()
         coEvery { weatherRepository.getWeather(any(), any(), any()) } coAnswers { Result.failure(Exception("Network error")) }
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
@@ -223,10 +231,25 @@ class MainViewModelTest {
         assertNotNull(state.error)
     }
 
+    @Test
+    fun `loadWeather shows actionable message when location services are off`() = runTest {
+        every { locationProvider.hasLocationPermission } returns true
+        coEvery { locationProvider.getCurrentLocation() } returns Result.failure(
+            IllegalStateException("Location services are turned off.")
+        )
+
+        viewModel = createAndAdvance()
+        val state = viewModel.uiState.value
+
+        assertNull(state.weatherData)
+        assertEquals("Turn on location services to load local weather.", state.error)
+        assertFalse(state.isLoading)
+    }
+
     // --- Refresh ---
 
     @Test
-    fun `refresh sets isRefreshing then clears`() = runTest(testDispatcher) {
+    fun `refresh sets isRefreshing then clears`() = runTest {
         stubLocationSuccess()
         viewModel = createAndAdvance()
         viewModel.refresh()
@@ -240,7 +263,7 @@ class MainViewModelTest {
     // --- Preferences ---
 
     @Test
-    fun `particle preference is observed from settings`() = runTest(testDispatcher) {
+    fun `particle preference is observed from settings`() = runTest {
         val settingsFlow = MutableStateFlow(NimbusSettings(particlesEnabled = false))
         every { prefs.settings } returns settingsFlow
         every { locationProvider.hasLocationPermission } returns false

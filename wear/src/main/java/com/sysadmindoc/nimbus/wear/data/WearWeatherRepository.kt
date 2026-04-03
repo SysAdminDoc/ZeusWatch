@@ -10,6 +10,9 @@ import okhttp3.Request
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val DEFAULT_LATITUDE = 39.8
+private const val DEFAULT_LONGITUDE = -98.5
+
 /**
  * Lightweight weather repository for Wear OS.
  * Uses OkHttp directly (no Retrofit) for minimal APK size.
@@ -22,8 +25,8 @@ class WearWeatherRepository @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true }
 
     suspend fun getCurrentWeather(
-        lat: Double = 39.8, // Default: US center (will be replaced by phone sync)
-        lon: Double = -98.5,
+        lat: Double = DEFAULT_LATITUDE, // Companion sync should replace this fallback.
+        lon: Double = DEFAULT_LONGITUDE,
     ): Result<WearWeatherData> = withContext(Dispatchers.IO) {
         try {
             val url = "https://api.open-meteo.com/v1/forecast" +
@@ -37,28 +40,44 @@ class WearWeatherRepository @Inject constructor(
                 .header("User-Agent", "ZeusWatch-Wear/1.3.0")
                 .build()
 
-            val response = client.newCall(request).execute()
-            val body = response.body?.string() ?: return@withContext Result.failure(Exception("Empty response"))
-            val data = json.decodeFromString(WearApiResponse.serializer(), body)
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(
+                        Exception("Weather service error (${response.code})")
+                    )
+                }
 
-            val current = data.current ?: return@withContext Result.failure(Exception("No current data"))
-            val daily = data.daily
+                val body = response.body?.string()
+                    ?: return@withContext Result.failure(Exception("Empty response"))
+                val data = json.decodeFromString<WearApiResponse>(body)
+                val current = data.current
+                    ?: return@withContext Result.failure(Exception("No current data"))
+                val daily = data.daily
 
-            Result.success(WearWeatherData(
-                temperature = current.temperature?.toInt() ?: 0,
-                condition = wmoDescription(current.weatherCode ?: 0),
-                high = daily?.temperatureMax?.firstOrNull()?.toInt() ?: current.temperature?.toInt() ?: 0,
-                low = daily?.temperatureMin?.firstOrNull()?.toInt() ?: current.temperature?.toInt() ?: 0,
-                locationName = "Current Location",
-                humidity = current.humidity ?: 0,
-                windSpeed = current.windSpeed?.toInt() ?: 0,
-                uvIndex = current.uvIndex?.toInt() ?: 0,
-                precipChance = daily?.precipProbMax?.firstOrNull() ?: 0,
-                isDay = (current.isDay ?: 1) == 1,
-                weatherCode = current.weatherCode ?: 0,
-            ))
+                Result.success(WearWeatherData(
+                    temperature = current.temperature?.toInt() ?: 0,
+                    condition = wmoDescription(current.weatherCode ?: 0),
+                    high = daily?.temperatureMax?.firstOrNull()?.toInt() ?: current.temperature?.toInt() ?: 0,
+                    low = daily?.temperatureMin?.firstOrNull()?.toInt() ?: current.temperature?.toInt() ?: 0,
+                    locationName = fallbackLocationLabel(lat, lon),
+                    humidity = current.humidity ?: 0,
+                    windSpeed = current.windSpeed?.toInt() ?: 0,
+                    uvIndex = current.uvIndex?.toInt() ?: 0,
+                    precipChance = daily?.precipProbMax?.firstOrNull() ?: 0,
+                    isDay = (current.isDay ?: 1) == 1,
+                    weatherCode = current.weatherCode ?: 0,
+                ))
+            }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private fun fallbackLocationLabel(lat: Double, lon: Double): String {
+        return if (lat == DEFAULT_LATITUDE && lon == DEFAULT_LONGITUDE) {
+            "Central US"
+        } else {
+            "Synced Location"
         }
     }
 

@@ -50,11 +50,16 @@ object NetworkModule {
             } catch (e: IOException) {
                 lastException = e
                 if (attempt < 2) {
-                    Thread.sleep((1000L * (1 shl attempt))) // 1s, 2s
+                    try {
+                        Thread.sleep(1000L * (1 shl attempt)) // 1s, 2s
+                    } catch (interrupted: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        throw IOException("Retry interrupted", interrupted)
+                    }
                 }
             }
         }
-        throw lastException!!
+        throw lastException ?: IOException("Request failed after retries")
     }
 
     @Provides
