@@ -87,6 +87,7 @@ class MainViewModel @Inject constructor(
         Log.d(TAG, "init: overrideLocationId=$overrideLocationId")
         observeSettings()
         observeSavedLocations()
+        observeLastLocation()
         viewModelScope.launch {
             connectivityObserver.isOnline.collect { online ->
                 _uiState.update { it.copy(isOffline = !online) }
@@ -120,6 +121,14 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             locationRepository.savedLocations.collect { locations ->
                 _uiState.update { it.copy(savedLocations = locations.toImmutableList()) }
+            }
+        }
+    }
+
+    private fun observeLastLocation() {
+        viewModelScope.launch {
+            prefs.lastLocation.collect { lastLocation ->
+                _uiState.update { it.copy(lastLocationName = lastLocation?.name) }
             }
         }
     }
@@ -467,6 +476,31 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun useLastLocation() {
+        viewModelScope.launch {
+            val lastLoc = prefs.lastLocation.first()
+            if (lastLoc == null) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Choose a location to get started.",
+                    )
+                }
+                return@launch
+            }
+
+            useGpsLocation = false
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    error = null,
+                    needsLocationPermission = false,
+                )
+            }
+            fetchWeather(lastLoc.latitude, lastLoc.longitude)
+        }
+    }
+
     fun loadForLocation(locationId: Long) {
         viewModelScope.launch {
             try {
@@ -509,6 +543,7 @@ data class MainUiState(
     val settings: NimbusSettings = NimbusSettings(),
     val savedLocations: ImmutableList<SavedLocationEntity> = persistentListOf(),
     val currentPage: Int = 0,
+    val lastLocationName: String? = null,
     val radarPreviewTileUrl: String? = null,
     val radarBaseMapUrl: String? = null,
     // Phase 1-2 additions

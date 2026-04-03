@@ -40,7 +40,7 @@ class UserPreferencesTest {
     fun defaultSettingsHaveCorrectDisplayDefaults() {
         val settings = NimbusSettings()
 
-        assertEquals(RadarProvider.WINDY_WEBVIEW, settings.radarProvider)
+        assertEquals(RadarProvider.NATIVE_MAPLIBRE, settings.radarProvider)
         assertEquals(IconStyle.METEOCONS, settings.iconStyle)
         assertEquals("", settings.customIconPackId)
         assertEquals(ThemeMode.STATIC_DARK, settings.themeMode)
@@ -264,9 +264,12 @@ class UserPreferencesTest {
     // --- NimbusSettings disabled cards ---
 
     @Test
-    fun defaultDisabledCardsIsEmpty() {
+    fun defaultDisabledCardsMatchCuratedDefaults() {
         val settings = NimbusSettings()
-        assertTrue(settings.disabledCards.isEmpty())
+
+        assertEquals(DEFAULT_DISABLED_CARDS, settings.disabledCards)
+        assertTrue(settings.disabledCards.contains(CardType.OUTDOOR_SCORE.name))
+        assertTrue(settings.disabledCards.contains(CardType.CLOTHING.name))
     }
 
     @Test

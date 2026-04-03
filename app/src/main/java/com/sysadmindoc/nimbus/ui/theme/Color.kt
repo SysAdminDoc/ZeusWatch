@@ -15,18 +15,18 @@ val NimbusBlueAccentSoft = Color(0xFFB7D9FF)
 val NimbusSurface = Color(0xFF0C1427)
 val NimbusSurfaceVariant = Color(0xFF13213A)
 val NimbusSurfaceElevated = Color(0xFF1A2D4F)
-val NimbusToolbarSurface = Color(0x3313203A)
-val NimbusNavSurface = Color(0xD90A1224)
+val NimbusToolbarSurface = Color(0x99121C31)
+val NimbusNavSurface = Color(0xF00A1224)
 
 // Glass surfaces and highlights
-val NimbusCardBg = Color(0x221B2E4E)
-val NimbusCardBgHover = Color(0x2D22385E)
-val NimbusCardBorder = Color(0x2BF0F7FF)
-val NimbusGlassTop = Color(0x38FFFFFF)
-val NimbusGlassBottom = Color(0x121D3458)
-val NimbusGlassHighlight = Color(0x40CFE8FF)
-val NimbusHeroGlow = Color(0x5588C9FF)
-val NimbusHeroGlowSoft = Color(0x2600D4FF)
+val NimbusCardBg = Color(0xCC11203A)
+val NimbusCardBgHover = Color(0xE0142745)
+val NimbusCardBorder = Color(0x2F7EA5D4)
+val NimbusGlassTop = Color(0xAA1A2B47)
+val NimbusGlassBottom = Color(0xE00A1427)
+val NimbusGlassHighlight = Color(0x246D9FD1)
+val NimbusHeroGlow = Color(0x3075A6D8)
+val NimbusHeroGlowSoft = Color(0x18194473)
 
 // Text
 val NimbusTextPrimary = Color(0xFFF7FAFF)
@@ -60,18 +60,18 @@ val NimbusSuccess = Color(0xFF66BB6A)
 // Background gradients
 val NimbusBackgroundGradient = Brush.verticalGradient(
     colors = listOf(
-        Color(0xFF06101E),
-        Color(0xFF0C1830),
-        Color(0xFF132A4C),
-        Color(0xFF07111F),
+        Color(0xFF050C18),
+        Color(0xFF0A1528),
+        Color(0xFF10213B),
+        Color(0xFF060D18),
     )
 )
 
 val NimbusHeaderGradient = Brush.verticalGradient(
     colors = listOf(
-        Color(0xFF101B31),
-        Color(0xFF183459),
-        Color(0xFF132B49),
+        Color(0xFF0E182B),
+        Color(0xFF18304F),
+        Color(0xFF12233E),
     )
 )
 

@@ -31,13 +31,12 @@ class SettingsScreenTest {
         }
 
         composeTestRule.onNodeWithText("Settings").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Temperature").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Wind Speed").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Pressure").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Precipitation").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Time Format").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Appearance").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Forecast").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Alerts").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Advanced").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Display").assertIsDisplayed()
         composeTestRule.onNodeWithText("Visual Effects").assertIsDisplayed()
-        composeTestRule.onNodeWithText("About").assertIsDisplayed()
     }
 
     @Test
@@ -51,8 +50,9 @@ class SettingsScreenTest {
             }
         }
 
+        composeTestRule.onNodeWithText("Advanced").performClick()
         composeTestRule.onNodeWithText("1.0.0").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Open-Meteo.com").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Open-Meteo, NWS, and more").assertIsDisplayed()
         composeTestRule.onNodeWithText("LGPL-3.0").assertIsDisplayed()
     }
 
@@ -67,6 +67,7 @@ class SettingsScreenTest {
             }
         }
 
+        composeTestRule.onNodeWithText("Forecast").performClick()
         composeTestRule.onNodeWithText("Fahrenheit").assertIsDisplayed()
         composeTestRule.onNodeWithText("Celsius").assertIsDisplayed()
     }
@@ -82,6 +83,7 @@ class SettingsScreenTest {
             }
         }
 
+        composeTestRule.onNodeWithText("Forecast").performClick()
         composeTestRule.onNodeWithText("mph").assertIsDisplayed()
         composeTestRule.onNodeWithText("km/h").assertIsDisplayed()
         composeTestRule.onNodeWithText("knots").assertIsDisplayed()
@@ -101,6 +103,7 @@ class SettingsScreenTest {
             }
         }
 
+        composeTestRule.onNodeWithText("Forecast").performClick()
         composeTestRule.onNodeWithText("Celsius").performClick()
         assertEquals(TempUnit.CELSIUS, selectedUnit)
     }
@@ -119,6 +122,7 @@ class SettingsScreenTest {
             }
         }
 
+        composeTestRule.onNodeWithText("Forecast").performClick()
         composeTestRule.onNodeWithText("km/h").performClick()
         assertEquals(WindUnit.KMH, selectedUnit)
     }
@@ -167,6 +171,7 @@ class SettingsScreenTest {
             }
         }
 
+        composeTestRule.onNodeWithText("Forecast").performClick()
         composeTestRule.onNodeWithText("12-hour").assertIsDisplayed()
         composeTestRule.onNodeWithText("24-hour").assertIsDisplayed()
     }

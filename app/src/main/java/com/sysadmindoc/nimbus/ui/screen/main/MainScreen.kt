@@ -44,11 +44,13 @@ import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Text
@@ -256,7 +258,20 @@ fun MainScreen(
                 val retryAction = if (hasLocationPermissionError) requestLocationPermissions else viewModel::loadWeather
 
                 when {
-                    state.isLoading && state.weatherData == null -> ShimmerLoadingSkeleton()
+                    state.isLoading && state.weatherData == null -> StartupState(
+                        title = "Finding Your Forecast",
+                        message = if (state.lastLocationName != null) {
+                            "Current location can take a few seconds. You can jump into ${state.lastLocationName} or choose another place manually."
+                        } else {
+                            "Current location can take a few seconds. Choose a city manually if you want to skip GPS."
+                        },
+                        primaryActionLabel = if (state.lastLocationName != null) "Use Last Location" else "Choose Location",
+                        onPrimaryAction = if (state.lastLocationName != null) viewModel::useLastLocation else onNavigateToLocations,
+                        secondaryActionLabel = if (state.lastLocationName != null) "Choose Location" else "Retry GPS",
+                        onSecondaryAction = if (state.lastLocationName != null) onNavigateToLocations else viewModel::loadWeather,
+                        tertiaryActionLabel = if (state.lastLocationName != null) "Retry GPS" else null,
+                        onTertiaryAction = if (state.lastLocationName != null) viewModel::loadWeather else null,
+                    )
                     state.error != null && state.weatherData == null -> ErrorState(
                         message = state.error!!,
                         onRetry = retryAction,
@@ -271,6 +286,8 @@ fun MainScreen(
                         },
                         actionLabel = retryLabel,
                         actionIcon = retryIcon,
+                        secondaryActionLabel = "Choose Location",
+                        onSecondaryAction = onNavigateToLocations,
                     )
                     state.weatherData != null -> {
                         val data = state.weatherData!!
@@ -291,6 +308,7 @@ fun MainScreen(
                                                 onNavigateToLocations = onNavigateToLocations,
                                                 onNavigateToCompare = onNavigateToCompare,
                                                 onLocationSelected = { index -> viewModel.onPageChanged(index) },
+                                                onUseLastLocation = { viewModel.useLastLocation() },
                                             )
                                             BottomTab.HOURLY.ordinal -> HourlyTab(
                                                 hourly = data.hourly,
@@ -336,6 +354,7 @@ fun MainScreen(
                                         onNavigateToLocations = onNavigateToLocations,
                                         onNavigateToCompare = onNavigateToCompare,
                                         onLocationSelected = { index -> viewModel.onPageChanged(index) },
+                                        onUseLastLocation = { viewModel.useLastLocation() },
                                     )
                                     BottomTab.HOURLY.ordinal -> HourlyTab(
                                         hourly = data.hourly,
@@ -373,9 +392,23 @@ internal fun TodayContent(
     onNavigateToLocations: () -> Unit = {},
     onNavigateToCompare: () -> Unit = {},
     onLocationSelected: (Int) -> Unit = {},
+    onUseLastLocation: () -> Unit = {},
 ) {
     when {
-        state.isLoading && state.weatherData == null -> ShimmerLoadingSkeleton()
+        state.isLoading && state.weatherData == null -> StartupState(
+            title = "Loading Weather",
+            message = if (state.lastLocationName != null) {
+                "Still checking your current position. You can open ${state.lastLocationName} instead or choose another saved place."
+            } else {
+                "Still checking your current position. Choose a city manually if GPS is taking too long."
+            },
+            primaryActionLabel = if (state.lastLocationName != null) "Use Last Location" else "Choose Location",
+            onPrimaryAction = if (state.lastLocationName != null) onUseLastLocation else onNavigateToLocations,
+            secondaryActionLabel = if (state.lastLocationName != null) "Choose Location" else "Retry GPS",
+            onSecondaryAction = if (state.lastLocationName != null) onNavigateToLocations else onRetry,
+            tertiaryActionLabel = if (state.lastLocationName != null) "Retry GPS" else null,
+            onTertiaryAction = if (state.lastLocationName != null) onRetry else null,
+        )
         state.error != null && state.weatherData == null -> ErrorState(
             message = state.error!!,
             onRetry = onRetry,
@@ -390,6 +423,8 @@ internal fun TodayContent(
             },
             actionLabel = if (isLocationPermissionError(state.error)) LOCATION_PERMISSION_ACTION_LABEL else "Retry",
             actionIcon = if (isLocationPermissionError(state.error)) Icons.Filled.LocationOn else Icons.Filled.Refresh,
+            secondaryActionLabel = "Choose Location",
+            onSecondaryAction = onNavigateToLocations,
         )
         state.weatherData != null -> WeatherContent(
             data = state.weatherData!!,
@@ -1063,12 +1098,99 @@ private fun InkPageIndicator(
 // ── Error State ──────────────────────────────────────────────────────────
 
 @Composable
+private fun StartupState(
+    title: String,
+    message: String,
+    primaryActionLabel: String,
+    onPrimaryAction: () -> Unit,
+    secondaryActionLabel: String,
+    onSecondaryAction: () -> Unit,
+    tertiaryActionLabel: String? = null,
+    onTertiaryAction: (() -> Unit)? = null,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NimbusNavyDark),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .padding(28.dp)
+                .clip(RoundedCornerShape(30.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            NimbusGlassTop,
+                            NimbusGlassBottom,
+                        ),
+                    ),
+                )
+                .border(1.dp, NimbusCardBorder, RoundedCornerShape(30.dp))
+                .padding(horizontal = 24.dp, vertical = 28.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(Color.White.copy(alpha = 0.06f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(28.dp),
+                    color = NimbusBlueAccent,
+                    strokeWidth = 2.5.dp,
+                )
+            }
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = NimbusTextPrimary,
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = NimbusTextSecondary,
+            )
+
+            Button(
+                onClick = onPrimaryAction,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = NimbusBlueAccent),
+            ) {
+                Text(primaryActionLabel)
+            }
+            OutlinedButton(
+                onClick = onSecondaryAction,
+                modifier = Modifier.fillMaxWidth(),
+                border = androidx.compose.foundation.BorderStroke(1.dp, NimbusCardBorder),
+            ) {
+                Text(secondaryActionLabel, color = NimbusTextPrimary)
+            }
+            if (tertiaryActionLabel != null && onTertiaryAction != null) {
+                Text(
+                    text = tertiaryActionLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = NimbusBlueAccent,
+                    modifier = Modifier.clickable(onClick = onTertiaryAction),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun ErrorState(
     message: String,
     onRetry: () -> Unit,
     icon: ImageVector = Icons.Filled.ErrorOutline,
     actionLabel: String = "Retry",
     actionIcon: ImageVector = Icons.Filled.Refresh,
+    secondaryActionLabel: String? = null,
+    onSecondaryAction: (() -> Unit)? = null,
 ) {
     Box(
         modifier = Modifier
@@ -1106,11 +1228,21 @@ private fun ErrorState(
             )
             Button(
                 onClick = onRetry,
+                modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = NimbusBlueAccent),
             ) {
                 Icon(actionIcon, null, Modifier.size(18.dp))
                 Spacer(modifier = Modifier.padding(4.dp))
                 Text(actionLabel)
+            }
+            if (secondaryActionLabel != null && onSecondaryAction != null) {
+                OutlinedButton(
+                    onClick = onSecondaryAction,
+                    modifier = Modifier.fillMaxWidth(),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, NimbusCardBorder),
+                ) {
+                    Text(secondaryActionLabel, color = NimbusTextPrimary)
+                }
             }
         }
     }
@@ -1119,5 +1251,5 @@ private fun ErrorState(
 private fun isLocationPermissionError(message: String?): Boolean {
     if (message.isNullOrBlank()) return false
     return message.contains("permission", ignoreCase = true) ||
-        message.contains("location", ignoreCase = true)
+        message.contains("grant location", ignoreCase = true)
 }
