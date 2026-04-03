@@ -1,6 +1,6 @@
 # ZeusWatch (Nimbus) - Android Weather App
 
-**Version**: v1.6.0 (versionCode 62)
+**Version**: v1.6.1 (versionCode 63)
 **Package**: `com.sysadmindoc.nimbus`
 **Stack**: Kotlin 2.1.0, Jetpack Compose (BOM 2024.12), Hilt 2.53.1, Retrofit 2.11.0, Room 2.6.1, DataStore, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.10.0, Lottie 6.6.2, Coil 3.0.4, Firebase Firestore
 **License**: LGPL-3.0
