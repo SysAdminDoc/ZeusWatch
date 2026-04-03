@@ -15,7 +15,7 @@ private val NimbusDarkScheme = darkColorScheme(
     primary = NimbusBlueAccent,
     onPrimary = NimbusTextPrimary,
     primaryContainer = NimbusNavyLight,
-    onPrimaryContainer = NimbusTextPrimary,
+    onPrimaryContainer = NimbusNavyDark,
     secondary = NimbusRainBlue,
     onSecondary = NimbusNavyDark,
     secondaryContainer = NimbusSurfaceElevated,
@@ -29,9 +29,11 @@ private val NimbusDarkScheme = darkColorScheme(
     surfaceVariant = NimbusSurfaceVariant,
     onSurfaceVariant = NimbusTextSecondary,
     outline = NimbusCardBorder,
-    outlineVariant = Color(0xFF1F2B4A),
+    outlineVariant = Color(0xFF203A61),
     error = NimbusError,
     onError = NimbusTextPrimary,
+    surfaceTint = NimbusBlueAccent,
+    scrim = NimbusNavyDark.copy(alpha = 0.72f),
 )
 
 /**

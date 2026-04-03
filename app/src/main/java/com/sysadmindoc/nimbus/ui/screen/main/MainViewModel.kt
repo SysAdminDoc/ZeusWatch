@@ -36,6 +36,7 @@ import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,6 +45,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.Stable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -160,18 +162,13 @@ class MainViewModel @Inject constructor(
                     return@launch
                 }
 
+                val result = locationProvider.getCurrentLocation()
                 var location: android.location.Location? = null
                 var lastError: Throwable? = null
-
-                for (attempt in 1..3) {
-                    val result = locationProvider.getCurrentLocation()
-                    result.fold(
-                        onSuccess = { location = it },
-                        onFailure = { lastError = it }
-                    )
-                    if (location != null) break
-                    if (attempt < 3) delay(1500L)
-                }
+                result.fold(
+                    onSuccess = { location = it },
+                    onFailure = { lastError = it }
+                )
 
                 if (location != null) {
                     fetchWeather(location!!.latitude, location!!.longitude)
@@ -182,7 +179,7 @@ class MainViewModel @Inject constructor(
                             it.copy(
                                 isLoading = false,
                                 isRefreshing = false,
-                                error = if (lastError is Exception) userFriendlyError(lastError as Exception) else "Unable to determine location.",
+                                error = userFriendlyError(lastError),
                             )
                         }
                     }
@@ -243,7 +240,7 @@ class MainViewModel @Inject constructor(
                     Log.e(TAG, "fetchWeather: failed: ${e.message}")
                     if (!tryLoadCached()) {
                         _uiState.update {
-                            it.copy(isLoading = false, isRefreshing = false, error = userFriendlyError(e as Exception))
+                            it.copy(isLoading = false, isRefreshing = false, error = userFriendlyError(e))
                         }
                     }
                 }
@@ -336,48 +333,46 @@ class MainViewModel @Inject constructor(
 
     // ── Derived Computations (summary, scores, alerts) ────────────────────
 
-    private fun computeDerivedData(data: WeatherData) {
+    private suspend fun computeDerivedData(data: WeatherData) {
         val settings = _uiState.value.settings
+        val currentState = _uiState.value
+        val derived = withContext(Dispatchers.Default) {
+            val templateSummary = WeatherSummaryEngine.generate(
+                current = data.current,
+                today = data.daily.firstOrNull(),
+                hourly = data.hourly,
+                yesterdayHigh = currentState.yesterdayHigh,
+                s = settings,
+            )
 
-        // Compute all derived values up front, then apply in a single state update
-        val templateSummary = WeatherSummaryEngine.generate(
-            current = data.current,
-            today = data.daily.firstOrNull(),
-            hourly = data.hourly,
-            yesterdayHigh = _uiState.value.yesterdayHigh,
-            s = settings,
-        )
+            val score = WeatherFormatter.outdoorActivityScore(
+                tempCelsius = data.current.temperature,
+                humidity = data.current.humidity,
+                windKmh = data.current.windSpeed,
+                uvIndex = data.current.uvIndex,
+                precipProbability = data.daily.firstOrNull()?.precipitationProbability ?: 0,
+                aqi = currentState.airQuality?.usAqi,
+            )
 
-        val score = WeatherFormatter.outdoorActivityScore(
-            tempCelsius = data.current.temperature,
-            humidity = data.current.humidity,
-            windKmh = data.current.windSpeed,
-            uvIndex = data.current.uvIndex,
-            precipProbability = data.daily.firstOrNull()?.precipitationProbability ?: 0,
-            aqi = _uiState.value.airQuality?.usAqi,
-        )
+            val drivingAlerts = if (settings.drivingAlerts) {
+                DrivingConditionEvaluator.evaluate(data.current)
+            } else {
+                persistentListOf()
+            }
 
-        val drivingAlerts = if (settings.drivingAlerts) {
-            DrivingConditionEvaluator.evaluate(data.current)
-        } else {
-            persistentListOf()
-        }
+            val healthAlerts = HealthAlertEvaluator.evaluate(
+                hourly = data.hourly,
+                pressureThresholdHpa = settings.migrainePressureThreshold,
+            )
 
-        val healthAlerts = HealthAlertEvaluator.evaluate(
-            hourly = data.hourly,
-            pressureThresholdHpa = settings.migrainePressureThreshold,
-        )
+            val clothingSuggestions = ClothingSuggestionEvaluator.evaluate(data.current)
+            val petSafetyAlerts = PetSafetyEvaluator.evaluate(data.current)
 
-        val clothingSuggestions = ClothingSuggestionEvaluator.evaluate(data.current)
-        val petSafetyAlerts = PetSafetyEvaluator.evaluate(data.current)
+            val goldenHour = WeatherFormatter.goldenHourTimes(
+                data.current.sunrise, data.current.sunset, settings,
+            )
 
-        val goldenHour = WeatherFormatter.goldenHourTimes(
-            data.current.sunrise, data.current.sunset, settings,
-        )
-
-        // Single state update — triggers one recomposition instead of many
-        _uiState.update {
-            it.copy(
+            DerivedWeatherState(
                 weatherSummary = templateSummary,
                 outdoorScore = score,
                 drivingAlerts = drivingAlerts.toImmutableList(),
@@ -388,17 +383,32 @@ class MainViewModel @Inject constructor(
             )
         }
 
+        // Single state update — triggers one recomposition instead of many
+        _uiState.update {
+            it.copy(
+                weatherSummary = derived.weatherSummary,
+                outdoorScore = derived.outdoorScore,
+                drivingAlerts = derived.drivingAlerts,
+                healthAlerts = derived.healthAlerts,
+                clothingSuggestions = derived.clothingSuggestions,
+                petSafetyAlerts = derived.petSafetyAlerts,
+                goldenHourTimes = derived.goldenHourTimes,
+            )
+        }
+
         // If AI style is selected, launch async generation and update when ready
-        if (settings.summaryStyle == SummaryStyle.AI_GENERATED) {
+        if (settings.summaryStyle == SummaryStyle.AI_GENERATED && summaryEngine.isAvailable()) {
             viewModelScope.launch {
-                val aiSummary = WeatherSummaryEngine.generateWithStyle(
-                    current = data.current,
-                    today = data.daily.firstOrNull(),
-                    hourly = data.hourly,
-                    yesterdayHigh = _uiState.value.yesterdayHigh,
-                    s = settings,
-                    aiEngine = summaryEngine,
-                )
+                val aiSummary = withContext(Dispatchers.Default) {
+                    WeatherSummaryEngine.generateWithStyle(
+                        current = data.current,
+                        today = data.daily.firstOrNull(),
+                        hourly = data.hourly,
+                        yesterdayHigh = _uiState.value.yesterdayHigh,
+                        s = settings,
+                        aiEngine = summaryEngine,
+                    )
+                }
                 _uiState.update { it.copy(weatherSummary = aiSummary) }
             }
         }
@@ -409,12 +419,20 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun userFriendlyError(e: Exception): String = when (e) {
-        is java.net.UnknownHostException -> "No internet connection"
-        is java.net.SocketTimeoutException -> "Server took too long to respond"
-        is java.net.ConnectException -> "Could not connect to weather service"
-        is retrofit2.HttpException -> "Weather service error (${e.code()})"
-        else -> "Something went wrong. Please try again."
+    private fun userFriendlyError(error: Throwable?): String {
+        val message = error?.message?.trim()
+        return when {
+            error is SecurityException -> "Location permission required to show weather."
+            message.equals("Location services are turned off.", ignoreCase = true) ->
+                "Turn on location services to load local weather."
+            message?.contains("Unable to determine location", ignoreCase = true) == true ->
+                "Unable to determine location. Move outdoors or check location services, then try again."
+            error is java.net.UnknownHostException -> "No internet connection"
+            error is java.net.SocketTimeoutException -> "Server took too long to respond"
+            error is java.net.ConnectException -> "Could not connect to weather service"
+            error is retrofit2.HttpException -> "Weather service error (${error.code()})"
+            else -> "Something went wrong. Please try again."
+        }
     }
 
     private fun latLonToTile(lat: Double, lon: Double, zoom: Int): Pair<Int, Int> {
@@ -504,4 +522,14 @@ data class MainUiState(
     val petSafetyAlerts: ImmutableList<PetSafetyAlert> = persistentListOf(),
     val goldenHourTimes: Pair<String, String>? = null,
     val isOffline: Boolean = false,
+)
+
+private data class DerivedWeatherState(
+    val weatherSummary: String,
+    val outdoorScore: Int,
+    val drivingAlerts: ImmutableList<DrivingAlert>,
+    val healthAlerts: ImmutableList<HealthAlert>,
+    val clothingSuggestions: ImmutableList<ClothingSuggestion>,
+    val petSafetyAlerts: ImmutableList<PetSafetyAlert>,
+    val goldenHourTimes: Pair<String, String>?,
 )

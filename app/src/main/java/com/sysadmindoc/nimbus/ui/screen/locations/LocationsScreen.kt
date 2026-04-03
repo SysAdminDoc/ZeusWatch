@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,6 +51,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -62,12 +64,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
+import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusError
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
-import com.sysadmindoc.nimbus.ui.theme.NimbusSurface
 import com.sysadmindoc.nimbus.ui.theme.NimbusSurfaceVariant
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -117,25 +121,57 @@ internal fun LocationsContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(NimbusNavyDark)
+                .background(NimbusBackgroundGradient)
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
         // Top bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onBack) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                NimbusGlassTop.copy(alpha = 0.76f),
+                                NimbusGlassBottom,
+                            ),
+                        ),
+                    )
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center,
+            ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = NimbusTextPrimary)
             }
-            Text(
-                "Locations",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = NimbusTextPrimary,
-            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+                Text(
+                    "Locations",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = NimbusTextPrimary,
+                )
+                Text(
+                    "${saved.size} saved places",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                )
+            }
         }
+
+        Text(
+            "Search, reorder, and jump between your favorite weather spots.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = NimbusTextSecondary,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
 
         // Search bar
         SearchBar(
@@ -189,8 +225,8 @@ private fun LocationsList(
             if (search.results.isNotEmpty()) {
                 item {
                     Text(
-                        "Search Results",
-                        style = MaterialTheme.typography.labelMedium,
+                        "SEARCH RESULTS",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = NimbusTextTertiary,
                         modifier = Modifier.padding(vertical = 4.dp),
                     )
@@ -218,8 +254,8 @@ private fun LocationsList(
         if (saved.isNotEmpty()) {
             item {
                 Text(
-                    "Saved Locations",
-                    style = MaterialTheme.typography.labelMedium,
+                    "SAVED LOCATIONS",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = NimbusTextTertiary,
                     modifier = Modifier.padding(vertical = 4.dp),
                 )
@@ -274,8 +310,16 @@ private fun SearchBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(NimbusSurfaceVariant)
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.8f),
+                        NimbusGlassBottom,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(22.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -326,18 +370,34 @@ private fun SearchResultItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(NimbusCardBg)
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.78f),
+                        NimbusCardBg,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(22.dp))
             .clickable(onClick = onAdd)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            Icons.Filled.LocationOn,
-            contentDescription = null,
-            tint = NimbusBlueAccent,
-            modifier = Modifier.size(20.dp),
-        )
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(CircleShape)
+                .background(NimbusBlueAccent.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Filled.LocationOn,
+                contentDescription = null,
+                tint = NimbusBlueAccent,
+                modifier = Modifier.size(18.dp),
+            )
+        }
         Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -378,10 +438,29 @@ private fun SavedLocationItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(NimbusSurfaceVariant)
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = if (location.isCurrentLocation) {
+                        listOf(
+                            NimbusBlueAccent.copy(alpha = 0.16f),
+                            NimbusGlassBottom,
+                        )
+                    } else {
+                        listOf(
+                            NimbusGlassTop.copy(alpha = 0.78f),
+                            NimbusSurfaceVariant,
+                        )
+                    },
+                ),
+            )
+            .border(
+                1.dp,
+                if (location.isCurrentLocation) NimbusBlueAccent.copy(alpha = 0.55f) else NimbusCardBorder,
+                RoundedCornerShape(22.dp),
+            )
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (showDragHandle) {
@@ -405,12 +484,20 @@ private fun SavedLocationItem(
             )
             Spacer(modifier = Modifier.width(8.dp))
         } else {
-            Icon(
-                Icons.Filled.MyLocation,
-                contentDescription = null,
-                tint = NimbusBlueAccent,
-                modifier = Modifier.size(20.dp),
-            )
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(NimbusBlueAccent.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Filled.MyLocation,
+                    contentDescription = null,
+                    tint = NimbusBlueAccent,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
             Spacer(modifier = Modifier.width(10.dp))
         }
         Column(modifier = Modifier.weight(1f)) {
@@ -434,11 +521,19 @@ private fun SavedLocationItem(
             }
         }
         if (weatherCode != null) {
-            com.sysadmindoc.nimbus.ui.component.WeatherIcon(
-                weatherCode = weatherCode,
-                isDay = isDay,
-                modifier = Modifier.size(24.dp),
-            )
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(NimbusCardBg)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                com.sysadmindoc.nimbus.ui.component.WeatherIcon(
+                    weatherCode = weatherCode,
+                    isDay = isDay,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
             Spacer(modifier = Modifier.width(6.dp))
         }
         if (temperature != null) {
@@ -450,8 +545,15 @@ private fun SavedLocationItem(
             Spacer(modifier = Modifier.width(8.dp))
         }
         if (!location.isCurrentLocation) {
-            IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Filled.Close, "Remove", tint = NimbusError.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(NimbusError.copy(alpha = 0.12f))
+                    .clickable(onClick = onRemove),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.Close, "Remove", tint = NimbusError.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
             }
         }
     }

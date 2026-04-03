@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.widget
 
 import android.content.Context
+import android.os.BatteryManager
 import androidx.glance.appwidget.updateAll
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
@@ -11,12 +12,10 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
 import com.sysadmindoc.nimbus.data.api.SavedLocationDao
-import com.sysadmindoc.nimbus.data.model.CurrentWeather
-import com.sysadmindoc.nimbus.data.model.DailyWeather
-import com.sysadmindoc.nimbus.data.model.HourlyWeather
-import com.sysadmindoc.nimbus.data.model.WeatherCode
+import com.sysadmindoc.nimbus.data.model.DailyConditions
+import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
@@ -27,17 +26,14 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
-import android.os.BatteryManager
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class WidgetRefreshWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted params: WorkerParameters,
-    private val weatherApi: OpenMeteoApi,
     private val prefs: UserPreferences,
     private val weatherRepository: WeatherRepository,
     private val locationRepository: LocationRepository,
@@ -62,12 +58,13 @@ class WidgetRefreshWorker @AssistedInject constructor(
         }
 
         return try {
-            val response = weatherApi.getForecast(lastLoc.latitude, lastLoc.longitude)
-            val current = response.current ?: return Result.failure()
-            val hourly = response.hourly
-            val daily = response.daily
+            val refreshedLocationKeys = mutableSetOf(locationKey(lastLoc.latitude, lastLoc.longitude))
+            val primaryWeather = weatherRepository
+                .getWeather(lastLoc.latitude, lastLoc.longitude, lastLoc.name)
+                .getOrNull()
+                ?: return Result.retry()
 
-            val data = buildWidgetData(lastLoc.name, current, hourly, daily, convertTemp)
+            val data = buildWidgetData(primaryWeather, convertTemp)
             WidgetDataProvider.save(applicationContext, data)
 
             // Fetch per-widget location weather data
@@ -82,10 +79,13 @@ class WidgetRefreshWorker @AssistedInject constructor(
                 for ((locId, widgetIds) in locationToWidgets) {
                     try {
                         val loc = savedLocationDao.getById(locId) ?: continue
-                        val locResponse = weatherApi.getForecast(loc.latitude, loc.longitude)
-                        val locCurrent = locResponse.current ?: continue
+                        val locWeather = weatherRepository
+                            .getWeather(loc.latitude, loc.longitude, loc.name)
+                            .getOrNull()
+                            ?: continue
 
-                        val locData = buildWidgetData(loc.name, locCurrent, locResponse.hourly, locResponse.daily, convertTemp)
+                        refreshedLocationKeys += locationKey(loc.latitude, loc.longitude)
+                        val locData = buildWidgetData(locWeather, convertTemp)
 
                         for (widgetId in widgetIds) {
                             WidgetDataProvider.save(applicationContext, locData, widgetId)
@@ -105,10 +105,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
             // Update persistent weather notification if enabled
             if (settings.persistentWeatherNotif) {
                 try {
-                    val weatherData = weatherRepository.getWeather(lastLoc.latitude, lastLoc.longitude, lastLoc.name)
-                    weatherData.getOrNull()?.let {
-                        WeatherNotificationHelper.showOrUpdate(applicationContext, it, settings)
-                    }
+                    WeatherNotificationHelper.showOrUpdate(applicationContext, primaryWeather, settings)
                 } catch (_: Exception) {}
             } else {
                 WeatherNotificationHelper.dismiss(applicationContext)
@@ -118,7 +115,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
             try {
                 val savedLocations = locationRepository.getAll()
                 for (loc in savedLocations) {
-                    if (loc.latitude == lastLoc.latitude && loc.longitude == lastLoc.longitude) continue
+                    if (!refreshedLocationKeys.add(locationKey(loc.latitude, loc.longitude))) continue
                     try {
                         weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
                     } catch (_: Exception) { /* Individual location failure is non-fatal */ }
@@ -132,41 +129,35 @@ class WidgetRefreshWorker @AssistedInject constructor(
     }
 
     private fun buildHourlyItems(
-        hourly: HourlyWeather?,
+        hourly: List<HourlyConditions>,
         now: LocalDateTime,
         convertTemp: (Double) -> Double,
     ): List<WidgetHourly> {
-        if (hourly == null) return emptyList()
         val items = mutableListOf<WidgetHourly>()
-        for (i in hourly.time.indices) {
-            val t = try {
-                LocalDateTime.parse(hourly.time[i], DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-            } catch (_: Exception) { continue }
+        for (hour in hourly) {
+            val t = hour.time
             if (t.isBefore(now.minusHours(1))) continue
             if (items.size >= 12) break
             items.add(WidgetHourly(
                 hour = WeatherFormatter.formatHourLabel(t),
-                temp = convertTemp(hourly.temperature?.getOrNull(i) ?: 0.0).toInt(),
-                code = hourly.weatherCode?.getOrNull(i) ?: 0,
-                isDay = (hourly.isDay?.getOrNull(i) ?: 1) == 1,
-                precipChance = hourly.precipitationProbability?.getOrNull(i) ?: 0,
+                temp = convertTemp(hour.temperature).toInt(),
+                code = hour.weatherCode.code,
+                isDay = hour.isDay,
+                precipChance = hour.precipitationProbability,
             ))
         }
         return items
     }
 
     private fun buildDailyItems(
-        daily: DailyWeather?,
+        daily: List<DailyConditions>,
         today: LocalDate,
         convertTemp: (Double) -> Double,
     ): List<WidgetDaily> {
-        if (daily == null) return emptyList()
         val items = mutableListOf<WidgetDaily>()
-        for (i in daily.time.indices) {
+        for (day in daily) {
             if (items.size >= 7) break
-            val d = try {
-                LocalDate.parse(daily.time[i], DateTimeFormatter.ISO_LOCAL_DATE)
-            } catch (_: Exception) { continue }
+            val d = day.date
             val label = when (d) {
                 today -> "Today"
                 today.plusDays(1) -> "Tmrw"
@@ -174,38 +165,42 @@ class WidgetRefreshWorker @AssistedInject constructor(
             }
             items.add(WidgetDaily(
                 day = label,
-                high = convertTemp(daily.temperatureMax?.getOrNull(i) ?: 0.0).toInt(),
-                low = convertTemp(daily.temperatureMin?.getOrNull(i) ?: 0.0).toInt(),
-                code = daily.weatherCode?.getOrNull(i) ?: 0,
-                precipChance = daily.precipitationProbabilityMax?.getOrNull(i) ?: 0,
+                high = convertTemp(day.temperatureHigh).toInt(),
+                low = convertTemp(day.temperatureLow).toInt(),
+                code = day.weatherCode.code,
+                precipChance = day.precipitationProbability,
             ))
         }
         return items
     }
 
     private fun buildWidgetData(
-        locationName: String,
-        current: CurrentWeather,
-        hourly: HourlyWeather?,
-        daily: DailyWeather?,
+        weatherData: WeatherData,
         convertTemp: (Double) -> Double,
     ): WidgetWeatherData {
         val now = LocalDateTime.now()
         val today = LocalDate.now()
         return WidgetWeatherData(
-            locationName = locationName,
-            temperature = convertTemp(current.temperature ?: 0.0),
-            feelsLike = convertTemp(current.apparentTemperature ?: current.temperature ?: 0.0),
-            high = convertTemp(daily?.temperatureMax?.getOrNull(0) ?: current.temperature ?: 0.0),
-            low = convertTemp(daily?.temperatureMin?.getOrNull(0) ?: current.temperature ?: 0.0),
-            weatherCode = current.weatherCode ?: 0,
-            isDay = (current.isDay ?: 1) == 1,
-            humidity = current.humidity ?: 0,
-            windSpeed = current.windSpeed ?: 0.0,
-            hourly = buildHourlyItems(hourly, now, convertTemp),
-            daily = buildDailyItems(daily, today, convertTemp),
+            locationName = weatherData.location.name,
+            temperature = convertTemp(weatherData.current.temperature),
+            feelsLike = convertTemp(weatherData.current.feelsLike),
+            high = convertTemp(weatherData.current.dailyHigh),
+            low = convertTemp(weatherData.current.dailyLow),
+            weatherCode = weatherData.current.weatherCode.code,
+            isDay = weatherData.current.isDay,
+            humidity = weatherData.current.humidity,
+            windSpeed = weatherData.current.windSpeed,
+            hourly = buildHourlyItems(weatherData.hourly, now, convertTemp),
+            daily = buildDailyItems(weatherData.daily, today, convertTemp),
+            updatedAt = weatherData.lastUpdated.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(),
         )
     }
+
+    private fun locationKey(latitude: Double, longitude: Double): String {
+        return "${latitude.formatKey()}:${longitude.formatKey()}"
+    }
+
+    private fun Double.formatKey(): String = "%.4f".format(Locale.US, this)
 
     companion object {
         private const val WORK_NAME = "nimbus_widget_refresh"

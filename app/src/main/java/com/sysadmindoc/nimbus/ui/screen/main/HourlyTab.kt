@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.ui.screen.main
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,7 +15,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -28,13 +28,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.component.WeatherIcon
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
+import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
+import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
-import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
@@ -70,22 +74,28 @@ fun HourlyTab(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(NimbusNavyDark)
+            .background(NimbusBackgroundGradient)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 "Hourly Forecast",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.headlineLarge,
                 color = NimbusTextPrimary,
             )
             Text(
                 locationName,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.labelLarge,
                 color = NimbusTextSecondary,
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(NimbusCardBg)
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
             )
             Spacer(modifier = Modifier.height(12.dp))
         }
@@ -100,19 +110,23 @@ fun HourlyTab(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(NimbusNavyDark),
+                        .background(NimbusBackgroundGradient),
                 ) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         dayLabel,
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                         color = NimbusBlueAccent,
-                        modifier = Modifier.padding(vertical = 6.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(NimbusCardBg)
+                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(14.dp))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                     )
                 }
             }
-            itemsIndexed(hours, key = { _, h -> h.time.toString() }) { _, hour ->
-                HourlyRow(hour = hour, timeFormatter = timeFormatter)
+            itemsIndexed(hours, key = { _, h -> h.time.toString() }) { index, hour ->
+                HourlyRow(hour = hour, timeFormatter = timeFormatter, isCurrent = index == 0 && date == LocalDate.now())
             }
         }
 
@@ -125,25 +139,48 @@ fun HourlyTab(
 private fun HourlyRow(
     hour: HourlyConditions,
     timeFormatter: DateTimeFormatter,
+    isCurrent: Boolean,
 ) {
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
+    val shape = RoundedCornerShape(22.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(NimbusCardBg)
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    colors = if (isCurrent) {
+                        listOf(
+                            NimbusBlueAccent.copy(alpha = 0.24f),
+                            NimbusGlassBottom,
+                        )
+                    } else {
+                        listOf(
+                            NimbusGlassTop.copy(alpha = 0.75f),
+                            NimbusCardBg,
+                        )
+                    },
+                ),
+            )
+            .border(1.dp, if (isCurrent) NimbusBlueAccent.copy(alpha = 0.55f) else NimbusCardBorder, shape)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Time
-        Text(
-            hour.time.format(timeFormatter),
-            style = MaterialTheme.typography.bodyMedium,
-            color = NimbusTextSecondary,
-            modifier = Modifier.width(76.dp),
-        )
+        Column(modifier = Modifier.width(76.dp)) {
+            Text(
+                if (isCurrent) "Now" else hour.time.format(timeFormatter),
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = if (isCurrent) NimbusBlueAccent else NimbusTextSecondary,
+            )
+            if (hour.precipitationProbability > 0) {
+                Text(
+                    "${hour.precipitationProbability}% rain",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NimbusBlueAccent,
+                )
+            }
+        }
 
-        // Icon
         WeatherIcon(
             weatherCode = hour.weatherCode,
             isDay = hour.isDay,
@@ -152,7 +189,6 @@ private fun HourlyRow(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Temp
         Text(
             WeatherFormatter.formatTemperature(hour.temperature, s),
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -160,7 +196,6 @@ private fun HourlyRow(
             modifier = Modifier.width(52.dp),
         )
 
-        // Condition + feels like
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 hour.weatherCode.description,
@@ -177,7 +212,6 @@ private fun HourlyRow(
             }
         }
 
-        // Wind speed
         hour.windSpeed?.let { ws ->
             if (ws > 0) {
                 Text(

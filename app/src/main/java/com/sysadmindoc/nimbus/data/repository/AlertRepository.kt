@@ -1,7 +1,9 @@
 package com.sysadmindoc.nimbus.data.repository
 
 import android.content.Context
+import android.location.Address
 import android.location.Geocoder
+import android.os.Build
 import android.util.Log
 import com.sysadmindoc.nimbus.data.api.AlertSourceAdapter
 import com.sysadmindoc.nimbus.data.api.MeteoAlarmAdapter
@@ -12,10 +14,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
 
 /**
  * Unified alert repository that dispatches to the correct international
@@ -105,8 +109,10 @@ class AlertRepository @Inject constructor(
         return when (pref) {
             AlertSourcePreference.AUTO -> {
                 if (countryCode == null) {
-                    // Can't detect country — try all adapters
-                    adapters.toList()
+                    // If we cannot determine the country, only use adapters that
+                    // explicitly declare global coverage. Regional adapters can
+                    // otherwise show false-positive alerts for the wrong country.
+                    adapters.filter { "GLOBAL" in it.supportedRegions }
                 } else {
                     adapters.filter { adapter ->
                         "GLOBAL" in adapter.supportedRegions ||
@@ -143,15 +149,37 @@ class AlertRepository @Inject constructor(
     private suspend fun detectCountry(lat: Double, lon: Double): String? {
         return withContext(Dispatchers.IO) {
             try {
-                @Suppress("DEPRECATION")
-                val geocoder = Geocoder(context, Locale.US)
-                val addresses = geocoder.getFromLocation(lat, lon, 1)
-                addresses?.firstOrNull()?.countryCode?.uppercase()
+                detectCountryWithGeocoder(lat, lon) ?: detectCountryFromTimezone()
             } catch (e: Exception) {
                 Log.w(TAG, "Geocoder country detection failed: ${e.message}")
-                // Fallback: rough timezone-based heuristic
                 detectCountryFromTimezone()
             }
+        }
+    }
+
+    private suspend fun detectCountryWithGeocoder(lat: Double, lon: Double): String? {
+        if (!Geocoder.isPresent()) return null
+
+        val geocoder = Geocoder(context, Locale.US)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            suspendCancellableCoroutine { continuation ->
+                geocoder.getFromLocation(lat, lon, 1, object : Geocoder.GeocodeListener {
+                    override fun onGeocode(addresses: MutableList<Address>) {
+                        if (continuation.isActive) {
+                            continuation.resume(addresses.firstOrNull()?.countryCode?.uppercase())
+                        }
+                    }
+
+                    override fun onError(errorMessage: String?) {
+                        if (continuation.isActive) {
+                            continuation.resume(null)
+                        }
+                    }
+                })
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            geocoder.getFromLocation(lat, lon, 1)?.firstOrNull()?.countryCode?.uppercase()
         }
     }
 
@@ -162,18 +190,10 @@ class AlertRepository @Inject constructor(
     private fun detectCountryFromTimezone(): String? {
         val tz = java.util.TimeZone.getDefault().id
         return when {
-            tz.startsWith("America/") -> {
-                when {
-                    tz.contains("Toronto") || tz.contains("Vancouver") ||
-                        tz.contains("Winnipeg") || tz.contains("Halifax") ||
-                        tz.contains("Edmonton") || tz.contains("Montreal") ||
-                        tz.contains("St_Johns") || tz.contains("Regina") -> "CA"
-                    else -> "US"
-                }
-            }
+            tz.startsWith("Canada/") -> "CA"
+            isCanadianTimezone(tz) -> "CA"
+            isUnitedStatesTimezone(tz) -> "US"
             tz.startsWith("Europe/") -> {
-                // Can't distinguish specific EU countries from timezone alone
-                // Return a generic EU marker — MeteoAlarm covers most
                 when {
                     tz.contains("London") -> "GB"
                     tz.contains("Berlin") -> "DE"
@@ -195,11 +215,52 @@ class AlertRepository @Inject constructor(
                     tz.contains("Athens") -> "GR"
                     tz.contains("Dublin") -> "IE"
                     tz.contains("Lisbon") -> "PT"
-                    else -> "DE" // Default EU fallback
+                    else -> null
                 }
             }
             tz.startsWith("Asia/Tokyo") -> "JP"
             else -> null
         }
+    }
+
+    private fun isCanadianTimezone(timezoneId: String): Boolean {
+        return timezoneId in setOf(
+            "America/Toronto",
+            "America/Vancouver",
+            "America/Winnipeg",
+            "America/Halifax",
+            "America/Edmonton",
+            "America/Montreal",
+            "America/St_Johns",
+            "America/Regina",
+            "America/Iqaluit",
+            "America/Whitehorse",
+            "America/Yellowknife",
+            "America/Rankin_Inlet",
+        )
+    }
+
+    private fun isUnitedStatesTimezone(timezoneId: String): Boolean {
+        if (timezoneId.startsWith("US/")) return true
+
+        return timezoneId == "Pacific/Honolulu" ||
+            timezoneId == "America/New_York" ||
+            timezoneId == "America/Detroit" ||
+            timezoneId.startsWith("America/Indiana/") ||
+            timezoneId.startsWith("America/Kentucky/") ||
+            timezoneId == "America/Chicago" ||
+            timezoneId == "America/Menominee" ||
+            timezoneId.startsWith("America/North_Dakota/") ||
+            timezoneId == "America/Denver" ||
+            timezoneId == "America/Boise" ||
+            timezoneId == "America/Phoenix" ||
+            timezoneId == "America/Los_Angeles" ||
+            timezoneId == "America/Anchorage" ||
+            timezoneId == "America/Juneau" ||
+            timezoneId == "America/Sitka" ||
+            timezoneId == "America/Metlakatla" ||
+            timezoneId == "America/Yakutat" ||
+            timezoneId == "America/Nome" ||
+            timezoneId == "America/Adak"
     }
 }
