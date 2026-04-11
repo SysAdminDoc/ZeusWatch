@@ -2,6 +2,38 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.6.4] - 2026-04-11
+
+Second QA audit pass. v1.6.3 covered hot files from the v1.6.2 stabilization diff; this round audited everything else (main view model, repositories, location services, utilities, theme, wallpaper, icon packs). 22 findings were raised, 20 were verified as false positives and rejected, and 2 latent bugs were confirmed and fixed.
+
+### Fixed
+- **AirQuality hourly list empty for distant locations** — `AirQualityRepository` was comparing Open-Meteo hourly timestamps (returned in location-local time when `timezone=auto` is set) against the device's `LocalDateTime.now()`. For users viewing a location in a different timezone (e.g. a phone in Denver looking at Tokyo weather), the filter `!t.isBefore(now.minusHours(1))` dropped every hour in the response, leaving the hourly AQI and 5-day daily AQI cards blank. The repository now anchors "now" off `response.current.time` (parsed as location-local) instead of the device clock. Pollen hourly fallback uses the same anchor.
+- **Settings screen main-thread icon pack discovery** — `SettingsViewModel` computed `availableIconPacks` at construction by calling `IconPackManager.getAvailablePacks()`, which reaches into every installed third-party icon-pack APK via `PackageManager.getResourcesForApplication()` + `AssetManager.open()`. That's blocking disk I/O on the main thread — a StrictMode violation that could hitch the first frame of the Settings screen on slow storage or with many packs installed. Now exposed as a `StateFlow<List<IconPack>>` computed on `Dispatchers.IO`; `SettingsScreen` consumes it via `collectAsStateWithLifecycle`. Initial state is an empty list so the UI isn't blocked on discovery.
+
+### Audit findings rejected (with verified reasons)
+| Claim | Verdict |
+|---|---|
+| `MainViewModel.loadWeatherForCoords` default-arg race | Single-threaded on `Dispatchers.Main.immediate` |
+| `fetchWeather` default-arg race | Same; only caller passes the arg explicitly |
+| `fetchYesterdayComparison` missing `withContext(IO)` | `WeatherRepository.getYesterdayWeather` already wraps in IO |
+| `AlertRepository` silently swallows adapter exceptions | Intentional partial-failure pattern |
+| Freenet `LocationProvider` listener leak | `LocationManagerCompat.getCurrentLocation` + `CancellationSignal` is the documented pattern |
+| `DrivingConditionEvaluator` black-ice at ≤2°C is wrong | Intentional NWS-recommended safety margin for bridge decks / shaded spots |
+| `HealthAlertEvaluator` `>` vs `>=` off-by-one | Pedantic; thresholds are advisory, not medical |
+| `PetSafetyEvaluator` pavement formula runs at night | Guarded by `if (current.isDay && current.cloudCover < 50)` — audit misread |
+| `MeteoconMapper` non-exhaustive | Has fall-through default |
+| `WeatherWallpaperService` Handler lifecycle unsafe | Correctly guards with `visible` flag + `removeCallbacks` |
+| `MainActivity` sync deep-link | Simple URI parsing, acceptable |
+| `WeatherFormatter.feelsLikeReason` hardcoded Celsius threshold | Computed on canonical metric; display unit doesn't enter |
+| `WeatherSummaryEngine` not DI-injected | Stateless Kotlin `object` — DI adds nothing |
+| `WeatherWallpaperService` raw Int weather code | `WeatherEffect.fromWmoCode` has `else -> CLEAR` default |
+| `MainViewModel` mutable props should be state | Internal tracking, not UI state |
+| `ClothingSuggestionEvaluator.weatherCode.isRainy` null safety | Enum property, not nullable |
+| `AlertRepository` timezone-to-country fallback | Best-effort only; primary path is Geocoder |
+| `SavedLocationMatchingTest` robustness | Tests verify the behavior contract |
+| `WeatherSummaryEngine` `hourly.isEmpty()` unsafe | `hourly.take(12)` on empty list is safe |
+| `GravitySensor` capture clarity | Working as designed |
+
 ## [1.6.3] - 2026-04-11
 
 Post-v1.6.2 QA audit. Fixes four latent bugs uncovered by a full senior-dev / UX / QA review of the v1.6.2 stabilization pass.

@@ -12,7 +12,13 @@ import com.sysadmindoc.nimbus.util.IconPackManager
 import com.sysadmindoc.nimbus.widget.WidgetRefreshWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -24,8 +30,25 @@ class SettingsViewModel @Inject constructor(
 
     val settings = prefs.settings
 
-    /** Discovered icon packs (bundled + external APKs). */
-    val availableIconPacks: List<IconPack> = iconPackManager.getAvailablePacks()
+    /**
+     * Discovered icon packs (bundled + external APKs). Exposed as a StateFlow
+     * because `IconPackManager.getAvailablePacks()` reaches into external APKs
+     * via `PackageManager.getResourcesForApplication()` + `AssetManager.open()`,
+     * which is blocking disk I/O. Opening Settings used to run that on the main
+     * thread during ViewModel construction; now it kicks off on `Dispatchers.IO`
+     * and the UI observes the result.
+     */
+    private val _availableIconPacks = MutableStateFlow<List<IconPack>>(emptyList())
+    val availableIconPacks: StateFlow<List<IconPack>> = _availableIconPacks.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            val packs = withContext(Dispatchers.IO) {
+                runCatching { iconPackManager.getAvailablePacks() }.getOrDefault(emptyList())
+            }
+            _availableIconPacks.value = packs
+        }
+    }
 
     fun setTempUnit(unit: TempUnit) = viewModelScope.launch { prefs.setTempUnit(unit) }
     fun setWindUnit(unit: WindUnit) = viewModelScope.launch { prefs.setWindUnit(unit) }
