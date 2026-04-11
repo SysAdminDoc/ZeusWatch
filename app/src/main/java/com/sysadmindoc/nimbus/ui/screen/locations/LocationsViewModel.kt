@@ -43,6 +43,7 @@ class LocationsViewModel @Inject constructor(
     val locationConditions: StateFlow<Map<Long, Pair<WeatherCode, Boolean>>> = _locationConditions.asStateFlow()
 
     private var searchJob: Job? = null
+    private var searchRequestId = 0L
 
     init {
         // Load cached temperatures whenever saved locations change
@@ -69,20 +70,33 @@ class LocationsViewModel @Inject constructor(
 
     fun onSearchQueryChanged(query: String) {
         searchJob?.cancel()
+        val requestId = ++searchRequestId
         if (query.length < 2) {
-            _searchState.update { it.copy(query = query, results = emptyList(), isSearching = false) }
+            _searchState.value = SearchState(query = query)
             return
         }
-        // Set isSearching=true immediately so UI shows spinner, not "No results"
-        _searchState.update { it.copy(query = query, isSearching = true) }
+        _searchState.value = SearchState(query = query, isSearching = true)
         searchJob = viewModelScope.launch {
             delay(350) // Debounce
+            if (requestId != searchRequestId) return@launch
             locationRepository.search(query).fold(
                 onSuccess = { results ->
-                    _searchState.update { it.copy(results = results, isSearching = false) }
+                    if (requestId == searchRequestId) {
+                        _searchState.value = SearchState(
+                            query = query,
+                            results = results,
+                            isSearching = false,
+                        )
+                    }
                 },
                 onFailure = {
-                    _searchState.update { it.copy(results = emptyList(), isSearching = false, error = "Search failed") }
+                    if (requestId == searchRequestId) {
+                        _searchState.value = SearchState(
+                            query = query,
+                            isSearching = false,
+                            error = "Search failed",
+                        )
+                    }
                 }
             )
         }
@@ -104,8 +118,13 @@ class LocationsViewModel @Inject constructor(
     fun moveLocation(fromIndex: Int, toIndex: Int) {
         val current = savedLocations.value.toMutableList()
         if (fromIndex !in current.indices || toIndex !in current.indices) return
+        val currentLocationIndex = current.indexOfFirst { it.isCurrentLocation }
+        if (fromIndex == currentLocationIndex) return
+
+        val minTargetIndex = if (currentLocationIndex >= 0) currentLocationIndex + 1 else 0
+        val adjustedTargetIndex = toIndex.coerceIn(minTargetIndex, current.lastIndex)
         val item = current.removeAt(fromIndex)
-        current.add(toIndex, item)
+        current.add(adjustedTargetIndex, item)
         viewModelScope.launch {
             locationRepository.reorderLocations(current.map { it.id })
         }
@@ -113,7 +132,8 @@ class LocationsViewModel @Inject constructor(
 
     fun clearSearch() {
         searchJob?.cancel()
-        _searchState.update { SearchState() }
+        searchRequestId += 1
+        _searchState.value = SearchState()
     }
 }
 

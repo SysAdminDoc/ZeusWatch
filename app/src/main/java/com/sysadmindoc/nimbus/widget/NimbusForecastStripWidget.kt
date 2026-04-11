@@ -142,6 +142,6 @@ private fun ForecastStripContent(data: WidgetWeatherData?) {
     }
 }
 
-class NimbusForecastStripWidgetReceiver : GlanceAppWidgetReceiver() {
+class NimbusForecastStripWidgetReceiver : NimbusWidgetReceiverBase() {
     override val glanceAppWidget = NimbusForecastStripWidget()
 }

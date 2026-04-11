@@ -3,6 +3,7 @@ package com.sysadmindoc.nimbus.data.repository
 import com.sysadmindoc.nimbus.data.api.GeocodingApi
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.api.SavedLocationDao
+import com.sysadmindoc.nimbus.data.model.matchesSavedLocation
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +29,10 @@ class LocationRepository @Inject constructor(
         }
 
     suspend fun addLocation(result: GeocodingResult): Long {
+        dao.getAll()
+            .firstOrNull { location -> matchesSavedLocation(result, location) }
+            ?.let { existing -> return existing.id }
+
         val nextOrder = (dao.maxSortOrder() ?: -1) + 1
         return dao.insert(
             SavedLocationEntity(
@@ -62,7 +67,10 @@ class LocationRepository @Inject constructor(
     suspend fun getAll(): List<SavedLocationEntity> = dao.getAll()
 
     suspend fun reorderLocations(orderedIds: List<Long>) {
-        dao.reorderAll(orderedIds)
+        val currentLocationId = dao.getCurrentLocation()?.id
+        val normalizedIds = orderedIds.filterNot { it == currentLocationId }
+        currentLocationId?.let { dao.updateSortOrder(it, -1) }
+        dao.reorderAll(normalizedIds)
     }
 
     suspend fun ensureCurrentLocation(lat: Double, lon: Double, name: String) {
@@ -70,7 +78,15 @@ class LocationRepository @Inject constructor(
         if (existing == null) {
             addCurrentLocation(lat, lon, name)
         } else {
-            dao.update(existing.copy(latitude = lat, longitude = lon, name = name))
+            dao.update(
+                existing.copy(
+                    latitude = lat,
+                    longitude = lon,
+                    name = name,
+                    sortOrder = -1,
+                    isCurrentLocation = true,
+                )
+            )
         }
     }
 }

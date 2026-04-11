@@ -28,7 +28,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
-import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
@@ -46,6 +45,7 @@ import java.util.Locale
 @Composable
 fun RadarPlaybackControls(
     isPlaying: Boolean,
+    playbackEnabled: Boolean,
     currentFrame: Int,
     totalFrames: Int,
     pastFrameCount: Int,
@@ -70,11 +70,25 @@ fun RadarPlaybackControls(
             .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
             .padding(horizontal = 16.dp, vertical = 14.dp),
     ) {
-        Text(
-            text = "Radar Playback",
-            style = MaterialTheme.typography.labelMedium,
-            color = NimbusTextSecondary,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Radar Playback",
+                style = MaterialTheme.typography.labelMedium,
+                color = NimbusTextSecondary,
+            )
+
+            if (!playbackEnabled) {
+                Text(
+                    text = "Static",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NimbusTextTertiary,
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.padding(top = 6.dp))
 
@@ -84,6 +98,7 @@ fun RadarPlaybackControls(
         ) {
             // Play/Pause
             IconButton(
+                enabled = playbackEnabled,
                 onClick = onTogglePlayback,
                 modifier = Modifier
                     .size(40.dp)
@@ -103,6 +118,7 @@ fun RadarPlaybackControls(
             // Slider
             Column(modifier = Modifier.weight(1f)) {
                 Slider(
+                    enabled = playbackEnabled,
                     value = currentFrame.toFloat(),
                     onValueChange = { onSeekToFrame(it.toInt()) },
                     valueRange = 0f..(totalFrames - 1).coerceAtLeast(1).toFloat(),
@@ -117,23 +133,23 @@ fun RadarPlaybackControls(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    // Past/Forecast label
                     val isForecast = currentFrame >= pastFrameCount
+                    val timestampText = currentTimestamp?.let { ts ->
+                        val dateFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+                        dateFormat.format(Date(ts * 1000))
+                    } ?: "No frames"
+
                     Text(
                         text = if (isForecast) "Forecast" else "Past",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isForecast) NimbusBlueAccent else NimbusTextSecondary,
                     )
 
-                    // Timestamp
-                    currentTimestamp?.let { ts ->
-                        val dateFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
-                        Text(
-                            text = dateFormat.format(Date(ts * 1000)),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = NimbusTextSecondary,
-                        )
-                    }
+                    Text(
+                        text = if (playbackEnabled) timestampText else "Animation unavailable",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NimbusTextSecondary,
+                    )
                 }
             }
         }

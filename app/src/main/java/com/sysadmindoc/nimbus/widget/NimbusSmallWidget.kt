@@ -137,6 +137,6 @@ private fun SmallWidgetContent(data: WidgetWeatherData?) {
     }
 }
 
-class NimbusSmallWidgetReceiver : GlanceAppWidgetReceiver() {
+class NimbusSmallWidgetReceiver : NimbusWidgetReceiverBase() {
     override val glanceAppWidget = NimbusSmallWidget()
 }

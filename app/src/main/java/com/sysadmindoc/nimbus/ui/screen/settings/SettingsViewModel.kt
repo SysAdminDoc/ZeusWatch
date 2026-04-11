@@ -1,16 +1,23 @@
 package com.sysadmindoc.nimbus.ui.screen.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.nimbus.data.model.IconPack
 import com.sysadmindoc.nimbus.data.repository.*
+import com.sysadmindoc.nimbus.util.AlertCheckWorker
+import com.sysadmindoc.nimbus.util.AlertNotificationHelper
+import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.util.IconPackManager
+import com.sysadmindoc.nimbus.widget.WidgetRefreshWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val prefs: UserPreferences,
     private val iconPackManager: IconPackManager,
 ) : ViewModel() {
@@ -27,7 +34,15 @@ class SettingsViewModel @Inject constructor(
     fun setTimeFormat(format: TimeFormat) = viewModelScope.launch { prefs.setTimeFormat(format) }
     fun setVisibilityUnit(unit: VisibilityUnit) = viewModelScope.launch { prefs.setVisibilityUnit(unit) }
     fun setParticlesEnabled(enabled: Boolean) = viewModelScope.launch { prefs.setParticlesEnabled(enabled) }
-    fun setAlertNotificationsEnabled(enabled: Boolean) = viewModelScope.launch { prefs.setAlertNotificationsEnabled(enabled) }
+    fun setAlertNotificationsEnabled(enabled: Boolean) = viewModelScope.launch {
+        prefs.setAlertNotificationsEnabled(enabled)
+        if (enabled) {
+            AlertCheckWorker.schedule(appContext)
+        } else {
+            AlertCheckWorker.cancel(appContext)
+            AlertNotificationHelper.dismissAll(appContext)
+        }
+    }
     fun setAlertMinSeverity(severity: AlertMinSeverity) = viewModelScope.launch { prefs.setAlertMinSeverity(severity) }
     fun setAlertCheckAllLocations(enabled: Boolean) = viewModelScope.launch { prefs.setAlertCheckAllLocations(enabled) }
     fun setAlertSourcePref(pref: AlertSourcePreference) = viewModelScope.launch { prefs.setAlertSourcePref(pref) }
@@ -45,7 +60,13 @@ class SettingsViewModel @Inject constructor(
     fun resetCardPreferences() = viewModelScope.launch { prefs.resetCardPreferences() }
 
     // Notifications
-    fun setPersistentWeatherNotif(enabled: Boolean) = viewModelScope.launch { prefs.setPersistentWeatherNotif(enabled) }
+    fun setPersistentWeatherNotif(enabled: Boolean) = viewModelScope.launch {
+        prefs.setPersistentWeatherNotif(enabled)
+        WidgetRefreshWorker.sync(appContext, enabled)
+        if (!enabled) {
+            WeatherNotificationHelper.dismiss(appContext)
+        }
+    }
     fun setNowcastingAlerts(enabled: Boolean) = viewModelScope.launch { prefs.setNowcastingAlerts(enabled) }
     fun setDrivingAlerts(enabled: Boolean) = viewModelScope.launch { prefs.setDrivingAlerts(enabled) }
     fun setHealthAlertsEnabled(enabled: Boolean) = viewModelScope.launch { prefs.setHealthAlertsEnabled(enabled) }

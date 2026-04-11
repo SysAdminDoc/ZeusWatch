@@ -233,6 +233,6 @@ private fun DayRow(day: WidgetDaily) {
     }
 }
 
-class NimbusLargeWidgetReceiver : GlanceAppWidgetReceiver() {
+class NimbusLargeWidgetReceiver : NimbusWidgetReceiverBase() {
     override val glanceAppWidget = NimbusLargeWidget()
 }

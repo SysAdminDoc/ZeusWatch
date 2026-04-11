@@ -8,11 +8,18 @@ import coil3.SingletonImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
+import com.sysadmindoc.nimbus.data.repository.UserPreferences
+import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.widget.WidgetRefreshWorker
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -20,6 +27,13 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
+
+    @Inject
+    lateinit var prefs: UserPreferences
+
+    @Inject
+    @DefaultDispatcher
+    lateinit var defaultDispatcher: CoroutineDispatcher
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -30,8 +44,22 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
         super.onCreate()
         AlertNotificationHelper.createChannels(this)
         WeatherNotificationHelper.createChannel(this)
-        AlertCheckWorker.schedule(this)
-        WidgetRefreshWorker.schedule(this)
+
+        CoroutineScope(SupervisorJob() + defaultDispatcher).launch {
+            val settings = prefs.settings.first()
+            if (settings.alertNotificationsEnabled) {
+                AlertCheckWorker.schedule(this@NimbusApplication)
+            } else {
+                AlertCheckWorker.cancel(this@NimbusApplication)
+                AlertNotificationHelper.dismissAll(this@NimbusApplication)
+            }
+
+            if (!settings.persistentWeatherNotif) {
+                WeatherNotificationHelper.dismiss(this@NimbusApplication)
+            }
+
+            WidgetRefreshWorker.sync(this@NimbusApplication, settings.persistentWeatherNotif)
+        }
     }
 
     override fun newImageLoader(context: android.content.Context): ImageLoader {

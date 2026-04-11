@@ -30,6 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -89,6 +91,7 @@ fun RadarScreen(
 
     var selectedLayer by remember { mutableStateOf(RadarLayer.RADAR) }
     var showReportSheet by remember { mutableStateOf(false) }
+    val canSubmitReport = canOpenCommunityReport(isOffline, resolvedLat, resolvedLon)
 
     // Load community reports when location is resolved
     LaunchedEffect(resolvedLat, resolvedLon) {
@@ -97,13 +100,16 @@ fun RadarScreen(
         }
     }
 
-    // Reload radar frames when switching back to radar mode;
-    // connect/disconnect Blitzortung WebSocket based on layer selection.
-    LaunchedEffect(selectedLayer) {
-        if (selectedLayer == RadarLayer.RADAR) {
+    DisposableEffect(Unit) {
+        onDispose { viewModel.disconnectLightning() }
+    }
+
+    LaunchedEffect(selectedLayer, settings.radarProvider, isOffline) {
+        val useNativeRadar = settings.radarProvider == RadarProvider.NATIVE_MAPLIBRE && !isOffline
+        if (useNativeRadar && selectedLayer == RadarLayer.RADAR) {
             viewModel.loadFrames()
         }
-        if (selectedLayer == RadarLayer.LIGHTNING || selectedLayer == RadarLayer.RADAR) {
+        if (useNativeRadar && (selectedLayer == RadarLayer.LIGHTNING || selectedLayer == RadarLayer.RADAR)) {
             viewModel.connectLightning()
         } else {
             viewModel.disconnectLightning()
@@ -114,6 +120,13 @@ fun RadarScreen(
     LaunchedEffect(reportSubmitState.result) {
         if (reportSubmitState.result == "success") {
             kotlinx.coroutines.delay(1500)
+            showReportSheet = false
+            viewModel.resetReportState()
+        }
+    }
+
+    LaunchedEffect(canSubmitReport) {
+        if (!canSubmitReport && showReportSheet) {
             showReportSheet = false
             viewModel.resetReportState()
         }
@@ -143,6 +156,8 @@ fun RadarScreen(
                         overlayTileUrl = if (isRadarMode || isLightningMode) null else selectedLayer.tileUrlTemplate,
                         lightningStrikes = if (showLightning) strikes else emptyList(),
                         communityReports = nearbyReports,
+                        onCameraMoveStarted = { viewModel.onMapInteractionStart() },
+                        onCameraIdle = { viewModel.onMapInteractionEnd() },
                         modifier = Modifier.fillMaxSize(),
                     )
                     RadarInfoPill(
@@ -163,16 +178,47 @@ fun RadarScreen(
                     )
                     // Playback controls overlay (bottom) - only shown in radar mode
                     if (isRadarMode) {
-                        RadarPlaybackControls(
-                            isPlaying = radarState.isPlaying,
-                            currentFrame = radarState.currentFrameIndex,
-                            totalFrames = radarState.totalFrames,
-                            pastFrameCount = radarState.pastFrameCount,
-                            currentTimestamp = radarState.currentFrame?.timestamp,
-                            onTogglePlayback = { viewModel.togglePlayback() },
-                            onSeekToFrame = { viewModel.seekToFrame(it) },
-                            modifier = Modifier.align(Alignment.BottomCenter),
+                        val showLoadingOverlay = shouldShowRadarLoadingOverlay(
+                            provider = settings.radarProvider,
+                            selectedLayer = selectedLayer,
+                            radarState = radarState,
+                            isOffline = isOffline,
                         )
+                        val showErrorOverlay = shouldShowRadarErrorOverlay(
+                            provider = settings.radarProvider,
+                            selectedLayer = selectedLayer,
+                            radarState = radarState,
+                            isOffline = isOffline,
+                        )
+
+                        if (radarState.frameSet != null) {
+                            RadarPlaybackControls(
+                                isPlaying = radarState.isPlaying,
+                                playbackEnabled = radarState.canAnimatePlayback,
+                                currentFrame = radarState.currentFrameIndex,
+                                totalFrames = radarState.totalFrames,
+                                pastFrameCount = radarState.pastFrameCount,
+                                currentTimestamp = radarState.currentFrame?.timestamp,
+                                onTogglePlayback = { viewModel.togglePlayback() },
+                                onSeekToFrame = { viewModel.seekToFrame(it) },
+                                modifier = Modifier.align(Alignment.BottomCenter),
+                            )
+                        }
+
+                        when {
+                            showLoadingOverlay -> RadarStatusCard(
+                                title = "Loading Radar",
+                                message = "Fetching the latest radar frames for this area.",
+                                isLoading = true,
+                                modifier = Modifier.align(Alignment.Center),
+                            )
+                            showErrorOverlay -> RadarStatusCard(
+                                title = "Radar Unavailable",
+                                message = radarState.error ?: "We couldn't load radar frames right now.",
+                                onRetry = { viewModel.loadFrames(force = true) },
+                                modifier = Modifier.align(Alignment.Center),
+                            )
+                        }
                     }
                 }
                 RadarProvider.WINDY_WEBVIEW -> {
@@ -220,20 +266,22 @@ fun RadarScreen(
             }
 
             // Community report FAB
-            FloatingActionButton(
-                onClick = { showReportSheet = true },
-                containerColor = NimbusBlueAccent.copy(alpha = 0.95f),
-                contentColor = NimbusTextPrimary,
-                shape = RoundedCornerShape(22.dp),
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(16.dp),
-            ) {
-                Icon(
-                    Icons.Filled.Add,
-                    contentDescription = "Report weather conditions",
-                )
+            if (canSubmitReport) {
+                FloatingActionButton(
+                    onClick = { showReportSheet = true },
+                    containerColor = NimbusBlueAccent.copy(alpha = 0.95f),
+                    contentColor = NimbusTextPrimary,
+                    shape = RoundedCornerShape(22.dp),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .windowInsetsPadding(WindowInsets.safeDrawing)
+                        .padding(16.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = "Report weather conditions",
+                    )
+                }
             }
         }
 
@@ -272,6 +320,7 @@ fun RadarTab(
     val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
 
     var showReportSheet by remember { mutableStateOf(false) }
+    val canSubmitReport = canOpenCommunityReport(isOffline, latitude, longitude)
 
     // Load community reports for this location
     LaunchedEffect(latitude, longitude) {
@@ -280,10 +329,20 @@ fun RadarTab(
         }
     }
 
-    // Auto-dismiss report sheet on success
+    DisposableEffect(Unit) {
+        onDispose { viewModel.disconnectLightning() }
+    }
+
     LaunchedEffect(reportSubmitState.result) {
         if (reportSubmitState.result == "success") {
             kotlinx.coroutines.delay(1500)
+            showReportSheet = false
+            viewModel.resetReportState()
+        }
+    }
+
+    LaunchedEffect(canSubmitReport) {
+        if (!canSubmitReport && showReportSheet) {
             showReportSheet = false
             viewModel.resetReportState()
         }
@@ -296,13 +355,12 @@ fun RadarTab(
     ) {
         var selectedLayer by remember { mutableStateOf(RadarLayer.RADAR) }
 
-        // Stop/resume radar playback when switching layers;
-        // connect/disconnect Blitzortung WebSocket based on layer selection.
-        LaunchedEffect(selectedLayer) {
-            if (selectedLayer == RadarLayer.RADAR) {
+        LaunchedEffect(selectedLayer, settings.radarProvider, isOffline) {
+            val useNativeRadar = settings.radarProvider == RadarProvider.NATIVE_MAPLIBRE && !isOffline
+            if (useNativeRadar && selectedLayer == RadarLayer.RADAR) {
                 viewModel.loadFrames()
             }
-            if (selectedLayer == RadarLayer.LIGHTNING || selectedLayer == RadarLayer.RADAR) {
+            if (useNativeRadar && (selectedLayer == RadarLayer.LIGHTNING || selectedLayer == RadarLayer.RADAR)) {
                 viewModel.connectLightning()
             } else {
                 viewModel.disconnectLightning()
@@ -327,6 +385,8 @@ fun RadarTab(
                     overlayTileUrl = if (isRadarMode || isLightningMode) null else selectedLayer.tileUrlTemplate,
                     lightningStrikes = if (showLightning) strikes else emptyList(),
                     communityReports = nearbyReports,
+                    onCameraMoveStarted = { viewModel.onMapInteractionStart() },
+                    onCameraIdle = { viewModel.onMapInteractionEnd() },
                     modifier = Modifier.fillMaxSize(),
                 )
                 RadarInfoPill(
@@ -346,9 +406,10 @@ fun RadarTab(
                         .padding(top = 16.dp),
                 )
                 // Playback controls overlay (bottom) - only shown in radar mode
-                if (isRadarMode) {
+                if (isRadarMode && radarState.frameSet != null) {
                     RadarPlaybackControls(
                         isPlaying = radarState.isPlaying,
+                        playbackEnabled = radarState.canAnimatePlayback,
                         currentFrame = radarState.currentFrameIndex,
                         totalFrames = radarState.totalFrames,
                         pastFrameCount = radarState.pastFrameCount,
@@ -356,6 +417,31 @@ fun RadarTab(
                         onTogglePlayback = { viewModel.togglePlayback() },
                         onSeekToFrame = { viewModel.seekToFrame(it) },
                         modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+                }
+
+                when {
+                    shouldShowRadarLoadingOverlay(
+                        provider = settings.radarProvider,
+                        selectedLayer = selectedLayer,
+                        radarState = radarState,
+                        isOffline = isOffline,
+                    ) -> RadarStatusCard(
+                        title = "Loading Radar",
+                        message = "Fetching the latest radar frames for this area.",
+                        isLoading = true,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                    shouldShowRadarErrorOverlay(
+                        provider = settings.radarProvider,
+                        selectedLayer = selectedLayer,
+                        radarState = radarState,
+                        isOffline = isOffline,
+                    ) -> RadarStatusCard(
+                        title = "Radar Unavailable",
+                        message = radarState.error ?: "We couldn't load radar frames right now.",
+                        onRetry = { viewModel.loadFrames(force = true) },
+                        modifier = Modifier.align(Alignment.Center),
                     )
                 }
             }
@@ -376,20 +462,22 @@ fun RadarTab(
         }
 
         // Community report FAB
-        FloatingActionButton(
-            onClick = { showReportSheet = true },
-            containerColor = NimbusBlueAccent,
-            contentColor = NimbusTextPrimary,
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(16.dp),
-        ) {
-            Icon(
-                Icons.Filled.Add,
-                contentDescription = "Report weather conditions",
-            )
+        if (canSubmitReport) {
+            FloatingActionButton(
+                onClick = { showReportSheet = true },
+                containerColor = NimbusBlueAccent,
+                contentColor = NimbusTextPrimary,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(16.dp),
+            ) {
+                Icon(
+                    Icons.Filled.Add,
+                    contentDescription = "Report weather conditions",
+                )
+            }
         }
     }
 
@@ -532,6 +620,56 @@ private fun RadarInfoPill(
 }
 
 @Composable
+private fun RadarStatusCard(
+    title: String,
+    message: String,
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
+    onRetry: (() -> Unit)? = null,
+) {
+    Box(
+        modifier = modifier
+            .padding(horizontal = 24.dp)
+            .clip(RoundedCornerShape(30.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.82f),
+                        NimbusGlassBottom,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(30.dp))
+            .padding(horizontal = 28.dp, vertical = 30.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (isLoading) {
+                CircularProgressIndicator(color = NimbusBlueAccent)
+                Spacer(Modifier.height(18.dp))
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = NimbusTextPrimary,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
+            onRetry?.let {
+                Spacer(Modifier.height(18.dp))
+                Button(onClick = it) {
+                    Text("Retry")
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun RadarOfflineCard() {
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -573,4 +711,36 @@ private fun RadarOfflineCard() {
             )
         }
     }
+}
+
+internal fun canOpenCommunityReport(
+    isOffline: Boolean,
+    latitude: Double,
+    longitude: Double,
+): Boolean = !isOffline && (latitude != 0.0 || longitude != 0.0)
+
+internal fun shouldShowRadarLoadingOverlay(
+    provider: RadarProvider,
+    selectedLayer: RadarLayer,
+    radarState: RadarUiState,
+    isOffline: Boolean,
+): Boolean {
+    return !isOffline &&
+        provider == RadarProvider.NATIVE_MAPLIBRE &&
+        selectedLayer == RadarLayer.RADAR &&
+        radarState.isLoading &&
+        radarState.frameSet == null
+}
+
+internal fun shouldShowRadarErrorOverlay(
+    provider: RadarProvider,
+    selectedLayer: RadarLayer,
+    radarState: RadarUiState,
+    isOffline: Boolean,
+): Boolean {
+    return !isOffline &&
+        provider == RadarProvider.NATIVE_MAPLIBRE &&
+        selectedLayer == RadarLayer.RADAR &&
+        radarState.error != null &&
+        radarState.frameSet == null
 }

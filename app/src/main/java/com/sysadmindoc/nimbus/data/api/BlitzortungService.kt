@@ -1,17 +1,12 @@
 package com.sysadmindoc.nimbus.data.api
 
 import android.util.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -42,9 +37,6 @@ data class LightningStrike(
 class BlitzortungService @Inject constructor(
     private val okHttpClient: OkHttpClient,
 ) {
-    private var scopeJob = SupervisorJob()
-    private var scope = CoroutineScope(scopeJob + Dispatchers.IO)
-
     private val _strikes = MutableSharedFlow<LightningStrike>(extraBufferCapacity = 64)
     val strikes: SharedFlow<LightningStrike> = _strikes.asSharedFlow()
 
@@ -56,6 +48,9 @@ class BlitzortungService @Inject constructor(
 
     private val strikeBuffer = mutableListOf<LightningStrike>()
     private val bufferLock = Any()
+    private val webSocketClient: OkHttpClient = okHttpClient.newBuilder()
+        .retryOnConnectionFailure(true)
+        .build()
 
     /**
      * Open the WebSocket connection and begin receiving lightning data.
@@ -71,11 +66,7 @@ class BlitzortungService @Inject constructor(
 
         // Blitzortung needs a plain client without the logging/UA interceptors
         // that add latency to the high-frequency WebSocket stream.
-        val wsClient = okHttpClient.newBuilder()
-            .retryOnConnectionFailure(true)
-            .build()
-
-        webSocket = wsClient.newWebSocket(request, object : WebSocketListener() {
+        webSocket = webSocketClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 Log.d(TAG, "Blitzortung WebSocket connected")
                 isConnected = true
@@ -86,7 +77,7 @@ class BlitzortungService @Inject constructor(
             override fun onMessage(webSocket: WebSocket, text: String) {
                 parseStrike(text)?.let { strike ->
                     addToBuffer(strike)
-                    scope.launch { _strikes.emit(strike) }
+                    _strikes.tryEmit(strike)
                 }
             }
 
@@ -110,10 +101,6 @@ class BlitzortungService @Inject constructor(
         webSocket?.close(NORMAL_CLOSURE, "User navigated away")
         webSocket = null
         isConnected = false
-        // Cancel outstanding coroutines and recreate the scope
-        scopeJob.cancel()
-        scopeJob = SupervisorJob()
-        scope = CoroutineScope(scopeJob + Dispatchers.IO)
         synchronized(bufferLock) {
             strikeBuffer.clear()
             _recentStrikes.value = emptyList()

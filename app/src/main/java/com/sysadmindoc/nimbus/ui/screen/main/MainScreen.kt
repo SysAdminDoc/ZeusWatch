@@ -219,6 +219,14 @@ fun MainScreen(
     // Detect tablet: screen width >= 840dp
     val configuration = LocalConfiguration.current
     val isTablet = configuration.screenWidthDp >= 840
+    val visibleTabs = remember(isTablet) { visibleMainTabs(isTablet) }
+    val activeSelectedTab = normalizeSelectedMainTab(isTablet, selectedTab)
+
+    LaunchedEffect(isTablet, selectedTab, activeSelectedTab) {
+        if (activeSelectedTab != selectedTab) {
+            selectedTab = activeSelectedTab
+        }
+    }
 
     // Provide unit settings and weather theme state to all child composables
     val weatherThemeState = com.sysadmindoc.nimbus.ui.theme.WeatherThemeState(
@@ -229,18 +237,11 @@ fun MainScreen(
         LocalUnitSettings provides state.settings,
         com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState provides weatherThemeState,
     ) {
-        // On tablet, hide the Radar tab from bottom nav (it's always visible in the right pane)
-        val visibleTabs = if (isTablet) {
-            BottomTab.entries.filter { it != BottomTab.RADAR }
-        } else {
-            BottomTab.entries
-        }
-
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
                 ZeusWatchBottomNav(
-                    selectedTab = selectedTab,
+                    selectedTab = activeSelectedTab,
                     onTabSelected = { selectedTab = it },
                     visibleTabs = visibleTabs,
                 )
@@ -297,7 +298,7 @@ fun MainScreen(
                             Row(modifier = Modifier.fillMaxSize()) {
                                 // Left pane: Weather content (tab-switched)
                                 Box(modifier = Modifier.weight(0.55f)) {
-                                    Crossfade(targetState = selectedTab, animationSpec = tween(300), label = "tabletTab") { tab ->
+                                    Crossfade(targetState = activeSelectedTab, animationSpec = tween(300), label = "tabletTab") { tab ->
                                         when (tab) {
                                             BottomTab.TODAY.ordinal -> TodayContent(
                                                 state = state,
@@ -343,7 +344,7 @@ fun MainScreen(
                             }
                         } else {
                             // ── Phone layout with tab switching ─────────
-                            Crossfade(targetState = selectedTab, animationSpec = tween(300), label = "phoneTab") { tab ->
+                            Crossfade(targetState = activeSelectedTab, animationSpec = tween(300), label = "phoneTab") { tab ->
                                 when (tab) {
                                     BottomTab.TODAY.ordinal -> TodayContent(
                                         state = state,
@@ -1252,4 +1253,17 @@ private fun isLocationPermissionError(message: String?): Boolean {
     if (message.isNullOrBlank()) return false
     return message.contains("permission", ignoreCase = true) ||
         message.contains("grant location", ignoreCase = true)
+}
+
+internal fun visibleMainTabs(isTablet: Boolean): List<BottomTab> {
+    return if (isTablet) {
+        BottomTab.entries.filter { it != BottomTab.RADAR }
+    } else {
+        BottomTab.entries
+    }
+}
+
+internal fun normalizeSelectedMainTab(isTablet: Boolean, selectedTab: Int): Int {
+    val visibleOrdinals = visibleMainTabs(isTablet).map { it.ordinal }.toSet()
+    return if (selectedTab in visibleOrdinals) selectedTab else BottomTab.TODAY.ordinal
 }

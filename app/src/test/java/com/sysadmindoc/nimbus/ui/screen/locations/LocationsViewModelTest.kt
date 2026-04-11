@@ -8,7 +8,9 @@ import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.*
@@ -18,9 +20,10 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class LocationsViewModelTest {
 
-    private val testDispatcher = UnconfinedTestDispatcher()
+    private val testDispatcher = UnconfinedTestDispatcher(TestCoroutineScheduler())
     private lateinit var locationRepository: LocationRepository
     private lateinit var weatherRepository: WeatherRepository
+    private lateinit var savedLocationsFlow: MutableStateFlow<List<SavedLocationEntity>>
     private lateinit var viewModel: LocationsViewModel
 
     private val testResults = listOf(
@@ -43,6 +46,10 @@ class LocationsViewModelTest {
             id = 2, name = "New York", latitude = 40.7, longitude = -74.0,
             region = "New York", country = "United States", sortOrder = 0,
         ),
+        SavedLocationEntity(
+            id = 3, name = "Chicago", latitude = 41.8781, longitude = -87.6298,
+            region = "Illinois", country = "United States", sortOrder = 1,
+        ),
     )
 
     @Before
@@ -50,8 +57,9 @@ class LocationsViewModelTest {
         Dispatchers.setMain(testDispatcher)
         locationRepository = mockk(relaxed = true)
         weatherRepository = mockk(relaxed = true)
+        savedLocationsFlow = MutableStateFlow(savedLocations)
         coEvery { weatherRepository.getCachedWeather(any(), any()) } returns null
-        every { locationRepository.savedLocations } returns flowOf(savedLocations)
+        every { locationRepository.savedLocations } returns savedLocationsFlow
         coEvery { locationRepository.search(any()) } returns Result.success(testResults)
     }
 
@@ -70,7 +78,7 @@ class LocationsViewModelTest {
 
         viewModel.savedLocations.test {
             val items = expectMostRecentItem()
-            assertEquals(2, items.size)
+            assertEquals(3, items.size)
             assertEquals("My Location", items[0].name)
             assertEquals("New York", items[1].name)
         }
@@ -124,6 +132,25 @@ class LocationsViewModelTest {
     }
 
     @Test
+    fun `successful search clears previous error state`() = runTest {
+        coEvery { locationRepository.search("De") } returns Result.failure(Exception("Network error"))
+        coEvery { locationRepository.search("Denver") } returns Result.success(testResults)
+
+        viewModel = createViewModel()
+        viewModel.onSearchQueryChanged("De")
+        advanceUntilIdle()
+        assertNotNull(viewModel.searchState.value.error)
+
+        viewModel.onSearchQueryChanged("Denver")
+        advanceUntilIdle()
+
+        val state = viewModel.searchState.value
+        assertNull(state.error)
+        assertEquals("Denver", state.query)
+        assertEquals(2, state.results.size)
+    }
+
+    @Test
     fun `addLocation calls repository and clears search`() = runTest {
         coEvery { locationRepository.addLocation(any()) } returns 3L
 
@@ -153,6 +180,32 @@ class LocationsViewModelTest {
         advanceUntilIdle()
 
         coVerify { locationRepository.removeLocation(2L) }
+    }
+
+    @Test
+    fun `moveLocation keeps current location fixed at the top`() = runTest {
+        coEvery { locationRepository.reorderLocations(any()) } just Runs
+
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.moveLocation(2, 0)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { locationRepository.reorderLocations(listOf(1L, 3L, 2L)) }
+    }
+
+    @Test
+    fun `moveLocation ignores attempts to drag current location`() = runTest {
+        coEvery { locationRepository.reorderLocations(any()) } just Runs
+
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.moveLocation(0, 2)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { locationRepository.reorderLocations(any()) }
     }
 
     @Test

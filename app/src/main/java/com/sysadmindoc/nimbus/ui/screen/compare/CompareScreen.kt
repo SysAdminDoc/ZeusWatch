@@ -83,7 +83,7 @@ fun CompareScreen(
             ) {
                 CircularProgressIndicator()
             }
-            state.error != null -> Box(
+            shouldShowCompareFullScreenError(state) -> Box(
                 Modifier.fillMaxSize().background(NimbusBackgroundGradient),
                 contentAlignment = Alignment.Center,
             ) {
@@ -182,14 +182,18 @@ fun CompareScreen(
                             LocationSelector(
                                 label = "Primary",
                                 selected = state.location1,
-                                locations = state.savedLocations,
+                                locations = state.savedLocations.filter {
+                                    it.id == state.location1?.id || it.id != state.location2?.id
+                                },
                                 onSelect = { viewModel.selectLocation1(it) },
                                 modifier = Modifier.weight(1f),
                             )
                             LocationSelector(
                                 label = "Compare Against",
                                 selected = state.location2,
-                                locations = state.savedLocations,
+                                locations = state.savedLocations.filter {
+                                    it.id == state.location2?.id || it.id != state.location1?.id
+                                },
                                 onSelect = { viewModel.selectLocation2(it) },
                                 modifier = Modifier.weight(1f),
                             )
@@ -214,6 +218,14 @@ fun CompareScreen(
                             message = "${state.location1?.name ?: "Your current location"} is ready. Save one more place to unlock side-by-side comparisons.",
                             actionLabel = "Add Another Location",
                             onAction = onNavigateToLocations,
+                        )
+                    }
+                    state.error != null -> {
+                        CompareEmptyState(
+                            title = "Couldn't Load Comparison",
+                            message = state.error ?: "Something went wrong while comparing locations.",
+                            actionLabel = "Retry",
+                            onAction = { viewModel.retry() },
                         )
                     }
                     state.weather1 == null || state.weather2 == null -> {
@@ -500,4 +512,8 @@ private fun CompareRow(
             )
         }
     }
+}
+
+internal fun shouldShowCompareFullScreenError(state: CompareUiState): Boolean {
+    return state.error != null && state.savedLocations.isEmpty()
 }

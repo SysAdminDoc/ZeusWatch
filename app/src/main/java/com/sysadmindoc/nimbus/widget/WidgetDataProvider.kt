@@ -79,6 +79,23 @@ object WidgetDataProvider {
         )
     }
 
+    suspend fun clearDefault(context: Context) {
+        context.widgetDataStore.edit { prefs ->
+            prefs.remove(KEY_LOCATION)
+            prefs.remove(KEY_TEMP)
+            prefs.remove(KEY_FEELS_LIKE)
+            prefs.remove(KEY_HIGH)
+            prefs.remove(KEY_LOW)
+            prefs.remove(KEY_WEATHER_CODE)
+            prefs.remove(KEY_IS_DAY)
+            prefs.remove(KEY_HUMIDITY)
+            prefs.remove(KEY_WIND_SPEED)
+            prefs.remove(KEY_HOURLY_JSON)
+            prefs.remove(KEY_DAILY_JSON)
+            prefs.remove(KEY_UPDATED_AT)
+        }
+    }
+
     // ---- Per-widget keyed variants ----
 
     private fun wKey(appWidgetId: Int, base: String) = "w_${appWidgetId}_$base"
@@ -128,6 +145,23 @@ object WidgetDataProvider {
             } ?: emptyList(),
             updatedAt = prefs[longPreferencesKey(wKey(appWidgetId, "updated"))] ?: 0L,
         )
+    }
+
+    suspend fun remove(context: Context, appWidgetId: Int) {
+        context.widgetDataStore.edit { prefs ->
+            prefs.remove(stringPreferencesKey(wKey(appWidgetId, "location")))
+            prefs.remove(doublePreferencesKey(wKey(appWidgetId, "temp")))
+            prefs.remove(doublePreferencesKey(wKey(appWidgetId, "feels_like")))
+            prefs.remove(doublePreferencesKey(wKey(appWidgetId, "high")))
+            prefs.remove(doublePreferencesKey(wKey(appWidgetId, "low")))
+            prefs.remove(intPreferencesKey(wKey(appWidgetId, "code")))
+            prefs.remove(intPreferencesKey(wKey(appWidgetId, "is_day")))
+            prefs.remove(intPreferencesKey(wKey(appWidgetId, "humidity")))
+            prefs.remove(doublePreferencesKey(wKey(appWidgetId, "wind")))
+            prefs.remove(stringPreferencesKey(wKey(appWidgetId, "hourly")))
+            prefs.remove(stringPreferencesKey(wKey(appWidgetId, "daily")))
+            prefs.remove(longPreferencesKey(wKey(appWidgetId, "updated")))
+        }
     }
 }
 

@@ -14,6 +14,7 @@ import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.graphics.toArgb
 import com.sysadmindoc.nimbus.MainActivity
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
@@ -141,7 +142,7 @@ object AlertNotificationHelper {
             .setAutoCancel(true)
             .setGroup(GROUP_ID)
             .setCategory(categoryForSeverity(alert.severity))
-            .setColor(alert.severity.color.hashCode())
+            .setColor(alert.severity.color.toArgb())
             .build()
 
         try {
@@ -183,6 +184,17 @@ object AlertNotificationHelper {
             ) == PackageManager.PERMISSION_GRANTED
         } else {
             true
+        }
+    }
+
+    fun dismissAll(context: Context) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            nm.activeNotifications
+                .filter { it.id == SUMMARY_NOTIFICATION_ID || it.notification.group == GROUP_ID }
+                .forEach { nm.cancel(it.id) }
+        } else {
+            NotificationManagerCompat.from(context).cancel(SUMMARY_NOTIFICATION_ID)
         }
     }
 }

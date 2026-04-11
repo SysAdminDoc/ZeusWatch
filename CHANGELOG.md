@@ -2,6 +2,36 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.6.2] - 2026-04-11
+
+### Added
+- **Notification permission UX** — Settings now gates alert and persistent weather notification toggles behind a runtime POST_NOTIFICATIONS prompt on Android 13+, with a PermissionNoticeCard explaining the requirement.
+- **Permission-aware startup** — NimbusApplication reschedules alert/notification workers based on current toggle state instead of blindly launching them, with workers injected through a new `@DefaultDispatcher` Hilt qualifier.
+- **Per-widget display labels** — WidgetDataProvider now persists a dedicated `displayLocationName` per appWidgetId so different widgets can share a coordinate and still show the label the user chose.
+- **Coordinate-grouped widget refresh** — new `WidgetRefreshPlan` / `buildWidgetRefreshPlan()` pipeline deduplicates saved locations across widgets, fetches each unique coordinate once, and fans results back out to every assigned widget.
+- **Orphaned widget cleanup** — stale widget mappings for appWidgetIds that no longer exist are now pruned automatically during refresh.
+- **Alert dedupe by coordinate** — AlertCheckWorker collapses saved locations that share the same coordinate (4dp precision) so the same severe-weather alert no longer fires twice.
+- **Saved-location duplicate prevention** — new `SavedLocationMatching` utility (epsilon 0.0001° + normalized label) blocks duplicate inserts in LocationRepository and hides already-saved matches from the search results list.
+- **Current-location anchoring** — current location is now pinned at `sortOrder = -1` across `addLocation`, `reorderLocations`, and `ensureCurrentLocation` so drag-reorder can never demote it.
+- **Widget-config current-location hiding** — the "saved locations" picker in the widget config screen now hides the current-location row so users don't accidentally re-pick it as a saved choice.
+- **Radar frame throttle** — RadarViewModel caches the last successful frame load and skips redundant fetches within a 5-minute window via `shouldLoadRadarFrames()` / `canAnimateRadarPlayback()` guards.
+- **Radar status overlay** — RadarScreen renders a `RadarStatusCard` for loading/error states, disables playback controls when no frames are available, and hides the community-report FAB when offline or without a valid location.
+- **Compare slot state** — CompareViewModel now uses an explicit `Slot { PRIMARY, SECONDARY }` enum plus request-token + active-load counter so a fast location swap can't leave stale weather in the other slot.
+- **Connectivity validation** — ConnectivityObserver now requires both `NET_CAPABILITY_INTERNET` and either `NET_CAPABILITY_VALIDATED` or a VPN transport before reporting online.
+- **Configurable weather cache TTL** — WeatherRepository exposes a user-configurable cache TTL (default 30 min, via `DEFAULT_CACHE_MAX_AGE_MS`) instead of the fixed 6-hour cap, and uses the proper `reverseGeocode()` API for coordinate lookups.
+- **Tablet tab normalization** — MainScreen hides the Radar tab on tablets (split pane already shows radar) and auto-corrects the selected tab via `visibleMainTabs()` / `normalizeSelectedMainTab()` so rotation can't leave an invalid selection.
+- **Expanded test coverage** — new unit tests for `LocationRepository`, `AlertCheckWorker`, `WeatherRepository`, `CompareViewModel`, widget refresh/config logic, radar screen logic, and locations/main screen logic.
+
+### Fixed
+- Race in CompareScreen where swapping primary/secondary locations mid-fetch could overwrite the new slot with the old slot's data.
+- Radar playback controls rendering before a frame set was available, producing a broken transport UI on first load.
+- BlitzortungService no longer re-creates its CoroutineScope on disconnect; uses field-level scope + `tryEmit` to avoid dropped emissions and job leaks.
+- Widget refresh no longer hammers the network when multiple widgets point at the same coordinate, and respects low-battery (<=15%) without returning `Result.retry()` unnecessarily.
+- AlertNotificationHelper now only marks alerts as "seen" when they were actually notified, instead of every fetched alert.
+- LocationsScreen drag threshold is computed in real pixels via `LocalDensity` instead of a hardcoded float, fixing drag calibration on high-density screens.
+- MainActivity and WearMainActivity migrated to lifecycle-aware `collectAsStateWithLifecycle()` to stop collecting state in the background.
+- ApiKeyField in Settings now commits on focus-loss with a "Saved when you leave the field" hint + proper IME action handling, ending the silent-save bug.
+
 ## [1.5.0] - 2026-03-27
 
 ### Added
