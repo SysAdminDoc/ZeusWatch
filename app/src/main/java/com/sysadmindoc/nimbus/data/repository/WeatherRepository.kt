@@ -27,7 +27,7 @@ class WeatherRepository @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true }
 
     companion object {
-        private const val CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000L // 6 hours
+        private const val DEFAULT_CACHE_MAX_AGE_MS = 30 * 60 * 1000L
     }
 
     /**
@@ -53,7 +53,9 @@ class WeatherRepository @Inject constructor(
         locationName: String? = null,
     ): Result<WeatherData> = withContext(Dispatchers.IO) {
         try {
-            val forecastHours = userPreferences.settings.first().hourlyForecastHours
+            val settings = userPreferences.settings.first()
+            val forecastHours = settings.hourlyForecastHours
+            val cacheMaxAgeMs = settings.cacheTtlMs.takeIf { it > 0L } ?: DEFAULT_CACHE_MAX_AGE_MS
             val response = weatherApi.getForecast(latitude, longitude, forecastHours = forecastHours)
             val location = resolveLocationName(latitude, longitude, locationName)
             val weatherData = mapToWeatherData(response, location)
@@ -72,7 +74,7 @@ class WeatherRepository @Inject constructor(
                         longitude = longitude,
                     )
                 )
-                weatherDao.deleteOlderThan(System.currentTimeMillis() - CACHE_MAX_AGE_MS)
+                weatherDao.deleteOlderThan(System.currentTimeMillis() - cacheMaxAgeMs)
             } catch (_: Exception) { /* Cache failure is non-fatal */ }
 
             Result.success(weatherData)
@@ -84,10 +86,12 @@ class WeatherRepository @Inject constructor(
     suspend fun getCachedWeather(latitude: Double, longitude: Double): WeatherData? =
         withContext(Dispatchers.IO) {
             try {
+                val cacheMaxAgeMs = userPreferences.settings.first().cacheTtlMs
+                    .takeIf { it > 0L }
+                    ?: DEFAULT_CACHE_MAX_AGE_MS
                 val key = WeatherCacheEntity.makeKey(latitude, longitude)
                 val cached = weatherDao.getCached(key) ?: return@withContext null
-                // Return null if the cached entry is older than CACHE_MAX_AGE_MS
-                if (cached.isExpired(CACHE_MAX_AGE_MS)) return@withContext null
+                if (cached.isExpired(cacheMaxAgeMs)) return@withContext null
                 val response = json.decodeFromString(OpenMeteoResponse.serializer(), cached.responseJson)
                 val location = LocationInfo(
                     name = cached.locationName,
@@ -140,9 +144,9 @@ class WeatherRepository @Inject constructor(
                 longitude = longitude,
             )
         } else {
-            // Last resort: try Open-Meteo search with nearby city
+            // Last resort: fall back to Open-Meteo reverse geocoding.
             try {
-                val geo = geocodingApi.searchLocation("${latitude},${longitude}", count = 1)
+                val geo = geocodingApi.reverseGeocode(latitude, longitude, count = 1)
                 val first = geo.results?.firstOrNull()
                 LocationInfo(
                     name = first?.name ?: "Unknown Location",

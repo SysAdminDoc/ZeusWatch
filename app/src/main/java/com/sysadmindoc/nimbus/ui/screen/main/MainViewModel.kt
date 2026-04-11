@@ -34,9 +34,10 @@ import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
+import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -70,6 +71,7 @@ class MainViewModel @Inject constructor(
     private val prefs: UserPreferences,
     private val summaryEngine: SummaryEngine,
     private val connectivityObserver: ConnectivityObserver,
+    @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -81,6 +83,8 @@ class MainViewModel @Inject constructor(
     /** Track active coordinates for refresh without reverting to GPS. */
     private var activeLatitude: Double? = null
     private var activeLongitude: Double? = null
+    private var activeLocationId: Long? = null
+    private var activeLocationName: String? = null
     private var useGpsLocation: Boolean = true
 
     init {
@@ -120,7 +124,41 @@ class MainViewModel @Inject constructor(
     private fun observeSavedLocations() {
         viewModelScope.launch {
             locationRepository.savedLocations.collect { locations ->
-                _uiState.update { it.copy(savedLocations = locations.toImmutableList()) }
+                var recoveryLocation: SavedLocationEntity? = null
+                var shouldReloadGps = false
+                _uiState.update { state ->
+                    val fallback = locations.firstOrNull { it.isCurrentLocation } ?: locations.firstOrNull()
+                    val trackedLocationMissing = activeLocationId != null && locations.none { it.id == activeLocationId }
+                    val nextCurrentPage = when {
+                        trackedLocationMissing && fallback != null -> locations.indexOfFirst { it.id == fallback.id }.coerceAtLeast(0)
+                        locations.isEmpty() -> 0
+                        else -> state.currentPage.coerceIn(0, locations.lastIndex)
+                    }
+
+                    if (trackedLocationMissing) {
+                        useGpsLocation = fallback?.isCurrentLocation != false
+                        activeLocationId = fallback?.takeUnless { it.isCurrentLocation }?.id
+                        activeLocationName = fallback?.takeUnless { it.isCurrentLocation }?.name
+                        if (useGpsLocation) {
+                            shouldReloadGps = true
+                        } else {
+                            recoveryLocation = fallback
+                        }
+                    }
+
+                    state.copy(
+                        savedLocations = locations.toImmutableList(),
+                        currentPage = nextCurrentPage,
+                    )
+                }
+
+                when {
+                    recoveryLocation != null -> {
+                        val location = recoveryLocation ?: return@collect
+                        loadWeatherForCoords(location.latitude, location.longitude, location.id)
+                    }
+                    shouldReloadGps -> loadWeather()
+                }
             }
         }
     }
@@ -144,11 +182,15 @@ class MainViewModel @Inject constructor(
         _uiState.update { it.copy(currentPage = pageIndex) }
         Log.d(TAG, "onPageChanged: page=$pageIndex, loc=${loc.name}, isCurrent=${loc.isCurrentLocation}")
         if (loc.isCurrentLocation) {
+            activeLocationId = null
+            activeLocationName = null
             useGpsLocation = true
             loadWeather()
         } else {
+            activeLocationId = loc.id
+            activeLocationName = loc.name
             useGpsLocation = false
-            loadWeatherForCoords(loc.latitude, loc.longitude)
+            loadWeatherForCoords(loc.latitude, loc.longitude, loc.id, loc.name)
         }
     }
 
@@ -179,8 +221,9 @@ class MainViewModel @Inject constructor(
                     onFailure = { lastError = it }
                 )
 
-                if (location != null) {
-                    fetchWeather(location!!.latitude, location!!.longitude)
+                val resolvedLocation = location
+                if (resolvedLocation != null) {
+                    fetchWeather(resolvedLocation.latitude, resolvedLocation.longitude)
                 } else {
                     val cached = tryLoadCached()
                     if (!cached) {
@@ -204,19 +247,26 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun loadWeatherForCoords(lat: Double, lon: Double) {
+    fun loadWeatherForCoords(
+        lat: Double,
+        lon: Double,
+        locationId: Long? = activeLocationId,
+        locationName: String? = activeLocationName,
+    ) {
         viewModelScope.launch {
+            activeLocationId = locationId
+            activeLocationName = locationName
             _uiState.update { it.copy(isLoading = true, error = null) }
-            fetchWeather(lat, lon)
+            fetchWeather(lat, lon, locationName)
         }
     }
 
-    private suspend fun fetchWeather(lat: Double, lon: Double) {
+    private suspend fun fetchWeather(lat: Double, lon: Double, locationName: String? = activeLocationName) {
         try {
             activeLatitude = lat
             activeLongitude = lon
 
-            val result = repository.getWeather(lat, lon)
+            val result = repository.getWeather(lat, lon, locationName)
             result.fold(
                 onSuccess = { data ->
                     prefs.saveLastLocation(lat, lon, data.location.name)
@@ -345,7 +395,7 @@ class MainViewModel @Inject constructor(
     private suspend fun computeDerivedData(data: WeatherData) {
         val settings = _uiState.value.settings
         val currentState = _uiState.value
-        val derived = withContext(Dispatchers.Default) {
+        val derived = withContext(defaultDispatcher) {
             val templateSummary = WeatherSummaryEngine.generate(
                 current = data.current,
                 today = data.daily.firstOrNull(),
@@ -408,7 +458,7 @@ class MainViewModel @Inject constructor(
         // If AI style is selected, launch async generation and update when ready
         if (settings.summaryStyle == SummaryStyle.AI_GENERATED && summaryEngine.isAvailable()) {
             viewModelScope.launch {
-                val aiSummary = withContext(Dispatchers.Default) {
+                val aiSummary = withContext(defaultDispatcher) {
                     WeatherSummaryEngine.generateWithStyle(
                         current = data.current,
                         today = data.daily.firstOrNull(),
@@ -468,8 +518,10 @@ class MainViewModel @Inject constructor(
     fun refresh() {
         _uiState.update { it.copy(isRefreshing = true) }
         viewModelScope.launch {
-            if (!useGpsLocation && activeLatitude != null && activeLongitude != null) {
-                fetchWeather(activeLatitude!!, activeLongitude!!)
+            val lat = activeLatitude
+            val lon = activeLongitude
+            if (!useGpsLocation && lat != null && lon != null) {
+                fetchWeather(lat, lon)
             } else {
                 loadWeather()
             }
@@ -490,6 +542,8 @@ class MainViewModel @Inject constructor(
             }
 
             useGpsLocation = false
+            activeLocationId = null
+            activeLocationName = lastLoc.name
             _uiState.update {
                 it.copy(
                     isLoading = true,
@@ -504,12 +558,36 @@ class MainViewModel @Inject constructor(
     fun loadForLocation(locationId: Long) {
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(isLoading = true, error = null) }
                 val loc = locationRepository.getAll().find { it.id == locationId }
+                _uiState.update { state ->
+                    state.copy(
+                        isLoading = true,
+                        error = null,
+                        currentPage = loc?.let { found ->
+                            state.savedLocations.indexOfFirst { it.id == found.id }
+                                .takeIf { it >= 0 }
+                                ?: state.currentPage
+                        } ?: state.currentPage,
+                    )
+                }
                 if (loc != null) {
-                    if (loc.isCurrentLocation) { useGpsLocation = true; loadWeather() }
-                    else { useGpsLocation = false; fetchWeather(loc.latitude, loc.longitude) }
-                } else { useGpsLocation = true; loadWeather() }
+                    if (loc.isCurrentLocation) {
+                        activeLocationId = null
+                        activeLocationName = null
+                        useGpsLocation = true
+                        loadWeather()
+                    } else {
+                        activeLocationId = loc.id
+                        activeLocationName = loc.name
+                        useGpsLocation = false
+                        fetchWeather(loc.latitude, loc.longitude, loc.name)
+                    }
+                } else {
+                    activeLocationId = null
+                    activeLocationName = null
+                    useGpsLocation = true
+                    loadWeather()
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = userFriendlyError(e)) }
             }

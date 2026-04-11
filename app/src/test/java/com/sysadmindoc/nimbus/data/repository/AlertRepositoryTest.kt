@@ -19,6 +19,7 @@ import io.mockk.coVerify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -33,7 +34,7 @@ import java.util.TimeZone
 @Suppress("DEPRECATION")
 class AlertRepositoryTest {
 
-    private val testDispatcher = UnconfinedTestDispatcher()
+    private val testDispatcher = UnconfinedTestDispatcher(TestCoroutineScheduler())
 
     private lateinit var api: NwsAlertApi
     private lateinit var repository: AlertRepository

@@ -1,5 +1,11 @@
 package com.sysadmindoc.nimbus.ui.screen.settings
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,6 +27,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -47,10 +55,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.data.model.IconPack
@@ -63,11 +76,35 @@ fun SettingsScreen(
     onBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val settings by viewModel.settings.collectAsStateWithLifecycle(initialValue = NimbusSettings())
+    val notificationsPermissionGranted = hasNotificationPermission(context)
+    var pendingNotificationEnableAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val pendingAction = pendingNotificationEnableAction
+        pendingNotificationEnableAction = null
+        if (granted) {
+            pendingAction?.invoke()
+        }
+    }
+
+    val enableNotificationsIfPermitted: (() -> Unit) -> Unit = { onGranted ->
+        if (hasNotificationPermission(context)) {
+            onGranted()
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pendingNotificationEnableAction = onGranted
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            onGranted()
+        }
+    }
 
     SettingsContent(
         settings = settings,
         onBack = onBack,
+        notificationsPermissionGranted = notificationsPermissionGranted,
         availableIconPacks = viewModel.availableIconPacks,
         onTempUnit = { viewModel.setTempUnit(it) },
         onWindUnit = { viewModel.setWindUnit(it) },
@@ -76,7 +113,13 @@ fun SettingsScreen(
         onTimeFormat = { viewModel.setTimeFormat(it) },
         onVisibilityUnit = { viewModel.setVisibilityUnit(it) },
         onParticlesEnabled = { viewModel.setParticlesEnabled(it) },
-        onAlertNotificationsEnabled = { viewModel.setAlertNotificationsEnabled(it) },
+        onAlertNotificationsEnabled = { enabled ->
+            if (enabled) {
+                enableNotificationsIfPermitted { viewModel.setAlertNotificationsEnabled(true) }
+            } else {
+                viewModel.setAlertNotificationsEnabled(false)
+            }
+        },
         onAlertMinSeverity = { viewModel.setAlertMinSeverity(it) },
         onAlertCheckAllLocations = { viewModel.setAlertCheckAllLocations(it) },
         onAlertSourcePref = { viewModel.setAlertSourcePref(it) },
@@ -91,7 +134,13 @@ fun SettingsScreen(
         onCardOrder = { viewModel.setCardOrder(it) },
         onResetCardPreferences = { viewModel.resetCardPreferences() },
         // Notifications
-        onPersistentWeatherNotif = { viewModel.setPersistentWeatherNotif(it) },
+        onPersistentWeatherNotif = { enabled ->
+            if (enabled) {
+                enableNotificationsIfPermitted { viewModel.setPersistentWeatherNotif(true) }
+            } else {
+                viewModel.setPersistentWeatherNotif(false)
+            }
+        },
         onNowcastingAlerts = { viewModel.setNowcastingAlerts(it) },
         onDrivingAlerts = { viewModel.setDrivingAlerts(it) },
         onHealthAlertsEnabled = { viewModel.setHealthAlertsEnabled(it) },
@@ -133,6 +182,7 @@ private enum class SettingsCategory(val label: String, val summary: String) {
 internal fun SettingsContent(
     settings: NimbusSettings,
     onBack: () -> Unit,
+    notificationsPermissionGranted: Boolean = true,
     onTempUnit: (TempUnit) -> Unit = {},
     onWindUnit: (WindUnit) -> Unit = {},
     onPressureUnit: (PressureUnit) -> Unit = {},
@@ -477,6 +527,13 @@ internal fun SettingsContent(
         }
         if (selectedCategory == SettingsCategory.ALERTS) {
         SettingSection("Notifications") {
+            if (!notificationsPermissionGranted) {
+                PermissionNoticeCard(
+                    title = "Notification Permission Off",
+                    message = "Android notifications are blocked for ZeusWatch. Turn them on to receive severe weather alerts and the persistent forecast notification.",
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+            }
             SettingToggle(
                 label = "Alert Notifications",
                 sublabel = "Background checks for severe weather alerts",
@@ -1131,7 +1188,25 @@ private fun ApiKeyField(
     value: String,
     onValueChange: (String) -> Unit,
 ) {
-    var text by remember(value) { mutableStateOf(value) }
+    var text by remember(label) { mutableStateOf(value) }
+    var isFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(value, isFocused) {
+        if (!isFocused && value != text) {
+            text = value
+        }
+    }
+
+    fun commitValue() {
+        val committed = text.trim()
+        if (committed != value) {
+            onValueChange(committed)
+        }
+        if (committed != text) {
+            text = committed
+        }
+    }
 
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Text(
@@ -1140,16 +1215,32 @@ private fun ApiKeyField(
             color = NimbusTextSecondary,
             modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
         )
+        Text(
+            text = "Saved when you leave the field",
+            style = MaterialTheme.typography.labelSmall,
+            color = NimbusTextTertiary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+        )
         BasicTextField(
             value = text,
-            onValueChange = {
-                text = it
-                onValueChange(it)
-            },
+            onValueChange = { updatedText: String -> text = updatedText },
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium.copy(color = NimbusTextPrimary),
             cursorBrush = SolidColor(NimbusBlueAccent),
             visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    commitValue()
+                    focusManager.clearFocus()
+                },
+            ),
+            modifier = Modifier.onFocusChanged { focusState ->
+                if (isFocused && !focusState.isFocused) {
+                    commitValue()
+                }
+                isFocused = focusState.isFocused
+            },
             decorationBox = { innerTextField ->
                 Box(
                     modifier = Modifier
@@ -1169,6 +1260,33 @@ private fun ApiKeyField(
                     innerTextField()
                 }
             },
+        )
+    }
+}
+
+@Composable
+private fun PermissionNoticeCard(
+    title: String,
+    message: String,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(NimbusBlueAccent.copy(alpha = 0.12f))
+            .border(1.dp, NimbusBlueAccent.copy(alpha = 0.28f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = NimbusTextPrimary,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
         )
     }
 }
@@ -1206,5 +1324,16 @@ private fun IconPackSelector(
                 onClick = { onPackSelected(pack.id) },
             )
         }
+    }
+}
+
+private fun hasNotificationPermission(context: Context): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
+    } else {
+        true
     }
 }

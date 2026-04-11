@@ -1,6 +1,8 @@
 package com.sysadmindoc.nimbus.data.repository
 
 import com.sysadmindoc.nimbus.data.api.GeocodingApi
+import com.sysadmindoc.nimbus.data.api.GeocodingResponse
+import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
 import com.sysadmindoc.nimbus.data.api.WeatherDao
 import com.sysadmindoc.nimbus.data.location.ReverseGeocoder
@@ -189,6 +191,61 @@ class WeatherRepositoryTest {
         assertNotNull(result.getOrThrow())
     }
 
+    @Test
+    fun getWeatherDirectUsesConfiguredCacheTtlWhenPruningCache() = runTest {
+        every { userPreferences.settings } returns flowOf(NimbusSettings(cacheTtlMinutes = 15))
+        repository = WeatherRepository(
+            weatherApi = weatherApi,
+            geocodingApi = geocodingApi,
+            reverseGeocoder = reverseGeocoder,
+            weatherDao = weatherDao,
+            userPreferences = userPreferences,
+            sourceManager = dagger.Lazy { sourceManager },
+        )
+
+        val response = makeResponse()
+        val cutoffSlot = slot<Long>()
+        val before = System.currentTimeMillis()
+        coEvery { weatherApi.getForecast(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns response
+        coEvery { reverseGeocoder.resolve(testLat, testLon) } returns com.sysadmindoc.nimbus.data.location.ReverseGeoResult(
+            name = testLocationName, region = "Colorado", country = "US",
+        )
+        coEvery { weatherDao.deleteOlderThan(capture(cutoffSlot)) } returns Unit
+
+        repository.getWeatherDirect(testLat, testLon)
+
+        val after = System.currentTimeMillis()
+        val expectedTtl = 15 * 60 * 1000L
+        assertTrue(cutoffSlot.captured in (before - expectedTtl)..(after - expectedTtl))
+    }
+
+    @Test
+    fun getWeatherDirectFallsBackToOpenMeteoReverseGeocode() = runTest {
+        val response = makeResponse()
+        coEvery { weatherApi.getForecast(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns response
+        coEvery { reverseGeocoder.resolve(testLat, testLon) } returns null
+        coEvery {
+            geocodingApi.reverseGeocode(testLat, testLon, any(), any(), any())
+        } returns GeocodingResponse(
+            results = listOf(
+                GeocodingResult(
+                    id = 99,
+                    name = "Aurora",
+                    latitude = testLat,
+                    longitude = testLon,
+                    country = "United States",
+                    admin1 = "Colorado",
+                )
+            )
+        )
+
+        val result = repository.getWeatherDirect(testLat, testLon)
+
+        assertTrue(result.isSuccess)
+        assertEquals("Aurora", result.getOrThrow().location.name)
+        assertEquals("Colorado", result.getOrThrow().location.region)
+    }
+
     // --- getCachedWeather ---
 
     @Test
@@ -215,6 +272,25 @@ class WeatherRepositoryTest {
     @Test
     fun getCachedWeatherReturnsNullOnCorruptJson() = runTest {
         val cached = makeCacheEntity(responseJson = "{ not valid json !!!")
+        coEvery { weatherDao.getCached(any()) } returns cached
+
+        val data = repository.getCachedWeather(testLat, testLon)
+
+        assertNull(data)
+    }
+
+    @Test
+    fun getCachedWeatherHonorsConfiguredCacheTtl() = runTest {
+        every { userPreferences.settings } returns flowOf(NimbusSettings(cacheTtlMinutes = 15))
+        repository = WeatherRepository(
+            weatherApi = weatherApi,
+            geocodingApi = geocodingApi,
+            reverseGeocoder = reverseGeocoder,
+            weatherDao = weatherDao,
+            userPreferences = userPreferences,
+            sourceManager = dagger.Lazy { sourceManager },
+        )
+        val cached = makeCacheEntity(cachedAt = System.currentTimeMillis() - (16 * 60 * 1000L))
         coEvery { weatherDao.getCached(any()) } returns cached
 
         val data = repository.getCachedWeather(testLat, testLon)

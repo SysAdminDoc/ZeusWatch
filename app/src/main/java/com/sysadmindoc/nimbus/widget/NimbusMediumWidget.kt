@@ -159,6 +159,6 @@ private fun DayColumn(day: WidgetDaily, modifier: GlanceModifier = GlanceModifie
     }
 }
 
-class NimbusMediumWidgetReceiver : GlanceAppWidgetReceiver() {
+class NimbusMediumWidgetReceiver : NimbusWidgetReceiverBase() {
     override val glanceAppWidget = NimbusMediumWidget()
 }
