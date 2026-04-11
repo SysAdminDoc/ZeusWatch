@@ -45,8 +45,14 @@ class AirQualityRepository @Inject constructor(
                     ragweed = PollenReading.fromConcentration(current.ragweedPollen, "Ragweed", PollenThresholdsDb.RAGWEED),
                 )
 
-                // Build hourly AQI (next 24h)
-                val now = LocalDateTime.now()
+                // Build hourly AQI (next 24h). The API is called with `timezone=auto`,
+                // so all timestamps in `hourly.time` and `current.time` are in the
+                // LOCATION's local timezone — not the device's. We anchor "now" off
+                // `current.time` instead of `LocalDateTime.now()`, otherwise viewing a
+                // distant location (e.g. Denver phone looking at Tokyo weather) would
+                // filter the entire hourly list out because device-now is hours ahead
+                // of or behind location-now.
+                val now = parseApiLocalTime(current.time) ?: LocalDateTime.now()
 
                 // Pollen: fall back to hourly data if current returns no pollen
                 val pollen = if (!pollenFromCurrent.hasData && response.hourly != null) {
@@ -176,6 +182,21 @@ class AirQualityRepository @Inject constructor(
             val minutes = ChronoUnit.MINUTES.between(rise, set)
             "%dh %dm".format(minutes / 60, minutes % 60)
         } catch (_: Exception) { null }
+    }
+
+    /**
+     * Parse an Open-Meteo "current.time" string into a LocalDateTime in the
+     * location's timezone (the API returns "YYYY-MM-DDTHH:mm" when
+     * `timezone=auto` is used). Returns null on parse failure so the caller can
+     * fall back to `LocalDateTime.now()`.
+     */
+    private fun parseApiLocalTime(value: String?): LocalDateTime? {
+        if (value.isNullOrBlank()) return null
+        return try {
+            LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     /**

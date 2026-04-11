@@ -121,11 +121,12 @@ fun SettingsScreen(
         }
     }
 
+    val availableIconPacks by viewModel.availableIconPacks.collectAsStateWithLifecycle()
     SettingsContent(
         settings = settings,
         onBack = onBack,
         notificationsPermissionGranted = notificationsPermissionGranted,
-        availableIconPacks = viewModel.availableIconPacks,
+        availableIconPacks = availableIconPacks,
         onTempUnit = { viewModel.setTempUnit(it) },
         onWindUnit = { viewModel.setWindUnit(it) },
         onPressureUnit = { viewModel.setPressureUnit(it) },
