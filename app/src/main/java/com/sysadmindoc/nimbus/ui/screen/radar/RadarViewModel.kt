@@ -303,5 +303,8 @@ internal fun shouldLoadRadarFrames(
     if (state.frameSet == null) return true
     if (state.error != null) return true
     val lastLoadedAt = lastSuccessfulLoadAtMillis ?: return true
-    return nowMillis - lastLoadedAt >= RADAR_FRAME_REFRESH_INTERVAL_MS
+    val delta = nowMillis - lastLoadedAt
+    // Treat a negative delta (wall-clock rolled backward, e.g. NTP adjustment)
+    // as "stale" so we don't get stuck refusing to refresh for an entire interval.
+    return delta < 0L || delta >= RADAR_FRAME_REFRESH_INTERVAL_MS
 }

@@ -92,6 +92,26 @@ class RadarViewModelTest {
     }
 
     @Test
+    fun `shouldLoadRadarFrames forces refresh when clock rolls backward`() {
+        val state = RadarUiState(
+            isLoading = false,
+            frameSet = frameSet(totalFrames = 3),
+            error = null,
+        )
+
+        // Simulate NTP adjustment: "now" is earlier than the last recorded load.
+        val result = shouldLoadRadarFrames(
+            state = state,
+            isRequestInFlight = false,
+            lastSuccessfulLoadAtMillis = 1_000_000L,
+            nowMillis = 900_000L,
+            force = false,
+        )
+
+        assertTrue(result)
+    }
+
+    @Test
     fun `togglePlayback keeps stopped when fewer than two frames are loaded`() = runTest(scheduler) {
         coEvery { radarRepository.getRadarFrames() } returns Result.success(frameSet(totalFrames = 1))
         val viewModel = createViewModel()
