@@ -2,6 +2,23 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.6.3] - 2026-04-11
+
+Post-v1.6.2 QA audit. Fixes four latent bugs uncovered by a full senior-dev / UX / QA review of the v1.6.2 stabilization pass.
+
+### Fixed
+- **Widget ANR risk** — `NimbusWidgetReceiverBase.onDisabled()` and `onDeleted()` previously ran DataStore suspend calls inside `runBlocking { }` on the main thread, which can trigger an ANR if DataStore or WorkManager is slow. Now wraps the cleanup with `goAsync()` and executes it on `Dispatchers.IO`, then calls `pending.finish()` — up to ~10 s of safe background work per broadcast.
+- **Locale-dependent saved-location dedupe** — `SavedLocationMatching.normalizeLocationToken` used default-locale `lowercase()`, which is unstable across devices (Turkish dotless-i in particular: `"I".lowercase(tr) == "ı"`, not `"i"`). The new implementation decomposes the string to Unicode NFD, strips combining marks, then `lowercase(Locale.ROOT)`. `"Paris"` now dedupes against `"París"` (different diacritics from different geocoding sources), and `"Istanbul"` / `"istanbul"` match on Turkish-locale devices.
+- **Radar frame refresh stuck on NTP rollback** — `shouldLoadRadarFrames()` used `nowMillis - lastLoadedAt >= interval`, which stays `false` when the wall clock rolls backward (e.g. NTP adjustment shortly after boot). The predicate now also treats a negative delta as "stale", so a clock correction can't leave the user staring at old radar frames for up to 5 minutes.
+- **Settings permission banner not reactive** — the "Notification Permission Off" card in `SettingsScreen` was computed from a one-shot `hasNotificationPermission(context)` snapshot. If the user left the app, granted POST_NOTIFICATIONS via Android Settings, and came back, the card stayed visible until some other recomposition. The screen now subscribes to the lifecycle and re-reads the permission on `ON_RESUME`, and the in-app permission launcher updates the state directly from its `granted` callback.
+
+### Tests
+- `SavedLocationMatchingTest` — covers coordinate-epsilon matching, current-location exclusion, diacritic-insensitive label matching (`Paris` / `París`), and Turkish-locale stability (`Istanbul` / `istanbul` on `tr-TR`).
+- `RadarViewModelTest.shouldLoadRadarFrames forces refresh when clock rolls backward` — NTP-rollback regression guard.
+
+### Audit notes
+Four additional issues flagged by the audit were verified against the code and rejected as false positives: MainScreen tab normalization, `CompareViewModel.activeLoads` "race" (all on `viewModelScope.launch` = `Dispatchers.Main.immediate`), BlitzortungService WebSocket threading (OkHttp handles it), and ConnectivityObserver "captive portal too strict" (requiring `NET_CAPABILITY_VALIDATED` is correct for a network-dependent weather app). See the commit message for full rationale.
+
 ## [1.6.2] - 2026-04-11
 
 ### Added
