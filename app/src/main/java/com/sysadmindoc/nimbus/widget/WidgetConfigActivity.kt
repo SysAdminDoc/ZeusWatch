@@ -33,7 +33,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,7 +85,6 @@ class WidgetConfigActivity : ComponentActivity() {
         setContent {
             NimbusTheme {
                 WidgetConfigScreen(
-                    appWidgetId = appWidgetId,
                     locationDao = locationDao,
                     onLocationSelected = { locationId ->
                         confirmWidget(locationId)
@@ -99,8 +97,9 @@ class WidgetConfigActivity : ComponentActivity() {
     private fun confirmWidget(locationId: Long?) {
         lifecycleScope.launch {
             WidgetLocationPrefs.setLocationId(this@WidgetConfigActivity, appWidgetId, locationId)
+            WidgetRefreshWorker.schedule(this@WidgetConfigActivity)
+            WidgetRefreshWorker.enqueueImmediate(this@WidgetConfigActivity)
 
-            // Trigger widget update
             val resultValue = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
             setResult(RESULT_OK, resultValue)
             finish()
@@ -110,16 +109,16 @@ class WidgetConfigActivity : ComponentActivity() {
 
 @Composable
 private fun WidgetConfigScreen(
-    appWidgetId: Int,
     locationDao: SavedLocationDao,
     onLocationSelected: (Long?) -> Unit,
 ) {
     var locations by remember { mutableStateOf<List<SavedLocationEntity>>(emptyList()) }
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         locations = try { locationDao.getAll() } catch (_: Exception) { emptyList() }
     }
+
+    val selectableLocations = widgetSelectableLocations(locations)
 
     Column(
         modifier = Modifier
@@ -148,8 +147,8 @@ private fun WidgetConfigScreen(
             // Default option (GPS / last location)
             item {
                 LocationOption(
-                    name = "Default (Current Location)",
-                    subtitle = "Uses your GPS or last known location",
+                    name = "Default (Follow App Location)",
+                    subtitle = "Uses the app's current or last loaded location",
                     isCurrentLocation = true,
                     onClick = { onLocationSelected(null) },
                 )
@@ -157,15 +156,14 @@ private fun WidgetConfigScreen(
             }
 
             // Saved locations
-            items(locations) { loc ->
+            items(selectableLocations) { loc ->
                 LocationOption(
-                    name = if (loc.isCurrentLocation) "My Location" else loc.name,
-                    subtitle = if (loc.isCurrentLocation) "GPS location"
-                    else listOfNotNull(
+                    name = loc.name,
+                    subtitle = listOfNotNull(
                         loc.region.ifBlank { null },
                         loc.country.ifBlank { null },
                     ).joinToString(", "),
-                    isCurrentLocation = loc.isCurrentLocation,
+                    isCurrentLocation = false,
                     onClick = { onLocationSelected(loc.id) },
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -213,3 +211,7 @@ private fun LocationOption(
         }
     }
 }
+
+internal fun widgetSelectableLocations(
+    locations: List<SavedLocationEntity>,
+): List<SavedLocationEntity> = locations.filterNot { it.isCurrentLocation }
