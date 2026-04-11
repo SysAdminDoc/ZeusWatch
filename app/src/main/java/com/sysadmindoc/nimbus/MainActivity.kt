@@ -8,10 +8,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.ThemeMode
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
             val adaptiveInfo = AdaptiveLayoutInfo.from(windowSizeClass.widthSizeClass)
-            val settings by prefs.settings.collectAsState(initial = NimbusSettings())
+            val settings by prefs.settings.collectAsStateWithLifecycle(initialValue = NimbusSettings())
 
             NimbusTheme(
                 useWeatherAdaptive = settings.themeMode == ThemeMode.WEATHER_ADAPTIVE,

@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -213,7 +214,10 @@ private fun LocationsList(
     // Track drag state for reordering
     var draggedIndex by remember { mutableIntStateOf(-1) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
-    val itemHeight = 62f // Approximate dp height of each location row
+    val itemHeightPx = with(LocalDensity.current) { 62.dp.toPx() }
+    val visibleSearchResults = filterDuplicateSearchResults(search.results, saved)
+    val searchEmptyMessage = locationsSearchEmptyMessage(search, visibleSearchResults)
+    val minimumMovableIndex = saved.indexOfFirst { !it.isCurrentLocation }.takeIf { it >= 0 } ?: 0
 
     LazyColumn(
         modifier = Modifier
@@ -223,7 +227,7 @@ private fun LocationsList(
     ) {
         // Search results (shown when query active)
         if (search.query.length >= 2) {
-            if (search.results.isNotEmpty()) {
+            if (visibleSearchResults.isNotEmpty()) {
                 item {
                     Text(
                         "Search Results",
@@ -232,17 +236,17 @@ private fun LocationsList(
                         modifier = Modifier.padding(vertical = 4.dp),
                     )
                 }
-                items(search.results, key = { it.id }) { result ->
+                items(visibleSearchResults, key = { it.id }) { result ->
                     SearchResultItem(
                         result = result,
                         onAdd = { onAddLocation(result) },
                     )
                 }
                 item { Spacer(modifier = Modifier.height(12.dp)) }
-            } else if (!search.isSearching) {
+            } else if (searchEmptyMessage != null) {
                 item {
                     Text(
-                        search.error ?: "No results found",
+                        searchEmptyMessage,
                         style = MaterialTheme.typography.bodySmall,
                         color = if (search.error != null) NimbusError else NimbusTextTertiary,
                         modifier = Modifier.padding(vertical = 16.dp),
@@ -283,10 +287,16 @@ private fun LocationsList(
                     onDragStart = { draggedIndex = index; dragOffsetY = 0f },
                     onDrag = { delta ->
                         dragOffsetY += delta
-                        val targetIndex = (index + (dragOffsetY / itemHeight).toInt())
-                            .coerceIn(0, saved.lastIndex)
-                        if (targetIndex != index && targetIndex != draggedIndex) {
-                            onMoveLocation(draggedIndex, targetIndex)
+                        val currentIndex = draggedIndex.takeIf { it >= 0 } ?: index
+                        val targetIndex = computeDraggedLocationTargetIndex(
+                            currentIndex = currentIndex,
+                            dragOffsetPx = dragOffsetY,
+                            itemHeightPx = itemHeightPx,
+                            minimumIndex = minimumMovableIndex,
+                            lastIndex = saved.lastIndex,
+                        )
+                        if (targetIndex != currentIndex) {
+                            onMoveLocation(currentIndex, targetIndex)
                             draggedIndex = targetIndex
                             dragOffsetY = 0f
                         }
@@ -575,4 +585,40 @@ private fun SavedLocationItem(
             }
         }
     }
+}
+
+internal fun filterDuplicateSearchResults(
+    results: List<GeocodingResult>,
+    savedLocations: List<SavedLocationEntity>,
+): List<GeocodingResult> {
+    return results.filterNot { result ->
+        savedLocations.any { location ->
+            com.sysadmindoc.nimbus.data.model.matchesSavedLocation(result, location)
+        }
+    }
+}
+
+internal fun locationsSearchEmptyMessage(
+    search: SearchState,
+    visibleResults: List<GeocodingResult>,
+): String? {
+    if (search.query.length < 2 || search.isSearching || visibleResults.isNotEmpty()) return null
+    return when {
+        search.error != null -> search.error
+        search.results.isNotEmpty() -> "Location already saved"
+        else -> "No results found"
+    }
+}
+
+internal fun computeDraggedLocationTargetIndex(
+    currentIndex: Int,
+    dragOffsetPx: Float,
+    itemHeightPx: Float,
+    minimumIndex: Int = 0,
+    lastIndex: Int,
+): Int {
+    if (lastIndex < 0) return currentIndex
+    if (itemHeightPx <= 0f) return currentIndex.coerceIn(minimumIndex, lastIndex)
+    return (currentIndex + (dragOffsetPx / itemHeightPx).toInt())
+        .coerceIn(minimumIndex, lastIndex)
 }

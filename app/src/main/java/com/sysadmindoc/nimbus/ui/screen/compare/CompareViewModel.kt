@@ -21,8 +21,15 @@ class CompareViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
 ) : ViewModel() {
 
+    private enum class Slot { PRIMARY, SECONDARY }
+
     private val _uiState = MutableStateFlow(CompareUiState())
     val uiState: StateFlow<CompareUiState> = _uiState.asStateFlow()
+
+    private var requestTokenCounter = 0L
+    private var primaryRequestToken = 0L
+    private var secondaryRequestToken = 0L
+    private var activeLoads = 0
 
     init {
         viewModelScope.launch {
@@ -33,36 +40,50 @@ class CompareViewModel @Inject constructor(
     }
 
     fun selectLocation1(location: SavedLocationEntity) {
-        _uiState.update { it.copy(location1 = location, weather1 = null) }
-        fetchWeather(location, isFirst = true)
+        primaryRequestToken = consumeRequestToken()
+        _uiState.update { it.copy(location1 = location, weather1 = null, error = null) }
+        fetchWeather(location, Slot.PRIMARY, primaryRequestToken)
     }
 
     fun selectLocation2(location: SavedLocationEntity) {
-        _uiState.update { it.copy(location2 = location, weather2 = null) }
-        fetchWeather(location, isFirst = false)
+        secondaryRequestToken = consumeRequestToken()
+        _uiState.update { it.copy(location2 = location, weather2 = null, error = null) }
+        fetchWeather(location, Slot.SECONDARY, secondaryRequestToken)
     }
 
     fun retry() {
         _uiState.update { it.copy(error = null) }
         val loc1 = _uiState.value.location1
         val loc2 = _uiState.value.location2
-        if (loc1 != null) fetchWeather(loc1, isFirst = true)
-        if (loc2 != null) fetchWeather(loc2, isFirst = false)
+        if (loc1 != null) {
+            primaryRequestToken = consumeRequestToken()
+            fetchWeather(loc1, Slot.PRIMARY, primaryRequestToken)
+        }
+        if (loc2 != null) {
+            secondaryRequestToken = consumeRequestToken()
+            fetchWeather(loc2, Slot.SECONDARY, secondaryRequestToken)
+        }
     }
 
     private fun syncSavedLocations(locations: List<SavedLocationEntity>) {
         val validIds = locations.map { it.id }.toSet()
         val preferredPrimary = locations.firstOrNull { it.isCurrentLocation } ?: locations.firstOrNull()
-        var fetchPrimary: SavedLocationEntity? = null
-        var fetchSecondary: SavedLocationEntity? = null
+        var fetchPrimary: Pair<SavedLocationEntity, Long>? = null
+        var fetchSecondary: Pair<SavedLocationEntity, Long>? = null
 
         _uiState.update { state ->
             val primary = state.location1?.takeIf { it.id in validIds } ?: preferredPrimary
             val secondary = state.location2?.takeIf { it.id in validIds && it.id != primary?.id }
                 ?: locations.firstOrNull { it.id != primary?.id }
 
-            if (state.location1?.id != primary?.id) fetchPrimary = primary
-            if (state.location2?.id != secondary?.id) fetchSecondary = secondary
+            if (state.location1?.id != primary?.id && primary != null) {
+                primaryRequestToken = consumeRequestToken()
+                fetchPrimary = primary to primaryRequestToken
+            }
+            if (state.location2?.id != secondary?.id && secondary != null) {
+                secondaryRequestToken = consumeRequestToken()
+                fetchSecondary = secondary to secondaryRequestToken
+            }
 
             state.copy(
                 savedLocations = locations,
@@ -70,32 +91,90 @@ class CompareViewModel @Inject constructor(
                 location2 = secondary,
                 weather1 = if (state.location1?.id == primary?.id) state.weather1 else null,
                 weather2 = if (state.location2?.id == secondary?.id) state.weather2 else null,
+                error = if (locations.isEmpty()) null else state.error,
             )
         }
 
-        fetchPrimary?.let { fetchWeather(it, isFirst = true) }
-        fetchSecondary?.let { fetchWeather(it, isFirst = false) }
+        fetchPrimary?.let { (location, token) -> fetchWeather(location, Slot.PRIMARY, token) }
+        fetchSecondary?.let { (location, token) -> fetchWeather(location, Slot.SECONDARY, token) }
     }
 
-    private fun fetchWeather(location: SavedLocationEntity, isFirst: Boolean) {
+    private fun fetchWeather(
+        location: SavedLocationEntity,
+        slot: Slot,
+        requestToken: Long,
+    ) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            weatherRepository.getWeather(
-                location.latitude,
-                location.longitude,
-                location.name,
-            ).fold(
-                onSuccess = { data ->
-                    _uiState.update {
-                        if (isFirst) it.copy(weather1 = data, isLoading = false)
-                        else it.copy(weather2 = data, isLoading = false)
+            incrementLoading()
+            try {
+                weatherRepository.getWeather(
+                    location.latitude,
+                    location.longitude,
+                    location.name,
+                ).fold(
+                    onSuccess = { data ->
+                        _uiState.update { state ->
+                            when (slot) {
+                                Slot.PRIMARY -> {
+                                    if (requestToken != primaryRequestToken || state.location1?.id != location.id) {
+                                        state
+                                    } else {
+                                        state.copy(weather1 = data, error = null)
+                                    }
+                                }
+                                Slot.SECONDARY -> {
+                                    if (requestToken != secondaryRequestToken || state.location2?.id != location.id) {
+                                        state
+                                    } else {
+                                        state.copy(weather2 = data, error = null)
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    onFailure = {
+                        _uiState.update { state ->
+                            when (slot) {
+                                Slot.PRIMARY -> {
+                                    if (requestToken != primaryRequestToken || state.location1?.id != location.id) {
+                                        state
+                                    } else {
+                                        state.copy(
+                                            weather1 = null,
+                                            error = "Couldn't load weather for ${location.name}.",
+                                        )
+                                    }
+                                }
+                                Slot.SECONDARY -> {
+                                    if (requestToken != secondaryRequestToken || state.location2?.id != location.id) {
+                                        state
+                                    } else {
+                                        state.copy(
+                                            weather2 = null,
+                                            error = "Couldn't load weather for ${location.name}.",
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
-                },
-                onFailure = {
-                    _uiState.update { it.copy(isLoading = false, error = "Failed to load weather") }
-                }
-            )
+                )
+            } finally {
+                decrementLoading()
+            }
         }
+    }
+
+    private fun consumeRequestToken(): Long = ++requestTokenCounter
+
+    private fun incrementLoading() {
+        activeLoads += 1
+        _uiState.update { it.copy(isLoading = true) }
+    }
+
+    private fun decrementLoading() {
+        activeLoads = (activeLoads - 1).coerceAtLeast(0)
+        _uiState.update { it.copy(isLoading = activeLoads > 0) }
     }
 }
 

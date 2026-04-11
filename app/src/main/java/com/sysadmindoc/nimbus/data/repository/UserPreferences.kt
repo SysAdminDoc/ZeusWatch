@@ -17,6 +17,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "nimbus_prefs")
+private val persistentWeatherNotifKey = booleanPreferencesKey("persistent_weather_notif")
+
+internal suspend fun Context.readPersistentWeatherNotificationEnabled(): Boolean {
+    return dataStore.data.map { prefs -> prefs[persistentWeatherNotifKey] ?: true }.first()
+}
 
 @Singleton
 class UserPreferences @Inject constructor(

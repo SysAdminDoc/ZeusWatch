@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.*
@@ -21,7 +22,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelTest {
 
-    private val testDispatcher = UnconfinedTestDispatcher()
+    private val testDispatcher = UnconfinedTestDispatcher(TestCoroutineScheduler())
 
     private lateinit var weatherRepository: WeatherRepository
     private lateinit var alertRepository: AlertRepository
@@ -29,6 +30,7 @@ class MainViewModelTest {
     private lateinit var weatherSourceManager: WeatherSourceManager
     private lateinit var radarRepository: RadarRepository
     private lateinit var locationRepository: LocationRepository
+    private lateinit var savedLocationsFlow: MutableStateFlow<List<SavedLocationEntity>>
     private lateinit var locationProvider: LocationProvider
     private lateinit var prefs: UserPreferences
     private lateinit var connectivityObserver: ConnectivityObserver
@@ -64,6 +66,26 @@ class MainViewModelTest {
         dayLength = "10h 30m",
     )
 
+    private val seattle = SavedLocationEntity(
+        id = 2,
+        name = "Seattle",
+        latitude = 47.6062,
+        longitude = -122.3321,
+        region = "Washington",
+        country = "US",
+        sortOrder = 0,
+    )
+
+    private val chicago = SavedLocationEntity(
+        id = 3,
+        name = "Chicago",
+        latitude = 41.8781,
+        longitude = -87.6298,
+        region = "Illinois",
+        country = "US",
+        sortOrder = 1,
+    )
+
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
@@ -74,6 +96,7 @@ class MainViewModelTest {
         weatherSourceManager = mockk()
         radarRepository = mockk()
         locationRepository = mockk()
+        savedLocationsFlow = MutableStateFlow(emptyList())
         locationProvider = mockk()
         prefs = mockk(relaxed = true)
         connectivityObserver = mockk()
@@ -89,14 +112,29 @@ class MainViewModelTest {
         every { prefs.lastLocation } returns flowOf(null)
         coEvery { prefs.saveLastLocation(any(), any(), any()) } returns mockk()
         coEvery { locationRepository.ensureCurrentLocation(any(), any(), any()) } returns Unit
-        every { locationRepository.savedLocations } returns flowOf(emptyList())
+        every { locationRepository.savedLocations } returns savedLocationsFlow
         coEvery { alertRepository.getAlerts(any(), any()) } coAnswers { Result.success(emptyList()) }
         coEvery { airQualityRepository.getAirQuality(any(), any()) } coAnswers { Result.success(testAirQuality) }
         coEvery { weatherSourceManager.getAlerts(any(), any()) } coAnswers { Result.success(emptyList()) }
         coEvery { weatherSourceManager.getAirQuality(any(), any()) } coAnswers { Result.success(testAirQuality) }
         coEvery { weatherSourceManager.getMinutelyPrecipitation(any(), any()) } coAnswers { Result.success(emptyList()) }
         every { airQualityRepository.getAstronomy(any(), any()) } returns testAstronomy
-        coEvery { weatherRepository.getWeather(any(), any(), any()) } coAnswers { Result.success(testWeatherData) }
+        coEvery { weatherRepository.getWeather(any(), any(), any()) } coAnswers {
+            val latitude = firstArg<Double>()
+            val longitude = secondArg<Double>()
+            val locationName = thirdArg<String?>() ?: testWeatherData.location.name
+            Result.success(
+                testWeatherData.copy(
+                    location = LocationInfo(
+                        name = locationName,
+                        region = testWeatherData.location.region,
+                        country = testWeatherData.location.country,
+                        latitude = latitude,
+                        longitude = longitude,
+                    )
+                )
+            )
+        }
         coEvery { weatherRepository.getMinutelyPrecipitation(any(), any()) } coAnswers { Result.success(emptyList()) }
         coEvery { weatherRepository.getYesterdayWeather(any(), any()) } coAnswers { Result.success(null) }
         coEvery { weatherRepository.getCachedWeather(any(), any()) } returns null
@@ -131,6 +169,7 @@ class MainViewModelTest {
             prefs = prefs,
             summaryEngine = summaryEngine,
             connectivityObserver = connectivityObserver,
+            defaultDispatcher = testDispatcher,
             savedStateHandle = savedState,
         )
     }
@@ -274,5 +313,26 @@ class MainViewModelTest {
         settingsFlow.value = NimbusSettings(particlesEnabled = true)
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.particlesEnabled)
+    }
+
+    @Test
+    fun `deleted selected saved location recovers to remaining saved location`() = runTest {
+        every { locationProvider.hasLocationPermission } returns false
+        savedLocationsFlow.value = listOf(seattle, chicago)
+
+        viewModel = createAndAdvance()
+        viewModel.onPageChanged(1)
+        advanceUntilIdle()
+
+        clearMocks(weatherRepository, answers = false, recordedCalls = true)
+
+        savedLocationsFlow.value = listOf(seattle)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(0, state.currentPage)
+        assertEquals(listOf(seattle), state.savedLocations)
+        assertEquals("Seattle", state.weatherData?.location?.name)
+        coVerify { weatherRepository.getWeather(seattle.latitude, seattle.longitude, seattle.name) }
     }
 }

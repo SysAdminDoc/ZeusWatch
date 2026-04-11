@@ -29,6 +29,8 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.Stable
 import javax.inject.Inject
 
+private const val RADAR_FRAME_REFRESH_INTERVAL_MS = 5 * 60 * 1000L
+
 @HiltViewModel
 class RadarViewModel @Inject constructor(
     private val radarRepository: RadarRepository,
@@ -61,31 +63,49 @@ class RadarViewModel @Inject constructor(
     val reportSubmitState: StateFlow<ReportSubmitState> = _reportSubmitState.asStateFlow()
 
     private var playbackJob: Job? = null
+    private var frameLoadJob: Job? = null
+    private var lastSuccessfulFrameLoadAtMillis: Long? = null
 
     init {
         loadFrames()
     }
 
-    fun loadFrames() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-            radarRepository.getRadarFrames().fold(
-                onSuccess = { frameSet ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            frameSet = frameSet,
-                            currentFrameIndex = (frameSet.past.size - 1).coerceAtLeast(0),
-                            error = null,
-                        )
-                    }
-                },
-                onFailure = { e ->
-                    _uiState.update {
-                        it.copy(isLoading = false, error = e.message ?: "Failed to load radar")
-                    }
-                }
+    fun loadFrames(force: Boolean = false) {
+        val state = _uiState.value
+        if (!shouldLoadRadarFrames(
+                state = state,
+                isRequestInFlight = frameLoadJob?.isActive == true,
+                lastSuccessfulLoadAtMillis = lastSuccessfulFrameLoadAtMillis,
+                nowMillis = System.currentTimeMillis(),
+                force = force,
             )
+        ) {
+            return
+        }
+        frameLoadJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            try {
+                radarRepository.getRadarFrames().fold(
+                    onSuccess = { frameSet ->
+                        lastSuccessfulFrameLoadAtMillis = System.currentTimeMillis()
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                frameSet = frameSet,
+                                currentFrameIndex = (frameSet.past.size - 1).coerceAtLeast(0),
+                                error = null,
+                            )
+                        }
+                    },
+                    onFailure = { e ->
+                        _uiState.update {
+                            it.copy(isLoading = false, error = e.message ?: "Failed to load radar")
+                        }
+                    }
+                )
+            } finally {
+                frameLoadJob = null
+            }
         }
     }
 
@@ -121,11 +141,16 @@ class RadarViewModel @Inject constructor(
 
     private fun startPlayback() {
         playbackJob?.cancel()
+        playbackJob = null
+        val frameSet = _uiState.value.frameSet
+        if (!canAnimateRadarPlayback(frameSet)) {
+            _uiState.update { it.copy(isPlaying = false) }
+            return
+        }
+        val playableFrameSet = frameSet ?: return
         _uiState.update { it.copy(isPlaying = true) }
         playbackJob = viewModelScope.launch {
-            val frameSet = _uiState.value.frameSet ?: return@launch
-            val total = frameSet.totalFrames
-            if (total < 2) return@launch
+            val total = playableFrameSet.totalFrames
 
             while (true) {
                 val currentState = _uiState.value
@@ -135,7 +160,7 @@ class RadarViewModel @Inject constructor(
                 _uiState.update { it.copy(currentFrameIndex = nextIdx) }
 
                 // Pause longer on last past frame and last forecast frame
-                val isLastPast = nextIdx == frameSet.past.size - 1
+                val isLastPast = nextIdx == playableFrameSet.past.size - 1
                 val isLastForecast = nextIdx == total - 1
                 val delayMs = when {
                     isLastPast -> 1500L
@@ -241,6 +266,9 @@ data class RadarUiState(
     val pausedByGesture: Boolean = false,
     val error: String? = null,
 ) {
+    val canAnimatePlayback: Boolean
+        get() = canAnimateRadarPlayback(frameSet)
+
     val currentFrame: TimedTileUrl?
         get() = frameSet?.allFrames?.getOrNull(currentFrameIndex)
 
@@ -259,3 +287,21 @@ data class ReportSubmitState(
     val isSubmitting: Boolean = false,
     val result: String? = null, // null = idle, "success" = done, else error message
 )
+
+internal fun canAnimateRadarPlayback(frameSet: RadarFrameSet?): Boolean =
+    (frameSet?.totalFrames ?: 0) > 1
+
+internal fun shouldLoadRadarFrames(
+    state: RadarUiState,
+    isRequestInFlight: Boolean,
+    lastSuccessfulLoadAtMillis: Long?,
+    nowMillis: Long,
+    force: Boolean,
+): Boolean {
+    if (force) return true
+    if (isRequestInFlight) return false
+    if (state.frameSet == null) return true
+    if (state.error != null) return true
+    val lastLoadedAt = lastSuccessfulLoadAtMillis ?: return true
+    return nowMillis - lastLoadedAt >= RADAR_FRAME_REFRESH_INTERVAL_MS
+}

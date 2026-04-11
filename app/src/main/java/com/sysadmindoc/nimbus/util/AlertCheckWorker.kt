@@ -20,6 +20,7 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 import java.time.OffsetDateTime
 import java.util.concurrent.TimeUnit
+import java.util.Locale
 
 private const val TAG = "AlertCheckWorker"
 
@@ -56,7 +57,9 @@ class AlertCheckWorker @AssistedInject constructor(
 
         // Determine locations to check
         val locations = if (settings.alertCheckAllLocations) {
-            locationRepository.getAll().map { Triple(it.latitude, it.longitude, it.name) }
+            distinctAlertCheckLocations(
+                locationRepository.getAll().map { Triple(it.latitude, it.longitude, it.name) }
+            )
         } else {
             val lastLoc = prefs.lastLocation.first()
             if (lastLoc != null) listOf(Triple(lastLoc.latitude, lastLoc.longitude, lastLoc.name))
@@ -75,6 +78,7 @@ class AlertCheckWorker @AssistedInject constructor(
             val filtered = alerts.filter { alert ->
                 alert.severity.sortOrder <= maxSortOrder &&
                     alert.id !in seenIds &&
+                    alert.id !in newSeenIds &&
                     !isExpired(alert)
             }
 
@@ -89,10 +93,6 @@ class AlertCheckWorker @AssistedInject constructor(
                 )
                 newSeenIds.add(alert.id)
             }
-
-            // Also mark all fetched alert IDs as seen (even if filtered out by severity)
-            // so they don't get re-evaluated every cycle
-            alerts.forEach { newSeenIds.add(it.id) }
         }
 
         if (newSeenIds.isNotEmpty()) {
@@ -140,3 +140,14 @@ class AlertCheckWorker @AssistedInject constructor(
         }
     }
 }
+
+internal fun distinctAlertCheckLocations(
+    locations: List<Triple<Double, Double, String>>,
+): List<Triple<Double, Double, String>> {
+    val seen = linkedSetOf<String>()
+    return locations.filter { (lat, lon, _) ->
+        seen.add("${lat.alertLocationKey()}:${lon.alertLocationKey()}")
+    }
+}
+
+private fun Double.alertLocationKey(): String = "%.4f".format(Locale.US, this)

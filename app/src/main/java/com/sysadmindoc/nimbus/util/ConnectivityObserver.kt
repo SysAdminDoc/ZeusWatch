@@ -21,10 +21,14 @@ class ConnectivityObserver @Inject constructor(
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
         val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) { trySend(true) }
-            override fun onLost(network: Network) { trySend(false) }
+            override fun onAvailable(network: Network) {
+                trySend(cm.getNetworkCapabilities(network).hasUsableInternet())
+            }
+            override fun onLost(network: Network) {
+                trySend(cm.currentOnlineState())
+            }
             override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
-                trySend(caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
+                trySend(caps.hasUsableInternet())
             }
         }
 
@@ -33,11 +37,20 @@ class ConnectivityObserver @Inject constructor(
             .build()
 
         // Emit current state
-        val currentNetwork = cm.activeNetwork
-        val currentCaps = cm.getNetworkCapabilities(currentNetwork)
-        trySend(currentCaps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true)
+        trySend(cm.currentOnlineState())
 
         cm.registerNetworkCallback(request, callback)
         awaitClose { cm.unregisterNetworkCallback(callback) }
     }.distinctUntilChanged()
+
+    private fun ConnectivityManager.currentOnlineState(): Boolean =
+        getNetworkCapabilities(activeNetwork).hasUsableInternet()
+
+    private fun NetworkCapabilities?.hasUsableInternet(): Boolean {
+        if (this == null || !hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+            return false
+        }
+        return hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) ||
+            hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+    }
 }
