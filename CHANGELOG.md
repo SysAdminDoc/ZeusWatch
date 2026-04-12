@@ -2,6 +2,18 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.8.0] - 2026-04-12
+
+### Added
+- **Proactive precipitation nowcasting notifications** — "Rain in about 15 min", "Rain stopping soon", etc. The existing (but previously unwired) `nowcastingAlerts` preference now schedules a `NowcastAlertWorker` that runs every 15 minutes, pulls the last-known location, fetches the minutely-15 precipitation series, and checks for the first dry→wet or wet→dry transition within a 60-minute window. Title and intensity (light/steady/heavy) are derived from the peak mm value in the incoming wet run.
+- **`CHANNEL_NOWCAST` notification channel** — default importance (sound but no DND bypass), its own user-facing "Rain Nowcast" label under the existing Weather Alerts group.
+- **Dedupe + cooldown** — transition signature (`start:<timestamp>` or `stop:<timestamp>`) is persisted in a new `nimbus_nowcast_alerts` SharedPreferences file. The same bucket never notifies twice, and a 45-minute minimum gap between any two back-to-back nowcast notifications guards against flip-flop storms spamming the shade.
+- **Settings wiring** — toggling "Nowcasting alerts" in Settings now schedules/cancels the worker immediately (previously the toggle only wrote the pref). Flow is permission-gated by the same `POST_NOTIFICATIONS` prompt used for other alert toggles.
+- **Startup sync** — `NimbusApplication.onCreate` now reschedules the nowcast worker based on current settings alongside the existing `AlertCheckWorker` sync.
+
+### Tests
+- `NowcastAlertLogicTest` — 8 pure-function tests covering empty input, uniformly dry / uniformly wet series (no transition), rain-starting with peak intensity detection, rain-stopping, look-ahead window exclusion (transitions beyond 60 min are ignored), first-transition-only semantics, and notification signature stability across peak-intensity revisions (so a sharpening peak doesn't re-notify).
+
 ## [1.7.0] - 2026-04-12
 
 ### Added

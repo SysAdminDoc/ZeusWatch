@@ -7,6 +7,7 @@ import com.sysadmindoc.nimbus.data.model.IconPack
 import com.sysadmindoc.nimbus.data.repository.*
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
+import com.sysadmindoc.nimbus.util.NowcastAlertWorker
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.util.IconPackManager
 import com.sysadmindoc.nimbus.widget.WidgetRefreshWorker
@@ -90,7 +91,14 @@ class SettingsViewModel @Inject constructor(
             WeatherNotificationHelper.dismiss(appContext)
         }
     }
-    fun setNowcastingAlerts(enabled: Boolean) = viewModelScope.launch { prefs.setNowcastingAlerts(enabled) }
+    fun setNowcastingAlerts(enabled: Boolean) = viewModelScope.launch {
+        prefs.setNowcastingAlerts(enabled)
+        if (enabled) {
+            NowcastAlertWorker.schedule(appContext)
+        } else {
+            NowcastAlertWorker.cancel(appContext)
+        }
+    }
     fun setDrivingAlerts(enabled: Boolean) = viewModelScope.launch { prefs.setDrivingAlerts(enabled) }
     fun setHealthAlertsEnabled(enabled: Boolean) = viewModelScope.launch { prefs.setHealthAlertsEnabled(enabled) }
     fun setMigraineAlerts(enabled: Boolean) = viewModelScope.launch { prefs.setMigraineAlerts(enabled) }
