@@ -112,6 +112,7 @@ import com.sysadmindoc.nimbus.ui.component.RadarPreviewCard
 import com.sysadmindoc.nimbus.ui.component.SunArc
 import com.sysadmindoc.nimbus.ui.component.WeatherSummaryCard
 import com.sysadmindoc.nimbus.ui.component.VisibilityCard
+import com.sysadmindoc.nimbus.ui.component.OnThisDayCard
 import com.sysadmindoc.nimbus.ui.component.WindTrendCard
 import com.sysadmindoc.nimbus.ui.component.CloudCoverCard
 import com.sysadmindoc.nimbus.data.repository.CardType
@@ -964,6 +965,11 @@ private fun RenderCard(
         CardType.VISIBILITY -> VisibilityCard(
             visibilityMeters = data.current.visibility,
             hourly = data.hourly,
+            modifier = modifier,
+        )
+        CardType.ON_THIS_DAY -> OnThisDayCard(
+            data = state.onThisDay,
+            forecastHighC = data.daily.firstOrNull()?.temperatureHigh,
             modifier = modifier,
         )
     }
