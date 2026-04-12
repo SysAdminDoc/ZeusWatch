@@ -2,6 +2,19 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.7.0] - 2026-04-12
+
+### Added
+- **"On This Day" card** (28th dynamic card). Surfaces historical weather context for the current calendar date and location:
+  - 10-year average high temperature for this date at this location, with a color-coded delta badge comparing today's forecast high (amber = warmer than normal, blue = cooler, neutral = near normal).
+  - Record high and record low for this date over the sampled window.
+  - Prior-year highs rendered as a 52dp sparkline with an average-line guideline and year tick labels at both ends.
+  - Polite empty state when the archive has no usable observations (polar regions, brand-new settlements, first run without network and no cache).
+  - TalkBack: sparkline carries a semantic `contentDescription` describing the temperature range.
+- **Open-Meteo Archive integration**. New `OpenMeteoArchiveApi` Retrofit interface against `archive-api.open-meteo.com`, wired through a new `@Named("archive")` Retrofit in `NetworkModule`.
+- **Immutable historical cache**. `OnThisDayRepository` persists responses in a dedicated `nimbus_on_this_day` SharedPreferences file, keyed by `lat,lon,MM-dd` with `Locale.US` formatting (following the v1.6.5 locale-safe cache-key pattern). Historical observations don't change once logged, so there is no TTL — first access per (location, date) costs one archive call; every subsequent access is instant and offline-safe.
+- `CardType.ON_THIS_DAY` — disabled by default; users enable it via the existing Settings card-order screen.
+
 ## [1.6.5] - 2026-04-11
 
 Third QA audit pass focused on card composables, charts, accessibility, theme, and data-parsing robustness. 27 findings raised, 25 rejected as false positives (already-guarded divide-by-zeros, already-clamped path math, semantic AQI colors that follow EPA standards and shouldn't be themed). 2 latent i18n bugs confirmed and fixed.

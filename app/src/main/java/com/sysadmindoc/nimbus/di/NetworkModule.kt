@@ -14,6 +14,7 @@ import com.sysadmindoc.nimbus.data.api.MeteoAlarmApi
 import com.sysadmindoc.nimbus.data.api.NwsAlertAdapter
 import com.sysadmindoc.nimbus.data.api.NwsAlertApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
+import com.sysadmindoc.nimbus.data.api.OpenMeteoArchiveApi
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import dagger.Module
 import dagger.Provides
@@ -114,6 +115,23 @@ object NetworkModule {
     @Singleton
     fun provideOpenMeteoApi(@Named("weather") retrofit: Retrofit): OpenMeteoApi {
         return retrofit.create(OpenMeteoApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    @Named("archive")
+    fun provideArchiveRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(OpenMeteoArchiveApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOpenMeteoArchiveApi(@Named("archive") retrofit: Retrofit): OpenMeteoArchiveApi {
+        return retrofit.create(OpenMeteoArchiveApi::class.java)
     }
 
     @Provides

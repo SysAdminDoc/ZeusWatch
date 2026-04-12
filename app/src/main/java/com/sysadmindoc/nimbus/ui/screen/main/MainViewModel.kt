@@ -71,6 +71,7 @@ class MainViewModel @Inject constructor(
     private val prefs: UserPreferences,
     private val summaryEngine: SummaryEngine,
     private val connectivityObserver: ConnectivityObserver,
+    private val onThisDayRepository: com.sysadmindoc.nimbus.data.repository.OnThisDayRepository,
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -287,6 +288,7 @@ class MainViewModel @Inject constructor(
                     coroutineScope {
                         launch { fetchAlerts(lat, lon) }
                         launch { fetchAirQuality(lat, lon) }
+                        launch { fetchOnThisDay(lat, lon) }
                         launch { fetchAstronomy(data) }
                         launch { fetchRadarPreview(lat, lon) }
                         launch { fetchNowcast(lat, lon) }
@@ -374,6 +376,21 @@ class MainViewModel @Inject constructor(
                 onFailure = { Log.w(TAG, "fetchNowcast failed: ${it.message}") }
             )
         } catch (e: Exception) { Log.w(TAG, "fetchNowcast failed", e) }
+    }
+
+    // ── On This Day (historical same-date snapshot) ──────────────────────
+
+    private suspend fun fetchOnThisDay(lat: Double, lon: Double) {
+        try {
+            val data = onThisDayRepository.getOnThisDay(lat, lon)
+            _uiState.update { it.copy(onThisDay = data) }
+        } catch (e: Exception) {
+            Log.w(TAG, "fetchOnThisDay failed: ${e.message}")
+            // Keep any previously cached state; only overwrite with null on first try.
+            if (_uiState.value.onThisDay == null) {
+                _uiState.update { it.copy(onThisDay = null) }
+            }
+        }
     }
 
     // ── Yesterday Comparison ──────────────────────────────────────────────
@@ -635,6 +652,7 @@ data class MainUiState(
     val petSafetyAlerts: ImmutableList<PetSafetyAlert> = persistentListOf(),
     val goldenHourTimes: Pair<String, String>? = null,
     val isOffline: Boolean = false,
+    val onThisDay: com.sysadmindoc.nimbus.data.model.OnThisDayData? = null,
 )
 
 private data class DerivedWeatherState(

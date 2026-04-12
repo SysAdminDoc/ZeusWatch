@@ -169,6 +169,7 @@ class MainViewModelTest {
             prefs = prefs,
             summaryEngine = summaryEngine,
             connectivityObserver = connectivityObserver,
+            onThisDayRepository = mockk(relaxed = true),
             defaultDispatcher = testDispatcher,
             savedStateHandle = savedState,
         )
