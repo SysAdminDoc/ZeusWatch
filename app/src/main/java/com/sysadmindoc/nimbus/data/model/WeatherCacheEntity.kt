@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.Locale
 
 /**
  * Room entity storing serialized weather data for offline access.
@@ -20,8 +21,11 @@ data class WeatherCacheEntity(
     val cachedAt: Long = System.currentTimeMillis(),
 ) {
     companion object {
+        // Must use Locale.US — default-locale format() produces comma decimals
+        // in de_DE / fr_FR / etc. (e.g. "39,74,-104,99"), which both corrupts
+        // the stored key format and loses cache hits if the device locale changes.
         fun makeKey(lat: Double, lon: Double): String =
-            "%.2f,%.2f".format(lat, lon)
+            String.format(Locale.US, "%.2f,%.2f", lat, lon)
 
         const val DEFAULT_MAX_AGE_MS = 30 * 60 * 1000L // 30 minutes
         const val MAX_AGE_MS = DEFAULT_MAX_AGE_MS // For backward compatibility

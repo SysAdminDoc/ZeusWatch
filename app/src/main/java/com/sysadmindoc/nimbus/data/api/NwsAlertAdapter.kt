@@ -3,6 +3,8 @@ package com.sysadmindoc.nimbus.data.api
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import retrofit2.HttpException
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,7 +23,10 @@ class NwsAlertAdapter @Inject constructor(
 
     override suspend fun getAlerts(lat: Double, lon: Double): Result<List<WeatherAlert>> {
         return try {
-            val point = "%.4f,%.4f".format(lat, lon)
+            // Must force Locale.US — default-locale format() produces comma
+            // decimals ("39,7392,-104,9903") in de_DE/fr_FR/etc., which NWS
+            // then rejects as a malformed point.
+            val point = String.format(Locale.US, "%.4f,%.4f", lat, lon)
             val response = nwsApi.getActiveAlerts(point)
             val alerts = response.features.mapNotNull { feature ->
                 val props = feature.properties ?: return@mapNotNull null
@@ -43,15 +48,17 @@ class NwsAlertAdapter @Inject constructor(
                 )
             }
             Result.success(alerts)
-        } catch (e: Exception) {
-            // NWS returns 404/400 for non-US coordinates — treat as empty
-            if (e.message?.contains("404") == true ||
-                e.message?.contains("400") == true
-            ) {
+        } catch (e: HttpException) {
+            // NWS returns 404/400 for non-US coordinates — treat as empty.
+            // Use the HTTP code directly instead of `e.message?.contains("404")`,
+            // which is fragile to Retrofit/OkHttp message-format changes.
+            if (e.code() == 404 || e.code() == 400) {
                 Result.success(emptyList())
             } else {
                 Result.failure(e)
             }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }
