@@ -162,7 +162,13 @@ fun SettingsScreen(
                 viewModel.setPersistentWeatherNotif(false)
             }
         },
-        onNowcastingAlerts = { viewModel.setNowcastingAlerts(it) },
+        onNowcastingAlerts = { enabled ->
+            if (enabled) {
+                enableNotificationsIfPermitted { viewModel.setNowcastingAlerts(true) }
+            } else {
+                viewModel.setNowcastingAlerts(false)
+            }
+        },
         onDrivingAlerts = { viewModel.setDrivingAlerts(it) },
         onHealthAlertsEnabled = { viewModel.setHealthAlertsEnabled(it) },
         // Data display

@@ -12,6 +12,7 @@ import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
+import com.sysadmindoc.nimbus.util.NowcastAlertWorker
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.widget.WidgetRefreshWorker
 import dagger.hilt.android.HiltAndroidApp
@@ -52,6 +53,12 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
             } else {
                 AlertCheckWorker.cancel(this@NimbusApplication)
                 AlertNotificationHelper.dismissAll(this@NimbusApplication)
+            }
+
+            if (settings.nowcastingAlerts) {
+                NowcastAlertWorker.schedule(this@NimbusApplication)
+            } else {
+                NowcastAlertWorker.cancel(this@NimbusApplication)
             }
 
             if (!settings.persistentWeatherNotif) {
