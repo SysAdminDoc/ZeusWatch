@@ -32,6 +32,12 @@ object AlertNotificationHelper {
     private const val CHANNEL_MODERATE = "nimbus_alerts_moderate"
     private const val CHANNEL_MINOR = "nimbus_alerts_minor"
 
+    // Nowcasting: "Rain starts in 15 min" / "Rain stops in 10 min". Its own
+    // channel because semantically it's not a severity-gated severe-weather
+    // warning — it's a short-horizon precipitation heads-up.
+    const val CHANNEL_NOWCAST = "nimbus_alerts_nowcast"
+    const val NOTIFICATION_ID_NOWCAST = 0x1201
+
     fun createChannels(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -84,8 +90,55 @@ object AlertNotificationHelper {
             }
         )
 
+        // Nowcast: short-horizon precipitation heads-up ("Rain in 15 min").
+        // Default importance so it makes a sound but doesn't bypass DND.
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_NOWCAST, "Rain Nowcast", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                group = GROUP_ID
+                description = "Proactive notifications when rain is about to start or stop at your current location."
+            }
+        )
+
         // Delete the old single channel if it exists (clean migration)
         nm.deleteNotificationChannel("nimbus_weather_alerts")
+    }
+
+    /**
+     * Show a precipitation nowcast notification. [title] / [body] are composed
+     * by the caller ([NowcastAlertWorker]) so this helper stays presentation-only.
+     * Uses a stable notification id so repeated notifications replace (not stack).
+     */
+    fun showNowcastNotification(
+        context: Context,
+        title: String,
+        body: String,
+    ) {
+        if (!hasNotificationPermission(context)) return
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, NOTIFICATION_ID_NOWCAST, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_NOWCAST)
+            .setSmallIcon(R.drawable.ic_alert)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .build()
+
+        try {
+            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_NOWCAST, notification)
+        } catch (_: SecurityException) {
+            // Permission revoked after check
+        }
     }
 
     fun channelForSeverity(severity: AlertSeverity): String = when (severity) {
