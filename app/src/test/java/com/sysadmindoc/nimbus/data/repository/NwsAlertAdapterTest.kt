@@ -12,9 +12,16 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.test.runTest
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import retrofit2.HttpException
+import retrofit2.Response
+
+private fun httpException(code: Int): HttpException =
+    HttpException(Response.error<Any>(code, "".toResponseBody("text/plain".toMediaType())))
 
 class NwsAlertAdapterTest {
 
@@ -87,6 +94,22 @@ class NwsAlertAdapterTest {
         adapter.getAlerts(39.7392, -104.9847)
 
         assertEquals("39.7392,-104.9847", pointSlot.captured)
+    }
+
+    @Test
+    fun getAlertsFormatsPointWithDotDecimalOnLocalesThatUseCommaDecimal() = runTest {
+        // Regression: default-locale format() on de_DE / fr_FR produces comma
+        // decimals ("39,7392,-104,9847"), which NWS rejects as a malformed point.
+        val original = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("de-DE"))
+            val pointSlot = slot<String>()
+            coEvery { api.getActiveAlerts(capture(pointSlot), any(), any()) } returns NwsAlertResponse()
+            adapter.getAlerts(39.7392, -104.9847)
+            assertEquals("39.7392,-104.9847", pointSlot.captured)
+        } finally {
+            java.util.Locale.setDefault(original)
+        }
     }
 
     @Test
@@ -234,7 +257,7 @@ class NwsAlertAdapterTest {
 
     @Test
     fun getAlertsReturnsEmptyListOn404() = runTest {
-        coEvery { api.getActiveAlerts(any(), any(), any()) } throws Exception("HTTP 404")
+        coEvery { api.getActiveAlerts(any(), any(), any()) } throws httpException(404)
 
         val result = adapter.getAlerts(39.0, -104.0)
         assertTrue(result.isSuccess)
@@ -243,7 +266,7 @@ class NwsAlertAdapterTest {
 
     @Test
     fun getAlertsReturnsEmptyListOn400() = runTest {
-        coEvery { api.getActiveAlerts(any(), any(), any()) } throws Exception("HTTP 400")
+        coEvery { api.getActiveAlerts(any(), any(), any()) } throws httpException(400)
 
         val result = adapter.getAlerts(39.0, -104.0)
         assertTrue(result.isSuccess)
@@ -261,7 +284,7 @@ class NwsAlertAdapterTest {
 
     @Test
     fun getAlertsReturnsFailureOnServerError() = runTest {
-        coEvery { api.getActiveAlerts(any(), any(), any()) } throws Exception("HTTP 500 Internal Server Error")
+        coEvery { api.getActiveAlerts(any(), any(), any()) } throws httpException(500)
 
         val result = adapter.getAlerts(39.0, -104.0)
         assertTrue(result.isFailure)

@@ -2,6 +2,27 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.6.5] - 2026-04-11
+
+Third QA audit pass focused on card composables, charts, accessibility, theme, and data-parsing robustness. 27 findings raised, 25 rejected as false positives (already-guarded divide-by-zeros, already-clamped path math, semantic AQI colors that follow EPA standards and shouldn't be themed). 2 latent i18n bugs confirmed and fixed.
+
+### Fixed
+- **NWS alert requests malformed on comma-decimal locales** — `NwsAlertAdapter` built its request point via `"%.4f,%.4f".format(lat, lon)` using the default locale. On de_DE / fr_FR / es_ES and similar locales, this produces `"39,7392,-104,9847"` — comma-decimal output that the NWS API parses as four fields and rejects. The adapter now uses `String.format(Locale.US, ...)` explicitly. Regression test added (`getAlertsFormatsPointWithDotDecimalOnLocalesThatUseCommaDecimal`).
+- **NWS HTTP error handling fragile to Retrofit message-format changes** — `NwsAlertAdapter` detected the "non-US coordinates → 404" case via `e.message?.contains("404")`, which breaks if Retrofit's exception message format ever changes. The adapter now catches `retrofit2.HttpException` and inspects `e.code()` directly. All other exceptions still propagate as `Result.failure`.
+- **Weather cache key locale-dependent** — `WeatherCacheEntity.makeKey` formatted lat/lon with default locale, producing locale-dependent cache keys (`"39,74,-104,99"` on a German device vs `"39.74,-104.99"` elsewhere). Cache reads stayed consistent *within* a locale, but if the user ever changed device locale, every existing cache entry became unreachable. Now pinned to `Locale.US`.
+
+### Audit findings rejected (verified against real code)
+- `PrecipitationChartCard` divide-by-zero — `if (data.isEmpty()) return` on line 42 + `if (maxProb > 0)` on line 90 already guard the Canvas
+- `MoonPhaseCard` illFraction clamping — already `.coerceIn(0.0, 1.0)` on line 136
+- `VisibilityCard` thresholds bounds — list has 7 elements, loop `for (i in 0 until 6)` accesses indices 0–6 safely
+- `UvIndexBar` divide-by-zero — gated by `if (uvIndex >= 1)` on line 88
+- `AqiGauge` hardcoded colors break AMOLED — colors are semantic EPA AQI tiers and shouldn't be themed away
+- 10+ other hardcoded-color findings — semantic data colors, not UI chrome
+- `WeatherWallpaperService` paint.alpha clamping — particle spawn caps alpha at 0.5; multiplied by 255 = max 127
+- `NwsAlertAdapter` `e.message.contains` issue — **confirmed and fixed above**
+- Various `contentDescription = null` on decorative icons — intentional
+- `WeatherWallpaperService` frame rate hardcoded 30 fps — acceptable tradeoff for battery
+
 ## [1.6.4] - 2026-04-11
 
 Second QA audit pass. v1.6.3 covered hot files from the v1.6.2 stabilization diff; this round audited everything else (main view model, repositories, location services, utilities, theme, wallpaper, icon packs). 22 findings were raised, 20 were verified as false positives and rejected, and 2 latent bugs were confirmed and fixed.
