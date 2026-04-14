@@ -1,6 +1,6 @@
 # ZeusWatch
 
-![Version](https://img.shields.io/badge/version-1.5.0-blue)
+![Version](https://img.shields.io/badge/version-1.9.0-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Android%208.0+-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white)
@@ -8,7 +8,7 @@
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 ![Build](https://github.com/SysAdminDoc/zeuswatch/actions/workflows/build.yml/badge.svg)
 
-> A free, open-source Android weather app with a premium dark UI, 25 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, and Environment Canada.
+> A free, open-source Android weather app with a premium dark UI, 28 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, and Environment Canada.
 
 <!-- Screenshots go here after first release build -->
 <!-- ![Screenshots](docs/screenshots.png) -->
@@ -78,6 +78,7 @@ Install the APK from `app/build/outputs/apk/standard/debug/` or open in Android 
 | **Health Alerts** | Migraine triggers (pressure/temp swings, configurable threshold), respiratory (humidity extremes), arthritis (temp swing) |
 | **Haptic Feedback** | Severity-appropriate vibration patterns when alerts display |
 | **Expired Alert Filtering** | Skips alerts past their expiration timestamp |
+| **Custom Alert Rules** | User-defined thresholds: today's high/low, wind gusts, 24h rain, UV peak. Hourly background evaluation with per-rule dedupe. Separate notification channel |
 | **Pressure Trend** | Rising/Falling/Steady indicator computed from hourly surface pressure data |
 
 ### Radar & Maps

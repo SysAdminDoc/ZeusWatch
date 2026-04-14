@@ -38,6 +38,12 @@ object AlertNotificationHelper {
     const val CHANNEL_NOWCAST = "nimbus_alerts_nowcast"
     const val NOTIFICATION_ID_NOWCAST = 0x1201
 
+    // User-defined custom alert rules ("temp > 32°C tomorrow", etc.). Separate
+    // channel so users can silence custom rules without losing severe alerts.
+    const val CHANNEL_CUSTOM = "nimbus_alerts_custom"
+    /** Base id for per-rule notifications; we offset by rule hash so multiple rules don't collide. */
+    private const val NOTIFICATION_ID_CUSTOM_BASE = 0x1400
+
     fun createChannels(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -99,6 +105,14 @@ object AlertNotificationHelper {
             }
         )
 
+        // Custom alert rules: user-configured thresholds.
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_CUSTOM, "Custom Alerts", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                group = GROUP_ID
+                description = "Notifications for thresholds you set yourself (temperature, wind, rain, UV)."
+            }
+        )
+
         // Delete the old single channel if it exists (clean migration)
         nm.deleteNotificationChannel("nimbus_weather_alerts")
     }
@@ -136,6 +150,44 @@ object AlertNotificationHelper {
 
         try {
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_NOWCAST, notification)
+        } catch (_: SecurityException) {
+            // Permission revoked after check
+        }
+    }
+
+    /**
+     * Show a user-defined custom-alert-rule notification. [ruleKey] is a
+     * per-rule stable hash so multiple rules don't clobber each other; the
+     * same rule firing tomorrow will replace today's notification.
+     */
+    fun showCustomAlertNotification(
+        context: Context,
+        ruleKey: String,
+        title: String,
+        body: String,
+    ) {
+        if (!hasNotificationPermission(context)) return
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, ruleKey.hashCode(), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(context, CHANNEL_CUSTOM)
+            .setSmallIcon(R.drawable.ic_alert)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
+            .build()
+        try {
+            val id = NOTIFICATION_ID_CUSTOM_BASE + (ruleKey.hashCode() and 0xFFFF)
+            NotificationManagerCompat.from(context).notify(id, notification)
         } catch (_: SecurityException) {
             // Permission revoked after check
         }
