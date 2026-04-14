@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -15,13 +17,29 @@ android {
         applicationId = "com.sysadmindoc.nimbus.wear"
         minSdk = 30
         targetSdk = 35
-        versionCode = 50
-        versionName = "1.3.0"
+        versionCode = 51
+        versionName = "1.10.0"
+    }
+
+    signingConfigs {
+        create("release") {
+            val props = Properties()
+            val propsFile = rootProject.file("local.properties")
+            if (propsFile.exists()) {
+                propsFile.inputStream().use { stream -> props.load(stream) }
+            }
+            storeFile = file(props.getProperty("RELEASE_STORE_FILE", "../zeuswatch.jks"))
+            storePassword = props.getProperty("RELEASE_STORE_PASSWORD", "")
+            keyAlias = props.getProperty("RELEASE_KEY_ALIAS", "")
+            keyPassword = props.getProperty("RELEASE_KEY_PASSWORD", "")
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -72,6 +90,9 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.retrofit.kotlinx.serialization)
+
+    // Location
+    implementation(libs.play.services.location)
 
     // Lifecycle
     implementation(libs.lifecycle.runtime)
