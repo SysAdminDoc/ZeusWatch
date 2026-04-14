@@ -25,6 +25,12 @@ class WeatherSourceManager @Inject constructor(
     private val openMeteoMinutelyAdapter: OpenMeteoMinutelyAdapter,
     private val nwsAlertAdapter: AlertSourceManagerAdapter,
     private val openMeteoAqiAdapter: OpenMeteoAqiAdapter,
+    private val owmForecastAdapter: OwmForecastAdapter,
+    private val owmAlertAdapter: OwmAlertAdapter,
+    private val owmAqiAdapter: OwmAqiAdapter,
+    private val pirateWeatherAdapter: PirateWeatherForecastAdapter,
+    private val brightSkyForecastAdapter: BrightSkyForecastAdapter,
+    private val brightSkyAlertAdapter: BrightSkyAlertAdapter,
 ) {
 
     // ── Forecast ────────────────────────────────────────────────────────
@@ -59,9 +65,9 @@ class WeatherSourceManager @Inject constructor(
         locationName: String?,
     ): Result<WeatherData> = when (provider) {
         WeatherSourceProvider.OPEN_METEO -> openMeteoAdapter.getWeather(latitude, longitude, locationName)
-        WeatherSourceProvider.OPEN_WEATHER_MAP -> stubResult("OpenWeatherMap forecast")
-        WeatherSourceProvider.PIRATE_WEATHER -> stubResult("Pirate Weather forecast")
-        WeatherSourceProvider.BRIGHT_SKY -> stubResult("Bright Sky forecast")
+        WeatherSourceProvider.OPEN_WEATHER_MAP -> owmForecastAdapter.getWeather(latitude, longitude, locationName)
+        WeatherSourceProvider.PIRATE_WEATHER -> pirateWeatherAdapter.getWeather(latitude, longitude, locationName)
+        WeatherSourceProvider.BRIGHT_SKY -> brightSkyForecastAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.ENVIRONMENT_CANADA -> stubResult("Environment Canada forecast")
         else -> Result.failure(UnsupportedOperationException("${provider.displayName} does not support forecasts"))
     }
@@ -98,8 +104,8 @@ class WeatherSourceManager @Inject constructor(
         WeatherSourceProvider.NWS -> nwsAlertAdapter.getAlerts(latitude, longitude)
         WeatherSourceProvider.METEOALARM -> nwsAlertAdapter.getAlerts(latitude, longitude)
         WeatherSourceProvider.JMA -> nwsAlertAdapter.getAlerts(latitude, longitude)
-        WeatherSourceProvider.OPEN_WEATHER_MAP -> stubResult("OpenWeatherMap alerts")
-        WeatherSourceProvider.BRIGHT_SKY -> stubResult("Bright Sky alerts")
+        WeatherSourceProvider.OPEN_WEATHER_MAP -> owmAlertAdapter.getAlerts(latitude, longitude)
+        WeatherSourceProvider.BRIGHT_SKY -> brightSkyAlertAdapter.getAlerts(latitude, longitude)
         WeatherSourceProvider.ENVIRONMENT_CANADA -> stubResult("Environment Canada alerts")
         else -> Result.failure(UnsupportedOperationException("${provider.displayName} does not support alerts"))
     }
@@ -122,7 +128,7 @@ class WeatherSourceManager @Inject constructor(
         longitude: Double,
     ): Result<AirQualityData> = when (provider) {
         WeatherSourceProvider.OPEN_METEO -> openMeteoAqiAdapter.getAirQuality(latitude, longitude)
-        WeatherSourceProvider.OPEN_WEATHER_MAP -> stubResult("OpenWeatherMap AQI")
+        WeatherSourceProvider.OPEN_WEATHER_MAP -> owmAqiAdapter.getAirQuality(latitude, longitude)
         else -> Result.failure(UnsupportedOperationException("${provider.displayName} does not support air quality"))
     }
 
