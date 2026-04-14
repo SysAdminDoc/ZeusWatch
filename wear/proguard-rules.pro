@@ -18,3 +18,7 @@
 
 # Complications
 -keep class androidx.wear.watchface.complications.** { *; }
+
+# Google Play Services Location
+-keep class com.google.android.gms.location.** { *; }
+-dontwarn com.google.android.gms.**
