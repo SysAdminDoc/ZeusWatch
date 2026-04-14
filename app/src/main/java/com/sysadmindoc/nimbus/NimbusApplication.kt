@@ -12,6 +12,7 @@ import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
+import com.sysadmindoc.nimbus.util.CustomAlertWorker
 import com.sysadmindoc.nimbus.util.NowcastAlertWorker
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.widget.WidgetRefreshWorker
@@ -59,6 +60,15 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
                 NowcastAlertWorker.schedule(this@NimbusApplication)
             } else {
                 NowcastAlertWorker.cancel(this@NimbusApplication)
+            }
+
+            // Custom-rule worker only runs if the user has actually authored
+            // enabled rules. Avoids burning battery on a no-op hourly check.
+            val hasEnabledCustomRules = prefs.customAlertRules.first().any { it.enabled }
+            if (hasEnabledCustomRules) {
+                CustomAlertWorker.schedule(this@NimbusApplication)
+            } else {
+                CustomAlertWorker.cancel(this@NimbusApplication)
             }
 
             if (!settings.persistentWeatherNotif) {
