@@ -32,18 +32,15 @@ enum class WeatherSourceProvider(
         displayName = "OpenWeatherMap",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.ALERTS, WeatherDataType.AIR_QUALITY),
         requiresApiKey = true,
-        implemented = false,
     ),
     PIRATE_WEATHER(
         displayName = "Pirate Weather",
         supportedTypes = setOf(WeatherDataType.FORECAST),
         requiresApiKey = true,
-        implemented = false,
     ),
     BRIGHT_SKY(
         displayName = "Bright Sky (DWD)",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.ALERTS),
-        implemented = false,
     ),
     ENVIRONMENT_CANADA(
         displayName = "Environment Canada",

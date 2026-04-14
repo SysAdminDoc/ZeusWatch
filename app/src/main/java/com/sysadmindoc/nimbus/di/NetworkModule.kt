@@ -4,6 +4,7 @@ import com.sysadmindoc.nimbus.BuildConfig
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.sysadmindoc.nimbus.data.api.AirQualityApi
 import com.sysadmindoc.nimbus.data.api.AlertSourceAdapter
+import com.sysadmindoc.nimbus.data.api.BrightSkyApi
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertAdapter
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertApi
 import com.sysadmindoc.nimbus.data.api.GeocodingApi
@@ -15,6 +16,8 @@ import com.sysadmindoc.nimbus.data.api.NwsAlertAdapter
 import com.sysadmindoc.nimbus.data.api.NwsAlertApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoArchiveApi
+import com.sysadmindoc.nimbus.data.api.OpenWeatherMapApi
+import com.sysadmindoc.nimbus.data.api.PirateWeatherApi
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import dagger.Module
 import dagger.Provides
@@ -263,5 +266,81 @@ object NetworkModule {
         ecccAdapter: EnvironmentCanadaAlertAdapter,
     ): Set<@JvmSuppressWildcards AlertSourceAdapter> {
         return setOf(nwsAdapter, meteoAlarmAdapter, jmaAdapter, ecccAdapter)
+    }
+
+    // --- OpenWeatherMap ---
+
+    @Provides
+    @Singleton
+    @Named("owm")
+    fun provideOwmRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(OpenWeatherMapApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOpenWeatherMapApi(@Named("owm") retrofit: Retrofit): OpenWeatherMapApi {
+        return retrofit.create(OpenWeatherMapApi::class.java)
+    }
+
+    /** Separate OWM instance for Air Pollution (different base URL). */
+    @Provides
+    @Singleton
+    @Named("owm_aqi")
+    fun provideOwmAqiRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(OpenWeatherMapApi.AIR_POLLUTION_BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    @Named("owm_aqi")
+    fun provideOwmAqiApi(@Named("owm_aqi") retrofit: Retrofit): OpenWeatherMapApi {
+        return retrofit.create(OpenWeatherMapApi::class.java)
+    }
+
+    // --- Pirate Weather ---
+
+    @Provides
+    @Singleton
+    @Named("pirateweather")
+    fun providePirateWeatherRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(PirateWeatherApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun providePirateWeatherApi(@Named("pirateweather") retrofit: Retrofit): PirateWeatherApi {
+        return retrofit.create(PirateWeatherApi::class.java)
+    }
+
+    // --- Bright Sky (DWD) ---
+
+    @Provides
+    @Singleton
+    @Named("brightsky")
+    fun provideBrightSkyRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(BrightSkyApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideBrightSkyApi(@Named("brightsky") retrofit: Retrofit): BrightSkyApi {
+        return retrofit.create(BrightSkyApi::class.java)
     }
 }
