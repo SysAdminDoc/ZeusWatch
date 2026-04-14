@@ -40,6 +40,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.sysadmindoc.nimbus.ui.screen.compare.CompareScreen
+import com.sysadmindoc.nimbus.ui.screen.customalerts.CustomAlertsScreen
 import com.sysadmindoc.nimbus.ui.screen.locations.LocationsScreen
 import com.sysadmindoc.nimbus.ui.screen.main.MainScreen
 import com.sysadmindoc.nimbus.ui.screen.radar.RadarScreen
@@ -57,6 +58,7 @@ object Routes {
     const val RADAR = "radar/{lat}/{lon}"
     const val LOCATIONS = "locations"
     const val COMPARE = "compare"
+    const val CUSTOM_ALERTS = "custom_alerts"
 
     fun radar(lat: Double, lon: Double): String = "radar/$lat/$lon"
     fun mainWithLocation(id: Long): String = "main/$id"
@@ -115,6 +117,12 @@ fun NimbusNavHost(
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToCustomAlerts = { navController.navigate(Routes.CUSTOM_ALERTS) },
+            )
+        }
+        composable(Routes.CUSTOM_ALERTS) {
+            CustomAlertsScreen(
                 onBack = { navController.popBackStack() },
             )
         }

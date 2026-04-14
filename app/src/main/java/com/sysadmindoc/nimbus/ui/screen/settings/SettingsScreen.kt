@@ -32,6 +32,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
@@ -78,6 +79,7 @@ import com.sysadmindoc.nimbus.ui.theme.*
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onNavigateToCustomAlerts: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -125,6 +127,7 @@ fun SettingsScreen(
     SettingsContent(
         settings = settings,
         onBack = onBack,
+        onNavigateToCustomAlerts = onNavigateToCustomAlerts,
         notificationsPermissionGranted = notificationsPermissionGranted,
         availableIconPacks = availableIconPacks,
         onTempUnit = { viewModel.setTempUnit(it) },
@@ -209,6 +212,7 @@ private enum class SettingsCategory(val label: String, val summary: String) {
 internal fun SettingsContent(
     settings: NimbusSettings,
     onBack: () -> Unit,
+    onNavigateToCustomAlerts: () -> Unit = {},
     notificationsPermissionGranted: Boolean = true,
     onTempUnit: (TempUnit) -> Unit = {},
     onWindUnit: (WindUnit) -> Unit = {},
@@ -617,6 +621,36 @@ internal fun SettingsContent(
                 checked = settings.nowcastingAlerts,
                 onCheckedChange = { onNowcastingAlerts(it) },
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(NimbusCardBg)
+                    .clickable(onClick = onNavigateToCustomAlerts)
+                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Custom Alert Rules",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = NimbusTextPrimary,
+                    )
+                    Text(
+                        "Set thresholds for temperature, wind, rain, UV",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NimbusTextSecondary,
+                    )
+                }
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = NimbusTextTertiary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
             SettingToggle(
                 label = "Driving Condition Alerts",
                 sublabel = "Alerts for hazardous driving conditions",
