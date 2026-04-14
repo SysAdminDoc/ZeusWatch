@@ -3,6 +3,8 @@ package com.sysadmindoc.nimbus.wear
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sysadmindoc.nimbus.wear.data.HourlyEntry
+import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +17,7 @@ import javax.inject.Inject
 @HiltViewModel
 class WearWeatherViewModel @Inject constructor(
     private val repository: WearWeatherRepository,
+    private val locationProvider: WearLocationProvider,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WearUiState())
@@ -27,7 +30,12 @@ class WearWeatherViewModel @Inject constructor(
     fun loadWeather() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            repository.getCurrentWeather().fold(
+            val loc = locationProvider.getLocation()
+            repository.getCurrentWeather(
+                lat = loc.lat,
+                lon = loc.lon,
+                locationName = loc.name,
+            ).fold(
                 onSuccess = { data ->
                     _uiState.update {
                         it.copy(
@@ -41,6 +49,9 @@ class WearWeatherViewModel @Inject constructor(
                             windSpeed = data.windSpeed,
                             uvIndex = data.uvIndex,
                             precipChance = data.precipChance,
+                            isDay = data.isDay,
+                            weatherCode = data.weatherCode,
+                            hourly = data.hourly,
                         )
                     }
                 },
@@ -48,10 +59,12 @@ class WearWeatherViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(isLoading = false, error = e.message ?: "Failed to load weather")
                     }
-                }
+                },
             )
         }
     }
+
+    fun hasLocationPermission(): Boolean = locationProvider.hasPermission()
 }
 
 @Stable
@@ -67,4 +80,7 @@ data class WearUiState(
     val windSpeed: Int = 0,
     val uvIndex: Int = 0,
     val precipChance: Int = 0,
+    val isDay: Boolean = true,
+    val weatherCode: Int = 0,
+    val hourly: List<HourlyEntry> = emptyList(),
 )
