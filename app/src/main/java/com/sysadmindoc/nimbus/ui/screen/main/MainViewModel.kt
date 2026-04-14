@@ -436,10 +436,15 @@ class MainViewModel @Inject constructor(
                 persistentListOf()
             }
 
-            val healthAlerts = HealthAlertEvaluator.evaluate(
-                hourly = data.hourly,
-                pressureThresholdHpa = settings.migrainePressureThreshold,
-            )
+            val healthAlerts = if (settings.healthAlertsEnabled) {
+                HealthAlertEvaluator.evaluate(
+                    hourly = data.hourly,
+                    pressureThresholdHpa = settings.migrainePressureThreshold,
+                    enableMigraine = settings.migraineAlerts,
+                )
+            } else {
+                persistentListOf()
+            }
 
             val clothingSuggestions = ClothingSuggestionEvaluator.evaluate(data.current)
             val petSafetyAlerts = PetSafetyEvaluator.evaluate(data.current)
