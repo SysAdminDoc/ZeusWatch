@@ -7,6 +7,7 @@ import com.sysadmindoc.nimbus.data.model.IconPack
 import com.sysadmindoc.nimbus.data.repository.*
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
+import com.sysadmindoc.nimbus.util.HealthAlertWorker
 import com.sysadmindoc.nimbus.util.NowcastAlertWorker
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.util.IconPackManager
@@ -100,7 +101,14 @@ class SettingsViewModel @Inject constructor(
         }
     }
     fun setDrivingAlerts(enabled: Boolean) = viewModelScope.launch { prefs.setDrivingAlerts(enabled) }
-    fun setHealthAlertsEnabled(enabled: Boolean) = viewModelScope.launch { prefs.setHealthAlertsEnabled(enabled) }
+    fun setHealthAlertsEnabled(enabled: Boolean) = viewModelScope.launch {
+        prefs.setHealthAlertsEnabled(enabled)
+        if (enabled) {
+            HealthAlertWorker.schedule(appContext)
+        } else {
+            HealthAlertWorker.cancel(appContext)
+        }
+    }
     fun setMigraineAlerts(enabled: Boolean) = viewModelScope.launch { prefs.setMigraineAlerts(enabled) }
 
     // Data display

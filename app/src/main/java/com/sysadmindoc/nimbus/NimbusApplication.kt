@@ -13,6 +13,7 @@ import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
 import com.sysadmindoc.nimbus.util.CustomAlertWorker
+import com.sysadmindoc.nimbus.util.HealthAlertWorker
 import com.sysadmindoc.nimbus.util.NowcastAlertWorker
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.widget.WidgetRefreshWorker
@@ -60,6 +61,12 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
                 NowcastAlertWorker.schedule(this@NimbusApplication)
             } else {
                 NowcastAlertWorker.cancel(this@NimbusApplication)
+            }
+
+            if (settings.healthAlertsEnabled) {
+                HealthAlertWorker.schedule(this@NimbusApplication)
+            } else {
+                HealthAlertWorker.cancel(this@NimbusApplication)
             }
 
             // Custom-rule worker only runs if the user has actually authored

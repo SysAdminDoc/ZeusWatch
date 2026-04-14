@@ -38,6 +38,11 @@ object AlertNotificationHelper {
     const val CHANNEL_NOWCAST = "nimbus_alerts_nowcast"
     const val NOTIFICATION_ID_NOWCAST = 0x1201
 
+    // Health alerts: migraine pressure, respiratory humidity, arthritis temp swings.
+    // Separate channel so users can control health notification volume independently.
+    const val CHANNEL_HEALTH = "nimbus_alerts_health"
+    private const val NOTIFICATION_ID_HEALTH_BASE = 0x1300
+
     // User-defined custom alert rules ("temp > 32°C tomorrow", etc.). Separate
     // channel so users can silence custom rules without losing severe alerts.
     const val CHANNEL_CUSTOM = "nimbus_alerts_custom"
@@ -105,6 +110,14 @@ object AlertNotificationHelper {
             }
         )
 
+        // Health alerts: migraine pressure, respiratory, arthritis triggers.
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_HEALTH, "Health Alerts", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                group = GROUP_ID
+                description = "Health-related weather alerts: migraine pressure triggers, respiratory humidity, joint pain temperature swings."
+            }
+        )
+
         // Custom alert rules: user-configured thresholds.
         nm.createNotificationChannel(
             NotificationChannel(CHANNEL_CUSTOM, "Custom Alerts", NotificationManager.IMPORTANCE_DEFAULT).apply {
@@ -150,6 +163,53 @@ object AlertNotificationHelper {
 
         try {
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_NOWCAST, notification)
+        } catch (_: SecurityException) {
+            // Permission revoked after check
+        }
+    }
+
+    /**
+     * Show a health-related weather notification (migraine, respiratory, arthritis).
+     * Uses the dedicated CHANNEL_HEALTH. Notification ID is offset by alert type
+     * ordinal so different health alert types don't clobber each other.
+     */
+    fun showHealthNotification(
+        context: Context,
+        title: String,
+        body: String,
+        detail: String = "",
+        severity: HealthSeverity = HealthSeverity.ADVISORY,
+    ) {
+        if (!hasNotificationPermission(context)) return
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val notifId = NOTIFICATION_ID_HEALTH_BASE + title.hashCode().and(0xFF)
+        val pendingIntent = PendingIntent.getActivity(
+            context, notifId, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val bigText = if (detail.isNotBlank()) "$body\n\n$detail" else body
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_HEALTH)
+            .setSmallIcon(R.drawable.ic_alert)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(bigText))
+            .setPriority(
+                if (severity == HealthSeverity.WARNING) NotificationCompat.PRIORITY_HIGH
+                else NotificationCompat.PRIORITY_DEFAULT
+            )
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setColor(severity.color.toArgb())
+            .build()
+
+        try {
+            NotificationManagerCompat.from(context).notify(notifId, notification)
         } catch (_: SecurityException) {
             // Permission revoked after check
         }
