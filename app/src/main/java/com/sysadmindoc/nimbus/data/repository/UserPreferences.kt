@@ -17,6 +17,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "nimbus_prefs")
+
+private val customAlertRulesKey = stringPreferencesKey("custom_alert_rules")
 private val persistentWeatherNotifKey = booleanPreferencesKey("persistent_weather_notif")
 
 internal suspend fun Context.readPersistentWeatherNotificationEnabled(): Boolean {
@@ -216,6 +218,38 @@ class UserPreferences @Inject constructor(
     // Notifications
     suspend fun setPersistentWeatherNotif(enabled: Boolean) = store.edit { it[Keys.PERSISTENT_WEATHER_NOTIF] = enabled }
     suspend fun setNowcastingAlerts(enabled: Boolean) = store.edit { it[Keys.NOWCASTING_ALERTS] = enabled }
+
+    // ── Custom alert rules ──────────────────────────────────────────────
+    // Stored as a JSON-serialized list under a single preferences key to
+    // avoid a DataStore-per-rule model. The rule set is small (user-authored)
+    // so an O(n) read is fine.
+    private val customAlertJson = kotlinx.serialization.json.Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+
+    val customAlertRules: Flow<List<com.sysadmindoc.nimbus.data.model.CustomAlertRule>> =
+        store.data.map { prefs ->
+            val raw = prefs[customAlertRulesKey] ?: return@map emptyList()
+            runCatching {
+                customAlertJson.decodeFromString(
+                    kotlinx.serialization.builtins.ListSerializer(
+                        com.sysadmindoc.nimbus.data.model.CustomAlertRule.serializer()
+                    ),
+                    raw,
+                )
+            }.getOrDefault(emptyList())
+        }
+
+    suspend fun setCustomAlertRules(rules: List<com.sysadmindoc.nimbus.data.model.CustomAlertRule>) {
+        val serialized = customAlertJson.encodeToString(
+            kotlinx.serialization.builtins.ListSerializer(
+                com.sysadmindoc.nimbus.data.model.CustomAlertRule.serializer()
+            ),
+            rules,
+        )
+        store.edit { it[customAlertRulesKey] = serialized }
+    }
     suspend fun setDrivingAlerts(enabled: Boolean) = store.edit { it[Keys.DRIVING_ALERTS] = enabled }
     suspend fun setHealthAlertsEnabled(enabled: Boolean) = store.edit { it[Keys.HEALTH_ALERTS_ENABLED] = enabled }
     suspend fun setMigraineAlerts(enabled: Boolean) = store.edit { it[Keys.MIGRAINE_ALERTS] = enabled }

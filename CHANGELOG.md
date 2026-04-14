@@ -2,6 +2,17 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.9.0] - 2026-04-14
+
+### Added
+- **Custom Alert Rules** — user-defined weather threshold notifications. Create rules like "notify me if today's high > 32°C" or "alert when wind gusts exceed 50 km/h in the next 12 hours." Five supported metrics: today's high, tonight's low, wind gust (12h), precipitation sum (24h), and UV peak. Each rule is independently toggleable and stores thresholds in canonical metric units; the UI converts to the user's preferred display units (°F, mph, inches, etc.) at the Compose layer.
+- **`CustomAlertsScreen`** — dedicated screen accessible from Settings > Alerts > Custom Alert Rules. Full CRUD: add rules via FAB, edit via tap, toggle/delete per-row. Bottom-sheet editor with metric chip selector, operator picker (above/below), numeric threshold input, and enable toggle.
+- **`CustomAlertWorker`** — hourly periodic CoroutineWorker that evaluates enabled rules against the latest forecast for the user's last-known location. Dedupe per (rule-id, calendar date) via SharedPreferences-backed seen-set, pruned to 7 days. Network-constrained with exponential backoff.
+- **`CustomAlertEvaluator`** — pure-function evaluator: resolves each metric from `WeatherData` (daily high/low, hourly wind gusts, 24h precip sum, daily UV max), applies the operator/threshold, and returns triggered hits with observed values.
+- **`CHANNEL_CUSTOM` notification channel** — separate "Custom Alerts" channel so users can silence custom rules without losing severe weather or nowcast notifications. Per-rule stable notification IDs prevent clobbering.
+- **Startup sync** — `NimbusApplication.onCreate` now schedules/cancels `CustomAlertWorker` based on whether any enabled custom rules exist.
+- **Adaptive icon monochrome layer** — launcher icons updated to include `ic_launcher_monochrome` for Material You themed icons on Android 13+.
+
 ## [1.8.0] - 2026-04-12
 
 ### Added
