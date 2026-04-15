@@ -49,7 +49,7 @@ class WearWeatherRepository @Inject constructor(
 
             val request = Request.Builder()
                 .url(url)
-                .header("User-Agent", "ZeusWatch-Wear/1.13.0")
+                .header("User-Agent", "ZeusWatch-Wear/1.14.0")
                 .build()
 
             client.newCall(request).execute().use { response ->
@@ -154,6 +154,10 @@ data class WearWeatherData(
     val isDay: Boolean = true,
     val weatherCode: Int = 0,
     val hourly: List<HourlyEntry> = emptyList(),
+    val daily: List<WearDailyEntry> = emptyList(),
+    val alerts: List<WearAlertEntry> = emptyList(),
+    val aqi: Int = -1,
+    val aqiLabel: String = "",
 )
 
 data class HourlyEntry(
@@ -162,6 +166,21 @@ data class HourlyEntry(
     val weatherCode: Int,
     val precipChance: Int = 0,
     val windSpeed: Int = 0,
+)
+
+data class WearDailyEntry(
+    val date: String,
+    val weatherCode: Int,
+    val high: Int,
+    val low: Int,
+    val precipChance: Int = 0,
+)
+
+data class WearAlertEntry(
+    val event: String,
+    val severity: String,
+    val headline: String,
+    val expires: String = "",
 )
 
 @Serializable

@@ -6,6 +6,8 @@ import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.WearableListenerService
 import com.sysadmindoc.nimbus.wear.data.HourlyEntry
+import com.sysadmindoc.nimbus.wear.data.WearAlertEntry
+import com.sysadmindoc.nimbus.wear.data.WearDailyEntry
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -30,6 +32,7 @@ class WeatherDataListenerService : WearableListenerService() {
             try {
                 val map = DataMapItem.fromDataItem(event.dataItem).dataMap
 
+                // Hourly entries
                 val hourlyMaps = map.getDataMapArrayList("hourly") ?: emptyList()
                 val hourly = hourlyMaps.map { h ->
                     HourlyEntry(
@@ -38,6 +41,29 @@ class WeatherDataListenerService : WearableListenerService() {
                         weatherCode = h.getInt("weatherCode", 0),
                         precipChance = h.getInt("precipChance", 0),
                         windSpeed = h.getInt("windSpeed", 0),
+                    )
+                }
+
+                // Daily entries
+                val dailyMaps = map.getDataMapArrayList("daily") ?: emptyList()
+                val daily = dailyMaps.map { d ->
+                    WearDailyEntry(
+                        date = d.getString("date", ""),
+                        weatherCode = d.getInt("weatherCode", 0),
+                        high = d.getInt("high", 0),
+                        low = d.getInt("low", 0),
+                        precipChance = d.getInt("precipChance", 0),
+                    )
+                }
+
+                // Alerts
+                val alertMaps = map.getDataMapArrayList("alerts") ?: emptyList()
+                val alerts = alertMaps.map { a ->
+                    WearAlertEntry(
+                        event = a.getString("event", ""),
+                        severity = a.getString("severity", "Unknown"),
+                        headline = a.getString("headline", ""),
+                        expires = a.getString("expires", ""),
                     )
                 }
 
@@ -55,9 +81,13 @@ class WeatherDataListenerService : WearableListenerService() {
                     weatherCode = map.getInt("weatherCode", 0),
                     timestampMs = map.getLong("syncTimestampMs", System.currentTimeMillis()),
                     hourly = hourly,
+                    daily = daily,
+                    alerts = alerts,
+                    aqi = map.getInt("aqi", -1),
+                    aqiLabel = map.getString("aqiLabel", ""),
                 )
 
-                Log.d(TAG, "Received weather sync: ${map.getString("locationName")} ${map.getInt("temperature")}°")
+                Log.d(TAG, "Received weather sync: ${map.getString("locationName")} ${map.getInt("temperature")}° (${alerts.size} alerts, ${daily.size} daily)")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to process synced weather data", e)
             }

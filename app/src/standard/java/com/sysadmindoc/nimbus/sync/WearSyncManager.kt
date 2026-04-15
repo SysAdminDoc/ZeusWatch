@@ -5,6 +5,8 @@ import android.util.Log
 import com.google.android.gms.wearable.DataMap
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
+import com.sysadmindoc.nimbus.data.model.AirQualityData
+import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +28,11 @@ class WearSyncManager @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
 
-    suspend fun syncWeather(data: WeatherData) = withContext(Dispatchers.IO) {
+    suspend fun syncWeather(
+        data: WeatherData,
+        alerts: List<WeatherAlert> = emptyList(),
+        airQuality: AirQualityData? = null,
+    ) = withContext(Dispatchers.IO) {
         try {
             val request = PutDataMapRequest.create(PATH_WEATHER).apply {
                 dataMap.apply {
@@ -55,6 +61,40 @@ class WearSyncManager @Inject constructor(
                         })
                     }
                     putDataMapArrayList("hourly", hourlyMaps)
+
+                    // Daily forecast (next 7 days)
+                    val dailyMaps = ArrayList<DataMap>()
+                    data.daily.take(7).forEach { d ->
+                        dailyMaps.add(DataMap().apply {
+                            putString("date", d.date.toString())
+                            putInt("weatherCode", d.weatherCode.code)
+                            putInt("high", d.temperatureHigh.toInt())
+                            putInt("low", d.temperatureLow.toInt())
+                            putInt("precipChance", d.precipitationProbability)
+                        })
+                    }
+                    putDataMapArrayList("daily", dailyMaps)
+
+                    // Weather alerts
+                    val alertMaps = ArrayList<DataMap>()
+                    alerts.forEach { a ->
+                        alertMaps.add(DataMap().apply {
+                            putString("event", a.event)
+                            putString("severity", a.severity.label)
+                            putString("headline", a.headline)
+                            putString("expires", a.expires ?: "")
+                        })
+                    }
+                    putDataMapArrayList("alerts", alertMaps)
+
+                    // Air quality
+                    if (airQuality != null) {
+                        putInt("aqi", airQuality.usAqi)
+                        putString("aqiLabel", airQuality.aqiLevel.label)
+                    } else {
+                        putInt("aqi", -1)
+                        putString("aqiLabel", "")
+                    }
                 }
                 setUrgent()
             }
@@ -63,7 +103,7 @@ class WearSyncManager @Inject constructor(
                 .putDataItem(request.asPutDataRequest())
                 .await()
 
-            Log.d(TAG, "Synced weather to watch: ${data.location.name} ${data.current.temperature}°")
+            Log.d(TAG, "Synced weather to watch: ${data.location.name} ${data.current.temperature}° (${alerts.size} alerts, AQI=${airQuality?.usAqi ?: -1})")
         } catch (e: Exception) {
             // Non-fatal — watch falls back to its own API calls
             Log.w(TAG, "Failed to sync weather to watch", e)
