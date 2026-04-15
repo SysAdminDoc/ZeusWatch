@@ -315,10 +315,20 @@ class UserPreferences @Inject constructor(
     /** Mark alert IDs as seen. Caps at 200 entries to prevent unbounded growth. */
     suspend fun addSeenAlertIds(ids: Set<String>) = store.edit { prefs ->
         val existing = prefs[Keys.SEEN_ALERT_IDS] ?: emptySet()
-        val merged = (existing + ids).let {
-            if (it.size > 200) it.drop(it.size - 200).toSet() else it
+        val merged = existing + ids
+        // When over limit, keep the newest IDs (the ones just added) plus as many
+        // existing ones as we can. The new IDs are guaranteed to be retained.
+        prefs[Keys.SEEN_ALERT_IDS] = if (merged.size > 200) {
+            val keep = linkedSetOf<String>()
+            keep.addAll(ids) // always keep newly added
+            for (id in existing) {
+                if (keep.size >= 200) break
+                keep.add(id)
+            }
+            keep
+        } else {
+            merged
         }
-        prefs[Keys.SEEN_ALERT_IDS] = merged
     }
 
     suspend fun saveLastLocation(lat: Double, lon: Double, name: String) = store.edit {
