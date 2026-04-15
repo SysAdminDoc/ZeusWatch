@@ -34,6 +34,7 @@ import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
+import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -72,6 +73,7 @@ class MainViewModel @Inject constructor(
     private val summaryEngine: SummaryEngine,
     private val connectivityObserver: ConnectivityObserver,
     private val onThisDayRepository: com.sysadmindoc.nimbus.data.repository.OnThisDayRepository,
+    private val wearSyncManager: WearSyncManager,
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -292,6 +294,7 @@ class MainViewModel @Inject constructor(
                         launch { fetchAstronomy(data) }
                         launch { fetchRadarPreview(lat, lon) }
                         launch { fetchNowcast(lat, lon) }
+                        launch { wearSyncManager.syncWeather(data) }
                     }
                     // Yesterday comparison must complete before derived data computation
                     fetchYesterdayComparison(lat, lon)
