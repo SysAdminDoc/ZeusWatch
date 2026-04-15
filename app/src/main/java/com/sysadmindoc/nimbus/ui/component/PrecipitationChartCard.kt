@@ -35,6 +35,7 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 @Composable
 fun PrecipitationChartCard(
     hourly: List<HourlyConditions>,
+    referenceTime: java.time.LocalDateTime? = hourly.firstOrNull()?.time,
     modifier: Modifier = Modifier,
 ) {
     val s = LocalUnitSettings.current
@@ -71,7 +72,7 @@ fun PrecipitationChartCard(
             if (peakHour != null && peakHour.precipitationProbability > 0) {
                 Column {
                     Text(
-                        text = "Peak at ${WeatherFormatter.formatHourLabel(peakHour.time, s)}",
+                        text = "Peak at ${WeatherFormatter.formatRelativeHourLabel(peakHour.time, referenceTime, s)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = NimbusTextSecondary,
                     )
@@ -136,7 +137,7 @@ fun PrecipitationChartCard(
 
                     // Time labels every 6 hours
                     if (i % 6 == 0) {
-                        val label = WeatherFormatter.formatHourLabel(hour.time, s)
+                        val label = WeatherFormatter.formatRelativeHourLabel(hour.time, referenceTime, s)
                         val measured = textMeasurer.measure(label, labelStyle)
                         drawText(
                             measured,

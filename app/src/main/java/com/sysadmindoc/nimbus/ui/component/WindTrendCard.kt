@@ -40,6 +40,7 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 @Composable
 fun WindTrendCard(
     hourly: List<HourlyConditions>,
+    referenceTime: java.time.LocalDateTime? = hourly.firstOrNull()?.time,
     modifier: Modifier = Modifier,
 ) {
     val s = LocalUnitSettings.current
@@ -62,7 +63,7 @@ fun WindTrendCard(
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                 )
                 Text(
-                    text = "at ${WeatherFormatter.formatHourLabel(peakHour.time, s)}",
+                    text = "at ${WeatherFormatter.formatRelativeHourLabel(peakHour.time, referenceTime, s)}",
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusTextSecondary,
                 )
@@ -169,7 +170,7 @@ fun WindTrendCard(
             // Time labels every 6h
             for (i in data.indices step 6) {
                 if (i < points.size) {
-                    val label = WeatherFormatter.formatHourLabel(data[i].time, s)
+                    val label = WeatherFormatter.formatRelativeHourLabel(data[i].time, referenceTime, s)
                     val m = textMeasurer.measure(label, labelStyle)
                     drawText(m, topLeft = Offset(
                         (points[i].x - m.size.width / 2f).coerceIn(0f, w - m.size.width),

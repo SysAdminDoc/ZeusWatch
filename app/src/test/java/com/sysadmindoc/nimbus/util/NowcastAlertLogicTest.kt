@@ -105,4 +105,15 @@ class NowcastAlertLogicTest {
         // doesn't spam a user when a forecast sharpens its peak estimate.
         assertEquals(transitionSignature(t1), transitionSignature(t2))
     }
+
+    @Test
+    fun `nowcastReferenceTime anchors to earliest forecast bucket instead of device clock`() {
+        val series = listOf(
+            bucket(45, 0.0),
+            bucket(0, 0.2),
+            bucket(15, 0.5),
+        )
+
+        assertEquals(now, nowcastReferenceTime(series))
+    }
 }

@@ -122,10 +122,11 @@ object AccessibilityHelper {
     /** Daily forecast list description. */
     fun dailyForecast(daily: List<DailyConditions>, s: NimbusSettings = NimbusSettings()): String {
         if (daily.isEmpty()) return "Daily forecast unavailable."
+        val referenceDate = daily.firstOrNull()?.date
         return buildString {
             append("${daily.size}-day forecast. ")
             daily.take(3).forEach { day ->
-                val label = WeatherFormatter.formatDayLabel(day.date)
+                val label = WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate)
                 val high = WeatherFormatter.formatTemperature(day.temperatureHigh, s)
                 val low = WeatherFormatter.formatTemperature(day.temperatureLow, s)
                 append("$label: ${day.weatherCode.description}, ")

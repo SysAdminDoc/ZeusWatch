@@ -39,7 +39,7 @@ class AlertCheckWorkerTest {
         locationRepository = mockk()
         prefs = mockk(relaxed = true)
         mockkObject(AlertNotificationHelper)
-        every { AlertNotificationHelper.showAlertNotification(any(), any(), any()) } returns Unit
+        every { AlertNotificationHelper.showAlertNotification(any(), any(), any()) } returns true
     }
 
     @After
@@ -102,6 +102,27 @@ class AlertCheckWorkerTest {
 
         io.mockk.verify(exactly = 1) { AlertNotificationHelper.showAlertNotification(any(), any(), any()) }
         coVerify(exactly = 1) { prefs.addSeenAlertIds(setOf("shared-1")) }
+    }
+
+    @Test
+    fun `doWork does not mark alerts as seen when notification delivery fails`() = runTest {
+        val severeAlert = testAlert(id = "failed-1", severity = AlertSeverity.SEVERE)
+        every { prefs.settings } returns flowOf(
+            NimbusSettings(
+                alertNotificationsEnabled = true,
+                alertMinSeverity = com.sysadmindoc.nimbus.data.repository.AlertMinSeverity.SEVERE,
+                alertCheckAllLocations = false,
+            )
+        )
+        every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        coEvery { prefs.getSeenAlertIds() } returns emptySet()
+        coEvery { weatherSourceManager.getAlerts(any(), any()) } returns Result.success(listOf(severeAlert))
+        every { AlertNotificationHelper.showAlertNotification(any(), any(), any()) } returns false
+
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
+        worker.doWork()
+
+        coVerify(exactly = 0) { prefs.addSeenAlertIds(any()) }
     }
 
     @Test

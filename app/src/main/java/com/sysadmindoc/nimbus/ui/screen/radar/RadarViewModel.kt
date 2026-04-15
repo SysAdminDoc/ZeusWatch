@@ -66,10 +66,6 @@ class RadarViewModel @Inject constructor(
     private var frameLoadJob: Job? = null
     private var lastSuccessfulFrameLoadAtMillis: Long? = null
 
-    init {
-        loadFrames()
-    }
-
     fun loadFrames(force: Boolean = false) {
         val state = _uiState.value
         if (!shouldLoadRadarFrames(

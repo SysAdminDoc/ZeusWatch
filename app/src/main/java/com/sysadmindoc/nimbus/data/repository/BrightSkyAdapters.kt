@@ -3,9 +3,12 @@ package com.sysadmindoc.nimbus.data.repository
 import android.util.Log
 import com.sysadmindoc.nimbus.data.api.BrightSkyApi
 import com.sysadmindoc.nimbus.data.model.*
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,7 +30,7 @@ class BrightSkyForecastAdapter @Inject constructor(
         longitude: Double,
         locationName: String? = null,
     ): Result<WeatherData> = runCatching {
-        val today = LocalDate.now()
+        val today = LocalDate.now(ZoneOffset.UTC)
         val endDate = today.plusDays(10) // DWD MOSMIX forecasts go ~10 days
 
         val response = api.getWeather(
@@ -58,11 +61,13 @@ class BrightSkyForecastAdapter @Inject constructor(
         // Use current_weather endpoint if available, otherwise latest observation
         val currentEntry = currentResp?.weather?.firstOrNull() ?: findCurrentEntry(entries)
         ?: entries.first()
-        val now = LocalDateTime.now()
-        val today = now.toLocalDate()
+        val currentLocalTime = parseTimestamp(currentEntry.timestamp)
+            ?: entries.firstNotNullOfOrNull { parseTimestamp(it.timestamp) }
+            ?: LocalDateTime.now()
+        val today = currentLocalTime.toLocalDate()
 
         // Build hourly from forecast entries
-        val hourly = mapHourly(entries, now)
+        val hourly = mapHourly(entries, currentLocalTime)
 
         // Aggregate daily from hourly entries
         val daily = aggregateDaily(entries)
@@ -85,6 +90,7 @@ class BrightSkyForecastAdapter @Inject constructor(
                 weatherCode = WeatherCode.fromCode(
                     BsConditionMapper.toWmoCode(currentEntry.condition, currentEntry.icon)
                 ),
+                observationTime = currentLocalTime,
                 isDay = BsConditionMapper.isDayFromIcon(currentEntry.icon),
                 windSpeed = currentEntry.windSpeed ?: 0.0, // Already km/h
                 windDirection = currentEntry.windDirection ?: 0,
@@ -106,10 +112,16 @@ class BrightSkyForecastAdapter @Inject constructor(
     }
 
     private fun findCurrentEntry(entries: List<BsWeatherEntry>): BsWeatherEntry? {
-        val now = LocalDateTime.now()
+        val nowInstant = Instant.now()
+        val nowLocal = LocalDateTime.now()
         return entries.minByOrNull { entry ->
-            val entryTime = parseTimestamp(entry.timestamp) ?: return@minByOrNull Long.MAX_VALUE
-            kotlin.math.abs(java.time.Duration.between(now, entryTime).toMinutes())
+            val entryInstant = parseTimestampInstant(entry.timestamp)
+            if (entryInstant != null) {
+                kotlin.math.abs(Duration.between(nowInstant, entryInstant).toMinutes())
+            } else {
+                val entryTime = parseTimestamp(entry.timestamp) ?: return@minByOrNull Long.MAX_VALUE
+                kotlin.math.abs(Duration.between(nowLocal, entryTime).toMinutes())
+            }
         }
     }
 
@@ -201,6 +213,12 @@ class BrightSkyForecastAdapter @Inject constructor(
         } catch (_: Exception) {
             null
         }
+    }
+
+    private fun parseTimestampInstant(ts: String): Instant? = try {
+        OffsetDateTime.parse(ts).toInstant()
+    } catch (_: Exception) {
+        null
     }
 }
 

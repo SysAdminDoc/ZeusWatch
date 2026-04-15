@@ -9,6 +9,8 @@ import com.sysadmindoc.nimbus.data.repository.VisibilityUnit
 import com.sysadmindoc.nimbus.data.repository.WindUnit
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.LocalDate
+import java.time.LocalDateTime
 
 class WeatherFormatterTest {
 
@@ -164,6 +166,16 @@ class WeatherFormatterTest {
         assert(result.matches(Regex("[A-Z][a-z]{2} \\d{1,2}"))) { "Got: $result" }
     }
 
+    @Test
+    fun `formatRelativeDayLabel uses provided forecast date anchor`() {
+        val referenceDate = LocalDate.of(2026, 4, 15)
+
+        assertEquals("Today", WeatherFormatter.formatRelativeDayLabel(referenceDate, referenceDate))
+        assertEquals("Tomorrow", WeatherFormatter.formatRelativeDayLabel(referenceDate.plusDays(1), referenceDate))
+        val futureLabel = WeatherFormatter.formatRelativeDayLabel(referenceDate.plusDays(2), referenceDate)
+        assert(futureLabel.matches(Regex("[A-Z][a-z]{2} \\d{1,2}"))) { "Got: $futureLabel" }
+    }
+
     // --- Time ---
 
     @Test
@@ -184,5 +196,33 @@ class WeatherFormatterTest {
     @Test
     fun `formatTime returns dash for invalid string`() {
         assertEquals("--", WeatherFormatter.formatTime("not-a-date"))
+    }
+
+    @Test
+    fun `formatRelativeHourLabel returns Now for matching forecast hour`() {
+        val referenceTime = LocalDateTime.of(2026, 4, 15, 9, 5)
+
+        assertEquals(
+            "Now",
+            WeatherFormatter.formatRelativeHourLabel(
+                LocalDateTime.of(2026, 4, 15, 9, 45),
+                referenceTime,
+                metric,
+            ),
+        )
+    }
+
+    @Test
+    fun `formatRelativeHourLabel formats non matching hours using requested clock format`() {
+        val referenceTime = LocalDateTime.of(2026, 4, 15, 9, 5)
+
+        assertEquals(
+            "14:00",
+            WeatherFormatter.formatRelativeHourLabel(
+                LocalDateTime.of(2026, 4, 15, 14, 0),
+                referenceTime,
+                metric,
+            ),
+        )
     }
 }

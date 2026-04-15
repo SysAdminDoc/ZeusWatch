@@ -190,6 +190,7 @@ class WeatherRepository @Inject constructor(
                 feelsLike = current.apparentTemperature ?: current.temperature ?: 0.0,
                 humidity = current.humidity ?: 0,
                 weatherCode = WeatherCode.fromCode(current.weatherCode),
+                observationTime = locationLocalNow,
                 isDay = (current.isDay ?: 1) == 1,
                 windSpeed = current.windSpeed ?: 0.0,
                 windDirection = current.windDirection ?: 0,

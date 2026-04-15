@@ -86,12 +86,14 @@ class AlertCheckWorker @AssistedInject constructor(
 
             val showLocation = settings.alertCheckAllLocations && locations.size > 1
             for (alert in filtered) {
-                AlertNotificationHelper.showAlertNotification(
+                val delivered = AlertNotificationHelper.showAlertNotification(
                     context = applicationContext,
                     alert = alert,
                     locationName = if (showLocation) locationName else null,
                 )
-                newSeenIds.add(alert.id)
+                if (delivered) {
+                    newSeenIds.add(alert.id)
+                }
             }
         }
 

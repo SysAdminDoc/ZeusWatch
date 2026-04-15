@@ -77,6 +77,7 @@ private enum class DailyTrendTab(val label: String) {
 @Composable
 fun DailyForecastList(
     daily: List<DailyConditions>,
+    referenceDate: java.time.LocalDate? = daily.firstOrNull()?.date,
     modifier: Modifier = Modifier,
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -115,18 +116,20 @@ fun DailyForecastList(
                 when (tabs[selectedTab]) {
                     DailyTrendTab.OVERVIEW -> ExpandableDailyRow(
                         day = day,
+                        referenceDate = referenceDate,
                         isWarmest = index == warmestIndex && daily.size > 1,
                         weeklyMin = weeklyMin,
                         weeklyMax = weeklyMax,
                     )
                     DailyTrendTab.TEMPERATURE -> DailyTempRow(
                         day = day,
+                        referenceDate = referenceDate,
                         weeklyMin = weeklyMin,
                         weeklyMax = weeklyMax,
                     )
-                    DailyTrendTab.WIND -> DailyWindRow(day = day)
-                    DailyTrendTab.UV -> DailyUvRow(day = day)
-                    DailyTrendTab.PRECIPITATION -> DailyPrecipRow(day = day)
+                    DailyTrendTab.WIND -> DailyWindRow(day = day, referenceDate = referenceDate)
+                    DailyTrendTab.UV -> DailyUvRow(day = day, referenceDate = referenceDate)
+                    DailyTrendTab.PRECIPITATION -> DailyPrecipRow(day = day, referenceDate = referenceDate)
                 }
                 if (index < daily.lastIndex) {
                     HorizontalDivider(color = NimbusCardBorder, modifier = Modifier.padding(vertical = 2.dp))
@@ -171,6 +174,7 @@ private fun DailyTrendTabChip(
 @Composable
 private fun DailyTempRow(
     day: DailyConditions,
+    referenceDate: java.time.LocalDate?,
     weeklyMin: Double,
     weeklyMax: Double,
 ) {
@@ -183,7 +187,7 @@ private fun DailyTempRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            WeatherFormatter.formatDayLabel(day.date),
+            WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
             modifier = Modifier.width(72.dp),
         )
@@ -219,7 +223,7 @@ private fun DailyTempRow(
 }
 
 @Composable
-private fun DailyWindRow(day: DailyConditions) {
+private fun DailyWindRow(day: DailyConditions, referenceDate: java.time.LocalDate?) {
     val s = LocalUnitSettings.current
     Row(
         modifier = Modifier
@@ -229,7 +233,7 @@ private fun DailyWindRow(day: DailyConditions) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            WeatherFormatter.formatDayLabel(day.date),
+            WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
             modifier = Modifier.width(72.dp),
         )
@@ -265,7 +269,7 @@ private fun DailyWindRow(day: DailyConditions) {
 }
 
 @Composable
-private fun DailyUvRow(day: DailyConditions) {
+private fun DailyUvRow(day: DailyConditions, referenceDate: java.time.LocalDate?) {
     val s = LocalUnitSettings.current
     val uv = day.uvIndexMax ?: 0.0
     val uvColor = when {
@@ -290,7 +294,7 @@ private fun DailyUvRow(day: DailyConditions) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            WeatherFormatter.formatDayLabel(day.date),
+            WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
             modifier = Modifier.width(72.dp),
         )
@@ -329,7 +333,7 @@ private fun DailyUvRow(day: DailyConditions) {
 }
 
 @Composable
-private fun DailyPrecipRow(day: DailyConditions) {
+private fun DailyPrecipRow(day: DailyConditions, referenceDate: java.time.LocalDate?) {
     val s = LocalUnitSettings.current
     Row(
         modifier = Modifier
@@ -339,7 +343,7 @@ private fun DailyPrecipRow(day: DailyConditions) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            WeatherFormatter.formatDayLabel(day.date),
+            WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
             modifier = Modifier.width(72.dp),
         )
@@ -388,6 +392,7 @@ private fun DailyPrecipRow(day: DailyConditions) {
 @Composable
 private fun ExpandableDailyRow(
     day: DailyConditions,
+    referenceDate: java.time.LocalDate? = null,
     isWarmest: Boolean = false,
     weeklyMin: Double = 0.0,
     weeklyMax: Double = 0.0,
@@ -412,7 +417,7 @@ private fun ExpandableDailyRow(
         ) {
             Column(modifier = Modifier.width(92.dp)) {
                 Text(
-                    WeatherFormatter.formatDayLabel(day.date),
+                    WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 )
                 Text(
