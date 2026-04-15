@@ -37,6 +37,7 @@ fun MoonPhaseCard(
     modifier: Modifier = Modifier,
     sunrise: String? = null,
     sunset: String? = null,
+    referenceTime: java.time.LocalDateTime? = null,
 ) {
     WeatherCard(title = "Astronomy", modifier = modifier) {
         // Sunrise / Sunset row
@@ -52,7 +53,7 @@ fun MoonPhaseCard(
             }
 
             // Sunrise/sunset countdown
-            val countdown = sunCountdown(sunrise, sunset)
+            val countdown = sunCountdown(sunrise, sunset, referenceTime)
             if (countdown != null) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -69,6 +70,7 @@ fun MoonPhaseCard(
             SunArc(
                 sunrise = sunrise,
                 sunset = sunset,
+                referenceTime = referenceTime,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -205,11 +207,15 @@ private fun AstroDetail(label: String, value: String) {
     }
 }
 
-private fun sunCountdown(sunrise: String?, sunset: String?): String? {
+private fun sunCountdown(
+    sunrise: String?,
+    sunset: String?,
+    referenceTime: java.time.LocalDateTime? = null,
+): String? {
     if (sunrise == null || sunset == null) return null
     return try {
         val fmt = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
-        val now = java.time.LocalDateTime.now()
+        val now = referenceTime ?: java.time.LocalDateTime.now()
         val rise = java.time.LocalDateTime.parse(sunrise, fmt)
         val set = java.time.LocalDateTime.parse(sunset, fmt)
 

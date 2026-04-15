@@ -31,6 +31,7 @@ object ShareWeatherHelper {
     ): String = buildString {
         val location = data.location
         val current = data.current
+        val referenceDate = current.observationTime?.toLocalDate() ?: data.daily.firstOrNull()?.date
 
         appendLine("--- ZeusWatch ---")
         appendLine("${location.name}${if (location.region.isNotBlank()) ", ${location.region}" else ""}")
@@ -55,7 +56,7 @@ object ShareWeatherHelper {
         if (data.daily.isNotEmpty()) {
             appendLine("--- Forecast ---")
             data.daily.take(3).forEach { day ->
-                val label = WeatherFormatter.formatDayLabel(day.date)
+                val label = WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate)
                 val desc = day.weatherCode.description
                 val hi = WeatherFormatter.formatTemperature(day.temperatureHigh, s)
                 val lo = WeatherFormatter.formatTemperature(day.temperatureLow, s)
@@ -154,9 +155,15 @@ object ShareWeatherHelper {
         // 3-day mini forecast
         val forecastY = 510f
         val dayWidth = (CARD_WIDTH - 160f) / 3f
+        val referenceDate = current.observationTime?.toLocalDate() ?: data.daily.firstOrNull()?.date
         data.daily.take(3).forEachIndexed { i, day ->
             val x = 80f + i * dayWidth
-            canvas.drawText(WeatherFormatter.formatDayLabel(day.date), x, forecastY, textPaint(TEXT_SECONDARY, 24f))
+            canvas.drawText(
+                WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
+                x,
+                forecastY,
+                textPaint(TEXT_SECONDARY, 24f),
+            )
             canvas.drawText(day.weatherCode.description, x, forecastY + 30f, textPaint(TEXT_TERTIARY, 20f))
             canvas.drawText(
                 "${WeatherFormatter.formatTemperature(day.temperatureHigh, s)} / ${WeatherFormatter.formatTemperature(day.temperatureLow, s)}",

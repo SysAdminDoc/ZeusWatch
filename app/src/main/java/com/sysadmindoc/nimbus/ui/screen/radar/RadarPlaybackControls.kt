@@ -2,14 +2,17 @@ package com.sysadmindoc.nimbus.ui.screen.radar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
@@ -57,8 +61,9 @@ fun RadarPlaybackControls(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-            .clip(RoundedCornerShape(28.dp))
+            .padding(horizontal = 10.dp, vertical = 8.dp)
+            .widthIn(max = 520.dp)
+            .clip(RoundedCornerShape(26.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -67,8 +72,8 @@ fun RadarPlaybackControls(
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(26.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -90,7 +95,7 @@ fun RadarPlaybackControls(
             }
         }
 
-        Spacer(modifier = Modifier.padding(top = 6.dp))
+        Spacer(modifier = Modifier.size(4.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -103,12 +108,15 @@ fun RadarPlaybackControls(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(NimbusBlueAccent.copy(alpha = 0.95f)),
+                    .background(
+                        if (playbackEnabled) NimbusBlueAccent.copy(alpha = 0.95f)
+                        else Color.White.copy(alpha = 0.08f),
+                    ),
             ) {
                 Icon(
                     if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = NimbusTextPrimary,
+                    tint = if (playbackEnabled) NimbusTextPrimary else NimbusTextTertiary,
                     modifier = Modifier.size(24.dp),
                 )
             }
@@ -143,6 +151,13 @@ fun RadarPlaybackControls(
                         text = if (isForecast) "Forecast" else "Past",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isForecast) NimbusBlueAccent else NimbusTextSecondary,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(
+                                if (isForecast) NimbusBlueAccent.copy(alpha = 0.14f)
+                                else Color.White.copy(alpha = 0.06f),
+                            )
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
                     )
 
                     Text(

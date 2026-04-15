@@ -9,7 +9,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -28,7 +29,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
+import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
+import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
 
 /**
@@ -76,6 +79,20 @@ fun ShimmerLoadingSkeleton(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.height(60.dp))
+
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(NimbusBlueAccent.copy(alpha = 0.12f))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = "Refreshing forecast",
+                style = MaterialTheme.typography.labelMedium,
+                color = NimbusTextSecondary,
+            )
+        }
+        Spacer(modifier = Modifier.height(14.dp))
 
         // Location name placeholder
         ShimmerBox(width = 140.dp, height = 24.dp, brush = shimmerBrush)
@@ -128,6 +145,7 @@ private fun ShimmerBox(
             .height(height)
             .clip(RoundedCornerShape(8.dp))
             .background(NimbusCardBg)
+            .background(Color.White.copy(alpha = 0.02f))
             .background(brush)
     )
 }
@@ -142,8 +160,17 @@ private fun ShimmerCard(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(22.dp))
             .background(NimbusCardBg)
+            .background(Color.White.copy(alpha = 0.02f))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.03f),
+                        Color.Transparent,
+                    ),
+                ),
+            )
             .background(brush)
     )
 }

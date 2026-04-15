@@ -47,6 +47,7 @@ class OwmForecastAdapter @Inject constructor(
         val current = r.current ?: error("No current data from OWM")
         val zone = try { ZoneId.of(r.timezone) } catch (_: Exception) { ZoneId.systemDefault() }
         val firstDaily = r.daily.firstOrNull()
+        val locationLocalNow = epochToLocalDateTime(current.dt, zone)
 
         return WeatherData(
             location = LocationInfo(
@@ -61,6 +62,7 @@ class OwmForecastAdapter @Inject constructor(
                 weatherCode = WeatherCode.fromCode(
                     OwmConditionMapper.toWmoCode(current.weather.firstOrNull()?.id ?: 0)
                 ),
+                observationTime = locationLocalNow,
                 isDay = current.weather.firstOrNull()?.icon?.let {
                     OwmConditionMapper.isDayFromIcon(it)
                 } ?: true,
@@ -79,13 +81,16 @@ class OwmForecastAdapter @Inject constructor(
                 sunrise = current.sunrise?.let { epochToTimeStr(it, zone) },
                 sunset = current.sunset?.let { epochToTimeStr(it, zone) },
             ),
-            hourly = mapHourly(r.hourly, zone),
+            hourly = mapHourly(r.hourly, zone, locationLocalNow),
             daily = mapDaily(r.daily, zone),
         )
     }
 
-    private fun mapHourly(hourly: List<OwmHourly>, zone: ZoneId): List<HourlyConditions> {
-        val now = LocalDateTime.now()
+    private fun mapHourly(
+        hourly: List<OwmHourly>,
+        zone: ZoneId,
+        now: LocalDateTime,
+    ): List<HourlyConditions> {
         return hourly.mapNotNull { h ->
             val time = epochToLocalDateTime(h.dt, zone)
             if (time.isBefore(now.minusHours(1))) return@mapNotNull null

@@ -49,6 +49,7 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 @Composable
 fun TemperatureGraph(
     hourly: List<HourlyConditions>,
+    referenceTime: java.time.LocalDateTime? = hourly.firstOrNull()?.time,
     modifier: Modifier = Modifier,
     normalHigh: Double? = null,
     normalLow: Double? = null,
@@ -253,7 +254,7 @@ fun TemperatureGraph(
                 // ── Time labels (every 6 hours) ─────────────────────
                 for (i in data.indices step 6) {
                     if (i < points.size) {
-                        val label = WeatherFormatter.formatHourLabel(data[i].time, s)
+                        val label = WeatherFormatter.formatRelativeHourLabel(data[i].time, referenceTime, s)
                         val measured = textMeasurer.measure(label, labelStyle)
                         drawText(measured, topLeft = Offset(points[i].x - measured.size.width / 2f, h - paddingBottom + 6f))
                     }
@@ -281,7 +282,7 @@ fun TemperatureGraph(
 
                     // Tooltip
                     val tempText = WeatherFormatter.formatTemperature(nearHour.temperature, s)
-                    val timeText = WeatherFormatter.formatHourLabel(nearHour.time, s)
+                    val timeText = WeatherFormatter.formatRelativeHourLabel(nearHour.time, referenceTime, s)
                     val precipText = if (nearHour.precipitationProbability > 0) " ${nearHour.precipitationProbability}%" else ""
                     val tooltipText = "$tempText \u2022 $timeText$precipText"
                     val measured = textMeasurer.measure(tooltipText, tooltipStyle)
