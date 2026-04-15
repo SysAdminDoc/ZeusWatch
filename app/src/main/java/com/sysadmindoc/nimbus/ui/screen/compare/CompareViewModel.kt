@@ -68,23 +68,26 @@ class CompareViewModel @Inject constructor(
     private fun syncSavedLocations(locations: List<SavedLocationEntity>) {
         val validIds = locations.map { it.id }.toSet()
         val preferredPrimary = locations.firstOrNull { it.isCurrentLocation } ?: locations.firstOrNull()
+
+        // Compute new assignments BEFORE the CAS-retryable update lambda
+        val currentState = _uiState.value
+        val primary = currentState.location1?.takeIf { it.id in validIds } ?: preferredPrimary
+        val secondary = currentState.location2?.takeIf { it.id in validIds && it.id != primary?.id }
+            ?: locations.firstOrNull { it.id != primary?.id }
+
         var fetchPrimary: Pair<SavedLocationEntity, Long>? = null
         var fetchSecondary: Pair<SavedLocationEntity, Long>? = null
 
+        if (currentState.location1?.id != primary?.id && primary != null) {
+            primaryRequestToken = consumeRequestToken()
+            fetchPrimary = primary to primaryRequestToken
+        }
+        if (currentState.location2?.id != secondary?.id && secondary != null) {
+            secondaryRequestToken = consumeRequestToken()
+            fetchSecondary = secondary to secondaryRequestToken
+        }
+
         _uiState.update { state ->
-            val primary = state.location1?.takeIf { it.id in validIds } ?: preferredPrimary
-            val secondary = state.location2?.takeIf { it.id in validIds && it.id != primary?.id }
-                ?: locations.firstOrNull { it.id != primary?.id }
-
-            if (state.location1?.id != primary?.id && primary != null) {
-                primaryRequestToken = consumeRequestToken()
-                fetchPrimary = primary to primaryRequestToken
-            }
-            if (state.location2?.id != secondary?.id && secondary != null) {
-                secondaryRequestToken = consumeRequestToken()
-                fetchSecondary = secondary to secondaryRequestToken
-            }
-
             state.copy(
                 savedLocations = locations,
                 location1 = primary,

@@ -24,7 +24,7 @@ object AlertNotificationHelper {
 
     private const val GROUP_ID = "nimbus_alert_group"
     private const val GROUP_NAME = "Weather Alerts"
-    private const val SUMMARY_NOTIFICATION_ID = 0
+    private const val SUMMARY_NOTIFICATION_ID = 0x1000
 
     // Separate channels per severity tier
     private const val CHANNEL_EXTREME = "nimbus_alerts_extreme"
@@ -187,7 +187,7 @@ object AlertNotificationHelper {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
-        val notifId = NOTIFICATION_ID_HEALTH_BASE + title.hashCode().and(0xFF)
+        val notifId = NOTIFICATION_ID_HEALTH_BASE + (title.hashCode() and 0xFFFF)
         val pendingIntent = PendingIntent.getActivity(
             context, notifId, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,

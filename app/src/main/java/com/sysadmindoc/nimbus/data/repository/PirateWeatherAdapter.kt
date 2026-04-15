@@ -68,7 +68,7 @@ class PirateWeatherForecastAdapter @Inject constructor(
                 windGusts = current.windGust?.let { it * 3.6 },
                 pressure = current.pressure,
                 uvIndex = current.uvIndex,
-                visibility = current.visibility,
+                visibility = current.visibility?.let { it * 1000.0 }, // km → meters (WeatherFormatter expects meters)
                 dewPoint = current.dewPoint,
                 cloudCover = (current.cloudCover * 100).toInt(),
                 precipitation = current.precipIntensity,
@@ -106,7 +106,7 @@ class PirateWeatherForecastAdapter @Inject constructor(
                 humidity = h.humidity?.let { (it * 100).toInt() },
                 uvIndex = h.uvIndex,
                 cloudCover = h.cloudCover?.let { (it * 100).toInt() },
-                visibility = h.visibility,
+                visibility = h.visibility?.let { it * 1000.0 }, // km → meters
                 snowfall = if (h.precipType == "snow") h.precipIntensity else null,
                 windGusts = h.windGust?.let { it * 3.6 },
                 surfacePressure = h.pressure,

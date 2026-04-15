@@ -130,40 +130,38 @@ class MainViewModel @Inject constructor(
     private fun observeSavedLocations() {
         viewModelScope.launch {
             locationRepository.savedLocations.collect { locations ->
-                var recoveryLocation: SavedLocationEntity? = null
-                var shouldReloadGps = false
+                // Compute recovery action OUTSIDE _uiState.update to avoid
+                // side effects in the CAS-retryable lambda.
+                val fallback = locations.firstOrNull { it.isCurrentLocation } ?: locations.firstOrNull()
+                val trackedLocationMissing = activeLocationId != null && locations.none { it.id == activeLocationId }
+
+                if (trackedLocationMissing) {
+                    useGpsLocation = fallback?.isCurrentLocation != false
+                    activeLocationId = fallback?.takeUnless { it.isCurrentLocation }?.id
+                    activeLocationName = fallback?.takeUnless { it.isCurrentLocation }?.name
+                }
+
                 _uiState.update { state ->
-                    val fallback = locations.firstOrNull { it.isCurrentLocation } ?: locations.firstOrNull()
-                    val trackedLocationMissing = activeLocationId != null && locations.none { it.id == activeLocationId }
                     val nextCurrentPage = when {
                         trackedLocationMissing && fallback != null -> locations.indexOfFirst { it.id == fallback.id }.coerceAtLeast(0)
                         locations.isEmpty() -> 0
                         else -> state.currentPage.coerceIn(0, locations.lastIndex)
                     }
-
-                    if (trackedLocationMissing) {
-                        useGpsLocation = fallback?.isCurrentLocation != false
-                        activeLocationId = fallback?.takeUnless { it.isCurrentLocation }?.id
-                        activeLocationName = fallback?.takeUnless { it.isCurrentLocation }?.name
-                        if (useGpsLocation) {
-                            shouldReloadGps = true
-                        } else {
-                            recoveryLocation = fallback
-                        }
-                    }
-
                     state.copy(
                         savedLocations = locations.toImmutableList(),
                         currentPage = nextCurrentPage,
                     )
                 }
 
-                when {
-                    recoveryLocation != null -> {
-                        val location = recoveryLocation ?: return@collect
-                        loadWeatherForCoords(location.latitude, location.longitude, location.id, location.name)
+                if (trackedLocationMissing) {
+                    val recoveryLocation = fallback?.takeUnless { it.isCurrentLocation }
+                    when {
+                        recoveryLocation != null -> loadWeatherForCoords(
+                            recoveryLocation.latitude, recoveryLocation.longitude,
+                            recoveryLocation.id, recoveryLocation.name,
+                        )
+                        useGpsLocation -> loadWeather(clearDisplayedWeather = true)
                     }
-                    shouldReloadGps -> loadWeather(clearDisplayedWeather = true)
                 }
             }
         }
@@ -621,9 +619,10 @@ class MainViewModel @Inject constructor(
 
     private fun latLonToTile(lat: Double, lon: Double, zoom: Int): Pair<Int, Int> {
         val n = 1 shl zoom
-        val x = ((lon + 180.0) / 360.0 * n).toInt()
-        val latRad = Math.toRadians(lat)
-        val y = ((1.0 - ln(tan(latRad) + 1.0 / cos(latRad)) / Math.PI) / 2.0 * n).toInt()
+        val clampedLat = lat.coerceIn(-85.0511, 85.0511)
+        val x = ((lon + 180.0) / 360.0 * n).toInt().coerceIn(0, n - 1)
+        val latRad = Math.toRadians(clampedLat)
+        val y = ((1.0 - ln(tan(latRad) + 1.0 / cos(latRad)) / Math.PI) / 2.0 * n).toInt().coerceIn(0, n - 1)
         return Pair(x, y)
     }
 
