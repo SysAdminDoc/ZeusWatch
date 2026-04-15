@@ -30,8 +30,10 @@ class BrightSkyForecastAdapter @Inject constructor(
         longitude: Double,
         locationName: String? = null,
     ): Result<WeatherData> = runCatching {
-        val today = LocalDate.now(ZoneOffset.UTC)
-        val endDate = today.plusDays(10) // DWD MOSMIX forecasts go ~10 days
+        // Use yesterday UTC as start date to ensure we capture today's data
+        // in all timezones (UTC+14 is already tomorrow in UTC).
+        val today = LocalDate.now(ZoneOffset.UTC).minusDays(1)
+        val endDate = today.plusDays(11) // DWD MOSMIX forecasts go ~10 days
 
         val response = api.getWeather(
             latitude = latitude,
@@ -97,7 +99,7 @@ class BrightSkyForecastAdapter @Inject constructor(
                 windGusts = currentEntry.windGustSpeed,
                 pressure = currentEntry.pressureMsl ?: currentEntry.pressure ?: 0.0,
                 uvIndex = 0.0, // DWD doesn't provide UV
-                visibility = currentEntry.visibility?.let { it / 1000.0 }, // m → km
+                visibility = currentEntry.visibility, // meters (WeatherFormatter expects meters)
                 dewPoint = currentEntry.dewPoint,
                 cloudCover = currentEntry.cloudCover?.toInt() ?: 0,
                 precipitation = currentEntry.precipitation ?: 0.0,
@@ -112,15 +114,16 @@ class BrightSkyForecastAdapter @Inject constructor(
     }
 
     private fun findCurrentEntry(entries: List<BsWeatherEntry>): BsWeatherEntry? {
+        // Prefer Instant-based comparison (timezone-safe). Only fall back to
+        // LocalDateTime comparison when the timestamp lacks offset info.
         val nowInstant = Instant.now()
-        val nowLocal = LocalDateTime.now()
         return entries.minByOrNull { entry ->
             val entryInstant = parseTimestampInstant(entry.timestamp)
             if (entryInstant != null) {
                 kotlin.math.abs(Duration.between(nowInstant, entryInstant).toMinutes())
             } else {
-                val entryTime = parseTimestamp(entry.timestamp) ?: return@minByOrNull Long.MAX_VALUE
-                kotlin.math.abs(Duration.between(nowLocal, entryTime).toMinutes())
+                // Entry has no timezone offset — treat as opaque and deprioritize
+                Long.MAX_VALUE
             }
         }
     }
@@ -146,7 +149,7 @@ class BrightSkyForecastAdapter @Inject constructor(
                 humidity = e.humidity?.toInt(),
                 uvIndex = null, // Not provided by DWD
                 cloudCover = e.cloudCover?.toInt(),
-                visibility = e.visibility?.let { it / 1000.0 },
+                visibility = e.visibility, // meters (WeatherFormatter expects meters)
                 windGusts = e.windGustSpeed,
                 sunshineDuration = e.sunshine, // minutes
                 surfacePressure = e.pressureMsl ?: e.pressure,

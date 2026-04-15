@@ -71,7 +71,7 @@ class OwmForecastAdapter @Inject constructor(
                 windGusts = current.windGust?.let { it * 3.6 },
                 pressure = current.pressure.toDouble(),
                 uvIndex = current.uvi,
-                visibility = current.visibility?.let { it / 1000.0 }, // m → km
+                visibility = current.visibility, // meters (WeatherFormatter expects meters)
                 dewPoint = current.dewPoint,
                 cloudCover = current.clouds,
                 precipitation = (current.rain?.oneHour ?: 0.0) + (current.snow?.oneHour ?: 0.0),
@@ -111,7 +111,7 @@ class OwmForecastAdapter @Inject constructor(
                 humidity = h.humidity,
                 uvIndex = h.uvi,
                 cloudCover = h.clouds,
-                visibility = h.visibility?.let { it / 1000.0 },
+                visibility = h.visibility, // meters (WeatherFormatter expects meters)
                 snowfall = h.snow?.oneHour,
                 windGusts = h.windGust?.let { it * 3.6 },
                 surfacePressure = h.pressure?.toDouble(),
