@@ -23,6 +23,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
+import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.data.repository.readPersistentWeatherNotificationEnabled
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -42,6 +43,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
     private val prefs: UserPreferences,
     private val weatherRepository: WeatherRepository,
     private val locationRepository: LocationRepository,
+    private val wearSyncManager: WearSyncManager,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
@@ -87,6 +89,8 @@ class WidgetRefreshWorker @AssistedInject constructor(
                     refreshedLocationKeys += locationKey(lastLoc.latitude, lastLoc.longitude)
                     WidgetDataProvider.save(applicationContext, buildWidgetData(primaryWeather, convertTemp))
                     refreshedAnyLocation = true
+                    // Sync to watch in background
+                    try { wearSyncManager.syncWeather(primaryWeather) } catch (_: Exception) {}
                 }
             } else {
                 WidgetDataProvider.clearDefault(applicationContext)
