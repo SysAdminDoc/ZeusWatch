@@ -18,6 +18,12 @@ class WeatherSourceManagerTest {
     private lateinit var openMeteoMinutelyAdapter: OpenMeteoMinutelyAdapter
     private lateinit var alertAdapter: AlertSourceManagerAdapter
     private lateinit var aqiAdapter: OpenMeteoAqiAdapter
+    private lateinit var owmForecastAdapter: OwmForecastAdapter
+    private lateinit var owmAlertAdapter: OwmAlertAdapter
+    private lateinit var owmAqiAdapter: OwmAqiAdapter
+    private lateinit var pirateWeatherAdapter: PirateWeatherForecastAdapter
+    private lateinit var brightSkyForecastAdapter: BrightSkyForecastAdapter
+    private lateinit var brightSkyAlertAdapter: BrightSkyAlertAdapter
     private lateinit var manager: WeatherSourceManager
 
     private val testWeatherData = WeatherData(
@@ -52,8 +58,26 @@ class WeatherSourceManagerTest {
         openMeteoMinutelyAdapter = mockk()
         alertAdapter = mockk()
         aqiAdapter = mockk()
+        owmForecastAdapter = mockk()
+        owmAlertAdapter = mockk()
+        owmAqiAdapter = mockk()
+        pirateWeatherAdapter = mockk()
+        brightSkyForecastAdapter = mockk()
+        brightSkyAlertAdapter = mockk()
         every { prefs.settings } returns flowOf(defaultSettings)
-        manager = WeatherSourceManager(prefs, openMeteoAdapter, openMeteoMinutelyAdapter, alertAdapter, aqiAdapter)
+        manager = WeatherSourceManager(
+            prefs = prefs,
+            openMeteoAdapter = openMeteoAdapter,
+            openMeteoMinutelyAdapter = openMeteoMinutelyAdapter,
+            nwsAlertAdapter = alertAdapter,
+            openMeteoAqiAdapter = aqiAdapter,
+            owmForecastAdapter = owmForecastAdapter,
+            owmAlertAdapter = owmAlertAdapter,
+            owmAqiAdapter = owmAqiAdapter,
+            pirateWeatherAdapter = pirateWeatherAdapter,
+            brightSkyForecastAdapter = brightSkyForecastAdapter,
+            brightSkyAlertAdapter = brightSkyAlertAdapter,
+        )
     }
 
     // ── Forecast Tests ──
@@ -105,19 +129,40 @@ class WeatherSourceManagerTest {
                 areaDescription = "Test County", effective = null, expires = null, response = null,
             )
         )
-        coEvery { alertAdapter.getAlerts(any(), any()) } returns Result.success(alerts)
+        coEvery { alertAdapter.getAlerts(any(), any(), any()) } returns Result.success(alerts)
 
         val result = manager.getAlerts(40.0, -74.0)
         assertTrue(result.isSuccess)
         assertEquals(1, result.getOrNull()?.size)
+        coVerify(exactly = 1) {
+            alertAdapter.getAlerts(40.0, -74.0, AlertSourcePreference.NWS_ONLY)
+        }
     }
 
     @Test
     fun getAlertsReturnsFailureWhenSourceFailsNoFallback() = runTest {
-        coEvery { alertAdapter.getAlerts(any(), any()) } returns Result.failure(Exception("NWS down"))
+        coEvery { alertAdapter.getAlerts(any(), any(), any()) } returns Result.failure(Exception("NWS down"))
 
         val result = manager.getAlerts(40.0, -74.0)
         assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun getAlertsRoutesEnvironmentCanadaThroughInternationalAdapter() = runTest {
+        val settingsWithCanada = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                alerts = WeatherSourceProvider.ENVIRONMENT_CANADA,
+            )
+        )
+        every { prefs.settings } returns flowOf(settingsWithCanada)
+        coEvery { alertAdapter.getAlerts(any(), any(), any()) } returns Result.success(emptyList())
+
+        val result = manager.getAlerts(43.7, -79.4)
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            alertAdapter.getAlerts(43.7, -79.4, AlertSourcePreference.ECCC_ONLY)
+        }
     }
 
     // ── Air Quality Tests ──
@@ -165,12 +210,16 @@ class WeatherSourceManagerTest {
     // ── Source Config Tests ──
 
     @Test
-    fun forTypeFiltersOutUnimplementedProviders() {
+    fun forTypeReturnsOnlyImplementedForecastProviders() {
         val forecastProviders = WeatherSourceProvider.forType(WeatherDataType.FORECAST)
-        assertFalse("OWM should be hidden", forecastProviders.contains(WeatherSourceProvider.OPEN_WEATHER_MAP))
-        assertFalse("Pirate Weather should be hidden", forecastProviders.contains(WeatherSourceProvider.PIRATE_WEATHER))
-        assertFalse("Bright Sky should be hidden", forecastProviders.contains(WeatherSourceProvider.BRIGHT_SKY))
+        assertTrue("OWM should be present", forecastProviders.contains(WeatherSourceProvider.OPEN_WEATHER_MAP))
+        assertTrue("Pirate Weather should be present", forecastProviders.contains(WeatherSourceProvider.PIRATE_WEATHER))
+        assertTrue("Bright Sky should be present", forecastProviders.contains(WeatherSourceProvider.BRIGHT_SKY))
         assertTrue("Open-Meteo should be present", forecastProviders.contains(WeatherSourceProvider.OPEN_METEO))
+        assertFalse(
+            "Environment Canada forecast should stay hidden until implemented",
+            forecastProviders.contains(WeatherSourceProvider.ENVIRONMENT_CANADA)
+        )
     }
 
     @Test

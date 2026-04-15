@@ -177,6 +177,12 @@ class WeatherRepository @Inject constructor(
         val dailyHigh = daily?.temperatureMax?.getOrNull(todayIndex) ?: current.temperature ?: 0.0
         val dailyLow = daily?.temperatureMin?.getOrNull(todayIndex) ?: current.temperature ?: 0.0
 
+        // Anchor "now" off the response's current.time (location-local), not the device clock.
+        // Using LocalDateTime.now() would compare device-local time against location-local
+        // timestamps, silently filtering out all hourly entries for distant locations
+        // (same class of bug fixed in AirQualityRepository in v1.6.4).
+        val locationLocalNow = parseDateTime(current.time) ?: LocalDateTime.now()
+
         return WeatherData(
             location = location,
             current = CurrentConditions(
@@ -202,14 +208,13 @@ class WeatherRepository @Inject constructor(
                 sunrise = daily?.sunrise?.getOrNull(todayIndex),
                 sunset = daily?.sunset?.getOrNull(todayIndex),
             ),
-            hourly = mapHourlyData(hourly),
+            hourly = mapHourlyData(hourly, locationLocalNow),
             daily = mapDailyData(daily),
         )
     }
 
-    private fun mapHourlyData(hourly: HourlyWeather?): List<HourlyConditions> {
+    private fun mapHourlyData(hourly: HourlyWeather?, now: LocalDateTime): List<HourlyConditions> {
         if (hourly == null) return emptyList()
-        val now = LocalDateTime.now()
         return hourly.time.mapIndexedNotNull { i, timeStr ->
             val time = parseDateTime(timeStr) ?: return@mapIndexedNotNull null
             if (time.isBefore(now.minusHours(1))) return@mapIndexedNotNull null

@@ -5,11 +5,11 @@ import androidx.work.WorkerParameters
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
-import com.sysadmindoc.nimbus.data.repository.AlertRepository
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.SavedLocation
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
+import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -27,7 +27,7 @@ class AlertCheckWorkerTest {
 
     private lateinit var context: Context
     private lateinit var params: WorkerParameters
-    private lateinit var alertRepository: AlertRepository
+    private lateinit var weatherSourceManager: WeatherSourceManager
     private lateinit var locationRepository: LocationRepository
     private lateinit var prefs: UserPreferences
 
@@ -35,7 +35,7 @@ class AlertCheckWorkerTest {
     fun setup() {
         context = mockk(relaxed = true)
         params = mockk(relaxed = true)
-        alertRepository = mockk()
+        weatherSourceManager = mockk()
         locationRepository = mockk()
         prefs = mockk(relaxed = true)
         mockkObject(AlertNotificationHelper)
@@ -59,9 +59,9 @@ class AlertCheckWorkerTest {
         )
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
         coEvery { prefs.getSeenAlertIds() } returns emptySet()
-        coEvery { alertRepository.getAlerts(any(), any()) } returns Result.success(listOf(lowSeverityAlert))
+        coEvery { weatherSourceManager.getAlerts(any(), any()) } returns Result.success(listOf(lowSeverityAlert))
 
-        val worker = AlertCheckWorker(context, params, alertRepository, locationRepository, prefs)
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
         worker.doWork()
 
         coVerify(exactly = 0) { prefs.addSeenAlertIds(any()) }
@@ -95,9 +95,9 @@ class AlertCheckWorkerTest {
                 sortOrder = 1,
             ),
         )
-        coEvery { alertRepository.getAlerts(any(), any()) } returns Result.success(listOf(severeAlert))
+        coEvery { weatherSourceManager.getAlerts(any(), any()) } returns Result.success(listOf(severeAlert))
 
-        val worker = AlertCheckWorker(context, params, alertRepository, locationRepository, prefs)
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
         worker.doWork()
 
         io.mockk.verify(exactly = 1) { AlertNotificationHelper.showAlertNotification(any(), any(), any()) }
@@ -138,14 +138,14 @@ class AlertCheckWorkerTest {
                 sortOrder = 1,
             ),
         )
-        coEvery { alertRepository.getAlerts(any(), any()) } returns Result.success(emptyList())
+        coEvery { weatherSourceManager.getAlerts(any(), any()) } returns Result.success(emptyList())
 
-        val worker = AlertCheckWorker(context, params, alertRepository, locationRepository, prefs)
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
         worker.doWork()
 
-        coVerify(exactly = 2) { alertRepository.getAlerts(any(), any()) }
-        coVerify(exactly = 1) { alertRepository.getAlerts(39.73921, -104.99031) }
-        coVerify(exactly = 1) { alertRepository.getAlerts(40.01499, -105.27050) }
+        coVerify(exactly = 2) { weatherSourceManager.getAlerts(any(), any()) }
+        coVerify(exactly = 1) { weatherSourceManager.getAlerts(39.73921, -104.99031) }
+        coVerify(exactly = 1) { weatherSourceManager.getAlerts(40.01499, -105.27050) }
     }
 
     @Test

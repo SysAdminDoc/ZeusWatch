@@ -35,8 +35,8 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 @Composable
 fun SunshineDurationCard(
     sunshineDurationSeconds: Double,
-    dayLengthMinutes: Long? = null,
     modifier: Modifier = Modifier,
+    dayLengthMinutes: Long? = null,
 ) {
     val sunshineText = WeatherFormatter.formatSunshineDuration(sunshineDurationSeconds)
     val sunshineHours = sunshineDurationSeconds / 3600.0

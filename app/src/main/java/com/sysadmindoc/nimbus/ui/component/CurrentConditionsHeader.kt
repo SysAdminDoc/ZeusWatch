@@ -44,8 +44,8 @@ import kotlin.math.roundToInt
 fun CurrentConditionsHeader(
     current: CurrentConditions,
     locationName: String,
-    yesterdayHigh: Double? = null,
     modifier: Modifier = Modifier,
+    yesterdayHigh: Double? = null,
 ) {
     val s = LocalUnitSettings.current
     val shape = RoundedCornerShape(34.dp)

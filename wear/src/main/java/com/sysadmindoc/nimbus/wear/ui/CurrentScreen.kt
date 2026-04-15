@@ -35,11 +35,11 @@ private val AlertBannerText = Color(0xFFFF7043)
 @Composable
 fun CurrentScreen(
     state: WearUiState,
+    modifier: Modifier = Modifier,
     onHourlyTap: () -> Unit = {},
     onDailyTap: () -> Unit = {},
     onAlertsTap: () -> Unit = {},
     onRefresh: () -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier.fillMaxSize(),

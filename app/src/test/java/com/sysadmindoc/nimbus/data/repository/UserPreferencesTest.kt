@@ -107,6 +107,54 @@ class UserPreferencesTest {
         assertEquals(WeatherSourceProvider.OPEN_METEO, settings.sourceConfig.minutely)
     }
 
+    @Test
+    fun sourceConfigNormalizedFallsBackFromUnsupportedPrimarySelections() {
+        val normalized = SourceConfig(
+            forecast = WeatherSourceProvider.ENVIRONMENT_CANADA,
+            alerts = WeatherSourceProvider.PIRATE_WEATHER,
+            airQuality = WeatherSourceProvider.NWS,
+            minutely = WeatherSourceProvider.OPEN_WEATHER_MAP,
+        ).normalized()
+
+        assertEquals(WeatherSourceProvider.OPEN_METEO, normalized.forecast)
+        assertEquals(WeatherSourceProvider.NWS, normalized.alerts)
+        assertEquals(WeatherSourceProvider.OPEN_METEO, normalized.airQuality)
+        assertEquals(WeatherSourceProvider.OPEN_METEO, normalized.minutely)
+    }
+
+    @Test
+    fun sourceConfigNormalizedClearsUnsupportedOrDuplicateFallbacks() {
+        val normalized = SourceConfig(
+            forecast = WeatherSourceProvider.OPEN_METEO,
+            forecastFallback = WeatherSourceProvider.ENVIRONMENT_CANADA,
+            alerts = WeatherSourceProvider.NWS,
+            alertsFallback = WeatherSourceProvider.NWS,
+        ).normalized()
+
+        assertNull(normalized.forecastFallback)
+        assertNull(normalized.alertsFallback)
+    }
+
+    @Test
+    fun weatherSourceProviderDefaultForReturnsSafeDefaults() {
+        assertEquals(
+            WeatherSourceProvider.OPEN_METEO,
+            WeatherSourceProvider.defaultFor(WeatherDataType.FORECAST),
+        )
+        assertEquals(
+            WeatherSourceProvider.NWS,
+            WeatherSourceProvider.defaultFor(WeatherDataType.ALERTS),
+        )
+        assertEquals(
+            WeatherSourceProvider.OPEN_METEO,
+            WeatherSourceProvider.defaultFor(WeatherDataType.AIR_QUALITY),
+        )
+        assertEquals(
+            WeatherSourceProvider.OPEN_METEO,
+            WeatherSourceProvider.defaultFor(WeatherDataType.MINUTELY),
+        )
+    }
+
     // --- CardType enum ---
 
     @Test

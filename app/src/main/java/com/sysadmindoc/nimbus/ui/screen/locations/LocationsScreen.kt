@@ -99,7 +99,11 @@ fun LocationsScreen(
         onLocationSelected = onLocationSelected,
         onSearchQueryChanged = { viewModel.onSearchQueryChanged(it) },
         onClearSearch = { viewModel.clearSearch() },
-        onAddLocation = { viewModel.addLocation(it) },
+        onAddLocation = { result ->
+            viewModel.addLocation(result) { locationId ->
+                onLocationSelected(locationId)
+            }
+        },
         onRemoveLocation = { viewModel.removeLocation(it) },
         onMoveLocation = { from, to -> viewModel.moveLocation(from, to) },
     )
@@ -450,13 +454,13 @@ private fun SearchResultItem(
 @Composable
 private fun SavedLocationItem(
     location: SavedLocationEntity,
+    modifier: Modifier = Modifier,
     temperature: Double? = null,
     weatherCode: com.sysadmindoc.nimbus.data.model.WeatherCode? = null,
     isDay: Boolean = true,
     onClick: () -> Unit,
     onRemove: () -> Unit,
     showDragHandle: Boolean = false,
-    modifier: Modifier = Modifier,
     onDragStart: () -> Unit = {},
     onDrag: (Float) -> Unit = {},
     onDragEnd: () -> Unit = {},

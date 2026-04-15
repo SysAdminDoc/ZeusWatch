@@ -18,7 +18,7 @@ enum class WeatherSourceProvider(
     val displayName: String,
     val supportedTypes: Set<WeatherDataType>,
     val requiresApiKey: Boolean = false,
-    val implemented: Boolean = true,
+    private val implementedTypes: Set<WeatherDataType> = supportedTypes,
 ) {
     OPEN_METEO(
         displayName = "Open-Meteo",
@@ -45,6 +45,7 @@ enum class WeatherSourceProvider(
     ENVIRONMENT_CANADA(
         displayName = "Environment Canada",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.ALERTS),
+        implementedTypes = setOf(WeatherDataType.ALERTS),
     ),
     METEOALARM(
         displayName = "MeteoAlarm (EUMETNET)",
@@ -58,10 +59,24 @@ enum class WeatherSourceProvider(
     /** Returns true if this provider supports the given data type. */
     fun supports(type: WeatherDataType): Boolean = type in supportedTypes
 
+    /** Returns true if the app currently implements this provider for the given type. */
+    fun isImplementedFor(type: WeatherDataType): Boolean = type in implementedTypes
+
+    /** Returns true when the provider is both valid and implemented for the requested type. */
+    fun isSelectableFor(type: WeatherDataType): Boolean = supports(type) && isImplementedFor(type)
+
     companion object {
         /** Returns all implemented providers that support a given data type. */
         fun forType(type: WeatherDataType): List<WeatherSourceProvider> =
-            entries.filter { it.supports(type) && it.implemented }
+            entries.filter { it.isSelectableFor(type) }
+
+        /** Returns the safe built-in default source for a given data type. */
+        fun defaultFor(type: WeatherDataType): WeatherSourceProvider = when (type) {
+            WeatherDataType.FORECAST,
+            WeatherDataType.AIR_QUALITY,
+            WeatherDataType.MINUTELY -> OPEN_METEO
+            WeatherDataType.ALERTS -> NWS
+        }
     }
 }
 
@@ -73,4 +88,40 @@ data class SourceConfig(
     val alertsFallback: WeatherSourceProvider? = null,
     val airQuality: WeatherSourceProvider = WeatherSourceProvider.OPEN_METEO,
     val minutely: WeatherSourceProvider = WeatherSourceProvider.OPEN_METEO,
-)
+) {
+    /**
+     * Coerces stale or unsupported stored provider selections back to implemented values.
+     * This prevents older installs from getting stuck on sources the current build hides.
+     */
+    fun normalized(): SourceConfig {
+        val normalizedForecast = forecast.normalizedPrimary(WeatherDataType.FORECAST)
+        val normalizedAlerts = alerts.normalizedPrimary(WeatherDataType.ALERTS)
+        val normalizedAirQuality = airQuality.normalizedPrimary(WeatherDataType.AIR_QUALITY)
+        val normalizedMinutely = minutely.normalizedPrimary(WeatherDataType.MINUTELY)
+
+        return copy(
+            forecast = normalizedForecast,
+            forecastFallback = forecastFallback.normalizedFallback(
+                type = WeatherDataType.FORECAST,
+                primary = normalizedForecast,
+            ),
+            alerts = normalizedAlerts,
+            alertsFallback = alertsFallback.normalizedFallback(
+                type = WeatherDataType.ALERTS,
+                primary = normalizedAlerts,
+            ),
+            airQuality = normalizedAirQuality,
+            minutely = normalizedMinutely,
+        )
+    }
+}
+
+private fun WeatherSourceProvider.normalizedPrimary(type: WeatherDataType): WeatherSourceProvider =
+    takeIf { it.isSelectableFor(type) } ?: WeatherSourceProvider.defaultFor(type)
+
+private fun WeatherSourceProvider?.normalizedFallback(
+    type: WeatherDataType,
+    primary: WeatherSourceProvider,
+): WeatherSourceProvider? = this
+    ?.takeIf { it.isSelectableFor(type) }
+    ?.takeUnless { it == primary }
