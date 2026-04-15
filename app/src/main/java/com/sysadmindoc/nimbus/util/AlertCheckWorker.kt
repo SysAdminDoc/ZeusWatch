@@ -12,9 +12,9 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
-import com.sysadmindoc.nimbus.data.repository.AlertRepository
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
+import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -37,7 +37,7 @@ private const val TAG = "AlertCheckWorker"
 class AlertCheckWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted params: WorkerParameters,
-    private val alertRepository: AlertRepository,
+    private val weatherSourceManager: WeatherSourceManager,
     private val locationRepository: LocationRepository,
     private val prefs: UserPreferences,
 ) : CoroutineWorker(appContext, params) {
@@ -72,7 +72,7 @@ class AlertCheckWorker @AssistedInject constructor(
         }
 
         for ((lat, lon, locationName) in locations) {
-            val result = alertRepository.getAlerts(lat, lon)
+            val result = weatherSourceManager.getAlerts(lat, lon)
             val alerts = result.getOrNull() ?: continue
 
             val filtered = alerts.filter { alert ->

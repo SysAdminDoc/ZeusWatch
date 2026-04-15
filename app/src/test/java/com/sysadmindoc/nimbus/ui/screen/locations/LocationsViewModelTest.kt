@@ -171,6 +171,21 @@ class LocationsViewModelTest {
     }
 
     @Test
+    fun `addLocation invokes callback with selected location id`() = runTest {
+        coEvery { locationRepository.addLocation(any()) } returns 7L
+        var selectedLocationId: Long? = null
+
+        viewModel = createViewModel()
+        viewModel.addLocation(testResults[0]) { locationId ->
+            selectedLocationId = locationId
+        }
+
+        advanceUntilIdle()
+
+        assertEquals(7L, selectedLocationId)
+    }
+
+    @Test
     fun `removeLocation calls repository`() = runTest {
         coEvery { locationRepository.removeLocation(any()) } just Runs
 

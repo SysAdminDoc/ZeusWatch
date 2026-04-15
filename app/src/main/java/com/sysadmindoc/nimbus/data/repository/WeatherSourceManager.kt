@@ -101,12 +101,18 @@ class WeatherSourceManager @Inject constructor(
         latitude: Double,
         longitude: Double,
     ): Result<List<WeatherAlert>> = when (provider) {
-        WeatherSourceProvider.NWS -> nwsAlertAdapter.getAlerts(latitude, longitude)
-        WeatherSourceProvider.METEOALARM -> nwsAlertAdapter.getAlerts(latitude, longitude)
-        WeatherSourceProvider.JMA -> nwsAlertAdapter.getAlerts(latitude, longitude)
+        WeatherSourceProvider.NWS,
+        WeatherSourceProvider.METEOALARM,
+        WeatherSourceProvider.JMA,
+        WeatherSourceProvider.ENVIRONMENT_CANADA -> {
+            nwsAlertAdapter.getAlerts(
+                latitude = latitude,
+                longitude = longitude,
+                preferenceOverride = provider.toAlertSourcePreference(),
+            )
+        }
         WeatherSourceProvider.OPEN_WEATHER_MAP -> owmAlertAdapter.getAlerts(latitude, longitude)
         WeatherSourceProvider.BRIGHT_SKY -> brightSkyAlertAdapter.getAlerts(latitude, longitude)
-        WeatherSourceProvider.ENVIRONMENT_CANADA -> stubResult("Environment Canada alerts")
         else -> Result.failure(UnsupportedOperationException("${provider.displayName} does not support alerts"))
     }
 
@@ -157,6 +163,14 @@ class WeatherSourceManager @Inject constructor(
 
     private fun <T> stubResult(name: String): Result<T> =
         Result.failure(NotImplementedError("$name adapter coming soon"))
+
+    private fun WeatherSourceProvider.toAlertSourcePreference(): AlertSourcePreference = when (this) {
+        WeatherSourceProvider.NWS -> AlertSourcePreference.NWS_ONLY
+        WeatherSourceProvider.METEOALARM -> AlertSourcePreference.METEOALARM_ONLY
+        WeatherSourceProvider.JMA -> AlertSourcePreference.JMA_ONLY
+        WeatherSourceProvider.ENVIRONMENT_CANADA -> AlertSourcePreference.ECCC_ONLY
+        else -> error("${displayName} does not map to an AlertSourcePreference override")
+    }
 }
 
 // ── Source Adapters ─────────────────────────────────────────────────────
@@ -200,7 +214,8 @@ class AlertSourceManagerAdapter @Inject constructor(
     suspend fun getAlerts(
         latitude: Double,
         longitude: Double,
-    ): Result<List<WeatherAlert>> = alertRepository.getAlerts(latitude, longitude)
+        preferenceOverride: AlertSourcePreference? = null,
+    ): Result<List<WeatherAlert>> = alertRepository.getAlerts(latitude, longitude, preferenceOverride)
 }
 
 /**

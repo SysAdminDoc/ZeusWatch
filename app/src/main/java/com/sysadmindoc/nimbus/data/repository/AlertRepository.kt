@@ -48,10 +48,17 @@ class AlertRepository @Inject constructor(
      * 4. Sort by severity then urgency.
      */
     suspend fun getAlerts(latitude: Double, longitude: Double): Result<List<WeatherAlert>> =
+        getAlerts(latitude, longitude, preferenceOverride = null)
+
+    suspend fun getAlerts(
+        latitude: Double,
+        longitude: Double,
+        preferenceOverride: AlertSourcePreference? = null,
+    ): Result<List<WeatherAlert>> =
         withContext(Dispatchers.IO) {
             try {
                 val settings = prefs.settings.first()
-                val pref = settings.alertSourcePref
+                val pref = preferenceOverride ?: settings.alertSourcePref
                 val countryCode = detectCountry(latitude, longitude)
 
                 Log.d(TAG, "Detected country: $countryCode, alertSourcePref: $pref")
