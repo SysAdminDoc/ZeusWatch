@@ -18,3 +18,4 @@ local.properties
 *.jks
 google-services.json
 .kotlin/
+CLAUDE.md
