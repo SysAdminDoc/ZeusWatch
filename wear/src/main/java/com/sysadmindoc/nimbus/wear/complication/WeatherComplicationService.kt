@@ -10,6 +10,7 @@ import androidx.wear.watchface.complications.datasource.ComplicationRequest
 import androidx.wear.watchface.complications.datasource.SuspendingComplicationDataSourceService
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
+import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -18,6 +19,7 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
 
     @Inject lateinit var repository: WearWeatherRepository
     @Inject lateinit var locationProvider: WearLocationProvider
+    @Inject lateinit var syncedStore: SyncedWeatherStore
 
     override fun getPreviewData(type: ComplicationType): ComplicationData? {
         return when (type) {
@@ -40,8 +42,11 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
     }
 
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData? {
-        val loc = locationProvider.getLocation()
-        val data = repository.getCurrentWeather(loc.lat, loc.lon, loc.name).getOrNull() ?: return null
+        // Prefer phone-synced data to avoid network calls from the watch
+        val data = syncedStore.getFreshData() ?: run {
+            val loc = locationProvider.getLocation()
+            repository.getCurrentWeather(loc.lat, loc.lon, loc.name).getOrNull()
+        } ?: return null
 
         return when (request.complicationType) {
             ComplicationType.SHORT_TEXT -> ShortTextComplicationData.Builder(

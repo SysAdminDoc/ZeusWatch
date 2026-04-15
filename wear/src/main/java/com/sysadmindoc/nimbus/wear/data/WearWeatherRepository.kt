@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.wear.data
 
+import android.util.Log
+import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -10,17 +12,32 @@ import okhttp3.Request
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val TAG = "WearWeatherRepo"
+
 @Singleton
 class WearWeatherRepository @Inject constructor(
     private val client: OkHttpClient,
+    private val syncedStore: SyncedWeatherStore,
 ) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true }
 
+    /**
+     * Returns weather data, preferring phone-synced data when fresh.
+     * Falls back to a direct Open-Meteo API call when the phone hasn't
+     * synced recently or no paired device is connected.
+     */
     suspend fun getCurrentWeather(
         lat: Double,
         lon: Double,
         locationName: String = "Unknown",
     ): Result<WearWeatherData> = withContext(Dispatchers.IO) {
+        // Prefer phone-synced data if fresh (< 30 min)
+        val synced = syncedStore.getFreshData()
+        if (synced != null) {
+            Log.d(TAG, "Using phone-synced weather data (age ${(System.currentTimeMillis() - syncedStore.lastSyncTimestamp()) / 1000}s)")
+            return@withContext Result.success(synced)
+        }
+        Log.d(TAG, "No fresh synced data, fetching from API")
         try {
             val url = "https://api.open-meteo.com/v1/forecast" +
                 "?latitude=$lat&longitude=$lon" +
@@ -32,7 +49,7 @@ class WearWeatherRepository @Inject constructor(
 
             val request = Request.Builder()
                 .url(url)
-                .header("User-Agent", "ZeusWatch-Wear/1.10.0")
+                .header("User-Agent", "ZeusWatch-Wear/1.13.0")
                 .build()
 
             client.newCall(request).execute().use { response ->

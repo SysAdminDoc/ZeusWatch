@@ -51,6 +51,10 @@
 -keep class com.google.firebase.** { *; }
 -dontwarn com.google.firebase.**
 
+# Google Play Services Wearable (DataLayer sync — standard flavor only)
+-keep class com.google.android.gms.wearable.** { *; }
+-dontwarn com.google.android.gms.wearable.**
+
 # Coroutines
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}

@@ -17,8 +17,8 @@ android {
         applicationId = "com.sysadmindoc.nimbus.wear"
         minSdk = 30
         targetSdk = 35
-        versionCode = 51
-        versionName = "1.10.0"
+        versionCode = 52
+        versionName = "1.13.0"
     }
 
     signingConfigs {
@@ -93,6 +93,9 @@ dependencies {
 
     // Location
     implementation(libs.play.services.location)
+
+    // Wearable DataLayer sync
+    implementation(libs.play.services.wearable)
 
     // Lifecycle
     implementation(libs.lifecycle.runtime)
