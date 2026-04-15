@@ -4,6 +4,8 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.nimbus.wear.data.HourlyEntry
+import com.sysadmindoc.nimbus.wear.data.WearAlertEntry
+import com.sysadmindoc.nimbus.wear.data.WearDailyEntry
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,6 +54,10 @@ class WearWeatherViewModel @Inject constructor(
                             isDay = data.isDay,
                             weatherCode = data.weatherCode,
                             hourly = data.hourly,
+                            daily = data.daily,
+                            alerts = data.alerts,
+                            aqi = data.aqi,
+                            aqiLabel = data.aqiLabel,
                         )
                     }
                 },
@@ -83,4 +89,8 @@ data class WearUiState(
     val isDay: Boolean = true,
     val weatherCode: Int = 0,
     val hourly: List<HourlyEntry> = emptyList(),
+    val daily: List<WearDailyEntry> = emptyList(),
+    val alerts: List<WearAlertEntry> = emptyList(),
+    val aqi: Int = -1,
+    val aqiLabel: String = "",
 )

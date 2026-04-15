@@ -12,6 +12,8 @@ import com.sysadmindoc.nimbus.wear.WearWeatherViewModel
 object WearRoutes {
     const val CURRENT = "current"
     const val HOURLY = "hourly"
+    const val DAILY = "daily"
+    const val ALERTS = "alerts"
 }
 
 @Composable
@@ -29,11 +31,19 @@ fun WearNavHost(
             CurrentScreen(
                 state = state,
                 onHourlyTap = { navController.navigate(WearRoutes.HOURLY) },
+                onDailyTap = { navController.navigate(WearRoutes.DAILY) },
+                onAlertsTap = { navController.navigate(WearRoutes.ALERTS) },
                 onRefresh = { viewModel.loadWeather() },
             )
         }
         composable(WearRoutes.HOURLY) {
             HourlyScreen(hourly = state.hourly)
+        }
+        composable(WearRoutes.DAILY) {
+            DailyScreen(daily = state.daily)
+        }
+        composable(WearRoutes.ALERTS) {
+            AlertsScreen(alerts = state.alerts)
         }
     }
 }

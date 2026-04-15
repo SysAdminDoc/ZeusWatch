@@ -294,8 +294,13 @@ class MainViewModel @Inject constructor(
                         launch { fetchAstronomy(data) }
                         launch { fetchRadarPreview(lat, lon) }
                         launch { fetchNowcast(lat, lon) }
-                        launch { wearSyncManager.syncWeather(data) }
                     }
+                    // Sync to watch after all data is available
+                    wearSyncManager.syncWeather(
+                        data = data,
+                        alerts = _uiState.value.alerts,
+                        airQuality = _uiState.value.airQuality,
+                    )
                     // Yesterday comparison must complete before derived data computation
                     fetchYesterdayComparison(lat, lon)
                     computeDerivedData(data)
