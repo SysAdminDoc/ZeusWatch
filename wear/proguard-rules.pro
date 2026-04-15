@@ -22,3 +22,6 @@
 # Google Play Services Location
 -keep class com.google.android.gms.location.** { *; }
 -dontwarn com.google.android.gms.**
+
+# Google Play Services Wearable (DataLayer sync)
+-keep class com.google.android.gms.wearable.** { *; }

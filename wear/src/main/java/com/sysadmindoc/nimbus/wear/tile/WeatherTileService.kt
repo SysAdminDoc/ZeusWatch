@@ -16,6 +16,7 @@ import androidx.wear.tiles.TileBuilders
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
 import com.sysadmindoc.nimbus.wear.data.WearWeatherData
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
+import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +30,7 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
 
     @Inject lateinit var repository: WearWeatherRepository
     @Inject lateinit var locationProvider: WearLocationProvider
+    @Inject lateinit var syncedStore: SyncedWeatherStore
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -36,8 +38,12 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
         CallbackToFutureAdapter.getFuture<TileBuilders.Tile> { completer ->
             serviceScope.launch {
                 try {
-                    val loc = locationProvider.getLocation()
-                    val data = repository.getCurrentWeather(loc.lat, loc.lon, loc.name).getOrNull()
+                    // Prefer phone-synced data to avoid network calls from the watch
+                    val synced = syncedStore.getFreshData()
+                    val data = synced ?: run {
+                        val loc = locationProvider.getLocation()
+                        repository.getCurrentWeather(loc.lat, loc.lon, loc.name).getOrNull()
+                    }
                     completer.set(buildTile(data))
                 } catch (e: Exception) {
                     completer.set(buildTile(null))

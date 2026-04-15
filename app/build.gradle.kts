@@ -18,8 +18,8 @@ android {
         applicationId = "com.sysadmindoc.nimbus"
         minSdk = 26
         targetSdk = 35
-        versionCode = 73
-        versionName = "1.12.0"
+        versionCode = 74
+        versionName = "1.13.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -154,6 +154,9 @@ dependencies {
 
     // Location (standard flavor only)
     "standardImplementation"(libs.play.services.location)
+
+    // Wearable DataLayer sync (standard flavor only)
+    "standardImplementation"(libs.play.services.wearable)
 
     // Gemini Nano on-device AI (standard flavor only — requires Google AI Core)
     "standardImplementation"("com.google.ai.edge.aicore:aicore:0.0.1-exp02")
