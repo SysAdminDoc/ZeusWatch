@@ -3,6 +3,8 @@ package com.sysadmindoc.nimbus.wear.sync
 import android.content.Context
 import android.content.SharedPreferences
 import com.sysadmindoc.nimbus.wear.data.HourlyEntry
+import com.sysadmindoc.nimbus.wear.data.WearAlertEntry
+import com.sysadmindoc.nimbus.wear.data.WearDailyEntry
 import com.sysadmindoc.nimbus.wear.data.WearWeatherData
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,6 +25,10 @@ private const val KEY_IS_DAY = "isDay"
 private const val KEY_WEATHER_CODE = "weatherCode"
 private const val KEY_SYNC_TIMESTAMP = "syncTimestampMs"
 private const val KEY_HOURLY_COUNT = "hourlyCount"
+private const val KEY_DAILY_COUNT = "dailyCount"
+private const val KEY_ALERT_COUNT = "alertCount"
+private const val KEY_AQI = "aqi"
+private const val KEY_AQI_LABEL = "aqiLabel"
 private const val MAX_STALENESS_MS = 30 * 60 * 1000L // 30 minutes
 
 /**
@@ -51,6 +57,10 @@ class SyncedWeatherStore @Inject constructor(
         weatherCode: Int,
         timestampMs: Long,
         hourly: List<HourlyEntry>,
+        daily: List<WearDailyEntry> = emptyList(),
+        alerts: List<WearAlertEntry> = emptyList(),
+        aqi: Int = -1,
+        aqiLabel: String = "",
     ) {
         prefs.edit().apply {
             putInt(KEY_TEMPERATURE, temperature)
@@ -65,6 +75,8 @@ class SyncedWeatherStore @Inject constructor(
             putBoolean(KEY_IS_DAY, isDay)
             putInt(KEY_WEATHER_CODE, weatherCode)
             putLong(KEY_SYNC_TIMESTAMP, timestampMs)
+            putInt(KEY_AQI, aqi)
+            putString(KEY_AQI_LABEL, aqiLabel)
 
             // Store hourly entries as indexed keys
             putInt(KEY_HOURLY_COUNT, hourly.size)
@@ -75,6 +87,26 @@ class SyncedWeatherStore @Inject constructor(
                 putInt("hourly_${i}_precip", entry.precipChance)
                 putInt("hourly_${i}_wind", entry.windSpeed)
             }
+
+            // Store daily entries
+            putInt(KEY_DAILY_COUNT, daily.size)
+            daily.forEachIndexed { i, entry ->
+                putString("daily_${i}_date", entry.date)
+                putInt("daily_${i}_code", entry.weatherCode)
+                putInt("daily_${i}_high", entry.high)
+                putInt("daily_${i}_low", entry.low)
+                putInt("daily_${i}_precip", entry.precipChance)
+            }
+
+            // Store alerts
+            putInt(KEY_ALERT_COUNT, alerts.size)
+            alerts.forEachIndexed { i, alert ->
+                putString("alert_${i}_event", alert.event)
+                putString("alert_${i}_severity", alert.severity)
+                putString("alert_${i}_headline", alert.headline)
+                putString("alert_${i}_expires", alert.expires)
+            }
+
             apply()
         }
     }
@@ -104,6 +136,29 @@ class SyncedWeatherStore @Inject constructor(
             )
         }
 
+        val dailyCount = prefs.getInt(KEY_DAILY_COUNT, 0)
+        val daily = (0 until dailyCount).mapNotNull { i ->
+            val date = prefs.getString("daily_${i}_date", null) ?: return@mapNotNull null
+            WearDailyEntry(
+                date = date,
+                weatherCode = prefs.getInt("daily_${i}_code", 0),
+                high = prefs.getInt("daily_${i}_high", 0),
+                low = prefs.getInt("daily_${i}_low", 0),
+                precipChance = prefs.getInt("daily_${i}_precip", 0),
+            )
+        }
+
+        val alertCount = prefs.getInt(KEY_ALERT_COUNT, 0)
+        val alerts = (0 until alertCount).mapNotNull { i ->
+            val event = prefs.getString("alert_${i}_event", null) ?: return@mapNotNull null
+            WearAlertEntry(
+                event = event,
+                severity = prefs.getString("alert_${i}_severity", "Unknown") ?: "Unknown",
+                headline = prefs.getString("alert_${i}_headline", "") ?: "",
+                expires = prefs.getString("alert_${i}_expires", "") ?: "",
+            )
+        }
+
         return WearWeatherData(
             temperature = prefs.getInt(KEY_TEMPERATURE, 0),
             condition = prefs.getString(KEY_CONDITION, null)
@@ -118,6 +173,10 @@ class SyncedWeatherStore @Inject constructor(
             isDay = prefs.getBoolean(KEY_IS_DAY, true),
             weatherCode = weatherCode,
             hourly = hourly,
+            daily = daily,
+            alerts = alerts,
+            aqi = prefs.getInt(KEY_AQI, -1),
+            aqiLabel = prefs.getString(KEY_AQI_LABEL, "") ?: "",
         )
     }
 
