@@ -47,6 +47,7 @@ import org.maplibre.android.style.layers.SymbolLayer
 fun RadarMapView(
     latitude: Double,
     longitude: Double,
+    modifier: Modifier = Modifier,
     zoom: Double = 5.0,
     currentTileUrl: String?,
     previousTileUrl: String?,
@@ -56,7 +57,6 @@ fun RadarMapView(
     onMapReady: () -> Unit = {},
     onCameraMoveStarted: () -> Unit = {},
     onCameraIdle: () -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current

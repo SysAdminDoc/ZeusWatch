@@ -8,6 +8,7 @@
     <string name="widget_medium_desc">Current conditions with 3-day forecast</string>
     <string name="widget_large_desc">Hourly forecast with 5-day outlook</string>
     <string name="widget_forecast_strip_desc">Compact hourly temperature strip</string>
+    <string name="widget_loading_message">Loading...</string>
 
     <!-- Current Conditions -->
     <string name="feels_like">Feels like %1$s</string>

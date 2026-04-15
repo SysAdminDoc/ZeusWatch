@@ -163,16 +163,16 @@ class UserPreferences @Inject constructor(
             // Data sources
             sourceConfig = SourceConfig(
                 forecast = prefs[Keys.SOURCE_FORECAST]?.let { safeValueOf<WeatherSourceProvider>(it) }
-                    ?: WeatherSourceProvider.OPEN_METEO,
+                    ?: WeatherSourceProvider.defaultFor(WeatherDataType.FORECAST),
                 forecastFallback = prefs[Keys.SOURCE_FORECAST_FALLBACK]?.let { safeValueOf<WeatherSourceProvider>(it) },
                 alerts = prefs[Keys.SOURCE_ALERTS]?.let { safeValueOf<WeatherSourceProvider>(it) }
-                    ?: WeatherSourceProvider.NWS,
+                    ?: WeatherSourceProvider.defaultFor(WeatherDataType.ALERTS),
                 alertsFallback = prefs[Keys.SOURCE_ALERTS_FALLBACK]?.let { safeValueOf<WeatherSourceProvider>(it) },
                 airQuality = prefs[Keys.SOURCE_AIR_QUALITY]?.let { safeValueOf<WeatherSourceProvider>(it) }
-                    ?: WeatherSourceProvider.OPEN_METEO,
+                    ?: WeatherSourceProvider.defaultFor(WeatherDataType.AIR_QUALITY),
                 minutely = prefs[Keys.SOURCE_MINUTELY]?.let { safeValueOf<WeatherSourceProvider>(it) }
-                    ?: WeatherSourceProvider.OPEN_METEO,
-            ),
+                    ?: WeatherSourceProvider.defaultFor(WeatherDataType.MINUTELY),
+            ).normalized(),
             owmApiKey = prefs[Keys.OWM_API_KEY] ?: "",
             pirateWeatherApiKey = prefs[Keys.PIRATE_WEATHER_API_KEY] ?: "",
         )
@@ -274,18 +274,36 @@ class UserPreferences @Inject constructor(
     suspend fun setCacheTtlMinutes(minutes: Int) = store.edit { it[Keys.CACHE_TTL_MINUTES] = minutes.toString() }
 
     // Data sources
-    suspend fun setSourceForecast(provider: WeatherSourceProvider) = store.edit { it[Keys.SOURCE_FORECAST] = provider.name }
+    suspend fun setSourceForecast(provider: WeatherSourceProvider) = store.edit {
+        val safeProvider = provider.takeIf { it.isSelectableFor(WeatherDataType.FORECAST) }
+            ?: WeatherSourceProvider.defaultFor(WeatherDataType.FORECAST)
+        it[Keys.SOURCE_FORECAST] = safeProvider.name
+    }
     suspend fun setSourceForecastFallback(provider: WeatherSourceProvider?) = store.edit {
-        if (provider != null) it[Keys.SOURCE_FORECAST_FALLBACK] = provider.name
+        val safeProvider = provider?.takeIf { it.isSelectableFor(WeatherDataType.FORECAST) }
+        if (safeProvider != null) it[Keys.SOURCE_FORECAST_FALLBACK] = safeProvider.name
         else it.remove(Keys.SOURCE_FORECAST_FALLBACK)
     }
-    suspend fun setSourceAlerts(provider: WeatherSourceProvider) = store.edit { it[Keys.SOURCE_ALERTS] = provider.name }
+    suspend fun setSourceAlerts(provider: WeatherSourceProvider) = store.edit {
+        val safeProvider = provider.takeIf { it.isSelectableFor(WeatherDataType.ALERTS) }
+            ?: WeatherSourceProvider.defaultFor(WeatherDataType.ALERTS)
+        it[Keys.SOURCE_ALERTS] = safeProvider.name
+    }
     suspend fun setSourceAlertsFallback(provider: WeatherSourceProvider?) = store.edit {
-        if (provider != null) it[Keys.SOURCE_ALERTS_FALLBACK] = provider.name
+        val safeProvider = provider?.takeIf { it.isSelectableFor(WeatherDataType.ALERTS) }
+        if (safeProvider != null) it[Keys.SOURCE_ALERTS_FALLBACK] = safeProvider.name
         else it.remove(Keys.SOURCE_ALERTS_FALLBACK)
     }
-    suspend fun setSourceAirQuality(provider: WeatherSourceProvider) = store.edit { it[Keys.SOURCE_AIR_QUALITY] = provider.name }
-    suspend fun setSourceMinutely(provider: WeatherSourceProvider) = store.edit { it[Keys.SOURCE_MINUTELY] = provider.name }
+    suspend fun setSourceAirQuality(provider: WeatherSourceProvider) = store.edit {
+        val safeProvider = provider.takeIf { it.isSelectableFor(WeatherDataType.AIR_QUALITY) }
+            ?: WeatherSourceProvider.defaultFor(WeatherDataType.AIR_QUALITY)
+        it[Keys.SOURCE_AIR_QUALITY] = safeProvider.name
+    }
+    suspend fun setSourceMinutely(provider: WeatherSourceProvider) = store.edit {
+        val safeProvider = provider.takeIf { it.isSelectableFor(WeatherDataType.MINUTELY) }
+            ?: WeatherSourceProvider.defaultFor(WeatherDataType.MINUTELY)
+        it[Keys.SOURCE_MINUTELY] = safeProvider.name
+    }
 
     // API keys
     suspend fun setOwmApiKey(key: String) = store.edit { it[Keys.OWM_API_KEY] = key }
