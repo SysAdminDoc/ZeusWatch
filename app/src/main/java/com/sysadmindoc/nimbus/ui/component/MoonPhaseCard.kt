@@ -34,9 +34,9 @@ import kotlin.math.sin
 @Composable
 fun MoonPhaseCard(
     astronomy: AstronomyData,
+    modifier: Modifier = Modifier,
     sunrise: String? = null,
     sunset: String? = null,
-    modifier: Modifier = Modifier,
 ) {
     WeatherCard(title = "Astronomy", modifier = modifier) {
         // Sunrise / Sunset row

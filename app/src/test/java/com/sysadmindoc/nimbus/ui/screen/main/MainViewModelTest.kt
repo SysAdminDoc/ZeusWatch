@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.sysadmindoc.nimbus.data.location.LocationProvider
 import com.sysadmindoc.nimbus.data.model.*
 import com.sysadmindoc.nimbus.data.repository.*
+import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.util.ConnectivityObserver
 import com.sysadmindoc.nimbus.util.SummaryEngine
 import io.mockk.*
@@ -35,6 +36,7 @@ class MainViewModelTest {
     private lateinit var prefs: UserPreferences
     private lateinit var connectivityObserver: ConnectivityObserver
     private lateinit var summaryEngine: SummaryEngine
+    private lateinit var wearSyncManager: WearSyncManager
 
     private lateinit var viewModel: MainViewModel
 
@@ -101,6 +103,7 @@ class MainViewModelTest {
         prefs = mockk(relaxed = true)
         connectivityObserver = mockk()
         summaryEngine = mockk()
+        wearSyncManager = mockk(relaxed = true)
         every { connectivityObserver.isOnline } returns flowOf(true)
         every { summaryEngine.isAvailable() } returns false
         every { summaryEngine.close() } just Runs
@@ -170,6 +173,7 @@ class MainViewModelTest {
             summaryEngine = summaryEngine,
             connectivityObserver = connectivityObserver,
             onThisDayRepository = mockk(relaxed = true),
+            wearSyncManager = wearSyncManager,
             defaultDispatcher = testDispatcher,
             savedStateHandle = savedState,
         )

@@ -102,10 +102,14 @@ class LocationsViewModel @Inject constructor(
         }
     }
 
-    fun addLocation(result: GeocodingResult) {
+    fun addLocation(
+        result: GeocodingResult,
+        onAdded: (Long) -> Unit = {},
+    ) {
         viewModelScope.launch {
-            locationRepository.addLocation(result)
+            val locationId = locationRepository.addLocation(result)
             _searchState.update { it.copy(query = "", results = emptyList()) }
+            onAdded(locationId)
         }
     }
 
