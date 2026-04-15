@@ -65,8 +65,9 @@ class OnThisDayRepository @Inject constructor(
         // Archive has a ~2-day lag; start from last year to be safe.
         val endYear = today.year - 1
         val startYear = endYear - HISTORY_SPAN_YEARS + 1
-        val startDate = LocalDate.of(startYear, today.monthValue, today.dayOfMonth)
-        val endDate = LocalDate.of(endYear, today.monthValue, today.dayOfMonth)
+        // Clamp day for Feb 29 in non-leap years to avoid DateTimeException
+        val startDate = safeDate(startYear, today.monthValue, today.dayOfMonth)
+        val endDate = safeDate(endYear, today.monthValue, today.dayOfMonth)
         val fmt = DateTimeFormatter.ISO_LOCAL_DATE
 
         val response = runCatching {
@@ -164,6 +165,12 @@ class OnThisDayRepository @Inject constructor(
         val lowC: Double,
         val precipMm: Double?,
     )
+
+    /** Clamp day of month for years where it doesn't exist (e.g. Feb 29 in non-leap years). */
+    private fun safeDate(year: Int, month: Int, day: Int): LocalDate {
+        val maxDay = java.time.YearMonth.of(year, month).lengthOfMonth()
+        return LocalDate.of(year, month, minOf(day, maxDay))
+    }
 
     companion object {
         private const val PREFS_NAME = "nimbus_on_this_day"

@@ -34,7 +34,8 @@ object WeatherSummaryEngine {
         val parts = mutableListOf<String>()
 
         // Opening: time-of-day greeting + condition
-        val hour = java.time.LocalTime.now().hour
+        // Use location-local observation time when available; fall back to device time
+        val hour = current.observationTime?.hour ?: java.time.LocalTime.now().hour
         val timeOfDay = when {
             !current.isDay -> "tonight"
             hour < 12 -> "this morning"
@@ -55,7 +56,7 @@ object WeatherSummaryEngine {
             val windDesc = when {
                 current.windSpeed > 60 -> "strong winds"
                 current.windSpeed > 40 -> "breezy conditions"
-                else -> "light winds"
+                else -> "moderate winds"
             }
             parts.add("with $windDesc")
         }
@@ -137,9 +138,9 @@ object WeatherSummaryEngine {
         return when {
             maxProb < 20 -> null // No rain expected
             rainyHours >= 8 -> "with rain likely throughout the day"
-            rainyHours >= 4 && firstRainIdx <= 2 -> "with rain expected this morning"
-            rainyHours >= 4 && firstRainIdx > 6 -> "with rain developing this evening"
-            rainyHours >= 4 -> "with rain likely this afternoon"
+            rainyHours >= 4 && firstRainIdx <= 2 -> "with rain expected soon"
+            rainyHours >= 4 && firstRainIdx > 6 -> "with rain developing later"
+            rainyHours >= 4 -> "with rain likely later today"
             rainyHours >= 1 && maxProb > 60 -> "with a chance of showers"
             rainyHours >= 1 -> "with a slight chance of rain"
             else -> null

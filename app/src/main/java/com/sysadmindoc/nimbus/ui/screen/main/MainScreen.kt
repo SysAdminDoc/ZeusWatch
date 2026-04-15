@@ -232,10 +232,12 @@ fun MainScreen(
     }
 
     // Provide unit settings and weather theme state to all child composables
-    val weatherThemeState = com.sysadmindoc.nimbus.ui.theme.WeatherThemeState(
-        weatherCode = state.weatherData?.current?.weatherCode,
-        isDay = state.weatherData?.current?.isDay ?: true,
-    )
+    val weatherThemeState = remember(state.weatherData?.current?.weatherCode, state.weatherData?.current?.isDay) {
+        com.sysadmindoc.nimbus.ui.theme.WeatherThemeState(
+            weatherCode = state.weatherData?.current?.weatherCode,
+            isDay = state.weatherData?.current?.isDay ?: true,
+        )
+    }
     CompositionLocalProvider(
         LocalUnitSettings provides state.settings,
         com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState provides weatherThemeState,

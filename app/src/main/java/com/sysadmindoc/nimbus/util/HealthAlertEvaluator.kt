@@ -134,7 +134,8 @@ object HealthAlertEvaluator {
         val next6 = hourly.take(6)
         if (next6.size < 3) return null
 
-        val humidityChange = next6.maxOf { it.humidity ?: 0 } - next6.minOf { it.humidity ?: 0 }
+        val humidities = next6.mapNotNull { it.humidity }
+        val humidityChange = if (humidities.size >= 2) humidities.max() - humidities.min() else 0
         val tempChange = next6.maxOf { it.temperature } - next6.minOf { it.temperature }
 
         if (tempChange > 8 && humidityChange > 30) {
