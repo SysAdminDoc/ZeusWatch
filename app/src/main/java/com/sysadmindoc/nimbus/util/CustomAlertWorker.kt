@@ -26,7 +26,8 @@ import java.util.concurrent.TimeUnit
  *
  * Each (rule-id, yyyy-MM-dd) pair is deduped against a SharedPreferences-
  * backed seen-set so the same rule doesn't re-fire every hour on the same
- * day. The dedupe set is trimmed to the last 7 days to keep the file small.
+ * forecast-local day. The dedupe set is trimmed to the last 7 days to keep
+ * the file small.
  */
 private const val TAG = "CustomAlertWorker"
 
@@ -52,19 +53,22 @@ class CustomAlertWorker @AssistedInject constructor(
         if (triggered.isEmpty()) return Result.success()
 
         val store = CustomAlertDedupeStore(applicationContext)
-        store.pruneOld()
-        val today = LocalDate.now().toString()
+        val today = weatherReferenceDate(weather).toString()
+        store.pruneOld(today)
 
         for (hit in triggered) {
             val dedupeKey = "${hit.rule.id}:$today"
             if (!store.markAndCheckNew(dedupeKey)) continue
             val (title, body) = formatTriggeredAlert(hit, settings)
-            AlertNotificationHelper.showCustomAlertNotification(
+            val delivered = AlertNotificationHelper.showCustomAlertNotification(
                 context = applicationContext,
                 ruleKey = hit.rule.id,
                 title = title,
                 body = body,
             )
+            if (!delivered) {
+                store.remove(dedupeKey)
+            }
         }
         return Result.success()
     }
@@ -113,9 +117,16 @@ private class CustomAlertDedupeStore(context: Context) {
         return true
     }
 
+    fun remove(key: String) {
+        val seen = prefs.getStringSet(KEY_SET, emptySet()).orEmpty().toMutableSet()
+        if (seen.remove(key)) {
+            prefs.edit().putStringSet(KEY_SET, seen).apply()
+        }
+    }
+
     /** Drop dedupe keys older than 7 days so the set doesn't grow unbounded. */
-    fun pruneOld() {
-        val cutoff = LocalDate.now().minusDays(7).toString()
+    fun pruneOld(referenceDate: String) {
+        val cutoff = LocalDate.parse(referenceDate).minusDays(7).toString()
         val current = prefs.getStringSet(KEY_SET, emptySet()).orEmpty()
         val keep = current.filter { key ->
             // Keys look like "$ruleId:$yyyy-MM-dd"; keep anything whose trailing

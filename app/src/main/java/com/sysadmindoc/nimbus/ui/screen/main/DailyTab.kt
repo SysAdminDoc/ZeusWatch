@@ -50,12 +50,12 @@ import java.time.format.DateTimeFormatter
 fun DailyTab(
     daily: List<DailyConditions>,
     locationName: String,
+    referenceDate: LocalDate? = daily.firstOrNull()?.date,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
 ) {
     val dayFormatter = remember { DateTimeFormatter.ofPattern("EEEE") }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("MMM d") }
-    val today = LocalDate.now()
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -95,8 +95,8 @@ fun DailyTab(
             DailyDetailRow(
                 day = day,
                 dayLabel = when {
-                    day.date == today -> "Today"
-                    day.date == today.plusDays(1) -> "Tomorrow"
+                    referenceDate != null && day.date == referenceDate -> "Today"
+                    referenceDate != null && day.date == referenceDate.plusDays(1) -> "Tomorrow"
                     else -> day.date.format(dayFormatter)
                 },
                 dateLabel = day.date.format(dateFormatter),

@@ -54,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -249,11 +250,19 @@ private fun LocationsList(
                 item { Spacer(modifier = Modifier.height(12.dp)) }
             } else if (searchEmptyMessage != null) {
                 item {
-                    Text(
-                        searchEmptyMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (search.error != null) NimbusError else NimbusTextTertiary,
-                        modifier = Modifier.padding(vertical = 16.dp),
+                    LocationsCalloutCard(
+                        title = when {
+                            search.error != null -> "Search unavailable"
+                            search.results.isNotEmpty() -> "Already saved"
+                            else -> "No matches yet"
+                        },
+                        message = searchEmptyMessage,
+                        icon = when {
+                            search.error != null -> Icons.Filled.Close
+                            else -> Icons.Filled.Search
+                        },
+                        tint = if (search.error != null) NimbusError else NimbusBlueAccent,
+                        modifier = Modifier.padding(vertical = 8.dp),
                     )
                 }
             }
@@ -262,12 +271,21 @@ private fun LocationsList(
         // Saved locations
         if (saved.isNotEmpty()) {
             item {
-                Text(
-                    "Saved Locations",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = NimbusTextTertiary,
-                    modifier = Modifier.padding(vertical = 4.dp),
-                )
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    Text(
+                        "Saved Locations",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = NimbusTextTertiary,
+                    )
+                    if (saved.size > 1) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Long-press a handle to reorder your favorites.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NimbusTextSecondary,
+                        )
+                    }
+                }
             }
             items(saved.size, key = { saved[it].id }) { index ->
                 val loc = saved[index]
@@ -306,6 +324,16 @@ private fun LocationsList(
                         }
                     },
                     onDragEnd = { draggedIndex = -1; dragOffsetY = 0f },
+                )
+            }
+        } else if (search.query.length < 2) {
+            item {
+                LocationsCalloutCard(
+                    title = "No saved locations yet",
+                    message = "Search for a city, ZIP code, or region above to build a shortlist you can jump between anytime.",
+                    icon = Icons.Filled.LocationOn,
+                    tint = NimbusBlueAccent,
+                    modifier = Modifier.padding(top = 8.dp),
                 )
             }
         }
@@ -587,6 +615,61 @@ private fun SavedLocationItem(
             ) {
                 Icon(Icons.Filled.Close, "Remove", tint = NimbusError.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun LocationsCalloutCard(
+    title: String,
+    message: String,
+    icon: ImageVector,
+    tint: Color,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        tint.copy(alpha = 0.12f),
+                        NimbusCardBg,
+                    ),
+                ),
+            )
+            .border(1.dp, tint.copy(alpha = 0.22f), RoundedCornerShape(22.dp))
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(tint.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = NimbusTextPrimary,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
         }
     }
 }

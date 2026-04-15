@@ -31,7 +31,6 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.format.TextStyle
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -177,59 +176,13 @@ class WidgetRefreshWorker @AssistedInject constructor(
         }
     }
 
-    private fun buildHourlyItems(
-        hourly: List<HourlyConditions>,
-        now: LocalDateTime,
-        convertTemp: (Double) -> Double,
-    ): List<WidgetHourly> {
-        val items = mutableListOf<WidgetHourly>()
-        for (hour in hourly) {
-            val t = hour.time
-            if (t.isBefore(now.minusHours(1))) continue
-            if (items.size >= 12) break
-            items.add(WidgetHourly(
-                hour = WeatherFormatter.formatHourLabel(t),
-                temp = convertTemp(hour.temperature).toInt(),
-                code = hour.weatherCode.code,
-                isDay = hour.isDay,
-                precipChance = hour.precipitationProbability,
-            ))
-        }
-        return items
-    }
-
-    private fun buildDailyItems(
-        daily: List<DailyConditions>,
-        today: LocalDate,
-        convertTemp: (Double) -> Double,
-    ): List<WidgetDaily> {
-        val items = mutableListOf<WidgetDaily>()
-        for (day in daily) {
-            if (items.size >= 7) break
-            val d = day.date
-            val label = when (d) {
-                today -> "Today"
-                today.plusDays(1) -> "Tmrw"
-                else -> d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
-            }
-            items.add(WidgetDaily(
-                day = label,
-                high = convertTemp(day.temperatureHigh).toInt(),
-                low = convertTemp(day.temperatureLow).toInt(),
-                code = day.weatherCode.code,
-                precipChance = day.precipitationProbability,
-            ))
-        }
-        return items
-    }
-
     private fun buildWidgetData(
         weatherData: WeatherData,
         convertTemp: (Double) -> Double,
         displayLocationName: String = weatherData.location.name,
     ): WidgetWeatherData {
-        val now = LocalDateTime.now()
-        val today = LocalDate.now()
+        val locationToday = weatherData.daily.firstOrNull()?.date
+            ?: weatherData.hourly.firstOrNull()?.time?.toLocalDate()
         return WidgetWeatherData(
             locationName = displayLocationName,
             temperature = convertTemp(weatherData.current.temperature),
@@ -240,8 +193,12 @@ class WidgetRefreshWorker @AssistedInject constructor(
             isDay = weatherData.current.isDay,
             humidity = weatherData.current.humidity,
             windSpeed = weatherData.current.windSpeed,
-            hourly = buildHourlyItems(weatherData.hourly, now, convertTemp),
-            daily = buildDailyItems(weatherData.daily, today, convertTemp),
+            hourly = buildWidgetHourlyItems(
+                weatherData.hourly,
+                weatherData.current.observationTime,
+                convertTemp,
+            ),
+            daily = buildWidgetDailyItems(weatherData.daily, locationToday, convertTemp),
             updatedAt = weatherData.lastUpdated.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(),
         )
     }
@@ -382,6 +339,43 @@ internal fun buildWidgetRefreshPlan(
 
 internal fun widgetLocationKey(latitude: Double, longitude: Double): String {
     return "${latitude.formatWidgetLocationKey()}:${longitude.formatWidgetLocationKey()}"
+}
+
+internal fun buildWidgetHourlyItems(
+    hourly: List<HourlyConditions>,
+    referenceTime: java.time.LocalDateTime?,
+    convertTemp: (Double) -> Double,
+): List<WidgetHourly> {
+    return hourly.take(12).map { hour ->
+        WidgetHourly(
+            hour = WeatherFormatter.formatRelativeHourLabel(hour.time, referenceTime),
+            temp = convertTemp(hour.temperature).toInt(),
+            code = hour.weatherCode.code,
+            isDay = hour.isDay,
+            precipChance = hour.precipitationProbability,
+        )
+    }
+}
+
+internal fun buildWidgetDailyItems(
+    daily: List<DailyConditions>,
+    today: LocalDate?,
+    convertTemp: (Double) -> Double,
+): List<WidgetDaily> {
+    return daily.take(7).map { day ->
+        val label = when {
+            today != null && day.date == today -> "Today"
+            today != null && day.date == today.plusDays(1) -> "Tmrw"
+            else -> day.date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+        }
+        WidgetDaily(
+            day = label,
+            high = convertTemp(day.temperatureHigh).toInt(),
+            low = convertTemp(day.temperatureLow).toInt(),
+            code = day.weatherCode.code,
+            precipChance = day.precipitationProbability,
+        )
+    }
 }
 
 private data class MutableWidgetRefreshRequest(

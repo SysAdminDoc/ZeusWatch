@@ -74,7 +74,7 @@ class AirQualityRepository @Inject constructor(
                         // Hourly AQI (next 24h)
                         if (!t.isBefore(now.minusHours(1)) && hourlyAqi.size < 24) {
                             hourlyAqi.add(HourlyAqi(
-                                hour = WeatherFormatter.formatHourLabel(t),
+                                hour = WeatherFormatter.formatRelativeHourLabel(t, now),
                                 aqi = aqi,
                                 level = AqiLevel.fromAqi(aqi),
                             ))
@@ -95,7 +95,7 @@ class AirQualityRepository @Inject constructor(
                     .take(5)
                     .map { (date, maxAqi) ->
                         DailyAqi(
-                            dayLabel = WeatherFormatter.formatDayLabel(date),
+                            dayLabel = WeatherFormatter.formatRelativeDayLabel(date, today),
                             maxAqi = maxAqi,
                             level = AqiLevel.fromAqi(maxAqi),
                         )
@@ -124,8 +124,15 @@ class AirQualityRepository @Inject constructor(
      * Calculate astronomy data from date.
      * Moon phase uses Conway's algorithm approximation.
      */
-    fun getAstronomy(sunrise: String?, sunset: String?): AstronomyData {
-        val now = LocalDateTime.now()
+    fun getAstronomy(
+        sunrise: String?,
+        sunset: String?,
+        referenceTime: LocalDateTime? = null,
+    ): AstronomyData {
+        val now = referenceTime
+            ?: parseApiLocalTime(sunrise)
+            ?: parseApiLocalTime(sunset)
+            ?: LocalDateTime.now()
         val lunarAge = calculateLunarAge(now.year, now.monthValue, now.dayOfMonth)
         val illumination = calculateIllumination(lunarAge)
         val phase = MoonPhase.fromDayOfCycle(lunarAge)

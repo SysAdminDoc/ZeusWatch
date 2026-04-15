@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit
  * and fires proactive notifications.
  *
  * Runs every 1 hour. Uses the same [HealthAlertEvaluator] logic as the UI card.
- * Deduplicates per alert type per calendar date — each type fires at most once/day.
+ * Deduplicates per alert type per forecast-local calendar date — each type fires at most once/day.
  *
  * Silently skips if:
  *  - user toggled `healthAlertsEnabled` off
@@ -56,7 +56,7 @@ class HealthAlertWorker @AssistedInject constructor(
             return Result.success()
         }
 
-        val weatherResult = weatherRepository.getWeatherDirect(loc.latitude, loc.longitude, null)
+        val weatherResult = weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
         val data = weatherResult.getOrNull() ?: run {
             Log.w(TAG, "Weather fetch failed", weatherResult.exceptionOrNull())
             return Result.success() // Don't retry; next hourly run will try again
@@ -74,7 +74,7 @@ class HealthAlertWorker @AssistedInject constructor(
         }
 
         val store = HealthNotificationStore(applicationContext)
-        val today = LocalDate.now().toString()
+        val today = weatherReferenceDate(data).toString()
 
         for (alert in alerts) {
             val key = "${alert.type.name}:$today"
@@ -83,18 +83,20 @@ class HealthAlertWorker @AssistedInject constructor(
                 continue
             }
 
-            AlertNotificationHelper.showHealthNotification(
+            val delivered = AlertNotificationHelper.showHealthNotification(
                 context = applicationContext,
                 title = alert.type.label,
                 body = alert.message,
                 detail = alert.detail,
                 severity = alert.severity,
             )
-            store.record(key)
+            if (delivered) {
+                store.record(key)
+            }
         }
 
         // Prune old entries (keep last 7 days)
-        store.prune()
+        store.prune(today)
 
         return Result.success()
     }
@@ -142,8 +144,8 @@ private class HealthNotificationStore(context: Context) {
     }
 
     /** Remove entries older than 7 days to prevent unbounded growth. */
-    fun prune() {
-        val cutoff = LocalDate.now().minusDays(7).toString()
+    fun prune(referenceDate: String) {
+        val cutoff = LocalDate.parse(referenceDate).minusDays(7).toString()
         val editor = prefs.edit()
         prefs.all.keys.forEach { key ->
             val datePart = key.substringAfter(":", "")

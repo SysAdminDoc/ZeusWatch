@@ -121,7 +121,7 @@ class UserPreferences @Inject constructor(
                 prefs[Keys.ALERT_SOURCE_PREF] ?: AlertSourcePreference.AUTO.name
             ) ?: AlertSourcePreference.AUTO,
             // Display
-            radarProvider = safeValueOf<RadarProvider>(prefs[Keys.RADAR_PROVIDER] ?: RadarProvider.NATIVE_MAPLIBRE.name) ?: RadarProvider.NATIVE_MAPLIBRE,
+            radarProvider = safeValueOf<RadarProvider>(prefs[Keys.RADAR_PROVIDER] ?: RadarProvider.WINDY_WEBVIEW.name) ?: RadarProvider.WINDY_WEBVIEW,
             iconStyle = safeValueOf<IconStyle>(prefs[Keys.ICON_STYLE] ?: IconStyle.METEOCONS.name) ?: IconStyle.METEOCONS,
             customIconPackId = prefs[Keys.CUSTOM_ICON_PACK_ID] ?: "",
             themeMode = safeValueOf<ThemeMode>(prefs[Keys.THEME_MODE] ?: ThemeMode.STATIC_DARK.name) ?: ThemeMode.STATIC_DARK,
@@ -342,7 +342,7 @@ data class NimbusSettings(
     val alertCheckAllLocations: Boolean = true,
     val alertSourcePref: AlertSourcePreference = AlertSourcePreference.AUTO,
     // Display
-    val radarProvider: RadarProvider = RadarProvider.NATIVE_MAPLIBRE,
+    val radarProvider: RadarProvider = RadarProvider.WINDY_WEBVIEW,
     val iconStyle: IconStyle = IconStyle.METEOCONS,
     val customIconPackId: String = "",
     val themeMode: ThemeMode = ThemeMode.STATIC_DARK,
@@ -434,9 +434,28 @@ enum class AlertSourcePreference(val label: String) {
     ALL_SOURCES("All available sources"),
 }
 
-enum class RadarProvider(val label: String) {
-    NATIVE_MAPLIBRE("Native Map (Recommended)"),
-    WINDY_WEBVIEW("Windy Embed"),
+enum class RadarProvider(
+    val label: String,
+    val summary: String,
+    val supportsNativePlayback: Boolean = false,
+) {
+    WINDY_WEBVIEW(
+        label = "Windy Radar",
+        summary = "Global interactive radar from Windy.",
+    ),
+    NATIVE_MAPLIBRE(
+        label = "RainViewer Native",
+        summary = "Animated RainViewer frames with ZeusWatch playback, lightning, and overlays.",
+        supportsNativePlayback = true,
+    ),
+    NWS_WEBVIEW(
+        label = "NWS Radar (US)",
+        summary = "Official NOAA/NWS interactive radar for U.S. regions and stations.",
+    ),
+    NWS_STANDARD_WEBVIEW(
+        label = "NWS Radar Lite (US)",
+        summary = "Official NOAA/NWS low-bandwidth radar view.",
+    ),
 }
 
 enum class IconStyle(val label: String) {

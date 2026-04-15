@@ -1,14 +1,10 @@
 package com.sysadmindoc.nimbus.ui.theme
 
-import android.app.Activity
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 
 private val NimbusDarkScheme = darkColorScheme(
@@ -96,18 +92,6 @@ fun NimbusTheme(
         weatherAdaptiveScheme(weatherState.weatherCode, weatherState.isDay)
     } else {
         NimbusDarkScheme
-    }
-
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-            WindowCompat.getInsetsController(window, view).apply {
-                isAppearanceLightStatusBars = false
-                isAppearanceLightNavigationBars = false
-            }
-        }
     }
 
     MaterialTheme(

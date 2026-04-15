@@ -3,17 +3,19 @@ package com.sysadmindoc.nimbus.ui.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Map
@@ -21,7 +23,6 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +33,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
@@ -167,63 +169,81 @@ fun ZeusWatchBottomNav(
     modifier: Modifier = Modifier,
     visibleTabs: List<BottomTab> = BottomTab.entries,
 ) {
-    val dockShape = androidx.compose.foundation.shape.RoundedCornerShape(30.dp)
+    val dockShape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp)
     Box(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(22.dp, dockShape)
+                .widthIn(max = 720.dp)
+                .shadow(18.dp, dockShape)
                 .clip(dockShape)
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            NimbusNavSurface,
+                            NimbusNavSurface.copy(alpha = 0.98f),
                             NimbusGlassBottom.copy(alpha = 0.96f),
                         ),
                     ),
                 )
                 .border(1.dp, NimbusCardBorder, dockShape)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .selectableGroup()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             visibleTabs.forEach { tab ->
                 val index = tab.ordinal
                 val isSelected = selectedTab == index
-                val tabShape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp)
+                val tabShape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
                 Column(
                     modifier = Modifier
                         .weight(1f)
+                        .height(52.dp)
                         .clip(tabShape)
                         .background(
                             if (isSelected) {
                                 Brush.verticalGradient(
                                     colors = listOf(
-                                        NimbusBlueAccent.copy(alpha = 0.28f),
+                                        NimbusBlueAccent.copy(alpha = 0.20f),
                                         Color.White.copy(alpha = 0.08f),
                                     ),
                                 )
                             } else {
-                                Brush.verticalGradient(colors = listOf(Color.Transparent, Color.Transparent))
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.03f),
+                                        Color.Transparent,
+                                    ),
+                                )
                             },
                         )
-                        .clickable { onTabSelected(index) }
-                        .padding(vertical = 10.dp),
+                        .border(
+                            width = 1.dp,
+                            color = if (isSelected) NimbusBlueAccent.copy(alpha = 0.38f) else Color.Transparent,
+                            shape = tabShape,
+                        )
+                        .selectable(
+                            selected = isSelected,
+                            onClick = { onTabSelected(index) },
+                            role = Role.Tab,
+                        )
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                 ) {
                     Icon(
                         tab.icon,
                         contentDescription = tab.label,
-                        modifier = Modifier.size(22.dp),
+                        modifier = Modifier.size(20.dp),
                         tint = if (isSelected) Color.White else NimbusTextTertiary,
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = tab.label,
                         style = MaterialTheme.typography.labelSmall.copy(

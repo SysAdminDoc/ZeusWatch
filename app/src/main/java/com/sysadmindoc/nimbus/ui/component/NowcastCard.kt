@@ -36,11 +36,12 @@ import java.time.LocalDateTime
 @Composable
 fun NowcastCard(
     data: List<MinutelyPrecipitation>,
+    referenceTime: LocalDateTime? = data.firstOrNull()?.time,
     modifier: Modifier = Modifier,
 ) {
-    val now = LocalDateTime.now()
     // Filter to next ~90 minutes of data
-    val filtered = remember(data) {
+    val filtered = remember(data, referenceTime) {
+        val now = referenceTime ?: return@remember data.take(8)
         data.filter { it.time.isAfter(now.minusMinutes(5)) }
             .take(8) // 8 x 15min = 2 hours
     }
@@ -110,7 +111,11 @@ fun NowcastCard(
 
                 // Time labels every other bar
                 if (i % 2 == 0) {
-                    val label = com.sysadmindoc.nimbus.util.WeatherFormatter.formatHourLabel(entry.time, settings)
+                    val label = com.sysadmindoc.nimbus.util.WeatherFormatter.formatRelativeHourLabel(
+                        entry.time,
+                        referenceTime,
+                        settings,
+                    )
                     val m = textMeasurer.measure(label, labelStyle)
                     drawText(m, topLeft = Offset(x, h - 14f))
                 }

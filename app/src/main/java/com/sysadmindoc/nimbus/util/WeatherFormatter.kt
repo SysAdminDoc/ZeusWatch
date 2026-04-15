@@ -7,6 +7,7 @@ import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.data.repository.TimeFormat
 import com.sysadmindoc.nimbus.data.repository.VisibilityUnit
 import com.sysadmindoc.nimbus.data.repository.WindUnit
+import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.math.roundToInt
 import java.time.format.DateTimeFormatter
@@ -165,8 +166,6 @@ object WeatherFormatter {
     // ── Time / Date ──────────────────────────────────────────────────────
 
     fun formatHourLabel(time: LocalDateTime, s: NimbusSettings = NimbusSettings()): String {
-        val now = LocalDateTime.now()
-        if (time.hour == now.hour && time.dayOfYear == now.dayOfYear) return "Now"
         val pattern = when (s.timeFormat) {
             TimeFormat.TWELVE_HOUR -> "h a"
             TimeFormat.TWENTY_FOUR_HOUR -> "HH:mm"
@@ -174,17 +173,38 @@ object WeatherFormatter {
         return time.format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
     }
 
-    fun formatDayLabel(date: java.time.LocalDate): String {
-        val today = java.time.LocalDate.now()
+    fun formatRelativeHourLabel(
+        time: LocalDateTime,
+        referenceTime: LocalDateTime?,
+        s: NimbusSettings = NimbusSettings(),
+    ): String {
+        return if (referenceTime != null && isSameForecastHour(time, referenceTime)) {
+            "Now"
+        } else {
+            formatHourLabel(time, s)
+        }
+    }
+
+    fun formatDayLabel(date: LocalDate): String {
+        val today = LocalDate.now()
         return when (date) {
             today -> "Today"
             today.plusDays(1) -> "Tomorrow"
-            else -> {
-                val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
-                val dayNum = date.dayOfMonth
-                "$dayName $dayNum"
-            }
+            else -> shortDayLabel(date)
         }
+    }
+
+    fun formatRelativeDayLabel(date: LocalDate, referenceDate: LocalDate?): String {
+        val today = referenceDate ?: return shortDayLabel(date)
+        return when (date) {
+            today -> "Today"
+            today.plusDays(1) -> "Tomorrow"
+            else -> shortDayLabel(date)
+        }
+    }
+
+    fun isSameForecastHour(time: LocalDateTime, referenceTime: LocalDateTime): Boolean {
+        return time.hour == referenceTime.hour && time.toLocalDate() == referenceTime.toLocalDate()
     }
 
     fun formatTime(isoString: String?, s: NimbusSettings = NimbusSettings()): String {
@@ -345,5 +365,11 @@ object WeatherFormatter {
         score >= 40 -> "Fair"
         score >= 20 -> "Poor"
         else -> "Stay Inside"
+    }
+
+    private fun shortDayLabel(date: LocalDate): String {
+        val dayName = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+        val dayNum = date.dayOfMonth
+        return "$dayName $dayNum"
     }
 }

@@ -3,12 +3,20 @@ package com.sysadmindoc.nimbus.ui.screen.radar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -53,8 +62,9 @@ fun RadarLayerSelector(
 ) {
     Row(
         modifier = modifier
+            .widthIn(max = 520.dp)
             .horizontalScroll(rememberScrollState())
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(22.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -63,9 +73,10 @@ fun RadarLayerSelector(
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(24.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(22.dp))
+            .selectableGroup()
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         RadarLayer.entries.forEach { layer ->
             val isSelected = layer == selectedLayer
@@ -86,19 +97,39 @@ fun RadarLayerSelector(
             }
             val textColor = if (isSelected) NimbusTextPrimary else NimbusTextTertiary
 
-            Text(
-                text = layer.label,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                ),
-                color = textColor,
+            Row(
                 modifier = Modifier
+                    .heightIn(min = 40.dp)
                     .clip(RoundedCornerShape(18.dp))
                     .background(bg)
                     .border(1.dp, if (isSelected) NimbusBlueAccent.copy(alpha = 0.5f) else NimbusCardBorder, RoundedCornerShape(18.dp))
-                    .clickable { onLayerSelected(layer) }
-                    .padding(horizontal = 16.dp, vertical = 9.dp),
-            )
+                    .selectable(
+                        selected = isSelected,
+                        onClick = { onLayerSelected(layer) },
+                        role = Role.Tab,
+                    )
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(if (isSelected) 10.dp else 8.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(
+                            if (isSelected) NimbusBlueAccent.copy(alpha = 0.95f)
+                            else NimbusTextTertiary.copy(alpha = 0.35f),
+                        )
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = layer.label,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                    ),
+                    color = textColor,
+                )
+            }
         }
     }
 }

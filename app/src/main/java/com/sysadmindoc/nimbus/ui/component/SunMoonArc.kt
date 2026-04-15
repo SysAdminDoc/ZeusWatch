@@ -39,11 +39,12 @@ fun SunArc(
     modifier: Modifier = Modifier,
     moonrise: String? = null,
     moonset: String? = null,
+    referenceTime: LocalDateTime? = null,
 ) {
     if (sunrise == null || sunset == null) return
 
     val settings = LocalUnitSettings.current
-    val now = LocalDateTime.now()
+    val now = referenceTime ?: LocalDateTime.now()
     val fmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     val riseTime = try { LocalDateTime.parse(sunrise, fmt) } catch (_: Exception) { return }
     val setTime = try { LocalDateTime.parse(sunset, fmt) } catch (_: Exception) { return }

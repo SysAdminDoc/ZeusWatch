@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.ui.screen.customalerts
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -12,17 +13,22 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -47,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -64,6 +71,9 @@ import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
+import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -88,21 +98,45 @@ fun CustomAlertsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.safeDrawing)
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = onBack) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        NimbusGlassTop.copy(alpha = 0.76f),
+                                        NimbusGlassBottom,
+                                    ),
+                                ),
+                            )
+                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+                            .clickable(onClick = onBack),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = NimbusTextPrimary,
+                            modifier = Modifier.size(20.dp),
                         )
                     }
-                    Text(
-                        "Custom Alerts",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = NimbusTextPrimary,
-                    )
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column {
+                        Text(
+                            "Custom Alerts",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = NimbusTextPrimary,
+                        )
+                        Text(
+                            "Build your own weather triggers for heat, rain, UV, and wind.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NimbusTextSecondary,
+                        )
+                    }
                 }
             },
             floatingActionButton = {
@@ -179,6 +213,9 @@ private fun RuleList(
         ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        item {
+            CustomAlertsIntroCard(ruleCount = rules.size)
+        }
         items(rules, key = { it.id }) { rule ->
             RuleRow(
                 rule = rule,
@@ -194,29 +231,59 @@ private fun RuleList(
 @Composable
 private fun EmptyState(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.padding(32.dp),
+        modifier = modifier.padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(
-            Icons.Filled.Notifications,
-            contentDescription = null,
-            tint = NimbusTextTertiary,
-            modifier = Modifier.size(48.dp),
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            "No custom alerts yet",
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = NimbusTextPrimary,
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            "Add a rule to get notified when tomorrow's high goes above 32°C, the UV peak hits 9, or the next 24 hours drops more than 20 mm of rain.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = NimbusTextSecondary,
-            textAlign = TextAlign.Center,
-        )
+        Box(
+            modifier = Modifier
+                .widthIn(max = 420.dp)
+                .clip(RoundedCornerShape(30.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            NimbusGlassTop.copy(alpha = 0.78f),
+                            NimbusCardBg,
+                            NimbusGlassBottom,
+                        ),
+                    ),
+                )
+                .border(1.dp, NimbusCardBorder, RoundedCornerShape(30.dp))
+                .padding(horizontal = 24.dp, vertical = 28.dp),
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(NimbusBlueAccent.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Filled.Notifications,
+                        contentDescription = null,
+                        tint = NimbusBlueAccent,
+                        modifier = Modifier.size(26.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    "No custom alerts yet",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = NimbusTextPrimary,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Create a rule for heat, low temperatures, heavy rain, strong wind, or high UV so ZeusWatch can watch the forecast for you.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NimbusTextSecondary,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                AlertHintPill(text = "Use the + button to create your first alert")
+            }
+        }
     }
 }
 
@@ -231,13 +298,30 @@ private fun RuleRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(NimbusCardBg)
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        if (rule.enabled) NimbusBlueAccent.copy(alpha = 0.10f) else NimbusGlassTop.copy(alpha = 0.52f),
+                        NimbusCardBg,
+                    ),
+                ),
+            )
+            .border(
+                1.dp,
+                if (rule.enabled) NimbusBlueAccent.copy(alpha = 0.22f) else NimbusCardBorder,
+                RoundedCornerShape(22.dp),
+            )
             .clickable(onClick = onEdit)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
+            AlertHintPill(
+                text = if (rule.enabled) "Alert active" else "Paused",
+                tint = if (rule.enabled) NimbusBlueAccent else NimbusTextTertiary,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "${rule.metric.label} ${rule.operator.symbol} ${formatThreshold(rule, settings)}",
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
@@ -250,11 +334,20 @@ private fun RuleRow(
             )
         }
         Switch(checked = rule.enabled, onCheckedChange = { onToggle() })
-        IconButton(onClick = onDelete) {
+        Box(
+            modifier = Modifier
+                .padding(start = 6.dp)
+                .size(34.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.06f))
+                .clickable(onClick = onDelete),
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(
                 Icons.Filled.Delete,
                 contentDescription = "Delete rule",
                 tint = NimbusTextTertiary,
+                modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -284,31 +377,40 @@ private fun RuleEditor(
 ) {
     var metric by remember { mutableStateOf(initial.metric) }
     var operator by remember { mutableStateOf(initial.operator) }
-    var thresholdText by remember(metric) {
-        val displayValue = convertForDisplay(initial.thresholdCanonical, metric, settings)
-        val defaultText = when (metric.unit) {
-            com.sysadmindoc.nimbus.data.model.CustomAlertUnit.CELSIUS,
-            com.sysadmindoc.nimbus.data.model.CustomAlertUnit.KMH ->
-                kotlin.math.round(displayValue).toInt().toString()
-            com.sysadmindoc.nimbus.data.model.CustomAlertUnit.MM,
-            com.sysadmindoc.nimbus.data.model.CustomAlertUnit.UV ->
-                String.format(java.util.Locale.US, "%.1f", displayValue)
-        }
-        mutableStateOf(defaultText)
+    var thresholdText by remember {
+        mutableStateOf(
+            formatThresholdInput(initial.thresholdCanonical, initial.metric, settings),
+        )
     }
     var enabled by remember { mutableStateOf(initial.enabled) }
+    var previousMetric by remember { mutableStateOf(initial.metric) }
+    val parsedThreshold = thresholdText.toDoubleOrNull()
+
+    androidx.compose.runtime.LaunchedEffect(metric) {
+        if (metric != previousMetric) {
+            operator = defaultOperator(metric)
+            thresholdText = defaultThresholdText(metric, settings)
+            previousMetric = metric
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 12.dp)
             .navigationBarsPadding(),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
             text = if (isNew) "New custom alert" else "Edit custom alert",
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
             color = NimbusTextPrimary,
+        )
+        Text(
+            text = "ZeusWatch checks this rule against the forecast and only notifies you when the threshold is met.",
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
         )
 
         // Metric picker
@@ -340,6 +442,11 @@ private fun RuleEditor(
                 style = MaterialTheme.typography.labelMedium,
                 color = NimbusTextSecondary,
             )
+            Text(
+                text = metric.summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextTertiary,
+            )
             BasicTextField(
                 value = thresholdText,
                 onValueChange = { thresholdText = it.filter { ch -> ch.isDigit() || ch == '.' || ch == '-' } },
@@ -348,18 +455,65 @@ private fun RuleEditor(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(NimbusNavyDark)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                NimbusGlassTop.copy(alpha = 0.44f),
+                                NimbusNavyDark,
+                            ),
+                        ),
+                    )
+                    .border(
+                        1.dp,
+                        if (parsedThreshold != null) NimbusCardBorder else Color.Red.copy(alpha = 0.3f),
+                        RoundedCornerShape(18.dp),
+                    )
                     .padding(horizontal = 12.dp, vertical = 12.dp),
             )
+            if (parsedThreshold == null) {
+                Text(
+                    text = "Enter a numeric threshold to save this alert.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFFFB4AB),
+                )
+            } else {
+                AlertHintPill(
+                    text = "This alert will trigger when ${metric.label.lowercase()} ${operator.label} $thresholdText${displayUnitLabel(metric, settings)}",
+                )
+            }
         }
 
         // Enabled toggle
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            if (enabled) NimbusBlueAccent.copy(alpha = 0.12f) else NimbusGlassTop.copy(alpha = 0.46f),
+                            NimbusCardBg,
+                        ),
+                    ),
+                )
+                .border(
+                    1.dp,
+                    if (enabled) NimbusBlueAccent.copy(alpha = 0.26f) else NimbusCardBorder,
+                    RoundedCornerShape(20.dp),
+                )
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Enabled", modifier = Modifier.weight(1f), color = NimbusTextPrimary)
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Enabled", color = NimbusTextPrimary, style = MaterialTheme.typography.bodyLarge)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = if (enabled) "This rule can send notifications." else "Saved, but notifications are paused.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                )
+            }
             Switch(checked = enabled, onCheckedChange = { enabled = it })
         }
 
@@ -373,8 +527,9 @@ private fun RuleEditor(
             }
             Spacer(modifier = Modifier.width(8.dp))
             TextButton(
+                enabled = parsedThreshold != null,
                 onClick = {
-                    val parsed = thresholdText.toDoubleOrNull() ?: return@TextButton
+                    val parsed = parsedThreshold ?: return@TextButton
                     onSave(metric, operator, parsed, enabled)
                 },
             ) {
@@ -406,7 +561,26 @@ private fun <T> ChipSelector(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(if (isSelected) NimbusBlueAccent else NimbusNavyDark)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = if (isSelected) {
+                                listOf(
+                                    NimbusBlueAccent.copy(alpha = 0.92f),
+                                    NimbusBlueAccent.copy(alpha = 0.78f),
+                                )
+                            } else {
+                                listOf(
+                                    NimbusGlassTop.copy(alpha = 0.48f),
+                                    NimbusNavyDark,
+                                )
+                            },
+                        ),
+                    )
+                    .border(
+                        1.dp,
+                        if (isSelected) NimbusBlueAccent.copy(alpha = 0.34f) else NimbusCardBorder,
+                        RoundedCornerShape(20.dp),
+                    )
                     .clickable { onSelect(option) }
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             ) {
@@ -421,3 +595,96 @@ private fun <T> ChipSelector(
     }
 }
 
+@Composable
+private fun CustomAlertsIntroCard(
+    ruleCount: Int,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.72f),
+                        NimbusCardBg,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(24.dp))
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(NimbusBlueAccent.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Notifications,
+                contentDescription = null,
+                tint = NimbusBlueAccent,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = "Rule center",
+                style = MaterialTheme.typography.labelLarge,
+                color = NimbusTextPrimary,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "$ruleCount custom alert${if (ruleCount == 1) "" else "s"} ready to watch the forecast.",
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlertHintPill(
+    text: String,
+    tint: Color = NimbusBlueAccent,
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(tint.copy(alpha = 0.10f))
+            .border(1.dp, tint.copy(alpha = 0.18f), RoundedCornerShape(16.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (tint == NimbusBlueAccent) NimbusTextSecondary else tint,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+private fun defaultThresholdText(
+    metric: CustomAlertMetric,
+    settings: NimbusSettings,
+): String = formatThresholdInput(defaultThresholdCanonical(metric), metric, settings)
+
+private fun formatThresholdInput(
+    canonicalValue: Double,
+    metric: CustomAlertMetric,
+    settings: NimbusSettings,
+): String {
+    val displayValue = convertForDisplay(canonicalValue, metric, settings)
+    return when (metric.unit) {
+        com.sysadmindoc.nimbus.data.model.CustomAlertUnit.CELSIUS,
+        com.sysadmindoc.nimbus.data.model.CustomAlertUnit.KMH ->
+            kotlin.math.round(displayValue).toInt().toString()
+        com.sysadmindoc.nimbus.data.model.CustomAlertUnit.MM,
+        com.sysadmindoc.nimbus.data.model.CustomAlertUnit.UV ->
+            String.format(java.util.Locale.US, "%.1f", displayValue)
+    }
+}

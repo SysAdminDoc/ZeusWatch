@@ -40,11 +40,19 @@ class UserPreferencesTest {
     fun defaultSettingsHaveCorrectDisplayDefaults() {
         val settings = NimbusSettings()
 
-        assertEquals(RadarProvider.NATIVE_MAPLIBRE, settings.radarProvider)
+        assertEquals(RadarProvider.WINDY_WEBVIEW, settings.radarProvider)
         assertEquals(IconStyle.METEOCONS, settings.iconStyle)
         assertEquals("", settings.customIconPackId)
         assertEquals(ThemeMode.STATIC_DARK, settings.themeMode)
         assertEquals(SummaryStyle.AI_GENERATED, settings.summaryStyle)
+    }
+
+    @Test
+    fun radarProvidersExposeExpectedPlaybackCapabilities() {
+        assertFalse(RadarProvider.WINDY_WEBVIEW.supportsNativePlayback)
+        assertTrue(RadarProvider.NATIVE_MAPLIBRE.supportsNativePlayback)
+        assertFalse(RadarProvider.NWS_WEBVIEW.supportsNativePlayback)
+        assertFalse(RadarProvider.NWS_STANDARD_WEBVIEW.supportsNativePlayback)
     }
 
     @Test

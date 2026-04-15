@@ -139,8 +139,8 @@ object AlertNotificationHelper {
         context: Context,
         title: String,
         body: String,
-    ) {
-        if (!hasNotificationPermission(context)) return
+    ): Boolean {
+        if (!hasNotificationPermission(context)) return false
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -163,8 +163,10 @@ object AlertNotificationHelper {
 
         try {
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_NOWCAST, notification)
+            return true
         } catch (_: SecurityException) {
             // Permission revoked after check
+            return false
         }
     }
 
@@ -179,8 +181,8 @@ object AlertNotificationHelper {
         body: String,
         detail: String = "",
         severity: HealthSeverity = HealthSeverity.ADVISORY,
-    ) {
-        if (!hasNotificationPermission(context)) return
+    ): Boolean {
+        if (!hasNotificationPermission(context)) return false
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -210,8 +212,10 @@ object AlertNotificationHelper {
 
         try {
             NotificationManagerCompat.from(context).notify(notifId, notification)
+            return true
         } catch (_: SecurityException) {
             // Permission revoked after check
+            return false
         }
     }
 
@@ -225,8 +229,8 @@ object AlertNotificationHelper {
         ruleKey: String,
         title: String,
         body: String,
-    ) {
-        if (!hasNotificationPermission(context)) return
+    ): Boolean {
+        if (!hasNotificationPermission(context)) return false
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -248,8 +252,10 @@ object AlertNotificationHelper {
         try {
             val id = NOTIFICATION_ID_CUSTOM_BASE + (ruleKey.hashCode() and 0xFFFF)
             NotificationManagerCompat.from(context).notify(id, notification)
+            return true
         } catch (_: SecurityException) {
             // Permission revoked after check
+            return false
         }
     }
 
@@ -268,8 +274,8 @@ object AlertNotificationHelper {
         context: Context,
         alert: WeatherAlert,
         locationName: String? = null,
-    ) {
-        if (!hasNotificationPermission(context)) return
+    ): Boolean {
+        if (!hasNotificationPermission(context)) return false
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -324,8 +330,10 @@ object AlertNotificationHelper {
                 .setAutoCancel(true)
                 .build()
             nm.notify(SUMMARY_NOTIFICATION_ID, summary)
+            return true
         } catch (_: SecurityException) {
             // Permission revoked after check
+            return false
         }
     }
 

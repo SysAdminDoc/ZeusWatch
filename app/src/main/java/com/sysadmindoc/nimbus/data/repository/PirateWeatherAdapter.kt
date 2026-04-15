@@ -46,6 +46,7 @@ class PirateWeatherForecastAdapter @Inject constructor(
         val current = r.currently ?: error("No current data from Pirate Weather")
         val zone = try { ZoneId.of(r.timezone) } catch (_: Exception) { ZoneId.systemDefault() }
         val firstDaily = r.daily?.data?.firstOrNull()
+        val locationLocalNow = epochToLocalDateTime(current.time, zone)
 
         return WeatherData(
             location = LocationInfo(
@@ -60,6 +61,7 @@ class PirateWeatherForecastAdapter @Inject constructor(
                 weatherCode = WeatherCode.fromCode(
                     PwIconMapper.toWmoCode(current.icon, current.precipType)
                 ),
+                observationTime = locationLocalNow,
                 isDay = PwIconMapper.isDayFromIcon(current.icon),
                 windSpeed = current.windSpeed * 3.6, // m/s → km/h
                 windDirection = current.windBearing,
@@ -76,13 +78,16 @@ class PirateWeatherForecastAdapter @Inject constructor(
                 sunrise = firstDaily?.sunriseTime?.let { epochToTimeStr(it, zone) },
                 sunset = firstDaily?.sunsetTime?.let { epochToTimeStr(it, zone) },
             ),
-            hourly = mapHourly(r.hourly?.data ?: emptyList(), zone),
+            hourly = mapHourly(r.hourly?.data ?: emptyList(), zone, locationLocalNow),
             daily = mapDaily(r.daily?.data ?: emptyList(), zone),
         )
     }
 
-    private fun mapHourly(data: List<PwHourly>, zone: ZoneId): List<HourlyConditions> {
-        val now = LocalDateTime.now()
+    private fun mapHourly(
+        data: List<PwHourly>,
+        zone: ZoneId,
+        now: LocalDateTime,
+    ): List<HourlyConditions> {
         return data.mapNotNull { h ->
             val time = epochToLocalDateTime(h.time, zone)
             if (time.isBefore(now.minusHours(1))) return@mapNotNull null

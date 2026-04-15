@@ -9,6 +9,7 @@ import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.util.ConnectivityObserver
 import com.sysadmindoc.nimbus.util.SummaryEngine
 import io.mockk.*
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDateTime
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelTest {
@@ -37,6 +39,7 @@ class MainViewModelTest {
     private lateinit var connectivityObserver: ConnectivityObserver
     private lateinit var summaryEngine: SummaryEngine
     private lateinit var wearSyncManager: WearSyncManager
+    private lateinit var onThisDayRepository: OnThisDayRepository
 
     private lateinit var viewModel: MainViewModel
 
@@ -44,7 +47,9 @@ class MainViewModelTest {
         location = LocationInfo("Denver", "Colorado", "US", 39.7, -104.9),
         current = CurrentConditions(
             temperature = 22.2, feelsLike = 21.1, humidity = 45,
-            weatherCode = WeatherCode.CLEAR_SKY, isDay = true,
+            weatherCode = WeatherCode.CLEAR_SKY,
+            observationTime = LocalDateTime.of(2025, 1, 15, 9, 0),
+            isDay = true,
             windSpeed = 12.8, windDirection = 180, windGusts = 24.1,
             pressure = 1013.25, uvIndex = 5.0, visibility = 16000.0,
             dewPoint = 10.0, cloudCover = 20, precipitation = 0.0,
@@ -104,6 +109,7 @@ class MainViewModelTest {
         connectivityObserver = mockk()
         summaryEngine = mockk()
         wearSyncManager = mockk(relaxed = true)
+        onThisDayRepository = mockk(relaxed = true)
         every { connectivityObserver.isOnline } returns flowOf(true)
         every { summaryEngine.isAvailable() } returns false
         every { summaryEngine.close() } just Runs
@@ -121,7 +127,8 @@ class MainViewModelTest {
         coEvery { weatherSourceManager.getAlerts(any(), any()) } coAnswers { Result.success(emptyList()) }
         coEvery { weatherSourceManager.getAirQuality(any(), any()) } coAnswers { Result.success(testAirQuality) }
         coEvery { weatherSourceManager.getMinutelyPrecipitation(any(), any()) } coAnswers { Result.success(emptyList()) }
-        every { airQualityRepository.getAstronomy(any(), any()) } returns testAstronomy
+        every { airQualityRepository.getAstronomy(any(), any(), any()) } returns testAstronomy
+        coEvery { onThisDayRepository.getOnThisDay(any(), any(), any()) } returns null
         coEvery { weatherRepository.getWeather(any(), any(), any()) } coAnswers {
             val latitude = firstArg<Double>()
             val longitude = secondArg<Double>()
@@ -172,7 +179,7 @@ class MainViewModelTest {
             prefs = prefs,
             summaryEngine = summaryEngine,
             connectivityObserver = connectivityObserver,
-            onThisDayRepository = mockk(relaxed = true),
+            onThisDayRepository = onThisDayRepository,
             wearSyncManager = wearSyncManager,
             defaultDispatcher = testDispatcher,
             savedStateHandle = savedState,
@@ -183,6 +190,18 @@ class MainViewModelTest {
         val vm = createViewModel()
         advanceUntilIdle()
         return vm
+    }
+
+    private fun weatherFor(location: SavedLocationEntity): WeatherData {
+        return testWeatherData.copy(
+            location = LocationInfo(
+                name = location.name,
+                region = location.region,
+                country = location.country,
+                latitude = location.latitude,
+                longitude = location.longitude,
+            )
+        )
     }
 
     // --- Success path ---
@@ -205,6 +224,24 @@ class MainViewModelTest {
         assertNotNull(state.airQuality)
         assertEquals(42, state.airQuality?.usAqi)
         assertNotNull(state.astronomy)
+    }
+
+    @Test
+    fun `loadWeather anchors calendar helpers to forecast observation time`() = runTest {
+        stubLocationSuccess()
+        viewModel = createAndAdvance()
+
+        val observationTime = testWeatherData.current.observationTime ?: error("missing observation time")
+        verify {
+            airQualityRepository.getAstronomy(
+                testWeatherData.current.sunrise,
+                testWeatherData.current.sunset,
+                observationTime,
+            )
+        }
+        coVerify {
+            onThisDayRepository.getOnThisDay(any(), any(), observationTime.toLocalDate())
+        }
     }
 
     // --- Permission flow ---
@@ -339,5 +376,95 @@ class MainViewModelTest {
         assertEquals(listOf(seattle), state.savedLocations)
         assertEquals("Seattle", state.weatherData?.location?.name)
         coVerify { weatherRepository.getWeather(seattle.latitude, seattle.longitude, seattle.name) }
+    }
+
+    @Test
+    fun `failed location change clears previous location scoped state`() = runTest {
+        stubLocationSuccess()
+        savedLocationsFlow.value = listOf(seattle)
+        coEvery { weatherSourceManager.getAlerts(any(), any()) } returns Result.success(
+            listOf(
+                WeatherAlert(
+                    id = "alert-1",
+                    event = "Storm",
+                    headline = "Storm incoming",
+                    description = "Storm details",
+                    instruction = "Stay aware",
+                    severity = AlertSeverity.MODERATE,
+                    urgency = AlertUrgency.EXPECTED,
+                    certainty = "Likely",
+                    senderName = "NWS",
+                    areaDescription = "Denver",
+                    effective = "2026-04-15T12:00:00Z",
+                    expires = "2026-04-15T18:00:00Z",
+                    response = null,
+                )
+            )
+        )
+        coEvery {
+            weatherRepository.getWeather(seattle.latitude, seattle.longitude, seattle.name)
+        } returns Result.failure(Exception("Network error"))
+
+        viewModel = createAndAdvance()
+        assertNotNull(viewModel.uiState.value.weatherData)
+        assertNotNull(viewModel.uiState.value.airQuality)
+        assertNotNull(viewModel.uiState.value.astronomy)
+        assertEquals(1, viewModel.uiState.value.alerts.size)
+
+        viewModel.onPageChanged(0)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.weatherData)
+        assertNull(state.airQuality)
+        assertNull(state.astronomy)
+        assertTrue(state.alerts.isEmpty())
+        assertTrue(state.nowcastData.isEmpty())
+        assertNull(state.radarPreviewTileUrl)
+        assertNotNull(state.error)
+    }
+
+    @Test
+    fun `latest location load wins when earlier request completes later`() = runTest {
+        every { locationProvider.hasLocationPermission } returns false
+        savedLocationsFlow.value = listOf(seattle, chicago)
+
+        val firstRequestStarted = CompletableDeferred<Unit>()
+        val releaseFirstRequest = CompletableDeferred<Unit>()
+        val releaseSecondRequest = CompletableDeferred<Unit>()
+        var requestCount = 0
+
+        coEvery { weatherRepository.getWeather(any(), any(), any()) } coAnswers {
+            when (++requestCount) {
+                1 -> {
+                    firstRequestStarted.complete(Unit)
+                    releaseFirstRequest.await()
+                    Result.success(weatherFor(seattle))
+                }
+                2 -> {
+                    releaseSecondRequest.await()
+                    Result.success(weatherFor(chicago))
+                }
+                else -> Result.success(testWeatherData)
+            }
+        }
+
+        viewModel = createAndAdvance()
+
+        viewModel.onPageChanged(0)
+        firstRequestStarted.await()
+
+        viewModel.onPageChanged(1)
+        releaseSecondRequest.complete(Unit)
+        advanceUntilIdle()
+
+        releaseFirstRequest.complete(Unit)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(1, state.currentPage)
+        assertEquals("Chicago", state.weatherData?.location?.name)
+        assertEquals(chicago.latitude, state.weatherData?.location?.latitude ?: 0.0, 0.0001)
+        assertNull(state.error)
     }
 }

@@ -127,6 +127,7 @@ class RadarViewModelTest {
     fun `togglePlayback starts playback when multiple frames are available`() = runTest(scheduler) {
         coEvery { radarRepository.getRadarFrames() } returns Result.success(frameSet(totalFrames = 3))
         val viewModel = createViewModel()
+        viewModel.loadFrames()
         advanceUntilIdle()
 
         viewModel.togglePlayback()
@@ -141,6 +142,7 @@ class RadarViewModelTest {
     fun `map interaction pauses and resumes playback when animation is available`() = runTest(scheduler) {
         coEvery { radarRepository.getRadarFrames() } returns Result.success(frameSet(totalFrames = 3))
         val viewModel = createViewModel()
+        viewModel.loadFrames()
         advanceUntilIdle()
 
         viewModel.togglePlayback()
@@ -162,6 +164,8 @@ class RadarViewModelTest {
     fun `loadFrames skips immediate duplicate fetch when frames are already loaded`() = runTest(scheduler) {
         coEvery { radarRepository.getRadarFrames() } returns Result.success(frameSet(totalFrames = 3))
         val viewModel = createViewModel()
+
+        viewModel.loadFrames()
         advanceUntilIdle()
 
         viewModel.loadFrames()
@@ -174,12 +178,24 @@ class RadarViewModelTest {
     fun `loadFrames force reload bypasses duplicate fetch guard`() = runTest(scheduler) {
         coEvery { radarRepository.getRadarFrames() } returns Result.success(frameSet(totalFrames = 3))
         val viewModel = createViewModel()
+
+        viewModel.loadFrames()
         advanceUntilIdle()
 
         viewModel.loadFrames(force = true)
         advanceUntilIdle()
 
         coVerify(exactly = 2) { radarRepository.getRadarFrames() }
+    }
+
+    @Test
+    fun `creating the view model does not eagerly fetch radar frames`() = runTest(scheduler) {
+        coEvery { radarRepository.getRadarFrames() } returns Result.success(frameSet(totalFrames = 3))
+
+        createViewModel()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { radarRepository.getRadarFrames() }
     }
 
     private fun createViewModel(): RadarViewModel {

@@ -32,6 +32,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusFogGray
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -43,6 +44,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun CloudCoverCard(
     hourly: List<HourlyConditions>,
+    referenceTime: LocalDateTime? = hourly.firstOrNull()?.time,
     modifier: Modifier = Modifier,
 ) {
     val currentCloud = hourly.firstOrNull()?.cloudCover ?: return
@@ -91,6 +93,7 @@ fun CloudCoverCard(
 
         CloudCoverChart(
             hours = next24,
+            referenceTime = referenceTime,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(120.dp),
@@ -101,6 +104,7 @@ fun CloudCoverCard(
 @Composable
 private fun CloudCoverChart(
     hours: List<HourlyConditions>,
+    referenceTime: LocalDateTime?,
     modifier: Modifier = Modifier,
 ) {
     val settings = LocalUnitSettings.current
@@ -108,8 +112,6 @@ private fun CloudCoverChart(
     val timeFmt = DateTimeFormatter.ofPattern(timePattern)
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
-    val now = LocalDateTime.now()
-
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -151,7 +153,7 @@ private fun CloudCoverChart(
                 else -> NimbusTextTertiary.copy(alpha = 0.55f)
             }
 
-            val isCurrent = hour.time.hour == now.hour && hour.time.toLocalDate() == now.toLocalDate()
+            val isCurrent = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime)
             val finalColor = if (isCurrent) NimbusBlueAccent else barColor
 
             drawRoundRect(

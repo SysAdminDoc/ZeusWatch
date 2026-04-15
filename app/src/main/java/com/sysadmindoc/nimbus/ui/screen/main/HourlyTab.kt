@@ -43,7 +43,6 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -51,20 +50,20 @@ import java.time.format.DateTimeFormatter
 fun HourlyTab(
     hourly: List<HourlyConditions>,
     locationName: String,
+    referenceTime: java.time.LocalDateTime? = hourly.firstOrNull()?.time,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
 ) {
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
     val forecastHours = s.hourlyForecastHours
     val dayFormatter = DateTimeFormatter.ofPattern("EEEE, MMM d")
-    val timePattern = if (s.timeFormat == com.sysadmindoc.nimbus.data.repository.TimeFormat.TWENTY_FOUR_HOUR) "HH:mm" else "h:mm a"
-    val timeFormatter = DateTimeFormatter.ofPattern(timePattern)
 
     val groupedHourly = remember(hourly, forecastHours) {
         hourly.take(forecastHours).groupBy { it.time.toLocalDate() }
             .toSortedMap()
             .entries.toList()
     }
+    val referenceDate = referenceTime?.toLocalDate()
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -101,10 +100,15 @@ fun HourlyTab(
         }
 
         groupedHourly.forEach { (date, hours) ->
+            val currentHourIndex = if (referenceTime == null) {
+                -1
+            } else {
+                hours.indexOfFirst { hour -> WeatherFormatter.isSameForecastHour(hour.time, referenceTime) }
+            }
             stickyHeader(key = "header_$date") {
-                val dayLabel = when (date) {
-                    LocalDate.now() -> "Today"
-                    LocalDate.now().plusDays(1) -> "Tomorrow"
+                val dayLabel = when {
+                    referenceDate != null && date == referenceDate -> "Today"
+                    referenceDate != null && date == referenceDate.plusDays(1) -> "Tomorrow"
                     else -> date.format(dayFormatter)
                 }
                 Column(
@@ -126,7 +130,11 @@ fun HourlyTab(
                 }
             }
             itemsIndexed(hours, key = { _, h -> h.time.toString() }) { index, hour ->
-                HourlyRow(hour = hour, timeFormatter = timeFormatter, isCurrent = index == 0 && date == LocalDate.now())
+                HourlyRow(
+                    hour = hour,
+                    isCurrent = index == currentHourIndex && currentHourIndex >= 0,
+                    referenceTime = referenceTime,
+                )
             }
         }
 
@@ -138,8 +146,8 @@ fun HourlyTab(
 @Composable
 private fun HourlyRow(
     hour: HourlyConditions,
-    timeFormatter: DateTimeFormatter,
     isCurrent: Boolean,
+    referenceTime: java.time.LocalDateTime?,
 ) {
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
     val shape = RoundedCornerShape(22.dp)
@@ -169,7 +177,11 @@ private fun HourlyRow(
     ) {
         Column(modifier = Modifier.width(76.dp)) {
             Text(
-                if (isCurrent) "Now" else hour.time.format(timeFormatter),
+                WeatherFormatter.formatRelativeHourLabel(
+                    time = hour.time,
+                    referenceTime = if (isCurrent) referenceTime else null,
+                    s = s,
+                ),
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                 color = if (isCurrent) NimbusBlueAccent else NimbusTextSecondary,
             )

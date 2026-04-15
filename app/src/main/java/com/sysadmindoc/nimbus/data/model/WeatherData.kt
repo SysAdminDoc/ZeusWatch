@@ -30,6 +30,7 @@ data class CurrentConditions(
     val feelsLike: Double,
     val humidity: Int,
     val weatherCode: WeatherCode,
+    val observationTime: LocalDateTime? = null,
     val isDay: Boolean,
     val windSpeed: Double,
     val windDirection: Int,

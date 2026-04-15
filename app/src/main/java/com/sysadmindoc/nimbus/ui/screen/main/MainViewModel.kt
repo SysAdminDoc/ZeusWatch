@@ -52,7 +52,9 @@ import androidx.compose.runtime.Stable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import java.time.LocalDate
 import javax.inject.Inject
+import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.tan
 import kotlin.math.cos
@@ -89,6 +91,7 @@ class MainViewModel @Inject constructor(
     private var activeLocationId: Long? = null
     private var activeLocationName: String? = null
     private var useGpsLocation: Boolean = true
+    private var latestWeatherRequestId: Long = 0L
 
     init {
         Log.d(TAG, "init: overrideLocationId=$overrideLocationId")
@@ -158,9 +161,9 @@ class MainViewModel @Inject constructor(
                 when {
                     recoveryLocation != null -> {
                         val location = recoveryLocation ?: return@collect
-                        loadWeatherForCoords(location.latitude, location.longitude, location.id)
+                        loadWeatherForCoords(location.latitude, location.longitude, location.id, location.name)
                     }
-                    shouldReloadGps -> loadWeather()
+                    shouldReloadGps -> loadWeather(clearDisplayedWeather = true)
                 }
             }
         }
@@ -188,7 +191,7 @@ class MainViewModel @Inject constructor(
             activeLocationId = null
             activeLocationName = null
             useGpsLocation = true
-            loadWeather()
+            loadWeather(clearDisplayedWeather = true)
         } else {
             activeLocationId = loc.id
             activeLocationName = loc.name
@@ -199,13 +202,17 @@ class MainViewModel @Inject constructor(
 
     // ── Weather Loading ──────────────────────────────────────────────────
 
-    fun loadWeather() {
+    fun loadWeather(clearDisplayedWeather: Boolean = false) {
+        val requestId = nextWeatherRequestId()
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(isLoading = true, error = null, needsLocationPermission = false) }
+                if (!isLatestWeatherRequest(requestId)) return@launch
+
+                beginWeatherLoad(clearDisplayedWeather)
 
                 if (!locationProvider.hasLocationPermission) {
-                    val hasCached = tryLoadCached()
+                    val hasCached = tryLoadCached(requestId)
+                    if (!isLatestWeatherRequest(requestId)) return@launch
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -224,11 +231,18 @@ class MainViewModel @Inject constructor(
                     onFailure = { lastError = it }
                 )
 
+                if (!isLatestWeatherRequest(requestId)) return@launch
+
                 val resolvedLocation = location
                 if (resolvedLocation != null) {
-                    fetchWeather(resolvedLocation.latitude, resolvedLocation.longitude)
+                    fetchWeather(
+                        lat = resolvedLocation.latitude,
+                        lon = resolvedLocation.longitude,
+                        requestId = requestId,
+                    )
                 } else {
-                    val cached = tryLoadCached()
+                    val cached = tryLoadCached(requestId)
+                    if (!isLatestWeatherRequest(requestId)) return@launch
                     if (!cached) {
                         _uiState.update {
                             it.copy(
@@ -241,7 +255,7 @@ class MainViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "loadWeather: error", e)
-                if (!tryLoadCached()) {
+                if (!tryLoadCached(requestId) && isLatestWeatherRequest(requestId)) {
                     _uiState.update {
                         it.copy(isLoading = false, isRefreshing = false, error = userFriendlyError(e))
                     }
@@ -256,26 +270,48 @@ class MainViewModel @Inject constructor(
         locationId: Long? = activeLocationId,
         locationName: String? = activeLocationName,
     ) {
+        val requestId = nextWeatherRequestId()
+        val clearDisplayedWeather = shouldClearDisplayedWeatherFor(lat, lon)
         viewModelScope.launch {
+            if (!isLatestWeatherRequest(requestId)) return@launch
+            useGpsLocation = false
             activeLocationId = locationId
             activeLocationName = locationName
-            _uiState.update { it.copy(isLoading = true, error = null) }
-            fetchWeather(lat, lon, locationName)
+            beginWeatherLoad(clearDisplayedWeather)
+            fetchWeather(lat, lon, locationName, requestId)
         }
     }
 
-    private suspend fun fetchWeather(lat: Double, lon: Double, locationName: String? = activeLocationName) {
+    private suspend fun fetchWeather(
+        lat: Double,
+        lon: Double,
+        locationName: String? = activeLocationName,
+        requestId: Long,
+    ) {
         try {
+            if (!isLatestWeatherRequest(requestId)) return
             activeLatitude = lat
             activeLongitude = lon
 
             val result = repository.getWeather(lat, lon, locationName)
+            if (!isLatestWeatherRequest(requestId)) return
             result.fold(
                 onSuccess = { data ->
-                    prefs.saveLastLocation(lat, lon, data.location.name)
-                    if (useGpsLocation) {
-                        locationRepository.ensureCurrentLocation(lat, lon, data.location.name)
+                    if (!isLatestWeatherRequest(requestId)) return@fold
+                    try {
+                        prefs.saveLastLocation(lat, lon, data.location.name)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to persist last location", e)
                     }
+                    if (!isLatestWeatherRequest(requestId)) return@fold
+                    if (useGpsLocation) {
+                        try {
+                            locationRepository.ensureCurrentLocation(lat, lon, data.location.name)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to update current location entry", e)
+                        }
+                    }
+                    if (!isLatestWeatherRequest(requestId)) return@fold
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -288,26 +324,41 @@ class MainViewModel @Inject constructor(
                     }
                     // Run independent sub-fetches in parallel
                     coroutineScope {
-                        launch { fetchAlerts(lat, lon) }
-                        launch { fetchAirQuality(lat, lon) }
-                        launch { fetchOnThisDay(lat, lon) }
-                        launch { fetchAstronomy(data) }
-                        launch { fetchRadarPreview(lat, lon) }
-                        launch { fetchNowcast(lat, lon) }
+                        launch { fetchAlerts(lat, lon, requestId) }
+                        launch { fetchAirQuality(lat, lon, requestId) }
+                        launch { fetchOnThisDay(lat, lon, data.current.observationTime?.toLocalDate(), requestId) }
+                        launch { fetchAstronomy(data, requestId) }
+                        launch { fetchRadarPreview(lat, lon, requestId) }
+                        launch { fetchNowcast(lat, lon, requestId) }
                     }
+                    if (!isLatestWeatherRequest(requestId)) return@fold
                     // Sync to watch after all data is available
-                    wearSyncManager.syncWeather(
-                        data = data,
-                        alerts = _uiState.value.alerts,
-                        airQuality = _uiState.value.airQuality,
-                    )
+                    try {
+                        wearSyncManager.syncWeather(
+                            data = data,
+                            alerts = _uiState.value.alerts,
+                            airQuality = _uiState.value.airQuality,
+                        )
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Wear sync failed", e)
+                    }
                     // Yesterday comparison must complete before derived data computation
-                    fetchYesterdayComparison(lat, lon)
-                    computeDerivedData(data)
+                    try {
+                        fetchYesterdayComparison(lat, lon, requestId)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Yesterday comparison failed", e)
+                    }
+                    if (!isLatestWeatherRequest(requestId)) return@fold
+                    try {
+                        computeDerivedData(data, requestId)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Derived weather computation failed", e)
+                    }
                 },
                 onFailure = { e ->
+                    if (!isLatestWeatherRequest(requestId)) return@fold
                     Log.e(TAG, "fetchWeather: failed: ${e.message}")
-                    if (!tryLoadCached()) {
+                    if (!tryLoadCached(requestId) && isLatestWeatherRequest(requestId)) {
                         _uiState.update {
                             it.copy(isLoading = false, isRefreshing = false, error = userFriendlyError(e))
                         }
@@ -315,6 +366,7 @@ class MainViewModel @Inject constructor(
                 }
             )
         } catch (e: Exception) {
+            if (!isLatestWeatherRequest(requestId)) return
             Log.e(TAG, "fetchWeather: unexpected", e)
             _uiState.update {
                 it.copy(isLoading = false, isRefreshing = false, error = userFriendlyError(e))
@@ -322,37 +374,63 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private suspend fun fetchAlerts(lat: Double, lon: Double) {
+    private suspend fun fetchAlerts(lat: Double, lon: Double, requestId: Long) {
         try {
             weatherSourceManager.getAlerts(lat, lon).fold(
-                onSuccess = { _uiState.update { s -> s.copy(alerts = it.toImmutableList()) } },
-                onFailure = { _uiState.update { s -> s.copy(alerts = persistentListOf()) } }
+                onSuccess = {
+                    if (isLatestWeatherRequest(requestId)) {
+                        _uiState.update { s -> s.copy(alerts = it.toImmutableList()) }
+                    }
+                },
+                onFailure = {
+                    if (isLatestWeatherRequest(requestId)) {
+                        _uiState.update { s -> s.copy(alerts = persistentListOf()) }
+                    }
+                }
             )
         } catch (_: Exception) {
-            _uiState.update { it.copy(alerts = persistentListOf()) }
+            if (isLatestWeatherRequest(requestId)) {
+                _uiState.update { it.copy(alerts = persistentListOf()) }
+            }
         }
     }
 
-    private suspend fun fetchAirQuality(lat: Double, lon: Double) {
+    private suspend fun fetchAirQuality(lat: Double, lon: Double, requestId: Long) {
         try {
             weatherSourceManager.getAirQuality(lat, lon).fold(
-                onSuccess = { _uiState.update { s -> s.copy(airQuality = it) } },
-                onFailure = { _uiState.update { s -> s.copy(airQuality = null) } }
+                onSuccess = {
+                    if (isLatestWeatherRequest(requestId)) {
+                        _uiState.update { s -> s.copy(airQuality = it) }
+                    }
+                },
+                onFailure = {
+                    if (isLatestWeatherRequest(requestId)) {
+                        _uiState.update { s -> s.copy(airQuality = null) }
+                    }
+                }
             )
         } catch (e: Exception) {
             Log.w(TAG, "fetchAirQuality failed", e)
-            _uiState.update { it.copy(airQuality = null) }
+            if (isLatestWeatherRequest(requestId)) {
+                _uiState.update { it.copy(airQuality = null) }
+            }
         }
     }
 
-    private fun fetchAstronomy(data: WeatherData) {
+    private fun fetchAstronomy(data: WeatherData, requestId: Long) {
         try {
-            val astronomy = airQualityRepository.getAstronomy(data.current.sunrise, data.current.sunset)
-            _uiState.update { it.copy(astronomy = astronomy) }
+            val astronomy = airQualityRepository.getAstronomy(
+                data.current.sunrise,
+                data.current.sunset,
+                data.current.observationTime,
+            )
+            if (isLatestWeatherRequest(requestId)) {
+                _uiState.update { it.copy(astronomy = astronomy) }
+            }
         } catch (e: Exception) { Log.w(TAG, "fetchAstronomy failed", e) }
     }
 
-    private suspend fun fetchRadarPreview(lat: Double, lon: Double) {
+    private suspend fun fetchRadarPreview(lat: Double, lon: Double, requestId: Long) {
         try {
             radarRepository.getRadarFrames().fold(
                 onSuccess = { frameSet ->
@@ -364,8 +442,10 @@ class MainViewModel @Inject constructor(
                         .replace("{x}", tileX.toString())
                         .replace("{y}", tileY.toString())
                     val baseUrl = "https://basemaps.cartocdn.com/dark_all/$zoom/$tileX/$tileY@2x.png"
-                    _uiState.update {
-                        it.copy(radarPreviewTileUrl = radarUrl, radarBaseMapUrl = baseUrl)
+                    if (isLatestWeatherRequest(requestId)) {
+                        _uiState.update {
+                            it.copy(radarPreviewTileUrl = radarUrl, radarBaseMapUrl = baseUrl)
+                        }
                     }
                 },
                 onFailure = { /* keep placeholder */ }
@@ -375,11 +455,13 @@ class MainViewModel @Inject constructor(
 
     // ── Nowcast (minutely precipitation) ────────────────────────────────
 
-    private suspend fun fetchNowcast(lat: Double, lon: Double) {
+    private suspend fun fetchNowcast(lat: Double, lon: Double, requestId: Long) {
         try {
             repository.getMinutelyPrecipitation(lat, lon).fold(
                 onSuccess = { data ->
-                    _uiState.update { it.copy(nowcastData = data.toImmutableList()) }
+                    if (isLatestWeatherRequest(requestId)) {
+                        _uiState.update { it.copy(nowcastData = data.toImmutableList()) }
+                    }
                 },
                 onFailure = { Log.w(TAG, "fetchNowcast failed: ${it.message}") }
             )
@@ -388,14 +470,21 @@ class MainViewModel @Inject constructor(
 
     // ── On This Day (historical same-date snapshot) ──────────────────────
 
-    private suspend fun fetchOnThisDay(lat: Double, lon: Double) {
+    private suspend fun fetchOnThisDay(
+        lat: Double,
+        lon: Double,
+        referenceDate: LocalDate?,
+        requestId: Long,
+    ) {
         try {
-            val data = onThisDayRepository.getOnThisDay(lat, lon)
-            _uiState.update { it.copy(onThisDay = data) }
+            val data = onThisDayRepository.getOnThisDay(lat, lon, referenceDate ?: LocalDate.now())
+            if (isLatestWeatherRequest(requestId)) {
+                _uiState.update { it.copy(onThisDay = data) }
+            }
         } catch (e: Exception) {
             Log.w(TAG, "fetchOnThisDay failed: ${e.message}")
             // Keep any previously cached state; only overwrite with null on first try.
-            if (_uiState.value.onThisDay == null) {
+            if (isLatestWeatherRequest(requestId) && _uiState.value.onThisDay == null) {
                 _uiState.update { it.copy(onThisDay = null) }
             }
         }
@@ -403,12 +492,14 @@ class MainViewModel @Inject constructor(
 
     // ── Yesterday Comparison ──────────────────────────────────────────────
 
-    private suspend fun fetchYesterdayComparison(lat: Double, lon: Double) {
+    private suspend fun fetchYesterdayComparison(lat: Double, lon: Double, requestId: Long) {
         try {
             repository.getYesterdayWeather(lat, lon).fold(
                 onSuccess = { yesterday ->
                     val high = yesterday?.temperatureHigh
-                    _uiState.update { it.copy(yesterdayHigh = high) }
+                    if (isLatestWeatherRequest(requestId)) {
+                        _uiState.update { it.copy(yesterdayHigh = high) }
+                    }
                 },
                 onFailure = { Log.w(TAG, "fetchYesterdayComparison failed: ${it.message}") }
             )
@@ -417,7 +508,7 @@ class MainViewModel @Inject constructor(
 
     // ── Derived Computations (summary, scores, alerts) ────────────────────
 
-    private suspend fun computeDerivedData(data: WeatherData) {
+    private suspend fun computeDerivedData(data: WeatherData, requestId: Long) {
         val settings = _uiState.value.settings
         val currentState = _uiState.value
         val derived = withContext(defaultDispatcher) {
@@ -472,6 +563,8 @@ class MainViewModel @Inject constructor(
             )
         }
 
+        if (!isLatestWeatherRequest(requestId)) return
+
         // Single state update — triggers one recomposition instead of many
         _uiState.update {
             it.copy(
@@ -498,12 +591,14 @@ class MainViewModel @Inject constructor(
                         aiEngine = summaryEngine,
                     )
                 }
-                _uiState.update { it.copy(weatherSummary = aiSummary) }
+                if (isLatestWeatherRequest(requestId)) {
+                    _uiState.update { it.copy(weatherSummary = aiSummary) }
+                }
             }
         }
 
         // Persistent weather notification
-        if (settings.persistentWeatherNotif) {
+        if (settings.persistentWeatherNotif && isLatestWeatherRequest(requestId)) {
             com.sysadmindoc.nimbus.util.WeatherNotificationHelper.showOrUpdate(appContext, data, settings)
         }
     }
@@ -532,26 +627,38 @@ class MainViewModel @Inject constructor(
         return Pair(x, y)
     }
 
-    private suspend fun tryLoadCached(): Boolean {
+    private suspend fun tryLoadCached(requestId: Long? = null): Boolean {
         return try {
+            if (requestId != null && !isLatestWeatherRequest(requestId)) return false
             val lastLoc = prefs.lastLocation.first() ?: return false
             val cached = repository.getCachedWeather(lastLoc.latitude, lastLoc.longitude)
             if (cached != null) {
-                _uiState.update {
-                    it.copy(isLoading = false, isRefreshing = false, weatherData = cached, error = null, isCached = true)
+                if (requestId == null || isLatestWeatherRequest(requestId)) {
+                    _uiState.update { state ->
+                        state.clearLocationScopedData().copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            weatherData = cached,
+                            error = null,
+                            isCached = true,
+                        )
+                    }
+                    true
+                } else {
+                    false
                 }
-                true
             } else false
         } catch (_: Exception) { false }
     }
 
     fun refresh() {
-        _uiState.update { it.copy(isRefreshing = true) }
+        _uiState.update { it.copy(isRefreshing = true, error = null) }
         viewModelScope.launch {
             val lat = activeLatitude
             val lon = activeLongitude
             if (!useGpsLocation && lat != null && lon != null) {
-                fetchWeather(lat, lon)
+                val requestId = nextWeatherRequestId()
+                fetchWeather(lat, lon, activeLocationName, requestId)
             } else {
                 loadWeather()
             }
@@ -573,15 +680,7 @@ class MainViewModel @Inject constructor(
 
             useGpsLocation = false
             activeLocationId = null
-            activeLocationName = lastLoc.name
-            _uiState.update {
-                it.copy(
-                    isLoading = true,
-                    error = null,
-                    needsLocationPermission = false,
-                )
-            }
-            fetchWeather(lastLoc.latitude, lastLoc.longitude)
+            loadWeatherForCoords(lastLoc.latitude, lastLoc.longitude, locationId = null, locationName = lastLoc.name)
         }
     }
 
@@ -605,18 +704,15 @@ class MainViewModel @Inject constructor(
                         activeLocationId = null
                         activeLocationName = null
                         useGpsLocation = true
-                        loadWeather()
+                        loadWeather(clearDisplayedWeather = true)
                     } else {
-                        activeLocationId = loc.id
-                        activeLocationName = loc.name
-                        useGpsLocation = false
-                        fetchWeather(loc.latitude, loc.longitude, loc.name)
+                        loadWeatherForCoords(loc.latitude, loc.longitude, loc.id, loc.name)
                     }
                 } else {
                     activeLocationId = null
                     activeLocationName = null
                     useGpsLocation = true
-                    loadWeather()
+                    loadWeather(clearDisplayedWeather = true)
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = userFriendlyError(e)) }
@@ -634,6 +730,30 @@ class MainViewModel @Inject constructor(
             it.copy(needsLocationPermission = true, isLoading = false, error = "Location permission required.")
         }
     }
+
+    private fun nextWeatherRequestId(): Long = ++latestWeatherRequestId
+
+    private fun isLatestWeatherRequest(requestId: Long): Boolean = requestId == latestWeatherRequestId
+
+    private fun beginWeatherLoad(clearDisplayedWeather: Boolean) {
+        _uiState.update { state ->
+            val baseState = if (clearDisplayedWeather) state.clearLocationScopedData() else state
+            baseState.copy(
+                isLoading = true,
+                error = null,
+                needsLocationPermission = false,
+                isCached = false,
+            )
+        }
+    }
+
+    private fun shouldClearDisplayedWeatherFor(lat: Double, lon: Double): Boolean {
+        val currentLocation = _uiState.value.weatherData?.location ?: return false
+        return !sameCoordinate(currentLocation.latitude, lat) || !sameCoordinate(currentLocation.longitude, lon)
+    }
+
+    private fun sameCoordinate(first: Double, second: Double, tolerance: Double = 0.0001): Boolean =
+        abs(first - second) <= tolerance
 }
 
 @Stable
@@ -676,4 +796,24 @@ private data class DerivedWeatherState(
     val clothingSuggestions: ImmutableList<ClothingSuggestion>,
     val petSafetyAlerts: ImmutableList<PetSafetyAlert>,
     val goldenHourTimes: Pair<String, String>?,
+)
+
+private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
+    weatherData = null,
+    alerts = persistentListOf(),
+    airQuality = null,
+    astronomy = null,
+    isCached = false,
+    radarPreviewTileUrl = null,
+    radarBaseMapUrl = null,
+    weatherSummary = "",
+    yesterdayHigh = null,
+    nowcastData = persistentListOf(),
+    outdoorScore = 0,
+    drivingAlerts = persistentListOf(),
+    healthAlerts = persistentListOf(),
+    clothingSuggestions = persistentListOf(),
+    petSafetyAlerts = persistentListOf(),
+    goldenHourTimes = null,
+    onThisDay = null,
 )
