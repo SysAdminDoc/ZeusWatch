@@ -37,6 +37,7 @@ fun UvIndexBar(
     uvIndex: Double,
     modifier: Modifier = Modifier,
     hourly: List<HourlyConditions> = emptyList(),
+    referenceTime: java.time.LocalDateTime? = hourly.firstOrNull()?.time,
 ) {
     val level = WeatherFormatter.uvDescription(uvIndex)
 
@@ -45,7 +46,7 @@ fun UvIndexBar(
         val peakHour = hourly.take(12).maxByOrNull { it.uvIndex ?: 0.0 }
         if (peakHour != null && (peakHour.uvIndex ?: 0.0) > uvIndex) {
             val s = LocalUnitSettings.current
-            "Peaks at ${WeatherFormatter.formatHourLabel(peakHour.time, s)}"
+            "Peaks at ${WeatherFormatter.formatRelativeHourLabel(peakHour.time, referenceTime, s)}"
         } else null
     } else null
     val levelColor = when {

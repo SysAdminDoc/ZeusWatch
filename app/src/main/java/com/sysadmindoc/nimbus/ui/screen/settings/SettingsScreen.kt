@@ -19,12 +19,15 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -331,11 +334,21 @@ internal fun SettingsContent(
             onSelectedCategory = { selectedCategory = it },
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        SettingsOverviewCard(
+            selectedCategory = selectedCategory,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         // ── Display ──────────────────────────────────────────
         if (selectedCategory == SettingsCategory.APPEARANCE) {
-        SettingSection("Display") {
+        SettingSection(
+            title = "Display",
+            description = "Choose the overall visual style, iconography, and forecast voice.",
+        ) {
             Text(
                 text = "Radar Provider",
                 style = MaterialTheme.typography.bodySmall,
@@ -345,11 +358,19 @@ internal fun SettingsContent(
             RadarProvider.entries.forEach { provider ->
                 SettingRadio(
                     label = provider.label,
+                    sublabel = provider.summary,
                     selected = settings.radarProvider == provider,
                     onClick = { onRadarProvider(provider) },
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Windy is the default for new installs. RainViewer Native keeps ZeusWatch's in-app playback, while the NWS options open official U.S. radar pages.",
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextTertiary,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Icon Style",
                 style = MaterialTheme.typography.bodySmall,
@@ -404,7 +425,10 @@ internal fun SettingsContent(
 
         // ── Cards (ordered, with move up/down) ─────────────
         if (selectedCategory == SettingsCategory.FORECAST) {
-        SettingSection("Home Cards") {
+        SettingSection(
+            title = "Home Cards",
+            description = "Decide what shows on the Today screen and which insights stay closest to the top.",
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -557,7 +581,10 @@ internal fun SettingsContent(
         // ── Notifications ────────────────────────────────────
         }
         if (selectedCategory == SettingsCategory.ALERTS) {
-        SettingSection("Notifications") {
+        SettingSection(
+            title = "Notifications",
+            description = "Control which weather changes can interrupt you and how proactive ZeusWatch should be.",
+        ) {
             if (!notificationsPermissionGranted) {
                 PermissionNoticeCard(
                     title = "Notification Permission Off",
@@ -668,7 +695,10 @@ internal fun SettingsContent(
         // ── Data Display ─────────────────────────────────────
         }
         if (selectedCategory == SettingsCategory.FORECAST) {
-        SettingSection("Data Display") {
+        SettingSection(
+            title = "Data Display",
+            description = "Surface extra forecast detail when you want more context than the default view.",
+        ) {
             SettingToggle(
                 label = "Yesterday Comparison",
                 sublabel = "Show warmer/cooler trend in the hero header",
@@ -731,7 +761,10 @@ internal fun SettingsContent(
 
         // ── Health ───────────────────────────────────────────
         if (selectedCategory == SettingsCategory.ALERTS && settings.healthAlertsEnabled) {
-            SettingSection("Health") {
+        SettingSection(
+            title = "Health",
+            description = "Enable weather-sensitive warnings for migraines, air quality, and other comfort impacts.",
+        ) {
                 SettingToggle(
                     label = "Migraine Alerts",
                     sublabel = "Alert on rapid pressure changes",
@@ -764,7 +797,10 @@ internal fun SettingsContent(
 
         // ── Accessibility ────────────────────────────────────
         if (selectedCategory == SettingsCategory.ALERTS) {
-        SettingSection("Accessibility") {
+        SettingSection(
+            title = "Accessibility",
+            description = "Keep the interface readable, comfortable, and calm in different conditions.",
+        ) {
             SettingToggle(
                 label = "Haptic Feedback for Alerts",
                 sublabel = "Vibration feedback when alerts are shown",
@@ -776,7 +812,10 @@ internal fun SettingsContent(
 
         // ── Visual Effects ───────────────────────────────────
         if (selectedCategory == SettingsCategory.APPEARANCE) {
-        SettingSection("Visual Effects") {
+        SettingSection(
+            title = "Visual Effects",
+            description = "Dial ambient motion up or down to match your preferred level of energy.",
+        ) {
             SettingToggle(
                 label = "Weather Particles",
                 sublabel = "Rain, snow, and sun ray animations",
@@ -788,7 +827,11 @@ internal fun SettingsContent(
 
         // ── Data Sources ─────────────────────────────────────────
         if (selectedCategory == SettingsCategory.ADVANCED) {
-        SettingSection("Data Sources", initiallyExpanded = false) {
+        SettingSection(
+            title = "Data Sources",
+            description = "Pick the providers and fallbacks ZeusWatch uses for forecasts, alerts, and air quality.",
+            initiallyExpanded = false,
+        ) {
             val sourceConfig = settings.sourceConfig
 
             // Forecast source
@@ -889,7 +932,11 @@ internal fun SettingsContent(
         }
 
         // ── Advanced ───────────────────────────────────────────
-        SettingSection("Advanced", initiallyExpanded = false) {
+        SettingSection(
+            title = "Advanced",
+            description = "Power-user controls for cache behavior and provider troubleshooting.",
+            initiallyExpanded = false,
+        ) {
             Text(
                 "Cache Duration",
                 style = MaterialTheme.typography.bodySmall,
@@ -907,7 +954,10 @@ internal fun SettingsContent(
         }
 
         // ── About ────────────────────────────────────────────
-        SettingSection("About") {
+        SettingSection(
+            title = "About",
+            description = "Version and project details for support, trust, and troubleshooting.",
+        ) {
             SettingInfo("Version", com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME)
             SettingInfo("Data Sources", "Open-Meteo, NWS, and more")
             SettingInfo("License", "LGPL-3.0")
@@ -916,6 +966,57 @@ internal fun SettingsContent(
 
         Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+}
+
+@Composable
+private fun SettingsOverviewCard(
+    selectedCategory: SettingsCategory,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(26.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.78f),
+                        NimbusCardBg,
+                        NimbusGlassBottom,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(26.dp))
+            .padding(horizontal = 18.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(9.dp)
+                    .clip(CircleShape)
+                    .background(NimbusBlueAccent),
+            )
+            Text(
+                text = "Focused area",
+                style = MaterialTheme.typography.labelMedium,
+                color = NimbusTextTertiary,
+            )
+        }
+        Text(
+            text = selectedCategory.label,
+            style = MaterialTheme.typography.headlineSmall,
+            color = NimbusTextPrimary,
+        )
+        Text(
+            text = "${selectedCategory.summary}. Swipe categories to move faster, then expand only the sections you want to change.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = NimbusTextSecondary,
+        )
     }
 }
 
@@ -935,28 +1036,53 @@ private fun SettingsCategoryPicker(
             val isSelected = category == selectedCategory
             Column(
                 modifier = Modifier
+                    .widthIn(min = 164.dp)
                     .clip(RoundedCornerShape(22.dp))
                     .background(
-                        if (isSelected) NimbusBlueAccent.copy(alpha = 0.14f)
-                        else NimbusCardBg,
+                        Brush.verticalGradient(
+                            colors = if (isSelected) {
+                                listOf(
+                                    NimbusBlueAccent.copy(alpha = 0.20f),
+                                    NimbusGlassTop.copy(alpha = 0.72f),
+                                    NimbusGlassBottom,
+                                )
+                            } else {
+                                listOf(
+                                    NimbusGlassTop.copy(alpha = 0.58f),
+                                    NimbusCardBg,
+                                )
+                            },
+                        ),
                     )
                     .border(
                         1.dp,
-                        if (isSelected) NimbusBlueAccent.copy(alpha = 0.34f) else NimbusCardBorder,
+                        if (isSelected) NimbusBlueAccent.copy(alpha = 0.44f) else NimbusCardBorder,
                         RoundedCornerShape(22.dp),
                     )
                     .clickable { onSelectedCategory(category) }
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
             ) {
-                Text(
-                    text = category.label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (isSelected) NimbusTextPrimary else NimbusTextSecondary,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isSelected) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.45f),
+                            ),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = category.label,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (isSelected) NimbusTextPrimary else NimbusTextSecondary,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = category.summary,
                     style = MaterialTheme.typography.bodySmall,
-                    color = NimbusTextTertiary,
+                    color = if (isSelected) NimbusTextSecondary else NimbusTextTertiary,
                 )
             }
         }
@@ -966,6 +1092,7 @@ private fun SettingsCategoryPicker(
 @Composable
 private fun SettingSection(
     title: String,
+    description: String? = null,
     initiallyExpanded: Boolean = true,
     content: @Composable () -> Unit,
 ) {
@@ -985,29 +1112,53 @@ private fun SettingSection(
                 ),
             )
             .border(1.dp, NimbusCardBorder, RoundedCornerShape(24.dp))
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(horizontal = 18.dp, vertical = 18.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { expanded = !expanded }
-                .padding(bottom = if (expanded) 10.dp else 0.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(bottom = if (expanded) 14.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                color = NimbusTextPrimary,
-            )
-            Text(
-                text = if (expanded) "\u25B2" else "\u25BC",
-                style = MaterialTheme.typography.labelSmall,
-                color = NimbusBlueAccent.copy(alpha = 0.8f),
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = NimbusTextPrimary,
+                )
+                if (description != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NimbusTextSecondary,
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(NimbusBlueAccent.copy(alpha = if (expanded) 0.18f else 0.10f))
+                    .border(
+                        1.dp,
+                        NimbusBlueAccent.copy(alpha = if (expanded) 0.28f else 0.16f),
+                        RoundedCornerShape(14.dp),
+                    )
+                    .padding(6.dp),
+            ) {
+                Icon(
+                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = if (expanded) "Collapse section" else "Expand section",
+                    tint = NimbusBlueAccent,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
         }
         if (expanded) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            HorizontalDivider(color = NimbusCardBorder.copy(alpha = 0.65f))
+            Spacer(modifier = Modifier.height(14.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 content()
             }
         }
@@ -1024,11 +1175,26 @@ private fun SettingRadio(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 68.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(if (selected) NimbusBlueAccent.copy(alpha = 0.14f) else NimbusCardBg)
-            .border(1.dp, if (selected) NimbusBlueAccent.copy(alpha = 0.35f) else NimbusCardBorder, RoundedCornerShape(20.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = if (selected) {
+                        listOf(
+                            NimbusBlueAccent.copy(alpha = 0.16f),
+                            NimbusGlassTop.copy(alpha = 0.66f),
+                        )
+                    } else {
+                        listOf(
+                            NimbusGlassTop.copy(alpha = 0.48f),
+                            NimbusCardBg,
+                        )
+                    },
+                ),
+            )
+            .border(1.dp, if (selected) NimbusBlueAccent.copy(alpha = 0.38f) else NimbusCardBorder, RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+            .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(
@@ -1059,11 +1225,26 @@ private fun SettingToggle(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 68.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(if (checked) NimbusBlueAccent.copy(alpha = 0.12f) else NimbusCardBg)
-            .border(1.dp, if (checked) NimbusBlueAccent.copy(alpha = 0.32f) else NimbusCardBorder, RoundedCornerShape(20.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = if (checked) {
+                        listOf(
+                            NimbusBlueAccent.copy(alpha = 0.14f),
+                            NimbusGlassTop.copy(alpha = 0.62f),
+                        )
+                    } else {
+                        listOf(
+                            NimbusGlassTop.copy(alpha = 0.46f),
+                            NimbusCardBg,
+                        )
+                    },
+                ),
+            )
+            .border(1.dp, if (checked) NimbusBlueAccent.copy(alpha = 0.34f) else NimbusCardBorder, RoundedCornerShape(20.dp))
             .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -1092,13 +1273,24 @@ private fun SettingInfo(label: String, value: String) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(NimbusCardBg)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.5f),
+                        NimbusCardBg,
+                    ),
+                ),
+            )
             .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = label, style = MaterialTheme.typography.bodyLarge, color = NimbusTextPrimary)
-        Text(text = value, style = MaterialTheme.typography.bodyMedium, color = NimbusTextSecondary)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = label, style = MaterialTheme.typography.labelMedium, color = NimbusTextSecondary)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(text = value, style = MaterialTheme.typography.bodyLarge, color = NimbusTextPrimary)
+        }
     }
 }
 
@@ -1125,7 +1317,14 @@ private fun SourceDropdown(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(18.dp))
-                    .background(NimbusCardBg)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                NimbusGlassTop.copy(alpha = 0.52f),
+                                NimbusCardBg,
+                            ),
+                        ),
+                    )
                     .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
                     .clickable { expanded = true }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
@@ -1136,10 +1335,11 @@ private fun SourceDropdown(
                     text = selected.displayName,
                     style = MaterialTheme.typography.bodyLarge,
                 )
-                Text(
-                    text = if (expanded) "\u25B2" else "\u25BC",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NimbusTextSecondary,
+                Icon(
+                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = if (expanded) "Collapse options" else "Expand options",
+                    tint = NimbusTextSecondary,
+                    modifier = Modifier.size(18.dp),
                 )
             }
             DropdownMenu(
@@ -1187,7 +1387,14 @@ private fun SourceDropdownNullable(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(18.dp))
-                    .background(NimbusCardBg)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                NimbusGlassTop.copy(alpha = 0.52f),
+                                NimbusCardBg,
+                            ),
+                        ),
+                    )
                     .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
                     .clickable { expanded = true }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
@@ -1199,10 +1406,11 @@ private fun SourceDropdownNullable(
                     style = MaterialTheme.typography.bodyLarge,
                     color = if (selected == null) NimbusTextTertiary else NimbusTextPrimary,
                 )
-                Text(
-                    text = if (expanded) "\u25B2" else "\u25BC",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NimbusTextSecondary,
+                Icon(
+                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = if (expanded) "Collapse options" else "Expand options",
+                    tint = NimbusTextSecondary,
+                    modifier = Modifier.size(18.dp),
                 )
             }
             DropdownMenu(
@@ -1277,7 +1485,7 @@ private fun ApiKeyField(
             modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
         )
         Text(
-            text = "Saved when you leave the field",
+            text = "Stored on this device and saved when you leave the field",
             style = MaterialTheme.typography.labelSmall,
             color = NimbusTextTertiary,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
@@ -1307,8 +1515,19 @@ private fun ApiKeyField(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(18.dp))
-                        .background(NimbusCardBg)
-                        .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    NimbusGlassTop.copy(alpha = 0.52f),
+                                    NimbusCardBg,
+                                ),
+                            ),
+                        )
+                        .border(
+                            1.dp,
+                            if (isFocused) NimbusBlueAccent.copy(alpha = 0.48f) else NimbusCardBorder,
+                            RoundedCornerShape(18.dp),
+                        )
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                 ) {
                     if (text.isEmpty()) {

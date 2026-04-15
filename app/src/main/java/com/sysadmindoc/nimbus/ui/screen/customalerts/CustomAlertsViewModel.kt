@@ -48,22 +48,11 @@ class CustomAlertsViewModel @Inject constructor(
      * the editor converts on save via [convertToCanonical].
      */
     fun defaultRule(metric: CustomAlertMetric = CustomAlertMetric.TEMP_HIGH_TODAY): CustomAlertRule {
-        val defaultCanonical = when (metric) {
-            CustomAlertMetric.TEMP_HIGH_TODAY -> 32.0   // 32°C ≈ 90°F
-            CustomAlertMetric.TEMP_LOW_TONIGHT -> 0.0
-            CustomAlertMetric.WIND_GUST_NEXT_12H -> 50.0
-            CustomAlertMetric.PRECIP_SUM_NEXT_24H -> 10.0
-            CustomAlertMetric.UV_INDEX_MAX_TODAY -> 8.0
-        }
-        val op = when (metric) {
-            CustomAlertMetric.TEMP_LOW_TONIGHT -> CustomAlertOperator.LESS_THAN
-            else -> CustomAlertOperator.GREATER_THAN
-        }
         return CustomAlertRule(
             id = UUID.randomUUID().toString(),
             metric = metric,
-            operator = op,
-            thresholdCanonical = defaultCanonical,
+            operator = defaultOperator(metric),
+            thresholdCanonical = defaultThresholdCanonical(metric),
             enabled = true,
         )
     }
@@ -117,4 +106,17 @@ class CustomAlertsViewModel @Inject constructor(
             CustomAlertWorker.cancel(appContext)
         }
     }
+}
+
+internal fun defaultThresholdCanonical(metric: CustomAlertMetric): Double = when (metric) {
+    CustomAlertMetric.TEMP_HIGH_TODAY -> 32.0   // 32°C ≈ 90°F
+    CustomAlertMetric.TEMP_LOW_TONIGHT -> 0.0
+    CustomAlertMetric.WIND_GUST_NEXT_12H -> 50.0
+    CustomAlertMetric.PRECIP_SUM_NEXT_24H -> 10.0
+    CustomAlertMetric.UV_INDEX_MAX_TODAY -> 8.0
+}
+
+internal fun defaultOperator(metric: CustomAlertMetric): CustomAlertOperator = when (metric) {
+    CustomAlertMetric.TEMP_LOW_TONIGHT -> CustomAlertOperator.LESS_THAN
+    else -> CustomAlertOperator.GREATER_THAN
 }

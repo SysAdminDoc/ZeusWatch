@@ -12,12 +12,15 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -41,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -81,36 +85,22 @@ fun CompareScreen(
                 Modifier.fillMaxSize().background(NimbusBackgroundGradient),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator()
+                CompareStateCard(
+                    title = "Preparing comparison",
+                    message = "Loading your saved places and the latest forecast context.",
+                    loading = true,
+                )
             }
             shouldShowCompareFullScreenError(state) -> Box(
                 Modifier.fillMaxSize().background(NimbusBackgroundGradient),
                 contentAlignment = Alignment.Center,
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    NimbusGlassTop.copy(alpha = 0.78f),
-                                    NimbusGlassBottom,
-                                ),
-                            ),
-                        )
-                        .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
-                        .padding(horizontal = 24.dp, vertical = 28.dp),
-                ) {
-                    Text(
-                        state.error ?: "Something went wrong",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = NimbusTextPrimary,
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Button(onClick = { viewModel.retry() }) { Text("Retry") }
-                }
+                CompareStateCard(
+                    title = "Comparison unavailable",
+                    message = state.error ?: "Something went wrong",
+                    actionLabel = "Retry",
+                    onAction = { viewModel.retry() },
+                )
             }
             else -> Column(
                 modifier = Modifier
@@ -160,6 +150,14 @@ fun CompareScreen(
                 }
 
                 if (state.savedLocations.isNotEmpty()) {
+                    CompareIntroCard(
+                        readyCount = state.savedLocations.size,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                if (state.savedLocations.isNotEmpty()) {
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
@@ -175,10 +173,16 @@ fun CompareScreen(
                             .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
                             .padding(horizontal = 18.dp, vertical = 18.dp),
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(
+                                text = "Choose two saved places to compare right now.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = NimbusTextSecondary,
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
                             LocationSelector(
                                 label = "Primary",
                                 selected = state.location1,
@@ -197,6 +201,7 @@ fun CompareScreen(
                                 onSelect = { viewModel.selectLocation2(it) },
                                 modifier = Modifier.weight(1f),
                             )
+                            }
                         }
                     }
                 }
@@ -237,6 +242,16 @@ fun CompareScreen(
                     else -> {
                     val w1 = state.weather1!!
                     val w2 = state.weather2!!
+
+                    CompareSummaryCard(
+                        location1 = state.location1,
+                        location2 = state.location2,
+                        weather1 = w1,
+                        weather2 = w2,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+
+                    Spacer(Modifier.height(12.dp))
 
                     // Weather condition icons row
                     Row(
@@ -311,6 +326,8 @@ fun CompareScreen(
                         "${w1.current.humidity}%",
                         "${w2.current.humidity}%",
                         highlightLower = true,
+                        raw1 = w1.current.humidity.toDouble(),
+                        raw2 = w2.current.humidity.toDouble(),
                     )
                     CompareRow("Wind",
                         WeatherFormatter.formatWindSpeed(w1.current.windSpeed, w1.current.windDirection, s),
@@ -335,6 +352,8 @@ fun CompareScreen(
                         "${w1.current.cloudCover}%",
                         "${w2.current.cloudCover}%",
                         highlightLower = true,
+                        raw1 = w1.current.cloudCover.toDouble(),
+                        raw2 = w2.current.cloudCover.toDouble(),
                     )
                     CompareRow("High / Low",
                         "${WeatherFormatter.formatTemperature(w1.current.dailyHigh, s)} / ${WeatherFormatter.formatTemperature(w1.current.dailyLow, s)}",
@@ -364,11 +383,31 @@ private fun CompareEmptyState(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    CompareStateCard(
+        title = title,
+        message = message,
+        actionLabel = actionLabel,
+        onAction = onAction,
         modifier = Modifier
             .padding(horizontal = 16.dp)
-            .fillMaxWidth()
+            .fillMaxWidth(),
+    )
+}
+
+@Composable
+private fun CompareStateCard(
+    title: String,
+    message: String,
+    modifier: Modifier = Modifier,
+    loading: Boolean = false,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier
+            .then(modifier)
             .clip(RoundedCornerShape(28.dp))
             .background(
                 Brush.verticalGradient(
@@ -381,6 +420,28 @@ private fun CompareEmptyState(
             .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
             .padding(horizontal = 24.dp, vertical = 28.dp),
     ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(NimbusBlueAccent.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    color = NimbusBlueAccent,
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                Icon(
+                    Icons.AutoMirrored.Filled.CompareArrows,
+                    contentDescription = null,
+                    tint = NimbusBlueAccent,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        }
         Text(
             text = title,
             style = MaterialTheme.typography.headlineSmall,
@@ -394,7 +455,7 @@ private fun CompareEmptyState(
             color = NimbusTextSecondary,
             textAlign = TextAlign.Center,
         )
-        if (actionLabel != null && onAction != null) {
+        if (!loading && actionLabel != null && onAction != null) {
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = onAction) {
                 Text(actionLabel)
@@ -417,6 +478,7 @@ private fun LocationSelector(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(min = 86.dp)
                 .clip(RoundedCornerShape(20.dp))
                 .background(
                     Brush.verticalGradient(
@@ -428,16 +490,33 @@ private fun LocationSelector(
                 )
                 .border(1.dp, NimbusCardBorder, RoundedCornerShape(20.dp))
                 .clickable { expanded = true }
-                .padding(14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = NimbusTextTertiary)
-            Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(if (selected != null) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.45f)),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(label, style = MaterialTheme.typography.labelSmall, color = NimbusTextTertiary)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = selected?.name ?: "Select...",
+                text = selected?.let { if (it.isCurrentLocation) "My Location" else it.name } ?: "Choose location",
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                 color = if (selected != null) NimbusTextPrimary else NimbusBlueAccent,
             )
+            selected?.let {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (it.isCurrentLocation) "Current device location" else listOfNotNull(it.region.takeIf(String::isNotBlank), it.country.takeIf(String::isNotBlank)).joinToString(", "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                    maxLines = 1,
+                )
+            }
         }
 
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -466,21 +545,28 @@ private fun CompareRow(
     value1: String,
     value2: String,
     highlightLower: Boolean = false,
-    raw1: Double = 0.0,
-    raw2: Double = 0.0,
+    raw1: Double? = null,
+    raw2: Double? = null,
 ) {
-    val shouldHighlight = highlightLower && raw1 != raw2
-    val color1 = if (shouldHighlight && raw1 < raw2) NimbusBlueAccent else NimbusTextPrimary
-    val color2 = if (shouldHighlight && raw2 < raw1) NimbusBlueAccent else NimbusTextPrimary
+    val (highlightFirst, highlightSecond) = highlightedCompareSides(highlightLower, raw1, raw2)
+    val color1 = if (highlightFirst) NimbusBlueAccent else NimbusTextPrimary
+    val color2 = if (highlightSecond) NimbusBlueAccent else NimbusTextPrimary
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(22.dp))
-            .background(NimbusCardBg)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.48f),
+                        NimbusCardBg,
+                    ),
+                ),
+            )
             .border(1.dp, NimbusCardBorder, RoundedCornerShape(22.dp))
-            .padding(horizontal = 16.dp, vertical = 2.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
     ) {
         Row(
             modifier = Modifier
@@ -493,25 +579,191 @@ private fun CompareRow(
                 text = value1,
                 style = MaterialTheme.typography.bodyMedium,
                 color = color1,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(if (highlightFirst) NimbusBlueAccent.copy(alpha = 0.12f) else Color.Transparent)
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
                 textAlign = TextAlign.Center,
             )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = NimbusTextTertiary,
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center,
-            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = NimbusTextTertiary,
+                    textAlign = TextAlign.Center,
+                )
+            }
             Text(
                 text = value2,
                 style = MaterialTheme.typography.bodyMedium,
                 color = color2,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(if (highlightSecond) NimbusBlueAccent.copy(alpha = 0.12f) else Color.Transparent)
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
                 textAlign = TextAlign.Center,
             )
         }
     }
+}
+
+@Composable
+private fun CompareIntroCard(
+    readyCount: Int,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(26.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.74f),
+                        NimbusCardBg,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(26.dp))
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(NimbusBlueAccent.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.CompareArrows,
+                contentDescription = null,
+                tint = NimbusBlueAccent,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = "Comparison deck ready",
+                style = MaterialTheme.typography.labelLarge,
+                color = NimbusTextPrimary,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "$readyCount saved places available for side-by-side weather decisions.",
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompareSummaryCard(
+    location1: SavedLocationEntity?,
+    location2: SavedLocationEntity?,
+    weather1: WeatherData,
+    weather2: WeatherData,
+    modifier: Modifier = Modifier,
+) {
+    val tempDelta = weather1.current.temperature - weather2.current.temperature
+    val deltaMagnitude = kotlin.math.abs(tempDelta)
+    val leadingName = if (tempDelta >= 0) {
+        location1?.let { if (it.isCurrentLocation) "My Location" else it.name } ?: weather1.location.name
+    } else {
+        location2?.let { if (it.isCurrentLocation) "My Location" else it.name } ?: weather2.location.name
+    }
+    val trailingName = if (tempDelta >= 0) {
+        location2?.let { if (it.isCurrentLocation) "My Location" else it.name } ?: weather2.location.name
+    } else {
+        location1?.let { if (it.isCurrentLocation) "My Location" else it.name } ?: weather1.location.name
+    }
+    val descriptor = when {
+        deltaMagnitude < 0.75 -> "currently feels nearly identical"
+        tempDelta >= 0 -> "is warmer right now"
+        else -> "is cooler right now"
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusBlueAccent.copy(alpha = 0.12f),
+                        NimbusGlassTop.copy(alpha = 0.72f),
+                        NimbusGlassBottom,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusBlueAccent.copy(alpha = 0.24f), RoundedCornerShape(28.dp))
+            .padding(horizontal = 18.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = "Snapshot",
+            style = MaterialTheme.typography.labelMedium,
+            color = NimbusTextTertiary,
+        )
+        Text(
+            text = if (deltaMagnitude < 0.75) {
+                "$leadingName and $trailingName $descriptor."
+            } else {
+                "$leadingName $descriptor than $trailingName by about ${kotlin.math.round(deltaMagnitude).toInt()}°."
+            },
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = NimbusTextPrimary,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CompareSummaryPill(
+                text = "Humidity ${weather1.current.humidity}% vs ${weather2.current.humidity}%",
+                modifier = Modifier.weight(1f),
+            )
+            CompareSummaryPill(
+                text = "Rain ${weather1.daily.firstOrNull()?.precipitationProbability ?: 0}% vs ${weather2.daily.firstOrNull()?.precipitationProbability ?: 0}%",
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompareSummaryPill(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color.White.copy(alpha = 0.06f))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(18.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+internal fun highlightedCompareSides(
+    highlightLower: Boolean,
+    raw1: Double?,
+    raw2: Double?,
+): Pair<Boolean, Boolean> {
+    if (!highlightLower || raw1 == null || raw2 == null || raw1 == raw2) return false to false
+    return (raw1 < raw2) to (raw2 < raw1)
 }
 
 internal fun shouldShowCompareFullScreenError(state: CompareUiState): Boolean {

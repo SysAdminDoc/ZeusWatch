@@ -39,6 +39,7 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 fun PressureTrendCard(
     hourly: List<HourlyConditions>,
     currentPressure: Double,
+    referenceTime: java.time.LocalDateTime? = hourly.firstOrNull()?.time,
     modifier: Modifier = Modifier,
 ) {
     val s = LocalUnitSettings.current
@@ -152,7 +153,7 @@ fun PressureTrendCard(
             // Time labels every 6h
             for (i in data.indices step 6) {
                 if (i < points.size) {
-                    val label = WeatherFormatter.formatHourLabel(data[i].first, s)
+                    val label = WeatherFormatter.formatRelativeHourLabel(data[i].first, referenceTime, s)
                     val m = textMeasurer.measure(label, labelStyle)
                     drawText(m, topLeft = Offset(
                         (points[i].x - m.size.width / 2f).coerceIn(0f, w - m.size.width),

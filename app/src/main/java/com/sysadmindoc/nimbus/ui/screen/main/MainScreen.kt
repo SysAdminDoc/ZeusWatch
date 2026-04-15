@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -75,6 +76,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -257,7 +259,11 @@ fun MainScreen(
                     state.weatherData == null && isLocationPermissionError(state.error)
                 val retryLabel = if (hasLocationPermissionError) LOCATION_PERMISSION_ACTION_LABEL else "Retry"
                 val retryIcon = if (hasLocationPermissionError) Icons.Filled.LocationOn else Icons.Filled.Refresh
-                val retryAction = if (hasLocationPermissionError) requestLocationPermissions else viewModel::loadWeather
+                val retryAction = if (hasLocationPermissionError) {
+                    requestLocationPermissions
+                } else {
+                    { viewModel.loadWeather() }
+                }
 
                 when {
                     state.isLoading && state.weatherData == null -> StartupState(
@@ -268,11 +274,23 @@ fun MainScreen(
                             "Current location can take a few seconds. Choose a city manually if you want to skip GPS."
                         },
                         primaryActionLabel = if (state.lastLocationName != null) "Use Last Location" else "Choose Location",
-                        onPrimaryAction = if (state.lastLocationName != null) viewModel::useLastLocation else onNavigateToLocations,
+                        onPrimaryAction = if (state.lastLocationName != null) {
+                            { viewModel.useLastLocation() }
+                        } else {
+                            onNavigateToLocations
+                        },
                         secondaryActionLabel = if (state.lastLocationName != null) "Choose Location" else "Retry GPS",
-                        onSecondaryAction = if (state.lastLocationName != null) onNavigateToLocations else viewModel::loadWeather,
+                        onSecondaryAction = if (state.lastLocationName != null) {
+                            onNavigateToLocations
+                        } else {
+                            { viewModel.loadWeather() }
+                        },
                         tertiaryActionLabel = if (state.lastLocationName != null) "Retry GPS" else null,
-                        onTertiaryAction = if (state.lastLocationName != null) viewModel::loadWeather else null,
+                        onTertiaryAction = if (state.lastLocationName != null) {
+                            { viewModel.loadWeather() }
+                        } else {
+                            null
+                        },
                     )
                     state.error != null && state.weatherData == null -> ErrorState(
                         message = state.error!!,
@@ -293,6 +311,8 @@ fun MainScreen(
                     )
                     state.weatherData != null -> {
                         val data = state.weatherData!!
+                        val referenceTime = data.current.observationTime
+                        val referenceDate = referenceTime?.toLocalDate() ?: data.daily.firstOrNull()?.date
 
                         if (isTablet) {
                             // ── Two-pane tablet layout ──────────────────
@@ -315,12 +335,14 @@ fun MainScreen(
                                             BottomTab.HOURLY.ordinal -> HourlyTab(
                                                 hourly = data.hourly,
                                                 locationName = data.location.name,
+                                                referenceTime = referenceTime,
                                                 isRefreshing = state.isRefreshing,
                                                 onRefresh = { viewModel.refresh() },
                                             )
                                             BottomTab.DAILY.ordinal -> DailyTab(
                                                 daily = data.daily,
                                                 locationName = data.location.name,
+                                                referenceDate = referenceDate,
                                                 isRefreshing = state.isRefreshing,
                                                 onRefresh = { viewModel.refresh() },
                                             )
@@ -361,10 +383,12 @@ fun MainScreen(
                                     BottomTab.HOURLY.ordinal -> HourlyTab(
                                         hourly = data.hourly,
                                         locationName = data.location.name,
+                                        referenceTime = referenceTime,
                                     )
                                     BottomTab.DAILY.ordinal -> DailyTab(
                                         daily = data.daily,
                                         locationName = data.location.name,
+                                        referenceDate = referenceDate,
                                     )
                                     BottomTab.RADAR.ordinal -> RadarTab(
                                         latitude = data.location.latitude,
@@ -448,7 +472,7 @@ internal fun TodayContent(
             isCached = state.isCached,
             state = state,
         )
-        else -> ErrorState(message = "Loading weather data...", onRetry = onRetry)
+        else -> ShimmerLoadingSkeleton()
     }
 }
 
@@ -815,6 +839,9 @@ private fun RenderCard(
     radarBaseMapUrl: String?,
     onNavigateToRadar: (Double, Double) -> Unit,
 ) {
+    val referenceTime = data.current.observationTime
+    val referenceDate = referenceTime?.toLocalDate() ?: data.daily.firstOrNull()?.date
+
     when (cardType) {
         CardType.WEATHER_SUMMARY -> {
             if (state.weatherSummary.isNotBlank()) {
@@ -829,28 +856,41 @@ private fun RenderCard(
         )
         CardType.NOWCAST -> {
             if (state.nowcastData.isNotEmpty()) {
-                NowcastCard(data = state.nowcastData, modifier = modifier)
+                NowcastCard(
+                    data = state.nowcastData,
+                    referenceTime = referenceTime,
+                    modifier = modifier,
+                )
             }
         }
         CardType.HOURLY_FORECAST -> HourlyForecastStrip(
             hourly = data.hourly,
+            referenceTime = referenceTime,
             modifier = modifier,
         )
         CardType.TEMPERATURE_GRAPH -> {
             if (data.hourly.size >= 4) {
                 val avgHigh = data.daily.takeIf { it.size > 2 }?.map { it.temperatureHigh }?.average()
                 val avgLow = data.daily.takeIf { it.size > 2 }?.map { it.temperatureLow }?.average()
-                TemperatureGraph(hourly = data.hourly, modifier = modifier, normalHigh = avgHigh, normalLow = avgLow)
+                TemperatureGraph(
+                    hourly = data.hourly,
+                    referenceTime = referenceTime,
+                    modifier = modifier,
+                    normalHigh = avgHigh,
+                    normalLow = avgLow,
+                )
             }
         }
         CardType.DAILY_FORECAST -> DailyForecastList(
             daily = data.daily,
+            referenceDate = referenceDate,
             modifier = modifier,
         )
         CardType.UV_INDEX -> UvIndexBar(
             uvIndex = data.current.uvIndex,
             modifier = modifier,
             hourly = data.hourly,
+            referenceTime = referenceTime,
         )
         CardType.WIND_COMPASS -> WindCompass(
             windSpeed = data.current.windSpeed,
@@ -932,6 +972,7 @@ private fun RenderCard(
                 astronomy = astro,
                 sunrise = data.current.sunrise,
                 sunset = data.current.sunset,
+                referenceTime = referenceTime,
                 modifier = modifier,
             )
         }
@@ -942,15 +983,18 @@ private fun RenderCard(
         )
         CardType.PRECIPITATION_CHART -> PrecipitationChartCard(
             hourly = data.hourly,
+            referenceTime = referenceTime,
             modifier = modifier,
         )
         CardType.PRESSURE_TREND -> PressureTrendCard(
             hourly = data.hourly,
             currentPressure = data.current.pressure,
+            referenceTime = referenceTime,
             modifier = modifier,
         )
         CardType.WIND_TREND -> WindTrendCard(
             hourly = data.hourly,
+            referenceTime = referenceTime,
             modifier = modifier,
         )
         CardType.DETAILS_GRID -> WeatherDetailsGrid(
@@ -960,6 +1004,7 @@ private fun RenderCard(
         )
         CardType.CLOUD_COVER -> CloudCoverCard(
             hourly = data.hourly,
+            referenceTime = referenceTime,
             modifier = modifier,
         )
         CardType.VISIBILITY -> VisibilityCard(
@@ -1126,6 +1171,7 @@ private fun StartupState(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier
                 .padding(28.dp)
+                .widthIn(max = 420.dp)
                 .clip(RoundedCornerShape(30.dp))
                 .background(
                     Brush.verticalGradient(
@@ -1156,11 +1202,19 @@ private fun StartupState(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
                 color = NimbusTextPrimary,
+                textAlign = TextAlign.Center,
             )
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
                 color = NimbusTextSecondary,
+                textAlign = TextAlign.Center,
+            )
+
+            StatusBadge(
+                text = "Current location can take a few seconds",
+                tint = NimbusBlueAccent,
+                icon = Icons.Filled.MyLocation,
             )
 
             Button(
@@ -1210,6 +1264,7 @@ private fun ErrorState(
             verticalArrangement = Arrangement.spacedBy(14.dp),
             modifier = Modifier
                 .padding(32.dp)
+                .widthIn(max = 420.dp)
                 .clip(RoundedCornerShape(30.dp))
                 .background(
                     Brush.verticalGradient(
@@ -1232,7 +1287,15 @@ private fun ErrorState(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
                 color = NimbusTextSecondary,
+                textAlign = TextAlign.Center,
             )
+            if (secondaryActionLabel != null && onSecondaryAction != null) {
+                StatusBadge(
+                    text = "Manual locations are still available",
+                    tint = NimbusBlueAccent,
+                    icon = Icons.Filled.LocationOn,
+                )
+            }
             Button(
                 onClick = onRetry,
                 modifier = Modifier.fillMaxWidth(),

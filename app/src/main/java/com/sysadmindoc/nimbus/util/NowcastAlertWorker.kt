@@ -70,7 +70,9 @@ class NowcastAlertWorker @AssistedInject constructor(
             return Result.success()
         }
 
-        val now = LocalDateTime.now()
+        // Minutely buckets are returned in the forecast location's local time.
+        // Anchoring against the device clock breaks remote-location nowcasts.
+        val now = nowcastReferenceTime(series)
         val transition = detectNowcastTransition(series, now) ?: run {
             Log.d(TAG, "No transition in window")
             return Result.success()
@@ -89,8 +91,10 @@ class NowcastAlertWorker @AssistedInject constructor(
         }
 
         val (title, body) = formatNowcastNotification(transition)
-        AlertNotificationHelper.showNowcastNotification(applicationContext, title, body)
-        store.record(signature, nowEpoch)
+        val delivered = AlertNotificationHelper.showNowcastNotification(applicationContext, title, body)
+        if (delivered) {
+            store.record(signature, nowEpoch)
+        }
         return Result.success()
     }
 
@@ -124,6 +128,10 @@ class NowcastAlertWorker @AssistedInject constructor(
             WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
         }
     }
+}
+
+internal fun nowcastReferenceTime(series: List<com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation>): LocalDateTime {
+    return series.minByOrNull { it.time }?.time ?: LocalDateTime.now()
 }
 
 /**

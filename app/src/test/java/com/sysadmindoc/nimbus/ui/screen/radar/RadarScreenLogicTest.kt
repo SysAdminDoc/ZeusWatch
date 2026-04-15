@@ -1,8 +1,10 @@
 package com.sysadmindoc.nimbus.ui.screen.radar
 
 import com.sysadmindoc.nimbus.data.repository.RadarProvider
+import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class RadarScreenLogicTest {
@@ -34,6 +36,14 @@ class RadarScreenLogicTest {
                 isOffline = false,
             )
         )
+        assertFalse(
+            shouldShowRadarLoadingOverlay(
+                provider = RadarProvider.NWS_WEBVIEW,
+                selectedLayer = RadarLayer.RADAR,
+                radarState = state,
+                isOffline = false,
+            )
+        )
     }
 
     @Test
@@ -58,6 +68,26 @@ class RadarScreenLogicTest {
                 isOffline = false,
             )
         )
+        assertFalse(
+            shouldShowRadarErrorOverlay(
+                provider = RadarProvider.NWS_STANDARD_WEBVIEW,
+                selectedLayer = RadarLayer.RADAR,
+                radarState = RadarUiState(isLoading = false, frameSet = null, error = "Network error"),
+                isOffline = false,
+            )
+        )
+    }
+
+    @Test
+    fun `radarFabBottomPadding lifts the report button above playback controls`() {
+        assertEquals(16.dp, radarFabBottomPadding(showPlaybackControls = false))
+        assertEquals(124.dp, radarFabBottomPadding(showPlaybackControls = true))
+    }
+
+    @Test
+    fun `radarTopControlsSpacing keeps extra clearance when the back button is present`() {
+        assertEquals(8.dp, radarTopControlsSpacing(showBackButton = false))
+        assertEquals(10.dp, radarTopControlsSpacing(showBackButton = true))
     }
 
     private fun frameSet() = com.sysadmindoc.nimbus.data.repository.RadarFrameSet(
