@@ -131,6 +131,9 @@ class NowcastAlertWorker @AssistedInject constructor(
 }
 
 internal fun nowcastReferenceTime(series: List<com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation>): LocalDateTime {
+    // Minutely API returns buckets in the forecast LOCATION's local time
+    // (timezone=auto). We anchor "now" on the earliest bucket so remote-location
+    // nowcasts aren't broken by the device clock being in a different timezone.
     return series.minByOrNull { it.time }?.time ?: LocalDateTime.now()
 }
 

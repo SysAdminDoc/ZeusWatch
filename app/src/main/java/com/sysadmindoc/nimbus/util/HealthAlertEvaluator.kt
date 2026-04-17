@@ -3,7 +3,10 @@ package com.sysadmindoc.nimbus.util
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import java.util.Locale
 import kotlin.math.abs
+
+private fun formatHpa(value: Double): String = String.format(Locale.getDefault(), "%.1f", value)
 
 /**
  * Evaluates weather conditions for health-related triggers.
@@ -108,7 +111,7 @@ object HealthAlertEvaluator {
                 type = HealthAlertType.MIGRAINE_TRIGGER,
                 severity = HealthSeverity.WARNING,
                 message = "Rapid pressure change detected — migraine trigger likely.",
-                detail = "Barometric pressure $maxDeltaDirection by ${"%.1f".format(absDelta)} hPa in the next 3 hours. " +
+                detail = "Barometric pressure $maxDeltaDirection by ${formatHpa(absDelta)} hPa within a 3-hour window in the next 12 hours. " +
                     "Consider taking preventive medication.",
             )
         }
@@ -118,7 +121,7 @@ object HealthAlertEvaluator {
                 type = HealthAlertType.MIGRAINE_TRIGGER,
                 severity = HealthSeverity.ADVISORY,
                 message = "Moderate pressure change ahead — possible migraine trigger.",
-                detail = "Barometric pressure $maxDeltaDirection by ${"%.1f".format(absDelta)} hPa over the next few hours.",
+                detail = "Barometric pressure $maxDeltaDirection by ${formatHpa(absDelta)} hPa over the next few hours.",
             )
         }
 

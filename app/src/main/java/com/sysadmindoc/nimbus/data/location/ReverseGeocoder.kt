@@ -51,16 +51,21 @@ class ReverseGeocoder @Inject constructor(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             geocoder.getFromLocation(latitude, longitude, 1) { addresses ->
                 val addr = addresses.firstOrNull()
-                if (addr != null) {
+                val name = addr?.run { locality ?: subAdminArea ?: adminArea }
+                if (addr == null || name.isNullOrBlank()) {
+                    // Match the pre-TIRAMISU branch: reject entries that carry no
+                    // usable human-readable name rather than propagating an empty
+                    // string up to the UI. The caller will fall back to Open-Meteo
+                    // reverse geocoding.
+                    cont.resume(null)
+                } else {
                     cont.resume(
                         ReverseGeoResult(
-                            name = addr.locality ?: addr.subAdminArea ?: addr.adminArea ?: "",
+                            name = name,
                             region = addr.adminArea ?: "",
                             country = addr.countryName ?: "",
                         )
                     )
-                } else {
-                    cont.resume(null)
                 }
             }
         } else {

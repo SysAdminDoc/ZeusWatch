@@ -106,7 +106,8 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
             }
             // Staleness indicator
             if (data.updatedAt > 0L) {
-                val mins = (System.currentTimeMillis() - data.updatedAt) / 60_000
+                val mins = ((System.currentTimeMillis() - data.updatedAt) / 60_000)
+                    .coerceAtLeast(0L)
                 val agoText = when {
                     mins < 5 -> "Now"
                     mins < 60 -> "${mins}m"
