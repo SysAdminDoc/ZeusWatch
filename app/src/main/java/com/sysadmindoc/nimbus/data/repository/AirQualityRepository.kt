@@ -17,6 +17,7 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.cos
@@ -172,12 +173,14 @@ class AirQualityRepository @Inject constructor(
     private fun estimateMoonTime(lunarAge: Double, isRise: Boolean): String {
         // Very rough approximation
         val baseHour = if (isRise) 18.0 else 6.0
-        val shift = (lunarAge / 29.53) * 24.0
-        val hour = ((baseHour + shift) % 24).toInt()
-        val minute = (((baseHour + shift) % 1) * 60).toInt()
+        val ageNormalized = ((lunarAge % 29.53) + 29.53) % 29.53
+        val shift = (ageNormalized / 29.53) * 24.0
+        val total = ((baseHour + shift) % 24 + 24) % 24
+        val hour = total.toInt().coerceIn(0, 23)
+        val minute = ((total - hour) * 60).toInt().coerceIn(0, 59)
         val amPm = if (hour < 12) "AM" else "PM"
         val h12 = if (hour == 0) 12 else if (hour > 12) hour - 12 else hour
-        return "%d:%02d %s".format(h12, minute, amPm)
+        return String.format(Locale.US, "%d:%02d %s", h12, minute, amPm)
     }
 
     private fun calculateDayLength(sunrise: String?, sunset: String?): String? {
@@ -187,7 +190,8 @@ class AirQualityRepository @Inject constructor(
             val rise = LocalDateTime.parse(sunrise, fmt)
             val set = LocalDateTime.parse(sunset, fmt)
             val minutes = ChronoUnit.MINUTES.between(rise, set)
-            "%dh %dm".format(minutes / 60, minutes % 60)
+            if (minutes < 0) return null
+            String.format(Locale.US, "%dh %dm", minutes / 60, minutes % 60)
         } catch (_: Exception) { null }
     }
 

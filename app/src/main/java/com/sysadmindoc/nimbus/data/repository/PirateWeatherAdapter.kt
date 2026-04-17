@@ -15,6 +15,17 @@ import javax.inject.Singleton
 private const val TAG = "PwAdapter"
 
 /**
+ * Convert a Pirate Weather 0..1 fraction to a 0..100 percent integer,
+ * guarding against NaN and out-of-range API values. Dark-Sky-compatible
+ * payloads have been observed to occasionally emit values slightly above
+ * 1.0 or negative values under erroneous conditions.
+ */
+private fun pctToInt(fraction: Double): Int {
+    if (fraction.isNaN()) return 0
+    return (fraction * 100).toInt().coerceIn(0, 100)
+}
+
+/**
  * Forecast adapter for Pirate Weather (Dark Sky-compatible API).
  * Maps PW response to [WeatherData] domain model.
  * SI units: Celsius, m/s, hPa, mm/h. Wind → km/h for consistency.
@@ -57,21 +68,21 @@ class PirateWeatherForecastAdapter @Inject constructor(
             current = CurrentConditions(
                 temperature = current.temperature,
                 feelsLike = current.apparentTemperature,
-                humidity = (current.humidity * 100).toInt(),
+                humidity = pctToInt(current.humidity),
                 weatherCode = WeatherCode.fromCode(
                     PwIconMapper.toWmoCode(current.icon, current.precipType)
                 ),
                 observationTime = locationLocalNow,
                 isDay = PwIconMapper.isDayFromIcon(current.icon),
-                windSpeed = current.windSpeed * 3.6, // m/s → km/h
+                windSpeed = (current.windSpeed * 3.6).coerceAtLeast(0.0), // m/s → km/h
                 windDirection = current.windBearing,
-                windGusts = current.windGust?.let { it * 3.6 },
+                windGusts = current.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
                 pressure = current.pressure,
-                uvIndex = current.uvIndex,
-                visibility = current.visibility?.let { it * 1000.0 }, // km → meters (WeatherFormatter expects meters)
+                uvIndex = current.uvIndex.coerceAtLeast(0.0),
+                visibility = current.visibility?.let { (it * 1000.0).coerceAtLeast(0.0) }, // km → meters (WeatherFormatter expects meters)
                 dewPoint = current.dewPoint,
-                cloudCover = (current.cloudCover * 100).toInt(),
-                precipitation = current.precipIntensity,
+                cloudCover = pctToInt(current.cloudCover),
+                precipitation = current.precipIntensity.coerceAtLeast(0.0),
                 snowfall = if (current.precipType == "snow") current.precipIntensity else null,
                 dailyHigh = firstDaily?.temperatureHigh ?: current.temperature,
                 dailyLow = firstDaily?.temperatureLow ?: current.temperature,
@@ -99,16 +110,16 @@ class PirateWeatherForecastAdapter @Inject constructor(
                     PwIconMapper.toWmoCode(h.icon, h.precipType)
                 ),
                 isDay = PwIconMapper.isDayFromIcon(h.icon),
-                precipitationProbability = ((h.precipProbability ?: 0.0) * 100).toInt(),
-                precipitation = h.precipIntensity,
-                windSpeed = h.windSpeed?.let { it * 3.6 },
+                precipitationProbability = pctToInt(h.precipProbability ?: 0.0),
+                precipitation = h.precipIntensity?.coerceAtLeast(0.0),
+                windSpeed = h.windSpeed?.let { (it * 3.6).coerceAtLeast(0.0) },
                 windDirection = h.windBearing,
-                humidity = h.humidity?.let { (it * 100).toInt() },
-                uvIndex = h.uvIndex,
-                cloudCover = h.cloudCover?.let { (it * 100).toInt() },
-                visibility = h.visibility?.let { it * 1000.0 }, // km → meters
-                snowfall = if (h.precipType == "snow") h.precipIntensity else null,
-                windGusts = h.windGust?.let { it * 3.6 },
+                humidity = h.humidity?.let { pctToInt(it) },
+                uvIndex = h.uvIndex?.coerceAtLeast(0.0),
+                cloudCover = h.cloudCover?.let { pctToInt(it) },
+                visibility = h.visibility?.let { (it * 1000.0).coerceAtLeast(0.0) }, // km → meters
+                snowfall = if (h.precipType == "snow") h.precipIntensity?.coerceAtLeast(0.0) else null,
+                windGusts = h.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
                 surfacePressure = h.pressure,
             )
         }
@@ -123,15 +134,15 @@ class PirateWeatherForecastAdapter @Inject constructor(
                 ),
                 temperatureHigh = d.temperatureHigh,
                 temperatureLow = d.temperatureLow,
-                precipitationProbability = ((d.precipProbability ?: 0.0) * 100).toInt(),
-                precipitationSum = d.precipIntensity?.let { it * 24 }, // mm/h → approximate mm/day
+                precipitationProbability = pctToInt(d.precipProbability ?: 0.0),
+                precipitationSum = d.precipIntensity?.let { (it * 24).coerceAtLeast(0.0) }, // mm/h → approximate mm/day
                 sunrise = d.sunriseTime?.let { epochToTimeStr(it, zone) },
                 sunset = d.sunsetTime?.let { epochToTimeStr(it, zone) },
-                uvIndexMax = d.uvIndex,
-                windSpeedMax = d.windSpeed?.let { it * 3.6 },
+                uvIndexMax = d.uvIndex?.coerceAtLeast(0.0),
+                windSpeedMax = d.windSpeed?.let { (it * 3.6).coerceAtLeast(0.0) },
                 windDirectionDominant = d.windBearing,
-                snowfallSum = if (d.precipType == "snow") d.precipIntensity?.let { it * 24 } else null,
-                windGustsMax = d.windGust?.let { it * 3.6 },
+                snowfallSum = if (d.precipType == "snow") d.precipIntensity?.let { (it * 24).coerceAtLeast(0.0) } else null,
+                windGustsMax = d.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
             )
         }
     }

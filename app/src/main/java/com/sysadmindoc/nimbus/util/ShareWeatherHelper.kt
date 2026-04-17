@@ -194,10 +194,17 @@ object ShareWeatherHelper {
         val bitmap = renderWeatherCard(data, s)
         try {
             val cacheDir = File(context.cacheDir, "shared_images")
-            cacheDir.mkdirs()
+            if (!cacheDir.exists() && !cacheDir.mkdirs() && !cacheDir.isDirectory) {
+                android.util.Log.w("ShareWeatherHelper", "Could not create shared_images cache dir")
+                return
+            }
             val file = File(cacheDir, "nimbus_weather.png")
-            FileOutputStream(file).use { out ->
+            val compressed = FileOutputStream(file).use { out ->
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            if (!compressed || !file.exists() || file.length() == 0L) {
+                android.util.Log.w("ShareWeatherHelper", "PNG compression failed or produced empty file")
+                return
             }
 
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
@@ -213,8 +220,11 @@ object ShareWeatherHelper {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
             )
+        } catch (e: Exception) {
+            // Don't crash the share action on disk-full / FileProvider misconfig / etc.
+            android.util.Log.w("ShareWeatherHelper", "Failed to share as image", e)
         } finally {
-            bitmap.recycle() // Fix memory leak
+            bitmap.recycle() // Free the ~3 MB bitmap immediately
         }
     }
 }

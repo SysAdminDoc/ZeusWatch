@@ -50,10 +50,13 @@ class WidgetRefreshWorker @AssistedInject constructor(
         val lastLoc = prefs.lastLocation.first()
         val widgetMappings = WidgetLocationPrefs.getAllMappings(applicationContext)
 
-        // Skip refresh on critically low battery to preserve device life
+        // Skip refresh on critically low battery to preserve device life.
+        // BATTERY_PROPERTY_CAPACITY returns Integer.MIN_VALUE when capacity is unknown
+        // (emulators, devices without fuel gauge, read failure) — treat that as "unknown"
+        // and proceed, rather than incorrectly skipping forever.
         val batteryManager = applicationContext.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
         val batteryLevel = batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 100
-        if (batteryLevel <= 15) return Result.success()
+        if (batteryLevel in 0..15) return Result.success()
 
         if (lastLoc == null && widgetMappings.isEmpty()) {
             if (settings.persistentWeatherNotif) {

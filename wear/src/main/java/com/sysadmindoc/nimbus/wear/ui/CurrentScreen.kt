@@ -217,12 +217,19 @@ private fun DetailChip(emoji: String, value: String) {
     }
 }
 
-private fun aqiEmoji(level: String): String = when (level.lowercase()) {
-    "good" -> "\uD83D\uDFE2"           // green circle
-    "moderate" -> "\uD83D\uDFE1"       // yellow circle
-    "unhealthy for sensitive" -> "\uD83D\uDFE0" // orange circle
-    "unhealthy" -> "\uD83D\uDD34"      // red circle
-    "very unhealthy" -> "\uD83D\uDFE3" // purple circle
-    "hazardous" -> "\uD83D\uDFE4"      // brown circle
-    else -> "\uD83C\uDF2C\uFE0F"       // wind face
+private fun aqiEmoji(level: String): String {
+    // Phone sends AqiLevel.label strings ("Good", "Moderate",
+    // "Unhealthy for Sensitive Groups", "Unhealthy", "Very Unhealthy",
+    // "Hazardous"). Use Locale.ROOT so Turkish-locale watches don't
+    // mangle the I in "Unhealthy"/"Sensitive" via dotless-i.
+    val lower = level.lowercase(java.util.Locale.ROOT)
+    return when {
+        lower.startsWith("good") -> "\uD83D\uDFE2"           // green circle
+        lower.startsWith("very unhealthy") -> "\uD83D\uDFE3" // purple circle (check before plain "unhealthy")
+        lower.startsWith("unhealthy for sensitive") -> "\uD83D\uDFE0" // orange circle
+        lower.startsWith("unhealthy") -> "\uD83D\uDD34"      // red circle
+        lower.startsWith("moderate") -> "\uD83D\uDFE1"       // yellow circle
+        lower.startsWith("hazardous") -> "\uD83D\uDFE4"      // brown circle
+        else -> "\uD83C\uDF2C\uFE0F"                         // wind face
+    }
 }
