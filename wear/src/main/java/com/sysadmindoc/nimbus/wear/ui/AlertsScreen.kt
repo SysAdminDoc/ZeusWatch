@@ -139,7 +139,7 @@ private fun AlertRow(alert: WearAlertEntry) {
     }
 }
 
-private fun severityColor(severity: String): Color = when (severity.lowercase()) {
+private fun severityColor(severity: String): Color = when (severity.lowercase(java.util.Locale.ROOT)) {
     "extreme" -> SeverityExtreme
     "severe" -> SeveritySevere
     "moderate" -> SeverityModerate

@@ -16,6 +16,15 @@ import javax.inject.Singleton
 private const val TAG = "OwmAdapter"
 
 /**
+ * Convert an OWM 0..1 probability fraction (`pop`) to a 0..100 integer,
+ * guarding against NaN and out-of-range payloads.
+ */
+private fun owmPctToInt(fraction: Double): Int {
+    if (fraction.isNaN()) return 0
+    return (fraction * 100).toInt().coerceIn(0, 100)
+}
+
+/**
  * Forecast adapter for OpenWeatherMap One Call 3.0 API.
  * Maps OWM response to [WeatherData] domain model.
  * All OWM data arrives in metric (Celsius, m/s, hPa, mm).
@@ -66,16 +75,16 @@ class OwmForecastAdapter @Inject constructor(
                 isDay = current.weather.firstOrNull()?.icon?.let {
                     OwmConditionMapper.isDayFromIcon(it)
                 } ?: true,
-                windSpeed = current.windSpeed * 3.6, // m/s → km/h
+                windSpeed = (current.windSpeed * 3.6).coerceAtLeast(0.0), // m/s → km/h
                 windDirection = current.windDeg,
-                windGusts = current.windGust?.let { it * 3.6 },
+                windGusts = current.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
                 pressure = current.pressure.toDouble(),
-                uvIndex = current.uvi,
-                visibility = current.visibility?.toDouble(), // meters (WeatherFormatter expects meters)
+                uvIndex = current.uvi.coerceAtLeast(0.0),
+                visibility = current.visibility?.toDouble()?.coerceAtLeast(0.0), // meters (WeatherFormatter expects meters)
                 dewPoint = current.dewPoint,
-                cloudCover = current.clouds,
-                precipitation = (current.rain?.oneHour ?: 0.0) + (current.snow?.oneHour ?: 0.0),
-                snowfall = current.snow?.oneHour,
+                cloudCover = current.clouds.coerceIn(0, 100),
+                precipitation = ((current.rain?.oneHour ?: 0.0) + (current.snow?.oneHour ?: 0.0)).coerceAtLeast(0.0),
+                snowfall = current.snow?.oneHour?.coerceAtLeast(0.0),
                 dailyHigh = firstDaily?.temp?.max ?: current.temp,
                 dailyLow = firstDaily?.temp?.min ?: current.temp,
                 sunrise = current.sunrise?.let { epochToTimeStr(it, zone) },
@@ -104,16 +113,16 @@ class OwmForecastAdapter @Inject constructor(
                 isDay = h.weather.firstOrNull()?.icon?.let {
                     OwmConditionMapper.isDayFromIcon(it)
                 } ?: true,
-                precipitationProbability = ((h.pop ?: 0.0) * 100).toInt(),
-                precipitation = (h.rain?.oneHour ?: 0.0) + (h.snow?.oneHour ?: 0.0),
-                windSpeed = h.windSpeed?.let { it * 3.6 },
+                precipitationProbability = owmPctToInt(h.pop ?: 0.0),
+                precipitation = ((h.rain?.oneHour ?: 0.0) + (h.snow?.oneHour ?: 0.0)).coerceAtLeast(0.0),
+                windSpeed = h.windSpeed?.let { (it * 3.6).coerceAtLeast(0.0) },
                 windDirection = h.windDeg,
-                humidity = h.humidity,
-                uvIndex = h.uvi,
-                cloudCover = h.clouds,
-                visibility = h.visibility?.toDouble(), // meters (WeatherFormatter expects meters)
-                snowfall = h.snow?.oneHour,
-                windGusts = h.windGust?.let { it * 3.6 },
+                humidity = h.humidity?.coerceIn(0, 100),
+                uvIndex = h.uvi?.coerceAtLeast(0.0),
+                cloudCover = h.clouds?.coerceIn(0, 100),
+                visibility = h.visibility?.toDouble()?.coerceAtLeast(0.0), // meters (WeatherFormatter expects meters)
+                snowfall = h.snow?.oneHour?.coerceAtLeast(0.0),
+                windGusts = h.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
                 surfacePressure = h.pressure?.toDouble(),
             )
         }
@@ -129,15 +138,15 @@ class OwmForecastAdapter @Inject constructor(
                 ),
                 temperatureHigh = d.temp.max,
                 temperatureLow = d.temp.min,
-                precipitationProbability = ((d.pop ?: 0.0) * 100).toInt(),
-                precipitationSum = d.rain?.plus(d.snow ?: 0.0),
+                precipitationProbability = owmPctToInt(d.pop ?: 0.0),
+                precipitationSum = d.rain?.plus(d.snow ?: 0.0)?.coerceAtLeast(0.0),
                 sunrise = d.sunrise?.let { epochToTimeStr(it, zone) },
                 sunset = d.sunset?.let { epochToTimeStr(it, zone) },
-                uvIndexMax = d.uvi,
-                windSpeedMax = d.windSpeed?.let { it * 3.6 },
+                uvIndexMax = d.uvi?.coerceAtLeast(0.0),
+                windSpeedMax = d.windSpeed?.let { (it * 3.6).coerceAtLeast(0.0) },
                 windDirectionDominant = d.windDeg,
-                snowfallSum = d.snow,
-                windGustsMax = d.windGust?.let { it * 3.6 },
+                snowfallSum = d.snow?.coerceAtLeast(0.0),
+                windGustsMax = d.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
             )
         }
     }

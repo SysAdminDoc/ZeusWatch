@@ -130,7 +130,7 @@ class WeatherRepository @Inject constructor(
         longitude: Double,
         provided: String?,
     ): LocationInfo {
-        if (provided != null) {
+        if (!provided.isNullOrBlank()) {
             return LocationInfo(name = provided, latitude = latitude, longitude = longitude)
         }
         // Use Android's built-in Geocoder for reliable reverse geocoding

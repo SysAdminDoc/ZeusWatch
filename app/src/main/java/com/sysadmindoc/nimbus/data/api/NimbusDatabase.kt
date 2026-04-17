@@ -32,6 +32,16 @@ abstract class NimbusDatabase : RoomDatabase() {
                         addedAt INTEGER NOT NULL DEFAULT 0
                     )
                 """.trimIndent())
+                // Match the indices declared on SavedLocationEntity, otherwise Room's
+                // schema validator throws IllegalStateException on upgrade from v1.
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_saved_locations_isCurrentLocation " +
+                        "ON saved_locations(isCurrentLocation)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_saved_locations_sortOrder " +
+                        "ON saved_locations(sortOrder)"
+                )
             }
         }
     }

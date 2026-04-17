@@ -21,36 +21,28 @@ private const val TAG = "GeminiNanoSummary"
 class GeminiNanoSummaryEngine @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : SummaryEngine {
-    private var model: GenerativeModel? = null
-    private var availabilityChecked = false
-    private var _isAvailable = false
-
-    /**
-     * Lazily initialise the on-device model.
-     * Returns null if the device doesn't support Gemini Nano.
-     */
-    private suspend fun getOrCreateModel(): GenerativeModel? {
-        if (availabilityChecked) return model
-        return try {
-            availabilityChecked = true
-            val generativeModel = GenerativeModel(
-                generationConfig {
-                    temperature = 0.7f
-                    topK = 16
-                    maxOutputTokens = 128
-                },
-            )
-            model = generativeModel
-            _isAvailable = true
-            Log.d(TAG, "Gemini Nano model initialised successfully")
-            generativeModel
-        } catch (e: Exception) {
-            Log.w(TAG, "Gemini Nano not available on this device: ${e.message}")
-            _isAvailable = false
-            model = null
-            null
-        }
+    // Eagerly attempt to construct the model so `isAvailable()` can give a truthful
+    // answer before any `generate()` call. Previously `isAvailable()` returned the
+    // default `false` until `getOrCreateModel()` was invoked inside `generate()` —
+    // but `generate()` was never called because `MainViewModel` gates on
+    // `isAvailable()`. That chicken-and-egg deadlock meant AI summaries (the app's
+    // default `SummaryStyle`) never ran on real devices.
+    private val model: GenerativeModel? = try {
+        GenerativeModel(
+            generationConfig {
+                temperature = 0.7f
+                topK = 16
+                maxOutputTokens = 128
+            },
+        ).also { Log.d(TAG, "Gemini Nano model initialised successfully") }
+    } catch (e: Exception) {
+        Log.w(TAG, "Gemini Nano not available on this device: ${e.message}")
+        null
     }
+
+    private val _isAvailable: Boolean = model != null
+
+    private var closed = false
 
     /**
      * Generate an AI-powered weather summary from the given weather parameters.
@@ -68,7 +60,8 @@ class GeminiNanoSummaryEngine @Inject constructor(
         precipChance: Int,
         uvIndex: Double,
     ): String? {
-        val generativeModel = getOrCreateModel() ?: return null
+        if (closed) return null
+        val generativeModel = model ?: return null
 
         val prompt = buildString {
             append("Write a brief, friendly 1-2 sentence weather summary for: ")
@@ -98,15 +91,14 @@ class GeminiNanoSummaryEngine @Inject constructor(
         }
     }
 
-    override fun isAvailable(): Boolean = _isAvailable
+    override fun isAvailable(): Boolean = _isAvailable && !closed
 
     /** Release the model resources when no longer needed. */
     override fun close() {
+        if (closed) return
+        closed = true
         try {
             model?.close()
         } catch (_: Exception) {}
-        model = null
-        availabilityChecked = false
-        _isAvailable = false
     }
 }

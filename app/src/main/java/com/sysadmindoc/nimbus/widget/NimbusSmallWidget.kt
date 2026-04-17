@@ -121,7 +121,10 @@ private fun SmallWidgetContent(data: WidgetWeatherData?) {
                     ),
                 )
                 if (data.updatedAt > 0L) {
-                    val mins = (System.currentTimeMillis() - data.updatedAt) / 60_000
+                    // Clamp to 0 so NTP rollback / daylight-saving adjustments don't
+                    // render "-3m" on the widget.
+                    val mins = ((System.currentTimeMillis() - data.updatedAt) / 60_000)
+                        .coerceAtLeast(0L)
                     val agoText = when {
                         mins < 5 -> "Now"
                         mins < 60 -> "${mins}m"

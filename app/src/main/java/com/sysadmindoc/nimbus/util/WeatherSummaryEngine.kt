@@ -51,11 +51,11 @@ object WeatherSummaryEngine {
             parts.add(precipOutlook)
         }
 
-        // Wind note for significant wind
+        // Wind note for significant wind (km/h, Beaufort-aligned phrasing)
         if (current.windSpeed > 30) {
             val windDesc = when {
-                current.windSpeed > 60 -> "strong winds"
-                current.windSpeed > 40 -> "breezy conditions"
+                current.windSpeed > 60 -> "gale-force winds"
+                current.windSpeed > 40 -> "strong winds"
                 else -> "moderate winds"
             }
             parts.add("with $windDesc")

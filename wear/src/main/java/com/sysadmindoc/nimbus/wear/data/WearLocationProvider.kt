@@ -66,17 +66,34 @@ class WearLocationProvider @Inject constructor(
         }
 
     private fun cache(lat: Double, lon: Double) {
+        // Store as bit-preserving Long → Double round-trips cleanly. Float storage
+        // loses ~11 meters of precision at the equator and breaks the "was this
+        // ever saved?" check below because Float→Double→Double equality fails.
         prefs.edit()
-            .putFloat("lat", lat.toFloat())
-            .putFloat("lon", lon.toFloat())
+            .putLong("lat_bits", java.lang.Double.doubleToRawLongBits(lat))
+            .putLong("lon_bits", java.lang.Double.doubleToRawLongBits(lon))
+            .remove("lat")
+            .remove("lon")
             .apply()
     }
 
     private fun cached(): LocationResult {
-        val lat = prefs.getFloat("lat", DEFAULT_LAT.toFloat()).toDouble()
-        val lon = prefs.getFloat("lon", DEFAULT_LON.toFloat()).toDouble()
+        val hasBits = prefs.contains("lat_bits") && prefs.contains("lon_bits")
+        val lat = if (hasBits) {
+            java.lang.Double.longBitsToDouble(prefs.getLong("lat_bits", 0L))
+        } else {
+            // Legacy Float path — preserved so existing installs don't lose their
+            // cached location when they first run the updated build.
+            prefs.getFloat("lat", DEFAULT_LAT.toFloat()).toDouble()
+        }
+        val lon = if (hasBits) {
+            java.lang.Double.longBitsToDouble(prefs.getLong("lon_bits", 0L))
+        } else {
+            prefs.getFloat("lon", DEFAULT_LON.toFloat()).toDouble()
+        }
+        val everSaved = hasBits || prefs.contains("lat")
         val name = prefs.getString("name", null)
-            ?: if (lat == DEFAULT_LAT && lon == DEFAULT_LON) "Central US" else "Saved Location"
+            ?: if (!everSaved) "Central US" else "Saved Location"
         return LocationResult(lat, lon, name)
     }
 

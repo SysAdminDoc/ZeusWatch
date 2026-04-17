@@ -163,10 +163,26 @@ class CommunityReportRepository @Inject constructor(
 
     @SuppressLint("HardwareIds")
     private fun hashDeviceId(context: Context): String {
-        val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        // Settings.Secure.ANDROID_ID is nullable on some ROMs and on freshly
+        // restored backups before the system assigns one. Fall back to a
+        // per-install random UUID (cached on-disk) so the deleteReport
+        // ownership check still works even when ANDROID_ID is missing.
+        val androidId: String? = try {
+            Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        } catch (_: Exception) { null }
+        val seed = androidId?.takeIf { it.isNotBlank() } ?: getOrCreateFallbackDeviceId(context)
         val digest = MessageDigest.getInstance("SHA-256")
-        val hash = digest.digest(androidId.toByteArray(Charsets.UTF_8))
+        val hash = digest.digest(seed.toByteArray(Charsets.UTF_8))
         return hash.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun getOrCreateFallbackDeviceId(context: Context): String {
+        val prefs = context.getSharedPreferences("nimbus_device_id", Context.MODE_PRIVATE)
+        val existing = prefs.getString(KEY_FALLBACK_ID, null)
+        if (existing != null) return existing
+        val fresh = java.util.UUID.randomUUID().toString()
+        prefs.edit().putString(KEY_FALLBACK_ID, fresh).apply()
+        return fresh
     }
 
     companion object {
@@ -175,5 +191,6 @@ class CommunityReportRepository @Inject constructor(
         private const val RATE_LIMIT_MS = 5 * 60 * 1000L // 5 minutes
         private const val TWO_HOURS_MS = 2 * 60 * 60 * 1000L
         private const val MAX_RESULTS = 200L
+        private const val KEY_FALLBACK_ID = "fallback_device_id"
     }
 }

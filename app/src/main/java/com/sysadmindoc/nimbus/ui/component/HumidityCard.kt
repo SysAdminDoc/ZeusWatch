@@ -96,7 +96,9 @@ private fun HumidityGauge(
     modifier: Modifier = Modifier,
 ) {
     val trackColor = Color.White.copy(alpha = 0.08f)
-    val fraction = humidity / 100f
+    // Defensive clamp so an upstream out-of-range value (>100 or <0) doesn't
+    // paint the gauge past the track edge.
+    val fraction = (humidity / 100f).coerceIn(0f, 1f)
 
     Canvas(modifier = modifier) {
         val barHeight = 10f

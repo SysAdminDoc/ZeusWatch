@@ -43,7 +43,7 @@ class BlitzortungService @Inject constructor(
     private val _recentStrikes = MutableStateFlow<List<LightningStrike>>(emptyList())
     val recentStrikes: StateFlow<List<LightningStrike>> = _recentStrikes.asStateFlow()
 
-    private var webSocket: WebSocket? = null
+    @Volatile private var webSocket: WebSocket? = null
     @Volatile private var isConnected = false
 
     private val strikeBuffer = mutableListOf<LightningStrike>()
@@ -84,11 +84,13 @@ class BlitzortungService @Inject constructor(
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 Log.w(TAG, "Blitzortung WebSocket failure: ${t.message}")
                 isConnected = false
+                this@BlitzortungService.webSocket = null
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 Log.d(TAG, "Blitzortung WebSocket closed: $reason")
                 isConnected = false
+                this@BlitzortungService.webSocket = null
             }
         })
     }
