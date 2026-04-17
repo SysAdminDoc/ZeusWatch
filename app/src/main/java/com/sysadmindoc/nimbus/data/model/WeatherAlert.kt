@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.data.model
 
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
+import java.util.Locale
 
 /**
  * UI-ready weather alert models.
@@ -31,7 +32,10 @@ enum class AlertSeverity(val label: String, val color: Color, val sortOrder: Int
     UNKNOWN("Unknown", Color(0xFF9E9E9E), 4);
 
     companion object {
-        fun from(value: String?): AlertSeverity = when (value?.lowercase()) {
+        // Locale.ROOT keeps lowercase() deterministic — default-locale lowercase on
+        // a Turkish device maps 'I' to 'ı' (dotless i), which would drop
+        // upstream alert strings like "IMMEDIATE" into the UNKNOWN bucket.
+        fun from(value: String?): AlertSeverity = when (value?.lowercase(Locale.ROOT)) {
             "extreme" -> EXTREME
             "severe" -> SEVERE
             "moderate" -> MODERATE
@@ -49,7 +53,7 @@ enum class AlertUrgency(val label: String, val sortOrder: Int) {
     UNKNOWN("Unknown", 4);
 
     companion object {
-        fun from(value: String?): AlertUrgency = when (value?.lowercase()) {
+        fun from(value: String?): AlertUrgency = when (value?.lowercase(Locale.ROOT)) {
             "immediate" -> IMMEDIATE
             "expected" -> EXPECTED
             "future" -> FUTURE
