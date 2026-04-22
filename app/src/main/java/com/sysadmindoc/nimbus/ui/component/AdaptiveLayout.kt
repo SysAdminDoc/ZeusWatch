@@ -27,23 +27,23 @@ data class AdaptiveLayoutInfo(
             WindowWidthSizeClass.Compact -> AdaptiveLayoutInfo(
                 widthClass = widthClass,
                 columns = 1,
-                contentPadding = 12.dp,
-                cardSpacing = 12.dp,
+                contentPadding = 16.dp,
+                cardSpacing = 14.dp,
                 isCompact = true,
             )
             WindowWidthSizeClass.Medium -> AdaptiveLayoutInfo(
                 widthClass = widthClass,
                 columns = 2,
-                contentPadding = 24.dp,
-                cardSpacing = 16.dp,
+                contentPadding = 28.dp,
+                cardSpacing = 18.dp,
                 isMedium = true,
                 isCompact = false,
             )
             WindowWidthSizeClass.Expanded -> AdaptiveLayoutInfo(
                 widthClass = widthClass,
                 columns = 2,
-                contentPadding = 32.dp,
-                cardSpacing = 16.dp,
+                contentPadding = 36.dp,
+                cardSpacing = 18.dp,
                 isExpanded = true,
                 isCompact = false,
             )

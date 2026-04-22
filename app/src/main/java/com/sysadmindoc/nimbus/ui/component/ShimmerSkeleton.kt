@@ -7,8 +7,11 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,9 +31,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.ui.component.LocalAdaptiveLayout
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
+import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
 
@@ -75,7 +82,7 @@ fun ShimmerLoadingSkeleton(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxSize()
             .background(NimbusBackgroundGradient)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = LocalAdaptiveLayout.current.contentPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.height(60.dp))
@@ -94,20 +101,45 @@ fun ShimmerLoadingSkeleton(modifier: Modifier = Modifier) {
         }
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Location name placeholder
-        ShimmerBox(width = 140.dp, height = 24.dp, brush = shimmerBrush)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Big temperature placeholder
-        ShimmerBox(width = 120.dp, height = 80.dp, brush = shimmerBrush)
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Condition text
-        ShimmerBox(width = 100.dp, height = 18.dp, brush = shimmerBrush)
-        Spacer(modifier = Modifier.height(8.dp))
-        ShimmerBox(width = 80.dp, height = 14.dp, brush = shimmerBrush)
-        Spacer(modifier = Modifier.height(8.dp))
-        ShimmerBox(width = 160.dp, height = 14.dp, brush = shimmerBrush)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(30.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            NimbusGlassTop.copy(alpha = 0.86f),
+                            NimbusCardBg,
+                            NimbusGlassBottom,
+                        ),
+                    ),
+                )
+                .padding(horizontal = 22.dp, vertical = 22.dp),
+        ) {
+            Column(horizontalAlignment = Alignment.Start) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    ShimmerBox(width = 132.dp, height = 28.dp, brush = shimmerBrush)
+                    ShimmerBox(width = 88.dp, height = 28.dp, brush = shimmerBrush)
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+                ShimmerBox(width = 168.dp, height = 16.dp, brush = shimmerBrush)
+                Spacer(modifier = Modifier.height(10.dp))
+                ShimmerBox(width = 142.dp, height = 72.dp, brush = shimmerBrush)
+                Spacer(modifier = Modifier.height(10.dp))
+                ShimmerBox(width = 180.dp, height = 18.dp, brush = shimmerBrush)
+                Spacer(modifier = Modifier.height(8.dp))
+                ShimmerBox(width = 224.dp, height = 14.dp, brush = shimmerBrush)
+                Spacer(modifier = Modifier.height(20.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    ShimmerBox(width = 92.dp, height = 52.dp, brush = shimmerBrush)
+                    ShimmerBox(width = 92.dp, height = 52.dp, brush = shimmerBrush)
+                    ShimmerBox(width = 92.dp, height = 52.dp, brush = shimmerBrush)
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -143,8 +175,9 @@ private fun ShimmerBox(
         modifier = modifier
             .width(width)
             .height(height)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(NimbusCardBg)
+            .border(1.dp, NimbusCardBorder.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
             .background(Color.White.copy(alpha = 0.02f))
             .background(brush)
     )

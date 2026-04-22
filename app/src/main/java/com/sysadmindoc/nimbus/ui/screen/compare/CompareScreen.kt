@@ -24,7 +24,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,6 +53,8 @@ import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.ui.component.LocalUnitSettings
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
+import com.sysadmindoc.nimbus.ui.component.PremiumMessageCard
+import com.sysadmindoc.nimbus.ui.component.ScreenHeader
 import com.sysadmindoc.nimbus.ui.component.WeatherIcon
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -109,45 +110,13 @@ fun CompareScreen(
                     .windowInsetsPadding(WindowInsets.safeDrawing)
                     .verticalScroll(rememberScrollState()),
             ) {
-                // Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        NimbusGlassTop.copy(alpha = 0.76f),
-                                        NimbusGlassBottom,
-                                    ),
-                                ),
-                            )
-                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
-                            .clickable(onClick = onBack),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = NimbusTextPrimary)
-                    }
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column {
-                        Text(
-                            "Compare Weather",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = NimbusTextPrimary,
-                        )
-                        Text(
-                            "Live side-by-side conditions for any two saved locations.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NimbusTextSecondary,
-                        )
-                    }
-                }
+                ScreenHeader(
+                    title = "Compare Weather",
+                    subtitle = "Pick two saved places and spot the differences that matter fastest.",
+                    eyebrow = "Side by side",
+                    onBack = onBack,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                )
 
                 if (state.savedLocations.isNotEmpty()) {
                     CompareIntroCard(
@@ -403,65 +372,16 @@ private fun CompareStateCard(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+    PremiumMessageCard(
+        title = title,
+        message = message,
+        icon = Icons.AutoMirrored.Filled.CompareArrows,
+        loading = loading,
+        primaryActionLabel = actionLabel,
+        onPrimaryAction = onAction,
         modifier = Modifier
             .then(modifier)
-            .clip(RoundedCornerShape(28.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.74f),
-                        NimbusGlassBottom,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
-            .padding(horizontal = 24.dp, vertical = 28.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(NimbusBlueAccent.copy(alpha = 0.14f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (loading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(22.dp),
-                    color = NimbusBlueAccent,
-                    strokeWidth = 2.dp,
-                )
-            } else {
-                Icon(
-                    Icons.AutoMirrored.Filled.CompareArrows,
-                    contentDescription = null,
-                    tint = NimbusBlueAccent,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-        }
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            color = NimbusTextPrimary,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = NimbusTextSecondary,
-            textAlign = TextAlign.Center,
-        )
-        if (!loading && actionLabel != null && onAction != null) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onAction) {
-                Text(actionLabel)
-            }
-        }
-    }
+    )
 }
 
 @Composable

@@ -55,85 +55,73 @@ private fun ForecastStripContent(data: WidgetWeatherData?) {
     Row(
         modifier = GlanceModifier
             .fillMaxSize()
-            .cornerRadius(16.dp)
+            .cornerRadius(18.dp)
             .background(WidgetTheme.bgColor)
             .clickable(
                 if (data != null) actionStartActivity<MainActivity>()
                 else actionRunCallback<WidgetRefreshAction>()
             )
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (data == null) {
-            Text(
-                "ZeusWatch \u2022 Tap to load",
-                style = WidgetTheme.labelStyle,
+            WidgetEmptyState(
+                title = "ZeusWatch",
+                message = "Tap to load the next few hours.",
             )
         } else {
-            // Current temp + icon
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = GlanceModifier.width(52.dp),
+                modifier = GlanceModifier.width(64.dp),
             ) {
                 Text(
-                    "Now",
-                    style = TextStyle(
-                        color = WidgetTheme.textSecondary,
-                        fontSize = 9.sp,
-                    ),
+                    "NEXT",
+                    style = WidgetTheme.eyebrowStyle,
+                    maxLines = 1,
                 )
+                Text(data.locationName, style = WidgetTheme.captionStyle, maxLines = 1)
+                Spacer(modifier = GlanceModifier.height(3.dp))
                 Image(
                     provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
                     contentDescription = WidgetUtils.weatherDescription(data.weatherCode, data.isDay),
-                    modifier = GlanceModifier.size(20.dp),
+                    modifier = GlanceModifier.size(18.dp),
                 )
                 Text(
                     "${data.temperature.toInt()}\u00B0",
-                    style = TextStyle(
-                        color = WidgetTheme.textPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
+                    style = WidgetTheme.tempSmall,
                 )
             }
 
-            // Divider space
-            Spacer(modifier = GlanceModifier.width(4.dp))
+            Spacer(modifier = GlanceModifier.width(6.dp))
 
-            // Next 5 hours (guard: skip if insufficient data)
             val upcoming = data.hourly.drop(1).take(5)
             upcoming.forEach { hour ->
                 Spacer(modifier = GlanceModifier.width(2.dp))
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = GlanceModifier.defaultWeight(),
+                    modifier = GlanceModifier
+                        .defaultWeight()
+                        .cornerRadius(10.dp)
+                        .background(WidgetTheme.cardColor)
+                        .padding(horizontal = 4.dp, vertical = 5.dp),
                 ) {
                     Text(
                         hour.hour,
-                        style = TextStyle(
-                            color = WidgetTheme.textTertiary,
-                            fontSize = 9.sp,
-                        ),
+                        style = WidgetTheme.captionStyle,
                     )
                     Image(
                         provider = ImageProvider(weatherIconRes(hour.code, hour.isDay)),
                         contentDescription = WidgetUtils.weatherDescription(hour.code, hour.isDay),
-                        modifier = GlanceModifier.size(16.dp),
+                        modifier = GlanceModifier.size(14.dp),
                     )
                     Text(
                         "${hour.temp}\u00B0",
-                        style = TextStyle(
-                            color = WidgetTheme.textPrimary,
-                            fontSize = 12.sp,
-                        ),
+                        style = WidgetTheme.tempSmall,
                     )
                     if (hour.precipChance > 20) {
                         Text(
                             "${hour.precipChance}%",
-                            style = TextStyle(
-                                color = WidgetTheme.textSecondary,
-                                fontSize = 8.sp,
-                            ),
+                            style = WidgetTheme.precipStyle,
                         )
                     }
                 }

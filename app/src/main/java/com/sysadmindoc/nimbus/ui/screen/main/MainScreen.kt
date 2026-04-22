@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
@@ -43,8 +45,6 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -73,6 +73,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -100,6 +101,8 @@ import com.sysadmindoc.nimbus.ui.component.DrivingAlertCard
 import com.sysadmindoc.nimbus.ui.component.GoldenHourCard
 import com.sysadmindoc.nimbus.ui.component.HealthAlertCard
 import com.sysadmindoc.nimbus.ui.component.HumidityCard
+import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
+import com.sysadmindoc.nimbus.ui.component.GlassActionButton
 import com.sysadmindoc.nimbus.ui.component.MoonPhaseCard
 import com.sysadmindoc.nimbus.ui.component.PrecipitationChartCard
 import com.sysadmindoc.nimbus.ui.component.PressureTrendCard
@@ -125,6 +128,7 @@ import com.sysadmindoc.nimbus.ui.component.UvIndexBar
 import com.sysadmindoc.nimbus.ui.component.WeatherDetailsGrid
 import com.sysadmindoc.nimbus.ui.component.WeatherParticles
 import com.sysadmindoc.nimbus.ui.component.WindCompass
+import com.sysadmindoc.nimbus.ui.component.PremiumMessageCard
 import com.sysadmindoc.nimbus.ui.navigation.BottomTab
 import com.sysadmindoc.nimbus.ui.navigation.ZeusWatchBottomNav
 import com.sysadmindoc.nimbus.ui.screen.radar.RadarTab
@@ -137,7 +141,6 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
-import com.sysadmindoc.nimbus.ui.theme.NimbusToolbarSurface
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
 import java.time.Duration
 import java.time.LocalDateTime
@@ -611,27 +614,13 @@ private fun WeatherContent(
             // ── Offline Banner ──────────────────────────────────────
             if (state.isOffline) {
                 item(key = "offline_banner") {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.errorContainer)
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            Icons.Filled.CloudOff,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "You're offline. Showing cached data.",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                        )
-                    }
+                    InlineNoticeCard(
+                        title = "Offline mode",
+                        message = "Showing the latest cached forecast until your connection returns.",
+                        icon = Icons.Filled.CloudOff,
+                        tint = NimbusWarning,
+                        modifier = Modifier.padding(horizontal = layout.contentPadding, vertical = 4.dp),
+                    )
                 }
             }
 
@@ -698,7 +687,7 @@ private fun WeatherContent(
                         if (todayPrecipChance > 0) {
                             StatusBadge(
                                 icon = Icons.Filled.WaterDrop,
-                                text = "$todayPrecipChance% rain today",
+                                text = "Rain risk $todayPrecipChance%",
                                 tint = NimbusBlueAccent,
                             )
                         }
@@ -710,7 +699,7 @@ private fun WeatherContent(
                             else -> NimbusTextTertiary
                         }
                         StatusBadge(
-                            text = if (isCached) "Cached • $updatedAgo" else "Updated $updatedAgo",
+                            text = if (isCached) "Offline-ready • $updatedAgo" else "Refreshed $updatedAgo",
                             tint = stalenessColor,
                         )
                     }
@@ -747,7 +736,7 @@ private fun WeatherContent(
             item(key = "footer") {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "ZeusWatch v${com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME} \u2022 Data: Open-Meteo.com",
+                    text = "ZeusWatch v${com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME} \u2022 Forecast data from Open-Meteo",
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusTextSecondary,
                     modifier = Modifier
@@ -767,30 +756,12 @@ private fun PremiumToolbarButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(18.dp)
-    Box(
-        modifier = modifier
-            .size(46.dp)
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusToolbarSurface,
-                        NimbusGlassBottom,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, shape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = NimbusTextPrimary.copy(alpha = 0.88f),
-            modifier = Modifier.size(20.dp),
-        )
-    }
+    GlassActionButton(
+        icon = icon,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -1036,7 +1007,8 @@ private fun LocationSelectorBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+                .horizontalScroll(rememberScrollState())
+                .selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             locations.forEachIndexed { index, loc ->
@@ -1065,7 +1037,11 @@ private fun LocationSelectorBar(
                         .clip(chipShape)
                         .background(chipBrush)
                         .border(1.dp, borderColor, chipShape)
-                        .clickable { onSelected(index) }
+                        .selectable(
+                            selected = isActive,
+                            onClick = { onSelected(index) },
+                            role = Role.Tab,
+                        )
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -1168,80 +1144,21 @@ private fun StartupState(
             .background(NimbusNavyDark),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+        PremiumMessageCard(
+            title = title,
+            message = message,
+            icon = Icons.Filled.MyLocation,
+            loading = true,
+            badgeText = "Current location can take a few seconds",
+            primaryActionLabel = primaryActionLabel,
+            onPrimaryAction = onPrimaryAction,
+            secondaryActionLabel = secondaryActionLabel,
+            onSecondaryAction = onSecondaryAction,
+            tertiaryActionLabel = tertiaryActionLabel,
+            onTertiaryAction = onTertiaryAction,
             modifier = Modifier
                 .padding(28.dp)
-                .widthIn(max = 420.dp)
-                .clip(RoundedCornerShape(30.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NimbusGlassTop,
-                            NimbusGlassBottom,
-                        ),
-                    ),
-                )
-                .border(1.dp, NimbusCardBorder, RoundedCornerShape(30.dp))
-                .padding(horizontal = 24.dp, vertical = 28.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(Color.White.copy(alpha = 0.06f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(28.dp),
-                    color = NimbusBlueAccent,
-                    strokeWidth = 2.5.dp,
-                )
-            }
-
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = NimbusTextPrimary,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = NimbusTextSecondary,
-                textAlign = TextAlign.Center,
-            )
-
-            StatusBadge(
-                text = "Current location can take a few seconds",
-                tint = NimbusBlueAccent,
-                icon = Icons.Filled.MyLocation,
-            )
-
-            Button(
-                onClick = onPrimaryAction,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = NimbusBlueAccent),
-            ) {
-                Text(primaryActionLabel)
-            }
-            OutlinedButton(
-                onClick = onSecondaryAction,
-                modifier = Modifier.fillMaxWidth(),
-                border = androidx.compose.foundation.BorderStroke(1.dp, NimbusCardBorder),
-            ) {
-                Text(secondaryActionLabel, color = NimbusTextPrimary)
-            }
-            if (tertiaryActionLabel != null && onTertiaryAction != null) {
-                Text(
-                    text = tertiaryActionLabel,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = NimbusBlueAccent,
-                    modifier = Modifier.clickable(onClick = onTertiaryAction),
-                )
-            }
-        }
+        )
     }
 }
 
@@ -1261,62 +1178,23 @@ private fun ErrorState(
             .background(NimbusNavyDark),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+        PremiumMessageCard(
+            title = if (actionLabel == LOCATION_PERMISSION_ACTION_LABEL) "Location access needed" else "Forecast unavailable",
+            message = message,
+            icon = icon,
+            primaryActionLabel = actionLabel,
+            onPrimaryAction = onRetry,
+            secondaryActionLabel = secondaryActionLabel,
+            onSecondaryAction = onSecondaryAction,
+            badgeText = if (secondaryActionLabel != null && onSecondaryAction != null) {
+                "Manual locations are still available"
+            } else {
+                null
+            },
             modifier = Modifier
-                .padding(32.dp)
-                .widthIn(max = 420.dp)
-                .clip(RoundedCornerShape(30.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NimbusGlassTop,
-                            NimbusGlassBottom,
-                        ),
-                    ),
-                )
-                .border(1.dp, NimbusCardBorder, RoundedCornerShape(30.dp))
-                .padding(horizontal = 28.dp, vertical = 30.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(50.dp),
-                tint = NimbusTextSecondary,
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyLarge,
-                color = NimbusTextSecondary,
-                textAlign = TextAlign.Center,
-            )
-            if (secondaryActionLabel != null && onSecondaryAction != null) {
-                StatusBadge(
-                    text = "Manual locations are still available",
-                    tint = NimbusBlueAccent,
-                    icon = Icons.Filled.LocationOn,
-                )
-            }
-            Button(
-                onClick = onRetry,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = NimbusBlueAccent),
-            ) {
-                Icon(actionIcon, null, Modifier.size(18.dp))
-                Spacer(modifier = Modifier.padding(4.dp))
-                Text(actionLabel)
-            }
-            if (secondaryActionLabel != null && onSecondaryAction != null) {
-                OutlinedButton(
-                    onClick = onSecondaryAction,
-                    modifier = Modifier.fillMaxWidth(),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NimbusCardBorder),
-                ) {
-                    Text(secondaryActionLabel, color = NimbusTextPrimary)
-                }
-            }
-        }
+                .padding(32.dp),
+            tint = if (actionLabel == LOCATION_PERMISSION_ACTION_LABEL) NimbusBlueAccent else NimbusWarning,
+        )
     }
 }
 

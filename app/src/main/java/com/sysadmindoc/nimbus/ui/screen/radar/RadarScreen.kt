@@ -32,11 +32,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,7 +58,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.RadarProvider
+import com.sysadmindoc.nimbus.ui.component.GlassActionButton
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
+import com.sysadmindoc.nimbus.ui.component.PremiumMessageCard
 import com.sysadmindoc.nimbus.ui.component.ReportSubmitSheet
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -501,9 +500,22 @@ private fun RadarTopControls(
                 RadarBackButton(onBack = onBack)
                 Spacer(modifier = Modifier.width(12.dp))
             }
-            Spacer(modifier = Modifier.weight(1f))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Radar",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = NimbusTextPrimary,
+                )
+                Text(
+                    text = if (selectedLayer != null) "${selectedLayer.label} layer • $providerLabel" else providerLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             RadarInfoPill(
-                text = providerLabel,
+                text = if (selectedLayer == null) "Interactive map" else selectedLayer.label,
                 modifier = Modifier.widthIn(max = 220.dp),
             )
         }
@@ -523,29 +535,12 @@ private fun RadarBackButton(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .size(44.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.76f),
-                        NimbusGlassBottom,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
-            .clickable(onClick = onBack),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            Icons.AutoMirrored.Filled.ArrowBack,
-            contentDescription = "Back",
-            tint = NimbusTextPrimary,
-            modifier = Modifier.size(20.dp),
-        )
-    }
+    GlassActionButton(
+        icon = Icons.AutoMirrored.Filled.ArrowBack,
+        contentDescription = "Back",
+        onClick = onBack,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -710,71 +705,17 @@ private fun RadarStatusCard(
     isLoading: Boolean = false,
     onRetry: (() -> Unit)? = null,
 ) {
-    Box(
+    PremiumMessageCard(
+        title = title,
+        message = message,
+        icon = Icons.Filled.CloudOff,
+        loading = isLoading,
+        primaryActionLabel = if (isLoading) null else "Retry",
+        onPrimaryAction = if (isLoading) null else onRetry,
         modifier = modifier
             .padding(horizontal = 24.dp)
             .widthIn(max = 420.dp)
-            .clip(RoundedCornerShape(30.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.82f),
-                        NimbusGlassBottom,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(30.dp))
-            .padding(horizontal = 28.dp, vertical = 30.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isLoading) NimbusBlueAccent.copy(alpha = 0.14f)
-                        else NimbusTextPrimary.copy(alpha = 0.08f),
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        color = NimbusBlueAccent,
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    Icon(
-                        Icons.Filled.CloudOff,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = NimbusTextPrimary,
-                    )
-                }
-            }
-            Spacer(Modifier.height(18.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = NimbusTextPrimary,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-                textAlign = TextAlign.Center,
-            )
-            onRetry?.let {
-                Spacer(Modifier.height(18.dp))
-                Button(onClick = it) {
-                    Text("Retry")
-                }
-            }
-        }
-    }
+    )
 }
 
 @Composable
@@ -783,44 +724,14 @@ private fun RadarOfflineCard() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+        PremiumMessageCard(
+            title = "Radar needs a connection",
+            message = "Reconnect to resume live radar, lightning, and community weather reports.",
+            icon = Icons.Filled.CloudOff,
             modifier = Modifier
-                .padding(24.dp)
-                .widthIn(max = 420.dp)
-                .clip(RoundedCornerShape(30.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NimbusGlassTop.copy(alpha = 0.8f),
-                            NimbusGlassBottom,
-                        ),
-                    ),
-                )
-                .border(1.dp, NimbusCardBorder, RoundedCornerShape(30.dp))
-                .padding(horizontal = 28.dp, vertical = 30.dp),
-        ) {
-            Icon(
-                Icons.Filled.CloudOff,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = NimbusTextPrimary,
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                "Radar requires an internet connection",
-                style = MaterialTheme.typography.bodyLarge,
-                color = NimbusTextPrimary,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Reconnect to resume live radar, lightning, and community reports.",
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-                textAlign = TextAlign.Center,
-            )
-        }
+                .padding(24.dp),
+            badgeText = "Forecast cards still work with cached data",
+        )
     }
 }
 

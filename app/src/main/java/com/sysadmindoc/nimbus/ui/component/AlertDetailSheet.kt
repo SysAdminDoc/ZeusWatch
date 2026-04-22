@@ -1,5 +1,8 @@
 package com.sysadmindoc.nimbus.ui.component
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,6 +26,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
@@ -54,13 +59,13 @@ fun AlertDetailSheet(
         scrimColor = NimbusNavyDark.copy(alpha = 0.6f),
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         dragHandle = {
-            // Custom drag handle bar
-            Spacer(
+            Box(
                 modifier = Modifier
                     .padding(vertical = 10.dp)
                     .width(40.dp)
                     .height(4.dp)
-                    .padding(0.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(Color.White.copy(alpha = 0.16f)),
             )
         },
     ) {
@@ -71,7 +76,6 @@ fun AlertDetailSheet(
                 .padding(horizontal = 20.dp, vertical = 4.dp)
                 .padding(bottom = 32.dp),
         ) {
-            // Header: icon + event + severity
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Filled.Warning,
@@ -84,46 +88,70 @@ fun AlertDetailSheet(
                     Text(
                         text = alert.event,
                         style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
                         ),
                         color = alert.severity.color,
                     )
                     Text(
-                        text = "${alert.severity.label} severity \u2022 ${alert.urgency.label} urgency",
+                        text = alert.headline,
                         style = MaterialTheme.typography.bodySmall,
                         color = NimbusTextSecondary,
+                        maxLines = 2,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AlertSheetPill(
+                    text = alert.severity.label,
+                    background = alert.severity.color.copy(alpha = 0.16f),
+                    textColor = alert.severity.color,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                AlertSheetPill(
+                    text = "${alert.urgency.label} urgency",
+                    background = Color.White.copy(alpha = 0.06f),
+                    textColor = NimbusTextSecondary,
+                )
+                alert.response?.takeIf { it.isNotBlank() }?.let {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    AlertSheetPill(
+                        text = it,
+                        background = Color.White.copy(alpha = 0.06f),
+                        textColor = NimbusTextTertiary,
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Headline
-            Text(
-                text = alert.headline,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                color = NimbusTextPrimary,
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.White.copy(alpha = 0.03f))
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(20.dp))
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+            ) {
+                Text(
+                    text = "Alert Details",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = NimbusTextPrimary,
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                MetadataItem("Issued by", alert.senderName)
+                MetadataItem("Areas", alert.areaDescription)
+                alert.effective?.let { MetadataItem("Effective", formatAlertTime(it)) }
+                alert.expires?.let { MetadataItem("Expires", formatAlertTime(it)) }
+            }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = NimbusCardBorder)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Metadata row
-            MetadataItem("Issued by", alert.senderName)
-            MetadataItem("Areas", alert.areaDescription)
-            alert.effective?.let { MetadataItem("Effective", formatAlertTime(it)) }
-            alert.expires?.let { MetadataItem("Expires", formatAlertTime(it)) }
-            alert.response?.let { MetadataItem("Action", it) }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = NimbusCardBorder)
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Description
             if (alert.description.isNotBlank()) {
                 Text(
-                    text = "Description",
+                    text = "What this means",
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = NimbusTextPrimary,
                 )
@@ -135,19 +163,13 @@ fun AlertDetailSheet(
                 )
             }
 
-            // Instructions
             if (!alert.instruction.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Instructions",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = alert.severity.color,
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = alert.instruction.trim(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NimbusTextPrimary,
+                InlineNoticeCard(
+                    title = "Recommended action",
+                    message = alert.instruction.trim(),
+                    icon = Icons.Filled.Warning,
+                    tint = alert.severity.color,
                 )
             }
         }
@@ -159,19 +181,40 @@ private fun MetadataItem(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 3.dp),
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.Top,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = NimbusTextTertiary,
-            modifier = Modifier.width(80.dp),
+            modifier = Modifier.width(92.dp),
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
             color = NimbusTextPrimary,
             modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun AlertSheetPill(
+    text: String,
+    background: Color,
+    textColor: Color,
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(background)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = textColor,
         )
     }
 }
