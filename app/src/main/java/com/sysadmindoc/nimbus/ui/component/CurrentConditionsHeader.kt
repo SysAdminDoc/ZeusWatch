@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -55,6 +56,13 @@ fun CurrentConditionsHeader(
     val feelsLikeText = buildString {
         append("Feels like ${WeatherFormatter.formatTemperature(current.feelsLike, s)}")
         if (feelsLikeReason != null) append(" • $feelsLikeReason")
+    }
+    val secondaryMeta = buildString {
+        append("Wind ${WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s)}")
+        append(" • Humidity ${current.humidity}%")
+        if (current.uvIndex > 0) {
+            append(" • UV ${WeatherFormatter.formatUvIndex(current.uvIndex)}")
+        }
     }
     val comparisonLabel = yesterdayHigh?.let {
         val todayConverted = WeatherFormatter.convertedTemp(current.dailyHigh, s)
@@ -96,6 +104,7 @@ fun CurrentConditionsHeader(
         ) {
             HeroPill(
                 text = locationName,
+                modifier = Modifier.weight(1f),
                 icon = {
                     Icon(
                         imageVector = Icons.Filled.LocationOn,
@@ -105,6 +114,7 @@ fun CurrentConditionsHeader(
                     )
                 },
             )
+            Spacer(modifier = Modifier.width(10.dp))
             HeroPill(text = if (current.isDay) "DAYLIGHT" else "OVERNIGHT")
         }
 
@@ -118,6 +128,12 @@ fun CurrentConditionsHeader(
             Column(
                 modifier = Modifier.weight(1f),
             ) {
+                Text(
+                    text = "Current Conditions",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = NimbusBlueAccent,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
                 AnimatedTemperature(
                     temperatureCelsius = current.temperature,
                     settings = s,
@@ -137,6 +153,12 @@ fun CurrentConditionsHeader(
                     text = feelsLikeText,
                     style = MaterialTheme.typography.bodyMedium,
                     color = NimbusTextSecondary,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = secondaryMeta,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary.copy(alpha = 0.88f),
                 )
             }
 
@@ -199,10 +221,11 @@ fun CurrentConditionsHeader(
 @Composable
 private fun HeroPill(
     text: String,
+    modifier: Modifier = Modifier,
     icon: @Composable (() -> Unit)? = null,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(18.dp))
             .background(Color.White.copy(alpha = 0.04f))
             .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(18.dp))
@@ -217,6 +240,8 @@ private fun HeroPill(
             text = text,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

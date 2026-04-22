@@ -30,7 +30,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Notifications
@@ -69,6 +68,8 @@ import com.sysadmindoc.nimbus.data.model.CustomAlertOperator
 import com.sysadmindoc.nimbus.data.model.CustomAlertRule
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
+import com.sysadmindoc.nimbus.ui.component.PremiumMessageCard
+import com.sysadmindoc.nimbus.ui.component.ScreenHeader
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
@@ -94,50 +95,15 @@ fun CustomAlertsScreen(
         Scaffold(
             containerColor = NimbusNavyDark,
             topBar = {
-                Row(
+                ScreenHeader(
+                    title = "Custom Alerts",
+                    subtitle = "Create personal forecast triggers for heat, cold, wind, rain, and UV.",
+                    eyebrow = "Rule-based alerts",
+                    onBack = onBack,
                     modifier = Modifier
-                        .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.safeDrawing)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        NimbusGlassTop.copy(alpha = 0.76f),
-                                        NimbusGlassBottom,
-                                    ),
-                                ),
-                            )
-                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
-                            .clickable(onClick = onBack),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = NimbusTextPrimary,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column {
-                        Text(
-                            "Custom Alerts",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = NimbusTextPrimary,
-                        )
-                        Text(
-                            "Build your own weather triggers for heat, rain, UV, and wind.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NimbusTextSecondary,
-                        )
-                    }
-                }
+                )
             },
             floatingActionButton = {
                 FloatingActionButton(
@@ -230,60 +196,16 @@ private fun RuleList(
 
 @Composable
 private fun EmptyState(modifier: Modifier = Modifier) {
-    Column(
+    Box(
         modifier = modifier.padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .widthIn(max = 420.dp)
-                .clip(RoundedCornerShape(30.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NimbusGlassTop.copy(alpha = 0.78f),
-                            NimbusCardBg,
-                            NimbusGlassBottom,
-                        ),
-                    ),
-                )
-                .border(1.dp, NimbusCardBorder, RoundedCornerShape(30.dp))
-                .padding(horizontal = 24.dp, vertical = 28.dp),
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(NimbusBlueAccent.copy(alpha = 0.14f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Filled.Notifications,
-                        contentDescription = null,
-                        tint = NimbusBlueAccent,
-                        modifier = Modifier.size(26.dp),
-                    )
-                }
-                Spacer(modifier = Modifier.height(14.dp))
-                Text(
-                    "No custom alerts yet",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = NimbusTextPrimary,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "Create a rule for heat, low temperatures, heavy rain, strong wind, or high UV so ZeusWatch can watch the forecast for you.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NimbusTextSecondary,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-                AlertHintPill(text = "Use the + button to create your first alert")
-            }
-        }
+        PremiumMessageCard(
+            title = "No custom alerts yet",
+            message = "Create a rule for heat, low temperatures, heavy rain, strong wind, or high UV so ZeusWatch can watch the forecast for you.",
+            icon = Icons.Filled.Notifications,
+            badgeText = "Use the + button to create your first alert",
+        )
     }
 }
 

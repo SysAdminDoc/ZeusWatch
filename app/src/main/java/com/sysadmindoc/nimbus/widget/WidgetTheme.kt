@@ -1,10 +1,22 @@
 package com.sysadmindoc.nimbus.widget
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.glance.color.ColorProvider
+import androidx.glance.GlanceModifier
+import androidx.glance.appwidget.cornerRadius
+import androidx.glance.background
+import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
+import androidx.glance.layout.Column
+import androidx.glance.layout.Spacer
+import androidx.glance.layout.height
+import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
+import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 
 /**
@@ -21,6 +33,14 @@ object WidgetTheme {
     val cardColor = ColorProvider(
         day = Color(0xFF1B2845),
         night = Color(0xFF111833),
+    )
+    val cardColorElevated = ColorProvider(
+        day = Color(0xFF23365D),
+        night = Color(0xFF172546),
+    )
+    val pillColor = ColorProvider(
+        day = Color(0xFF162743),
+        night = Color(0xFF101A31),
     )
     val textPrimary = ColorProvider(
         day = Color(0xFFF0F0F5),
@@ -63,6 +83,16 @@ object WidgetTheme {
         fontSize = 11.sp,
         fontWeight = FontWeight.Normal,
     )
+    val eyebrowStyle = TextStyle(
+        color = accentBlue,
+        fontSize = 9.sp,
+        fontWeight = FontWeight.Medium,
+    )
+    val titleStyle = TextStyle(
+        color = textPrimary,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.Medium,
+    )
     val locationStyle = TextStyle(
         color = textSecondary,
         fontSize = 12.sp,
@@ -76,6 +106,67 @@ object WidgetTheme {
         color = precipBlue,
         fontSize = 10.sp,
     )
+    val captionStyle = TextStyle(
+        color = textTertiary,
+        fontSize = 9.sp,
+        fontWeight = FontWeight.Normal,
+    )
+    val pillStyle = TextStyle(
+        color = accentBlue,
+        fontSize = 9.sp,
+        fontWeight = FontWeight.Medium,
+    )
+}
+
+fun widgetUpdatedLabel(updatedAt: Long): String? {
+    if (updatedAt <= 0L) return null
+    val mins = ((System.currentTimeMillis() - updatedAt) / 60_000).coerceAtLeast(0L)
+    return when {
+        mins < 5 -> "Live"
+        mins < 60 -> "${mins}m"
+        else -> "${mins / 60}h"
+    }
+}
+
+@Composable
+fun WidgetPill(
+    text: String,
+    modifier: GlanceModifier = GlanceModifier,
+) {
+    Box(
+        modifier = modifier
+            .cornerRadius(999.dp)
+            .background(WidgetTheme.pillColor)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = WidgetTheme.pillStyle,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+fun WidgetEmptyState(
+    title: String,
+    message: String,
+    modifier: GlanceModifier = GlanceModifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = title,
+            style = WidgetTheme.titleStyle,
+            maxLines = 1,
+        )
+        Spacer(modifier = GlanceModifier.height(4.dp))
+        Text(
+            text = message,
+            style = WidgetTheme.labelStyle,
+            maxLines = 2,
+        )
+    }
 }
 
 /**

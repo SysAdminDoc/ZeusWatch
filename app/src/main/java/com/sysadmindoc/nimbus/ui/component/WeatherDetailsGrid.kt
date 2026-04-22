@@ -1,6 +1,9 @@
 package com.sysadmindoc.nimbus.ui.component
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,10 +27,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -44,6 +49,12 @@ fun WeatherDetailsGrid(
         title = "Today's Details",
         modifier = modifier,
     ) {
+        Text(
+            text = "A fast read on moisture, light, pressure, and visibility so the rest of the forecast is easier to act on.",
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
             left = DetailItem(Icons.Filled.WaterDrop, "Humidity", WeatherFormatter.formatHumidity(current.humidity)),
             right = DetailItem(
@@ -105,7 +116,10 @@ private data class DetailItem(
 
 @Composable
 private fun DetailRow(left: DetailItem, right: DetailItem) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         DetailCell(item = left, modifier = Modifier.weight(1f))
         DetailCell(item = right, modifier = Modifier.weight(1f))
     }
@@ -113,15 +127,41 @@ private fun DetailRow(left: DetailItem, right: DetailItem) {
 
 @Composable
 private fun DetailCell(item: DetailItem, modifier: Modifier = Modifier) {
-    Row(modifier = modifier.padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(item.icon, contentDescription = item.label, modifier = Modifier.size(20.dp), tint = NimbusTextTertiary)
-        Column(modifier = Modifier.padding(start = 8.dp)) {
-            Text(text = item.label, style = MaterialTheme.typography.labelMedium, color = NimbusTextSecondary)
-            Text(text = item.value, style = MaterialTheme.typography.titleSmall)
-            if (item.subtitle != null) {
-                Text(text = item.subtitle, style = MaterialTheme.typography.labelSmall, color = item.subtitleColor ?: NimbusTextTertiary)
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(22.dp))
+            .background(Color.White.copy(alpha = 0.04f))
+            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(22.dp))
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White.copy(alpha = 0.06f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    item.icon,
+                    contentDescription = item.label,
+                    modifier = Modifier.size(18.dp),
+                    tint = NimbusTextTertiary,
+                )
+            }
+            Column(modifier = Modifier.padding(start = 10.dp)) {
+                Text(text = item.label, style = MaterialTheme.typography.labelMedium, color = NimbusTextSecondary)
+                if (item.subtitle != null) {
+                    Text(
+                        text = item.subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = item.subtitleColor ?: NimbusTextTertiary,
+                    )
+                }
             }
         }
+        Text(text = item.value, style = MaterialTheme.typography.titleMedium)
     }
 }
 

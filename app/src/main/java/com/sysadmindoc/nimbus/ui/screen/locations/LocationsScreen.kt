@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
@@ -66,7 +65,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
+import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
+import com.sysadmindoc.nimbus.ui.component.ScreenHeader
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
@@ -125,82 +126,47 @@ internal fun LocationsContent(
     onMoveLocation: (Int, Int) -> Unit = { _, _ -> },
 ) {
     PredictiveBackScaffold(onBack = onBack) {
+        val savedPlacesSubtitle = if (saved.isEmpty()) {
+            "Search for a city, ZIP code, or region to build a shortlist for widgets, alerts, and quick switching."
+        } else {
+            "${saved.size} saved places ready for quick switching, widgets, and alerts."
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(NimbusBackgroundGradient)
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
-        // Top bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                NimbusGlassTop.copy(alpha = 0.76f),
-                                NimbusGlassBottom,
-                            ),
-                        ),
-                    )
-                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = NimbusTextPrimary)
-            }
-            Spacer(modifier = Modifier.width(14.dp))
-            Column {
-                Text(
-                    "Locations",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = NimbusTextPrimary,
-                )
-                Text(
-                    "${saved.size} saved places",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NimbusTextSecondary,
-                )
-            }
-        }
+            ScreenHeader(
+                title = "Locations",
+                subtitle = savedPlacesSubtitle,
+                eyebrow = "Saved places",
+                onBack = onBack,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            )
 
-        Text(
-            "Search, reorder, and jump between your favorite weather spots.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = NimbusTextSecondary,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
+            Spacer(modifier = Modifier.height(14.dp))
 
-        Spacer(modifier = Modifier.height(14.dp))
+            SearchBar(
+                query = search.query,
+                isSearching = search.isSearching,
+                onQueryChanged = onSearchQueryChanged,
+                onClear = onClearSearch,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
 
-        // Search bar
-        SearchBar(
-            query = search.query,
-            isSearching = search.isSearching,
-            onQueryChanged = onSearchQueryChanged,
-            onClear = onClearSearch,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
+            Spacer(modifier = Modifier.height(8.dp))
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        LocationsList(
-            saved = saved,
-            search = search,
-            locationTemps = locationTemps,
-            locationConditions = locationConditions,
-            onLocationSelected = onLocationSelected,
-            onAddLocation = onAddLocation,
-            onRemoveLocation = onRemoveLocation,
-            onMoveLocation = onMoveLocation,
-        )
+            LocationsList(
+                saved = saved,
+                search = search,
+                locationTemps = locationTemps,
+                locationConditions = locationConditions,
+                onLocationSelected = onLocationSelected,
+                onAddLocation = onAddLocation,
+                onRemoveLocation = onRemoveLocation,
+                onMoveLocation = onMoveLocation,
+            )
         }
     }
 }
@@ -368,7 +334,7 @@ private fun SearchBar(
             textStyle = MaterialTheme.typography.bodyMedium.copy(color = NimbusTextPrimary),
             placeholder = {
                 Text(
-                    "Search city or zip code...",
+                    "Search city, ZIP code, or region",
                     style = MaterialTheme.typography.bodyMedium,
                     color = NimbusTextTertiary,
                 )
@@ -394,8 +360,8 @@ private fun SearchBar(
                         color = NimbusBlueAccent,
                         strokeWidth = 2.dp,
                     )
-                    query.isNotEmpty() -> IconButton(onClick = onClear, modifier = Modifier.size(24.dp)) {
-                        Icon(Icons.Filled.Clear, "Clear", tint = NimbusTextTertiary, modifier = Modifier.size(16.dp))
+                    query.isNotEmpty() -> IconButton(onClick = onClear, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Filled.Clear, "Clear", tint = NimbusTextTertiary, modifier = Modifier.size(18.dp))
                     }
                 }
             },
@@ -607,7 +573,7 @@ private fun SavedLocationItem(
         if (!location.isCurrentLocation) {
             Box(
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
                     .background(NimbusError.copy(alpha = 0.12f))
                     .clickable(onClick = onRemove),
@@ -627,51 +593,13 @@ private fun LocationsCalloutCard(
     tint: Color,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        tint.copy(alpha = 0.12f),
-                        NimbusCardBg,
-                    ),
-                ),
-            )
-            .border(1.dp, tint.copy(alpha = 0.22f), RoundedCornerShape(22.dp))
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(tint.copy(alpha = 0.14f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                color = NimbusTextPrimary,
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-            )
-        }
-    }
+    InlineNoticeCard(
+        title = title,
+        message = message,
+        icon = icon,
+        tint = tint,
+        modifier = modifier,
+    )
 }
 
 internal fun filterDuplicateSearchResults(

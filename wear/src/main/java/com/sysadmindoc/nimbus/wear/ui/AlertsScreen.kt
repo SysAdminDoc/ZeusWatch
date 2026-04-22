@@ -25,18 +25,13 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.Text
 import com.sysadmindoc.nimbus.wear.data.WearAlertEntry
 
-private val TextPrimary = Color(0xFFF0F0F5)
-private val TextSecondary = Color(0xFFB0B8CC)
-private val TextTertiary = Color(0xFF7A839E)
-
-private val SeverityExtreme = Color(0xFFD32F2F)
-private val SeveritySevere = Color(0xFFFF5722)
-private val SeverityModerate = Color(0xFFFF9800)
-private val SeverityMinor = Color(0xFFFFEB3B)
+private val SeverityExtreme = Color(0xFFD76363)
+private val SeveritySevere = Color(0xFFFF8A65)
+private val SeverityModerate = Color(0xFFFFB74D)
+private val SeverityMinor = Color(0xFFFFE082)
 private val SeverityUnknown = Color(0xFF9E9E9E)
 
 @Composable
@@ -50,35 +45,29 @@ fun AlertsScreen(
         Column(
             modifier = modifier
                 .fillMaxSize()
+                .background(WearBackground)
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Text("\u2705", fontSize = 24.sp)
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "No active alerts",
-                fontSize = 13.sp,
-                color = TextSecondary,
-                textAlign = TextAlign.Center,
+            WearStateCard(
+                title = "No active alerts",
+                message = "You're clear right now. Any severe weather alerts will appear here.",
+                icon = "\u2705",
+                accent = WearSuccessAccent,
             )
         }
         return
     }
 
     ScalingLazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .background(WearBackground),
         state = listState,
     ) {
         item {
-            ListHeader {
-                Text(
-                    "\u26A0\uFE0F Alerts (${alerts.size})",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
-                )
-            }
+            WearHeader(title = "\u26A0\uFE0F Alerts (${alerts.size})", subtitle = "Active weather advisories")
         }
         items(alerts) { alert ->
             AlertRow(alert)
@@ -93,7 +82,9 @@ private fun AlertRow(alert: WearAlertEntry) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .background(WearPanelTop, androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -121,7 +112,7 @@ private fun AlertRow(alert: WearAlertEntry) {
             Text(
                 text = alert.headline,
                 fontSize = 11.sp,
-                color = TextSecondary,
+                color = WearTextSecondary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 14.dp, top = 2.dp),
@@ -132,7 +123,7 @@ private fun AlertRow(alert: WearAlertEntry) {
             Text(
                 text = "Expires: ${formatExpiry(alert.expires)}",
                 fontSize = 10.sp,
-                color = TextTertiary,
+                color = WearTextTertiary,
                 modifier = Modifier.padding(start = 14.dp, top = 1.dp),
             )
         }

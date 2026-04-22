@@ -9,6 +9,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,7 +30,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -39,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
+import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import java.time.OffsetDateTime
 import java.time.Duration
@@ -78,10 +83,10 @@ fun AlertBanner(
                 liveRegion = LiveRegionMode.Assertive
                 contentDescription = "$alertDescription. Tap for details."
             },
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         alerts.forEach { alert ->
             AlertBannerItem(alert = alert, onClick = { onAlertClick(alert) })
-            Spacer(modifier = Modifier.height(6.dp))
         }
     }
 }
@@ -93,7 +98,7 @@ private fun AlertBannerItem(
 ) {
     val shape = RoundedCornerShape(12.dp)
     val severityColor = alert.severity.color
-    val bgColor = severityColor.copy(alpha = 0.15f)
+    val bgColor = severityColor.copy(alpha = 0.12f)
 
     // Pulse border for extreme alerts
     val borderAlpha = if (alert.severity == AlertSeverity.EXTREME) {
@@ -116,46 +121,102 @@ private fun AlertBannerItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(bgColor)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        bgColor,
+                        Color(0xFF111833),
+                    ),
+                ),
+            )
             .border(1.dp, severityColor.copy(alpha = borderAlpha), shape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .clickable(onClick = onClick, role = Role.Button)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
     ) {
-        Icon(
-            Icons.Filled.Warning,
-            contentDescription = "Weather alert: ${alert.event}",
-            tint = severityColor,
-            modifier = Modifier.size(22.dp),
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.Top) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(severityColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Filled.Warning,
+                    contentDescription = "Weather alert: ${alert.event}",
+                    tint = severityColor,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = alert.event,
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = severityColor,
-                    modifier = Modifier.weight(1f, fill = false),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                // Expiry countdown
-                val expiresIn = alert.expires?.let { formatExpiresIn(it) }
-                if (expiresIn != null) {
-                    Spacer(modifier = Modifier.width(8.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AlertMetaPill(
+                        text = alert.severity.label,
+                        background = severityColor.copy(alpha = 0.16f),
+                        textColor = severityColor,
+                    )
+                    AlertMetaPill(
+                        text = alert.urgency.label,
+                        background = Color.White.copy(alpha = 0.06f),
+                        textColor = NimbusTextSecondary,
+                    )
+                    alert.expires?.let(::formatExpiresIn)?.let { expiresIn ->
+                        AlertMetaPill(
+                            text = expiresIn,
+                            background = Color.White.copy(alpha = 0.06f),
+                            textColor = NimbusTextTertiary,
+                        )
+                    }
+                }
+
+                Text(
+                    text = alert.headline,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextPrimary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                if (alert.areaDescription.isNotBlank()) {
                     Text(
-                        text = expiresIn,
+                        text = alert.areaDescription,
                         style = MaterialTheme.typography.labelSmall,
                         color = NimbusTextTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
-            Text(
-                text = alert.headline,
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextPrimary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
+    }
+}
+
+@Composable
+private fun AlertMetaPill(
+    text: String,
+    background: Color,
+    textColor: Color,
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(background)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = textColor,
+        )
     }
 }
 

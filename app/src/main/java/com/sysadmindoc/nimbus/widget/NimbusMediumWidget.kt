@@ -55,29 +55,45 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .cornerRadius(16.dp)
+            .cornerRadius(18.dp)
             .background(WidgetTheme.bgColor)
             .clickable(
                 if (data != null) actionStartActivity<MainActivity>()
                 else actionRunCallback<WidgetRefreshAction>()
             )
-            .padding(12.dp),
+            .padding(14.dp),
     ) {
         if (data == null) {
-            Text(
-                "ZeusWatch",
-                style = TextStyle(
-                    color = WidgetTheme.textPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                ),
+            WidgetEmptyState(
+                title = "ZeusWatch",
+                message = "Tap to load the latest forecast and next few days.",
             )
-            Spacer(modifier = GlanceModifier.height(4.dp))
-            Text("Tap to open and load weather", style = WidgetTheme.labelStyle)
             return@Column
         }
 
-        // Top: current conditions row
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = GlanceModifier.defaultWeight()) {
+                Text(
+                    "OVERVIEW",
+                    style = WidgetTheme.eyebrowStyle,
+                )
+                Spacer(modifier = GlanceModifier.height(3.dp))
+                Text(
+                    data.locationName,
+                    style = WidgetTheme.titleStyle,
+                    maxLines = 1,
+                )
+            }
+            widgetUpdatedLabel(data.updatedAt)?.let { label ->
+                WidgetPill(text = label)
+            }
+        }
+
+        Spacer(modifier = GlanceModifier.height(10.dp))
+
         Row(
             modifier = GlanceModifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -85,44 +101,50 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
             Image(
                 provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
                 contentDescription = WidgetUtils.weatherDescription(data.weatherCode, data.isDay),
-                modifier = GlanceModifier.size(28.dp),
+                modifier = GlanceModifier.size(30.dp),
             )
-            Spacer(modifier = GlanceModifier.width(8.dp))
-            Text(
-                text = "${data.temperature.toInt()}\u00B0",
-                style = TextStyle(
-                    color = WidgetTheme.textPrimary,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Normal,
-                ),
-            )
-            Spacer(modifier = GlanceModifier.width(8.dp))
+            Spacer(modifier = GlanceModifier.width(10.dp))
             Column(modifier = GlanceModifier.defaultWeight()) {
-                Text(data.locationName, style = WidgetTheme.locationStyle, maxLines = 1)
                 Text(
-                    "H:${data.high.toInt()}\u00B0 L:${data.low.toInt()}\u00B0",
-                    style = WidgetTheme.highLowStyle,
+                    text = "${data.temperature.toInt()}\u00B0",
+                    style = TextStyle(
+                        color = WidgetTheme.textPrimary,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Medium,
+                    ),
+                )
+                Text(
+                    text = "Feels ${data.feelsLike.toInt()}\u00B0 \u2022 Humidity ${data.humidity}%",
+                    style = WidgetTheme.labelStyle,
+                    maxLines = 1,
                 )
             }
-            // Staleness indicator
-            if (data.updatedAt > 0L) {
-                val mins = ((System.currentTimeMillis() - data.updatedAt) / 60_000)
-                    .coerceAtLeast(0L)
-                val agoText = when {
-                    mins < 5 -> "Now"
-                    mins < 60 -> "${mins}m"
-                    else -> "${mins / 60}h"
-                }
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = agoText,
-                    style = TextStyle(color = WidgetTheme.textTertiary, fontSize = 9.sp),
+                    text = "H ${data.high.toInt()}\u00B0",
+                    style = WidgetTheme.labelStyle,
+                )
+                Spacer(modifier = GlanceModifier.height(2.dp))
+                Text(
+                    text = "L ${data.low.toInt()}\u00B0",
+                    style = WidgetTheme.captionStyle,
                 )
             }
         }
 
         Spacer(modifier = GlanceModifier.height(10.dp))
 
-        // Bottom: 3-day forecast
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("NEXT 3 DAYS", style = WidgetTheme.eyebrowStyle)
+            Spacer(modifier = GlanceModifier.defaultWeight())
+            Text("Tap to open", style = WidgetTheme.captionStyle)
+        }
+
+        Spacer(modifier = GlanceModifier.height(6.dp))
+
         Row(
             modifier = GlanceModifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -139,23 +161,23 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
 private fun DayColumn(day: WidgetDaily, modifier: GlanceModifier = GlanceModifier) {
     Column(
         modifier = modifier
-            .cornerRadius(10.dp)
+            .cornerRadius(12.dp)
             .background(WidgetTheme.cardColor)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(day.day, style = WidgetTheme.labelStyle)
-        Spacer(modifier = GlanceModifier.height(2.dp))
+        Text(day.day, style = WidgetTheme.captionStyle)
+        Spacer(modifier = GlanceModifier.height(3.dp))
         Image(
             provider = ImageProvider(weatherIconRes(day.code, true)),
             contentDescription = WidgetUtils.weatherDescription(day.code, true),
-            modifier = GlanceModifier.size(20.dp),
+            modifier = GlanceModifier.size(18.dp),
         )
-        Spacer(modifier = GlanceModifier.height(2.dp))
+        Spacer(modifier = GlanceModifier.height(4.dp))
         Text("${day.high}\u00B0", style = WidgetTheme.tempSmall)
         Text(
             "${day.low}\u00B0",
-            style = TextStyle(color = WidgetTheme.textTertiary, fontSize = 11.sp),
+            style = WidgetTheme.captionStyle,
         )
     }
 }

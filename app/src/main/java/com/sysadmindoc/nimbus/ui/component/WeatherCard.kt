@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.ui.component
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -44,12 +45,13 @@ fun WeatherCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(20.dp, shape)
+            .shadow(14.dp, shape, clip = false)
             .clip(shape)
+            .animateContentSize()
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        NimbusGlassTop,
+                        NimbusGlassTop.copy(alpha = 0.86f),
                         NimbusCardBg,
                         NimbusGlassBottom,
                     ),
@@ -59,7 +61,7 @@ fun WeatherCard(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        NimbusGlassHighlight,
+                        NimbusGlassHighlight.copy(alpha = 0.9f),
                         NimbusCardBorder,
                         Color.White.copy(alpha = 0.05f),
                     ),
@@ -83,7 +85,7 @@ fun WeatherCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 22.dp, vertical = 20.dp),
+                .padding(horizontal = 22.dp, vertical = 22.dp),
         ) {
             if (title != null) {
                 Row(modifier = Modifier.fillMaxWidth()) {
@@ -107,7 +109,7 @@ fun WeatherCard(
                 }
                 Box(
                     modifier = Modifier
-                        .padding(top = 12.dp, bottom = 16.dp)
+                        .padding(top = 12.dp, bottom = 18.dp)
                         .fillMaxWidth()
                         .height(1.dp)
                         .background(
