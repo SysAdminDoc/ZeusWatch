@@ -19,10 +19,12 @@ import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
@@ -51,88 +53,91 @@ class NimbusSmallWidget : GlanceAppWidget() {
 
 @Composable
 private fun SmallWidgetContent(data: WidgetWeatherData?) {
-    Row(
+    Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .cornerRadius(16.dp)
+            .cornerRadius(18.dp)
             .background(WidgetTheme.bgColor)
             .clickable(
                 if (data != null) actionStartActivity<MainActivity>()
                 else actionRunCallback<WidgetRefreshAction>()
             )
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = 14.dp, vertical = 10.dp),
     ) {
         if (data == null) {
-            Column {
-                Text(
-                    text = "ZeusWatch",
-                    style = TextStyle(
-                        color = WidgetTheme.textPrimary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                    ),
-                )
-                Text(
-                    text = "Tap to open and load weather",
-                    style = WidgetTheme.labelStyle,
-                )
-            }
-        } else {
-            // Weather icon
-            Image(
-                provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
-                contentDescription = WidgetUtils.weatherDescription(data.weatherCode, data.isDay),
-                modifier = GlanceModifier.size(32.dp),
+            WidgetEmptyState(
+                title = "ZeusWatch",
+                message = "Tap to open and load a live forecast.",
             )
-
-            Spacer(modifier = GlanceModifier.width(10.dp))
-
-            // Temp + location
-            Column {
-                Text(
-                    text = "${data.temperature.toInt()}\u00B0",
-                    style = TextStyle(
-                        color = WidgetTheme.textPrimary,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Normal,
-                    ),
-                )
-                Text(
-                    text = data.locationName,
-                    style = WidgetTheme.locationStyle,
-                    maxLines = 1,
-                )
+        } else {
+            Row(
+                modifier = GlanceModifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = GlanceModifier.defaultWeight()) {
+                    Text(
+                        text = "CURRENT",
+                        style = WidgetTheme.eyebrowStyle,
+                    )
+                    Spacer(modifier = GlanceModifier.height(3.dp))
+                    Text(
+                        text = data.locationName,
+                        style = WidgetTheme.titleStyle,
+                        maxLines = 1,
+                    )
+                }
+                widgetUpdatedLabel(data.updatedAt)?.let { label ->
+                    WidgetPill(text = label)
+                }
             }
 
-            Spacer(modifier = GlanceModifier.width(8.dp))
+            Spacer(modifier = GlanceModifier.height(8.dp))
 
-            // High / Low + staleness
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "H:${data.high.toInt()}\u00B0",
-                    style = WidgetTheme.labelStyle,
-                )
-                Text(
-                    text = "L:${data.low.toInt()}\u00B0",
-                    style = TextStyle(
-                        color = WidgetTheme.textTertiary,
-                        fontSize = 11.sp,
-                    ),
-                )
-                if (data.updatedAt > 0L) {
-                    // Clamp to 0 so NTP rollback / daylight-saving adjustments don't
-                    // render "-3m" on the widget.
-                    val mins = ((System.currentTimeMillis() - data.updatedAt) / 60_000)
-                        .coerceAtLeast(0L)
-                    val agoText = when {
-                        mins < 5 -> "Now"
-                        mins < 60 -> "${mins}m"
-                        else -> "${mins / 60}h"
-                    }
+            Row(
+                modifier = GlanceModifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = GlanceModifier
+                        .cornerRadius(14.dp)
+                        .background(WidgetTheme.cardColor)
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
+                        contentDescription = WidgetUtils.weatherDescription(data.weatherCode, data.isDay),
+                        modifier = GlanceModifier.size(30.dp),
+                    )
+                }
+
+                Spacer(modifier = GlanceModifier.width(10.dp))
+
+                Column(modifier = GlanceModifier.defaultWeight()) {
                     Text(
-                        text = agoText,
-                        style = TextStyle(color = WidgetTheme.textTertiary, fontSize = 9.sp),
+                        text = "${data.temperature.toInt()}\u00B0",
+                        style = TextStyle(
+                            color = WidgetTheme.textPrimary,
+                            fontSize = 27.sp,
+                            fontWeight = FontWeight.Medium,
+                        ),
+                    )
+                    Text(
+                        text = "Feels ${data.feelsLike.toInt()}\u00B0 \u2022 Humidity ${data.humidity}%",
+                        style = WidgetTheme.captionStyle,
+                        maxLines = 1,
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "H ${data.high.toInt()}\u00B0",
+                        style = WidgetTheme.labelStyle,
+                    )
+                    Spacer(modifier = GlanceModifier.height(2.dp))
+                    Text(
+                        text = "L ${data.low.toInt()}\u00B0",
+                        style = WidgetTheme.captionStyle,
                     )
                 }
             }

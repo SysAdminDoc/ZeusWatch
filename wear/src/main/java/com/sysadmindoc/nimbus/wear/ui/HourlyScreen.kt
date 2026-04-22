@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.wear.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,7 +12,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -18,14 +19,9 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.Text
 import com.sysadmindoc.nimbus.wear.data.HourlyEntry
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
-
-private val TextPrimary = Color(0xFFF0F0F5)
-private val TextSecondary = Color(0xFFB0B8CC)
-private val TextTertiary = Color(0xFF7A839E)
 
 @Composable
 fun HourlyScreen(
@@ -35,31 +31,30 @@ fun HourlyScreen(
     val listState = rememberScalingLazyListState()
 
     if (hourly.isEmpty()) {
-        Text(
-            text = "No forecast data",
-            fontSize = 13.sp,
-            color = TextSecondary,
-            textAlign = TextAlign.Center,
+        Box(
             modifier = modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 48.dp),
-        )
+                .background(WearBackground),
+            contentAlignment = Alignment.Center,
+        ) {
+            WearStateCard(
+                title = "No hourly forecast",
+                message = "Hourly detail will appear after the next phone sync.",
+                icon = "\u23F0",
+                modifier = Modifier.padding(horizontal = 18.dp),
+            )
+        }
         return
     }
 
     ScalingLazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .background(WearBackground),
         state = listState,
     ) {
         item {
-            ListHeader {
-                Text(
-                    "Hourly Forecast",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
-                )
-            }
+            WearHeader(title = "Hourly Forecast", subtitle = "Temperature and rain risk for the next stretch")
         }
         items(hourly) { entry ->
             HourlyRow(entry)
@@ -69,47 +64,37 @@ fun HourlyScreen(
 
 @Composable
 private fun HourlyRow(entry: HourlyEntry) {
-    Row(
+    WearPanel(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
-        // Time
-        Text(
-            text = formatHour(entry.time),
-            fontSize = 13.sp,
-            color = TextSecondary,
-            modifier = Modifier.width(48.dp),
-        )
-
-        // Weather emoji
-        Text(
-            text = WearWeatherRepository.wmoEmoji(entry.weatherCode),
-            fontSize = 16.sp,
-        )
-
-        Spacer(Modifier.width(4.dp))
-
-        // Temperature
-        Text(
-            text = "${entry.temperature}\u00B0",
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Medium,
-            color = TextPrimary,
-            modifier = Modifier.width(36.dp),
-            textAlign = TextAlign.End,
-        )
-
-        // Precip chance
-        Text(
-            text = "${entry.precipChance}%",
-            fontSize = 11.sp,
-            color = TextTertiary,
-            modifier = Modifier.width(32.dp),
-            textAlign = TextAlign.End,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = formatHour(entry.time),
+                fontSize = 12.sp,
+                color = WearTextSecondary,
+                modifier = Modifier.width(50.dp),
+            )
+            Text(
+                text = WearWeatherRepository.wmoEmoji(entry.weatherCode),
+                fontSize = 16.sp,
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = "${entry.temperature}\u00B0",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = WearTextPrimary,
+                modifier = Modifier.width(36.dp),
+                textAlign = TextAlign.End,
+            )
+            WearMiniPill(text = "${entry.precipChance}%", accent = WearBlueAccent)
+        }
     }
 }
 

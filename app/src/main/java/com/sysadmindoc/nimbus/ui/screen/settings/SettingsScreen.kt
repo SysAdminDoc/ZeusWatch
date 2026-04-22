@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,6 +28,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -38,6 +42,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -66,6 +71,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
@@ -76,7 +82,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.data.model.IconPack
 import com.sysadmindoc.nimbus.data.repository.*
+import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
+import com.sysadmindoc.nimbus.ui.component.ScreenHeader
 import com.sysadmindoc.nimbus.ui.theme.*
 
 @Composable
@@ -284,64 +292,29 @@ internal fun SettingsContent(
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .verticalScroll(scrollState),
         ) {
-        // Header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                NimbusGlassTop.copy(alpha = 0.76f),
-                                NimbusGlassBottom,
-                            ),
-                        ),
-                        RoundedCornerShape(18.dp),
-                    )
-                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
-                    .clickable(onClick = onBack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = NimbusTextPrimary,
-                )
-            }
-            Spacer(modifier = Modifier.width(14.dp))
-            Column {
-                Text(
-                    text = "Settings",
-                    style = MaterialTheme.typography.headlineLarge,
-                )
-                Text(
-                    text = "Tune the forecast, visuals, alerts, and data sources to your style.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NimbusTextSecondary,
-                )
-            }
-        }
+            ScreenHeader(
+                title = "Settings",
+                subtitle = "Tune the forecast, visuals, alerts, and data sources around how you use ZeusWatch.",
+                eyebrow = "Personalize ZeusWatch",
+                onBack = onBack,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            )
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        SettingsCategoryPicker(
-            selectedCategory = selectedCategory,
-            onSelectedCategory = { selectedCategory = it },
-        )
+            SettingsCategoryPicker(
+                selectedCategory = selectedCategory,
+                onSelectedCategory = { selectedCategory = it },
+            )
 
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-        SettingsOverviewCard(
-            selectedCategory = selectedCategory,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
+            SettingsOverviewCard(
+                selectedCategory = selectedCategory,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
 
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
         // ── Display ──────────────────────────────────────────
         if (selectedCategory == SettingsCategory.APPEARANCE) {
@@ -964,7 +937,7 @@ internal fun SettingsContent(
         }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -1029,7 +1002,8 @@ private fun SettingsCategoryPicker(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .horizontalScroll(rememberScrollState()),
+            .horizontalScroll(rememberScrollState())
+            .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         SettingsCategory.entries.forEach { category ->
@@ -1037,6 +1011,7 @@ private fun SettingsCategoryPicker(
             Column(
                 modifier = Modifier
                     .widthIn(min = 164.dp)
+                    .heightIn(min = 88.dp)
                     .clip(RoundedCornerShape(22.dp))
                     .background(
                         Brush.verticalGradient(
@@ -1059,7 +1034,11 @@ private fun SettingsCategoryPicker(
                         if (isSelected) NimbusBlueAccent.copy(alpha = 0.44f) else NimbusCardBorder,
                         RoundedCornerShape(22.dp),
                     )
-                    .clickable { onSelectedCategory(category) }
+                    .selectable(
+                        selected = isSelected,
+                        onClick = { onSelectedCategory(category) },
+                        role = Role.Tab,
+                    )
                     .padding(horizontal = 16.dp, vertical = 14.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1102,6 +1081,7 @@ private fun SettingSection(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(24.dp))
+            .animateContentSize()
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -1117,7 +1097,10 @@ private fun SettingSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { expanded = !expanded }
+                .clickable(
+                    onClick = { expanded = !expanded },
+                    role = Role.Button,
+                )
                 .padding(bottom = if (expanded) 14.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1193,7 +1176,11 @@ private fun SettingRadio(
                 ),
             )
             .border(1.dp, if (selected) NimbusBlueAccent.copy(alpha = 0.38f) else NimbusCardBorder, RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick)
+            .selectable(
+                selected = selected,
+                onClick = onClick,
+                role = Role.RadioButton,
+            )
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1243,7 +1230,11 @@ private fun SettingToggle(
                 ),
             )
             .border(1.dp, if (checked) NimbusBlueAccent.copy(alpha = 0.34f) else NimbusCardBorder, RoundedCornerShape(20.dp))
-            .clickable { onCheckedChange(!checked) }
+            .toggleable(
+                value = checked,
+                onValueChange = onCheckedChange,
+                role = Role.Switch,
+            )
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1549,26 +1540,11 @@ private fun PermissionNoticeCard(
     title: String,
     message: String,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(NimbusBlueAccent.copy(alpha = 0.12f))
-            .border(1.dp, NimbusBlueAccent.copy(alpha = 0.28f), RoundedCornerShape(20.dp))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = NimbusTextPrimary,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodySmall,
-            color = NimbusTextSecondary,
-        )
-    }
+    InlineNoticeCard(
+        title = title,
+        message = message,
+        icon = Icons.Filled.Notifications,
+    )
 }
 
 // ── Icon Pack Selector ────────────────────────────────────────────────

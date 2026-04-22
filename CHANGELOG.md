@@ -2,6 +2,121 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.15.0] - 2026-04-22
+
+### Changed
+- **UI modernization pass** — rebuilt every screen on a shared chrome layer. New `NimbusChrome.kt` exposes `GlassActionButton`, `ScreenHeader`, `PremiumMessageCard`, and `InlineNoticeCard`; new `WearChrome.kt` exposes `WearPanel`, `WearHeader`, `WearStateCard`, `WearMiniPill`, and `WearLinkRow`. MainScreen, RadarScreen, SettingsScreen, LocationsScreen, CompareScreen, and CustomAlertsScreen were each cut down in size (~180 lines removed from MainScreen alone) by moving header/state/empty/loading patterns onto those shared components, eliminating duplicated gradient/border/padding blocks. Toolbar buttons now share a single `GlassActionButton` shape.
+- **Typography refinements** — `Type.kt` rebalanced for better hierarchy at common densities (displayLarge 92→88sp, headlineLarge 30→32sp, body tracking/weights tuned). Matches Material 3 baseline deltas without changing semantic roles.
+- **Accessibility** — location selector pills now use `selectable`/`selectableGroup` with `Role.Tab` so TalkBack announces active-tab state instead of generic "button, double tap to activate."
+- **Component polish** — `AlertBanner`, `AlertDetailSheet`, `CurrentConditionsHeader`, `DailyForecastList`, `HourlyForecastStrip`, `RadarPreviewCard`, `ShimmerSkeleton`, `WeatherCard`, `WeatherDetailsGrid`, and `WeatherSummaryCard` rebuilt on the shared glass surfaces/palette, unifying padding, border thickness, and corner radii.
+- **Status copy** — "X% rain today" → "Rain risk X%", "Cached • …" → "Offline-ready • …", "Updated …" → "Refreshed …", offline banner replaced with an `InlineNoticeCard` ("Offline mode").
+- **Widget theme consolidation** — new `WidgetTheme.kt` centralizes Glance colors, text styles, `widgetUpdatedLabel()`, `weatherIconRes()`, plus shared `WidgetPill` and `WidgetEmptyState` composables. `NimbusSmallWidget`, `NimbusMediumWidget`, `NimbusLargeWidget`, `NimbusForecastStripWidget`, and `WidgetConfigActivity` now consume the shared theme.
+- **Wear OS UI** — AlertsScreen, CurrentScreen, DailyScreen, and HourlyScreen rebuilt on the new WearChrome primitives; consistent panel styling, mini-pill metadata, and tap targets across the 4 screens.
+- **Footer label** — "Data: Open-Meteo.com" → "Forecast data from Open-Meteo".
+
+### Fixed
+- Removed unused `NimbusToolbarSurface` import from `MainScreen.kt` after toolbar buttons consolidated onto `GlassActionButton`.
+
+### Version
+- phone versionCode 77 → 78, versionName 1.14.2 → 1.15.0
+- wear versionCode 53 → 54, versionName 1.14.0 → 1.15.0
+
+## [1.14.2] - 2026-04-17
+
+### Fixed
+- **Engineering audit round 2** — 4 bugs across 2 files.
+- **WeatherSummaryEngine timezone-unaware greeting** — `LocalTime.now()` drove the "this morning / this afternoon" label using the device clock, producing wrong greetings when viewing weather for a remote timezone. Now pulls hour-of-day from `current.observationTime` (location-local) with a device-time fallback.
+- **WeatherSummaryEngine wind band misclassification** — 30–40 km/h was labelled "light winds". Corrected the threshold table so that range renders as "moderate winds."
+- **WeatherSummaryEngine precipitation time labels** — `precipitationOutlook()` used fixed "this morning" / "this evening" strings based on array index, not actual time of day. Replaced with relative labels ("soon" / "later today") that stay correct regardless of when the function runs.
+- **OnThisDayRepository Feb 29 crash** — `LocalDate.of(year, 2, 29)` threw `DateTimeException` in non-leap years. New `safeDate()` helper clamps day-of-month to the target month's `lengthOfMonth()`.
+
+## [1.14.1] - 2026-04-17
+
+### Fixed
+- **Engineering audit round 1** — 10 bugs across 9 files.
+- **Visibility unit mismatch (3 adapters)** — `WeatherFormatter.formatVisibility()` expects meters; OWM/BrightSky were pre-dividing to km and PirateWeather was storing km as if it were meters. All three now return meters so unit conversion produces correct miles/km/ft.
+- **`addSeenAlertIds` ordering bug** — called `Set.drop()` on an unordered set, dropping arbitrary IDs during cap-and-trim. Rewritten with `LinkedHashSet` that prioritizes newly-seen IDs.
+- **CAS-retryable lambda side effects (2 ViewModels)** — `MutableStateFlow.update` lambdas can re-run under CAS contention; `MainViewModel.observeSavedLocations` and `CompareViewModel.syncSavedLocations` were triggering fetches and consuming request tokens inside the lambda. Extracted to post-update blocks.
+- **BrightSky UTC date offset** — `LocalDate.now(UTC)` could miss today's data for UTC+ timezones; now subtracts 1 day so morning queries still return a full hourly series.
+- **latLonToTile math error** — `ln(tan(lat))` blew up at extreme latitudes; clamp via `coerceIn(-85.0511, 85.0511)` (Web Mercator limits).
+- **Notification ID collisions** — summary ID 0 collides with system defaults; health notification hash was 8-bit (256 unique IDs). Widened to 16-bit hash and base ID 0x1000.
+- **HealthAlertEvaluator null humidity** — `minOf { it.humidity ?: 0 }` coerced nulls to 0%, producing phantom "extreme low humidity" alerts. Nulls are now filtered before min/max.
+- **MainScreen excessive recomposition** — `WeatherThemeState` allocated fresh on every recomposition; wrapped in `remember { }` so theme consumers don't cascade-recompose.
+
+## [1.14.0] - 2026-04-16
+
+### Added
+- **Wear OS — Alerts, Daily forecast, AQI**. Phone DataLayer sync now pushes alerts, 7-day daily forecast, and air quality alongside existing current + hourly data.
+- **`AlertsScreen`** (wear) — severity-colored dots, event names, headlines, expiry times.
+- **`DailyScreen`** (wear) — 7-day `ScalingLazyColumn` with weather emoji, high/low, precip chance.
+- **AQI chip on watch CurrentScreen** — color-coded by EPA level, replaces precip chip when AQI available.
+- **Alert banner on CurrentScreen** — orange strip with top alert name (or count), tappable to open `AlertsScreen`.
+- **Watch navigation expanded** — CurrentScreen now links to Hourly and 7-Day side-by-side plus banner tap. `WearNavHost` routes: `CURRENT`, `HOURLY`, `DAILY`, `ALERTS`.
+
+### Fixed
+- **Background wear sync** — `WidgetRefreshWorker` now calls `wearSyncManager.syncWeather()` after its primary fetch, so the watch stays fresh during background-only refresh cycles.
+- **Sync ordering** — phone syncs AFTER its parallel sub-fetches finish (alerts, AQI, etc.), so the watch gets the full payload in a single push instead of an incomplete first push.
+
+### Changed
+- New data models: `WearDailyEntry`, `WearAlertEntry`. `WearWeatherData` and `WearUiState` extended with `daily`, `alerts`, `aqi`, `aqiLabel`.
+- `SyncedWeatherStore` and `WeatherDataListenerService` updated for the new fields.
+
+### Version
+- wear versionCode 52 → 53.
+
+## [1.13.0] - 2026-04-15
+
+### Added
+- **Wear OS DataLayer sync** — phone pushes simplified weather (current + 12h hourly as a `DataMap`) to the paired watch after every successful fetch. Eliminates redundant watch-side API calls and keeps the two surfaces consistent.
+- **`WearSyncManager`** with flavor-split implementation: real `DataClient.putDataItem()` in `standard`, no-op in `freenet`.
+- **`WeatherDataListenerService`** (wear) — `WearableListenerService` that receives `/weather/current` data events and persists to `SyncedWeatherStore` (SharedPreferences).
+- **`WearWeatherRepository`** prefers synced data when < 30 minutes fresh; falls back to direct Open-Meteo when disconnected or stale.
+- **Tile + complication** now consult `SyncedWeatherStore` first.
+
+### Changed
+- ProGuard rules for `com.google.android.gms.wearable.**` added to both phone and wear modules.
+- wear versionCode 51 → 52, versionName 1.10.0 → 1.13.0 (aligned with phone for release parity).
+
+## [1.12.0] - 2026-04-15
+
+### Added
+- **Health alert system overhaul.**
+- **Migraine pressure detection** now uses real barometric surface pressure from hourly forecasts with a 3-hour rolling window. Replaces the old temp/humidity proxy heuristic. Pressure-drop and pressure-rise events fire independently against a user-configurable threshold (default 5.0 hPa / 3h).
+- **Temperature/humidity fallback** kicks in when pressure data is unavailable (e.g. Pirate Weather, some Bright Sky stations).
+- **`HealthAlertWorker`** — hourly CoroutineWorker that proactively evaluates health triggers and fires notifications via new `CHANNEL_HEALTH`. Per-type per-day dedupe with 7-day auto-prune.
+- **Three alert categories fully functional:** migraine (pressure), respiratory (humidity >85% or <20%), arthritis (temperature swings > 10–15°C / 12h). Each fires at WARNING or ADVISORY severity independently.
+
+### Fixed
+- **Critical toggle gating bug** — `healthAlertsEnabled` and `migraineAlerts` Settings toggles were not gating the evaluator, so alerts fired regardless of user preference. Now properly conditional, matching the `drivingAlerts` pattern.
+
+## [1.11.0] - 2026-04-15
+
+### Added
+- **Weather source adapters — 3 alternative providers** replacing the old stubs.
+- **OpenWeatherMap (One Call 3.0)** — full forecast (current + 48h hourly + 8-day daily), severe weather alerts, air quality with EPA AQI conversion from μg/m³. Condition codes 2xx–8xx mapped to WMO for consistent icon/theme rendering. Requires API key.
+- **Pirate Weather** (Dark Sky-compatible) — full forecast with Dark Sky icon → WMO mapping, humidity / cloudCover 0–1 → percent conversion, SI wind m/s → km/h. Requires API key.
+- **Bright Sky (DWD)** — free, no-key German Weather Service. 10-day MOSMIX forecasts, current observations, DWD severe weather alerts with English/German bilingual fields. Daily aggregation computed from hourly with circular-mean wind direction.
+- **Settings integration** — all three sources appear in Settings > Data Sources dropdowns. API key fields shown conditionally when OWM or Pirate Weather is selected.
+- **`WeatherSourceManager`** primary + fallback dispatching works across all new providers.
+- **New files**: `OpenWeatherMapApi`, `PirateWeatherApi`, `BrightSkyApi` (Retrofit), `OwmResponse`, `PirateWeatherResponse`, `BrightSkyResponse` (serialization), `OwmAdapters`, `PirateWeatherAdapter`, `BrightSkyAdapters`. `NetworkModule` extended with 4 new named Retrofit instances.
+
+## [1.10.0] - 2026-04-14
+
+### Changed
+- **Wear OS companion — complete rewrite.** Multi-screen Wear Compose UI with `SwipeDismissableNavHost` (current conditions + 12-hour hourly).
+- **Watch-side GPS** via `FusedLocationProviderClient` with SharedPreferences cache and reverse geocoding — replaces the hard-coded US coordinates in the prior build.
+- **Rich current screen** — weather emoji, temperature, condition, H/L, detail chips (humidity, wind, UV, precip), location name.
+- **Hourly forecast** — `ScalingLazyColumn` with time / emoji / temp / precip rows.
+
+### Fixed
+- **Tile ANR** — `WeatherTileService` replaced `runBlocking` with `CoroutineScope` + `CallbackToFutureAdapter`. The old code was blocking the main thread.
+- **Tile enrichment** — humidity, wind, and location info added; complication now uses the synced location instead of stale defaults.
+
+### Added
+- **`WearLocationProvider`** — permission-gated GPS, `Geocoder` reverse lookup, graceful fallback chain.
+- **Wear signing config** (shared keystore), `isShrinkResources = true`.
+- wear versionCode / versionName aligned to 1.10.0 / 51.
+
 ## [1.9.0] - 2026-04-14
 
 ### Added

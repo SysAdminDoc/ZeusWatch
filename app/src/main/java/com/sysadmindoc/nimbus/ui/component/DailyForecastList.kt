@@ -5,6 +5,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
@@ -46,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -80,6 +83,7 @@ fun DailyForecastList(
     referenceDate: java.time.LocalDate? = daily.firstOrNull()?.date,
     modifier: Modifier = Modifier,
 ) {
+    val s = LocalUnitSettings.current
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val tabs = DailyTrendTab.entries
     // Bounds-check restored tab index against current enum size
@@ -91,13 +95,17 @@ fun DailyForecastList(
     }
     val weeklyMin = remember(daily) { daily.minOfOrNull { it.temperatureLow } ?: 0.0 }
     val weeklyMax = remember(daily) { daily.maxOfOrNull { it.temperatureHigh } ?: 0.0 }
+    val weeklySummary = remember(daily, referenceDate, s) {
+        dailyHeaderSummary(daily.take(7), referenceDate, s)
+    }
 
     WeatherCard(title = "Daily Forecast", modifier = modifier) {
         // Tab selector
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+                .horizontalScroll(rememberScrollState())
+                .selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             tabs.forEachIndexed { index, tab ->
@@ -109,6 +117,12 @@ fun DailyForecastList(
             }
         }
 
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = weeklySummary,
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+        )
         Spacer(modifier = Modifier.height(10.dp))
 
         Column {
@@ -148,11 +162,12 @@ private fun DailyTrendTabChip(
     val shape = RoundedCornerShape(16.dp)
     Text(
         text = label,
-        style = MaterialTheme.typography.labelSmall.copy(
+        style = MaterialTheme.typography.labelMedium.copy(
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
         ),
         color = if (isSelected) NimbusBlueAccent else NimbusTextTertiary,
         modifier = Modifier
+            .heightIn(min = 40.dp)
             .clip(shape)
             .background(
                 if (isSelected) NimbusBlueAccent.copy(alpha = 0.15f)
@@ -164,8 +179,12 @@ private fun DailyTrendTabChip(
                 else Color.Transparent,
                 shape,
             )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .selectable(
+                selected = isSelected,
+                onClick = onClick,
+                role = Role.Tab,
+            )
+            .padding(horizontal = 14.dp, vertical = 10.dp),
     )
 }
 
@@ -411,7 +430,10 @@ private fun ExpandableDailyRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
-                .clickable { expanded = !expanded }
+                .clickable(
+                    onClick = { expanded = !expanded },
+                    role = Role.Button,
+                )
                 .padding(horizontal = 6.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -428,11 +450,19 @@ private fun ExpandableDailyRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (isWarmest) {
-                    Text(
-                        "Warmest",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = NimbusWarning,
-                    )
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(NimbusWarning.copy(alpha = 0.14f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            "Warmest",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = NimbusWarning,
+                        )
+                    }
                 }
             }
             Spacer(Modifier.width(8.dp))
@@ -487,6 +517,9 @@ private fun ExpandableDailyRow(
                 if (expanded) "Collapse" else "Expand",
                 tint = if (expanded) NimbusBlueAccent else NimbusTextTertiary,
                 modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (expanded) NimbusBlueAccent.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.04f))
+                    .padding(4.dp)
                     .size(20.dp)
                     .rotate(rotation)
                     .padding(start = 4.dp),
@@ -520,7 +553,7 @@ private fun DailyDetail(day: DailyConditions, s: NimbusSettings) {
             modifier = Modifier.padding(bottom = 8.dp),
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 DetailMini(Icons.Filled.WaterDrop, "Precip", if (day.precipitationSum != null) WeatherFormatter.formatPrecipitation(day.precipitationSum, s) else "0.0")
                 Spacer(Modifier.height(6.dp))
                 day.precipitationHours?.let {
@@ -533,7 +566,7 @@ private fun DailyDetail(day: DailyConditions, s: NimbusSettings) {
                     DetailMini(Icons.Filled.Air, "Gusts", WeatherFormatter.formatWindSpeed(it, s))
                 }
             }
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 DetailMini(Icons.Outlined.WbSunny, "Sunrise", WeatherFormatter.formatTime(day.sunrise, s))
                 Spacer(Modifier.height(6.dp))
                 DetailMini(Icons.Outlined.WbTwilight, "Sunset", WeatherFormatter.formatTime(day.sunset, s))
@@ -542,7 +575,7 @@ private fun DailyDetail(day: DailyConditions, s: NimbusSettings) {
                     DetailMini(Icons.Outlined.WbSunny, "Sunshine", WeatherFormatter.formatSunshineDuration(it))
                 }
             }
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 DetailMini(Icons.Outlined.WbSunny, "UV Max", day.uvIndexMax?.let { WeatherFormatter.formatUvIndex(it) } ?: "--")
                 day.snowfallSum?.let {
                     if (it > 0) {
@@ -634,4 +667,24 @@ private fun windArrowChar(degrees: Int): String = when {
     degrees < 293 -> "\u2192"
     degrees < 338 -> "\u2198"
     else -> "\u2193"
+}
+
+private fun dailyHeaderSummary(
+    daily: List<DailyConditions>,
+    referenceDate: java.time.LocalDate?,
+    settings: NimbusSettings,
+): String {
+    if (daily.isEmpty()) return "Daily forecast details will appear here when new forecast data arrives."
+
+    val warmest = daily.maxByOrNull { it.temperatureHigh }
+    val wettest = daily.maxByOrNull { it.precipitationProbability }
+    val warmestLabel = warmest?.let { WeatherFormatter.formatRelativeDayLabel(it.date, referenceDate) } ?: "later"
+    val warmestTemp = warmest?.let { WeatherFormatter.formatTemperature(it.temperatureHigh, settings) } ?: "--"
+
+    return if ((wettest?.precipitationProbability ?: 0) >= 40) {
+        val wettestLabel = WeatherFormatter.formatRelativeDayLabel(wettest!!.date, referenceDate)
+        "Warmest around $warmestLabel at $warmestTemp. Rain risk peaks $wettestLabel."
+    } else {
+        "Warmest around $warmestLabel at $warmestTemp. The week looks fairly steady overall."
+    }
 }

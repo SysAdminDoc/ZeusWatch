@@ -204,7 +204,7 @@ fun ZeusWatchBottomNav(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .height(52.dp)
+                        .height(56.dp)
                         .clip(tabShape)
                         .background(
                             if (isSelected) {
@@ -237,6 +237,15 @@ fun ZeusWatchBottomNav(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
+                    if (isSelected) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(Color.White.copy(alpha = 0.95f)),
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
                     Icon(
                         tab.icon,
                         contentDescription = tab.label,
