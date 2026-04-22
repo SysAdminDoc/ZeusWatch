@@ -13,11 +13,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,9 +33,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusFogGray
@@ -75,6 +79,11 @@ fun HourlyForecastStrip(
 
     // Smart precipitation summary
     val precipSummary = remember(hourly) { precipitationSummary(hourly.take(12)) }
+    val forecastHours = remember(hourly, s.hourlyForecastHours) { hourly.take(s.hourlyForecastHours) }
+    val activeTab = tabs[selectedTab]
+    val headerSummary = remember(activeTab, forecastHours, referenceTime, s) {
+        hourlyHeaderSummary(activeTab, forecastHours, referenceTime, s)
+    }
 
     WeatherCard(
         title = "Hourly Forecast",
@@ -84,7 +93,8 @@ fun HourlyForecastStrip(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+                .horizontalScroll(rememberScrollState())
+                .selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             tabs.forEachIndexed { index, tab ->
@@ -98,22 +108,29 @@ fun HourlyForecastStrip(
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        Text(
+            text = headerSummary,
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+        )
+
         if (precipSummary != null && selectedTab == HourlyTrendTab.PRECIPITATION.ordinal) {
             Text(
                 text = precipSummary,
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusRainBlue,
-                modifier = Modifier.padding(bottom = 10.dp),
+                modifier = Modifier.padding(top = 8.dp, bottom = 10.dp),
             )
+        } else {
+            Spacer(modifier = Modifier.height(10.dp))
         }
 
-        val activeTab = tabs[selectedTab]
         LazyRow(
             contentPadding = PaddingValues(horizontal = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             itemsIndexed(
-                items = hourly.take(s.hourlyForecastHours),
+                items = forecastHours,
                 key = { _, item -> item.time },
                 contentType = { _, _ -> activeTab.name },
             ) { index, hour ->
@@ -139,11 +156,12 @@ private fun TrendTabChip(
     val shape = RoundedCornerShape(16.dp)
     Text(
         text = label,
-        style = MaterialTheme.typography.labelSmall.copy(
+        style = MaterialTheme.typography.labelMedium.copy(
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
         ),
         color = if (isSelected) NimbusBlueAccent else NimbusTextTertiary,
         modifier = Modifier
+            .height(40.dp)
             .clip(shape)
             .background(
                 if (isSelected) NimbusBlueAccent.copy(alpha = 0.15f)
@@ -155,8 +173,12 @@ private fun TrendTabChip(
                 else Color.Transparent,
                 shape,
             )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .selectable(
+                selected = isSelected,
+                onClick = onClick,
+                role = Role.Tab,
+            )
+            .padding(horizontal = 14.dp, vertical = 10.dp),
     )
 }
 
@@ -190,11 +212,11 @@ private fun HourlyItemShell(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .width(74.dp)
+            .width(82.dp)
             .clip(shape)
             .background(cardBrush)
             .border(1.dp, if (highlighted) NimbusBlueAccent.copy(alpha = 0.55f) else NimbusCardBorder, shape)
-            .padding(horizontal = 10.dp, vertical = 12.dp),
+            .padding(horizontal = 10.dp, vertical = 14.dp),
     ) {
         Text(
             text = WeatherFormatter.formatRelativeHourLabel(hour.time, referenceTime, s),
@@ -490,5 +512,55 @@ private fun precipitationSummary(hours: List<HourlyConditions>): String? {
         }
         firstRainIdx > 8 -> "Rain possible later today"
         else -> null
+    }
+}
+
+private fun hourlyHeaderSummary(
+    activeTab: HourlyTrendTab,
+    hours: List<HourlyConditions>,
+    referenceTime: java.time.LocalDateTime?,
+    settings: NimbusSettings,
+): String {
+    if (hours.isEmpty()) return "Hourly details will appear here when new forecast data arrives."
+
+    return when (activeTab) {
+        HourlyTrendTab.TEMPERATURE -> {
+            val min = hours.minOf { it.temperature }
+            val max = hours.maxOf { it.temperature }
+            "Temperatures range from ${WeatherFormatter.formatTemperature(min, settings)} to ${WeatherFormatter.formatTemperature(max, settings)} over the next ${hours.size} hours."
+        }
+        HourlyTrendTab.FEELS_LIKE -> {
+            val maxGap = hours.maxOfOrNull { kotlin.math.abs((it.feelsLike ?: it.temperature) - it.temperature) } ?: 0.0
+            if (maxGap >= 3) {
+                "Feels-like swings run about ${kotlin.math.round(maxGap).toInt()}° away from the air temperature at their strongest."
+            } else {
+                "Feels-like temperatures stay close to the actual air temperature for most of this stretch."
+            }
+        }
+        HourlyTrendTab.WIND -> {
+            val peakWind = hours.maxOfOrNull { it.windSpeed ?: 0.0 } ?: 0.0
+            val peakGust = hours.maxOfOrNull { it.windGusts ?: 0.0 } ?: 0.0
+            if (peakGust > peakWind) {
+                "Peak winds reach ${WeatherFormatter.formatWindSpeed(peakWind, settings)} with gusts up to ${WeatherFormatter.formatWindSpeed(peakGust, settings)}."
+            } else {
+                "Peak winds top out around ${WeatherFormatter.formatWindSpeed(peakWind, settings)}."
+            }
+        }
+        HourlyTrendTab.PRECIPITATION -> precipitationSummary(hours.take(12))
+            ?: "Rain risk stays fairly low through this window."
+        HourlyTrendTab.CLOUD_COVER -> {
+            val avgCloud = hours.mapNotNull { it.cloudCover }.average().takeIf { !it.isNaN() } ?: 0.0
+            when {
+                avgCloud < 20 -> "Mostly clear skies dominate this stretch."
+                avgCloud < 50 -> "Skies stay partly cloudy for much of this stretch."
+                avgCloud < 75 -> "Cloud cover stays elevated for a good part of the day."
+                else -> "Expect mostly overcast skies through this stretch."
+            }
+        }
+        HourlyTrendTab.HUMIDITY -> {
+            val minHumidity = hours.minOfOrNull { it.humidity ?: 0 } ?: 0
+            val maxHumidity = hours.maxOfOrNull { it.humidity ?: 0 } ?: 0
+            "Humidity runs between $minHumidity% and $maxHumidity% over the next ${hours.size} hours."
+        }
     }
 }

@@ -17,8 +17,8 @@ android {
         applicationId = "com.sysadmindoc.nimbus.wear"
         minSdk = 30
         targetSdk = 35
-        versionCode = 53
-        versionName = "1.14.0"
+        versionCode = 54
+        versionName = "1.15.0"
     }
 
     signingConfigs {

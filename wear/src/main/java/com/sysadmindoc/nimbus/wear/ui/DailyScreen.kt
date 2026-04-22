@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.wear.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,7 +12,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -18,14 +19,9 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.Text
 import com.sysadmindoc.nimbus.wear.data.WearDailyEntry
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
-
-private val TextPrimary = Color(0xFFF0F0F5)
-private val TextSecondary = Color(0xFFB0B8CC)
-private val TextTertiary = Color(0xFF7A839E)
 
 @Composable
 fun DailyScreen(
@@ -35,31 +31,30 @@ fun DailyScreen(
     val listState = rememberScalingLazyListState()
 
     if (daily.isEmpty()) {
-        Text(
-            text = "No forecast data",
-            fontSize = 13.sp,
-            color = TextSecondary,
-            textAlign = TextAlign.Center,
+        Box(
             modifier = modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 48.dp),
-        )
+                .background(WearBackground),
+            contentAlignment = Alignment.Center,
+        ) {
+            WearStateCard(
+                title = "No daily forecast",
+                message = "Daily outlook will appear after the next phone sync.",
+                icon = "\uD83D\uDCC5",
+                modifier = Modifier.padding(horizontal = 18.dp),
+            )
+        }
         return
     }
 
     ScalingLazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .background(WearBackground),
         state = listState,
     ) {
         item {
-            ListHeader {
-                Text(
-                    "7-Day Forecast",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
-                )
-            }
+            WearHeader(title = "7-Day Forecast", subtitle = "High, low, and rain risk at a glance")
         }
         items(daily) { entry ->
             DailyRow(entry)
@@ -69,56 +64,44 @@ fun DailyScreen(
 
 @Composable
 private fun DailyRow(entry: WearDailyEntry) {
-    Row(
+    WearPanel(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        // Day label
-        Text(
-            text = formatDay(entry.date),
-            fontSize = 13.sp,
-            color = TextSecondary,
-            modifier = Modifier.width(40.dp),
-        )
-
-        // Weather emoji
-        Text(
-            text = WearWeatherRepository.wmoEmoji(entry.weatherCode),
-            fontSize = 16.sp,
-        )
-
-        Spacer(Modifier.width(4.dp))
-
-        // High
-        Text(
-            text = "${entry.high}\u00B0",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = TextPrimary,
-            modifier = Modifier.width(32.dp),
-            textAlign = TextAlign.End,
-        )
-
-        // Low
-        Text(
-            text = "${entry.low}\u00B0",
-            fontSize = 13.sp,
-            color = TextTertiary,
-            modifier = Modifier.width(32.dp),
-            textAlign = TextAlign.End,
-        )
-
-        // Precip chance
-        Text(
-            text = "${entry.precipChance}%",
-            fontSize = 11.sp,
-            color = TextTertiary,
-            modifier = Modifier.width(30.dp),
-            textAlign = TextAlign.End,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = formatDay(entry.date),
+                fontSize = 12.sp,
+                color = WearTextSecondary,
+                modifier = Modifier.width(44.dp),
+            )
+            Text(
+                text = WearWeatherRepository.wmoEmoji(entry.weatherCode),
+                fontSize = 16.sp,
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = "${entry.high}\u00B0",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = WearTextPrimary,
+                modifier = Modifier.width(34.dp),
+                textAlign = TextAlign.End,
+            )
+            Text(
+                text = "${entry.low}\u00B0",
+                fontSize = 12.sp,
+                color = WearTextTertiary,
+                modifier = Modifier.width(34.dp),
+                textAlign = TextAlign.End,
+            )
+            WearMiniPill(text = "${entry.precipChance}%", accent = WearBlueAccent)
+        }
     }
 }
 
