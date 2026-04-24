@@ -1,0 +1,42 @@
+version: 2
+
+# Weekly automated dependency scans. PRs land on `develop` by default (or
+# main if develop isn't present) so they can be batched into release cycles
+# rather than fragmenting main. Security-only updates for the CI actions so
+# workflow churn stays low.
+
+updates:
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "automated"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    ignore:
+      # AGP / Kotlin / Compose compiler / KSP are updated in lock-step by
+      # hand — pinning prevents Dependabot from stalling the queue with
+      # single-component bumps that would break KSP compatibility.
+      - dependency-name: "com.android.application"
+      - dependency-name: "org.jetbrains.kotlin:kotlin-gradle-plugin"
+      - dependency-name: "org.jetbrains.kotlin.plugin.compose"
+      - dependency-name: "com.google.devtools.ksp"
+      # Hilt KSP variant must match Dagger; bumped together in a version
+      # catalog update rather than a single PR.
+      - dependency-name: "com.google.dagger.hilt.android"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "ci"
+      - "automated"
