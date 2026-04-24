@@ -31,6 +31,7 @@ class WeatherSourceManager @Inject constructor(
     private val pirateWeatherAdapter: PirateWeatherForecastAdapter,
     private val brightSkyForecastAdapter: BrightSkyForecastAdapter,
     private val brightSkyAlertAdapter: BrightSkyAlertAdapter,
+    private val metNorwayForecastAdapter: MetNorwayForecastAdapter,
 ) {
 
     // ── Forecast ────────────────────────────────────────────────────────
@@ -68,6 +69,7 @@ class WeatherSourceManager @Inject constructor(
         WeatherSourceProvider.OPEN_WEATHER_MAP -> owmForecastAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.PIRATE_WEATHER -> pirateWeatherAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.BRIGHT_SKY -> brightSkyForecastAdapter.getWeather(latitude, longitude, locationName)
+        WeatherSourceProvider.MET_NORWAY -> metNorwayForecastAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.ENVIRONMENT_CANADA -> stubResult("Environment Canada forecast")
         else -> Result.failure(UnsupportedOperationException("${provider.displayName} does not support forecasts"))
     }
