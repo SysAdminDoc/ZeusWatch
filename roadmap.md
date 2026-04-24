@@ -20,48 +20,32 @@
 
 ### HIGH PRIORITY
 
-- **Missing ProGuard rule for Gemini Nano (`com.google.ai.edge.aicore`)**  
-  `app/proguard-rules.pro` has no `-keep` rule for the AI Core library used in standard flavor (`app/build.gradle.kts:162`). R8 will strip or obfuscate classes needed at runtime. Standard release builds will crash when invoking `GeminiNanoSummaryEngine`. Fix: add `-keep class com.google.ai.edge.** { *; }` and `-dontwarn com.google.ai.edge.**`.
+- **[OPEN] Environment Canada forecast adapter is stubbed**  
+  `WeatherSourceManager` returns `NotImplementedError` for Environment Canada forecast requests (line 71). Only the alert adapter (`EnvironmentCanadaAlertAdapter.kt`) is functional. Canadian users who select Environment Canada as primary source get no forecast data. Deferred from v1.16.0 — requires full `citypageweather-realtime` GeoJSON parsing + forecast/hourly mapping; planned for v1.17.0.
 
-- **No production crash reporting**  
-  Crashlytics was explicitly removed in v1.5.0. Firebase Firestore is already a standard-flavor dependency (`firebase-bom:33.7.0`), so the infrastructure exists — Crashlytics just needs re-adding. Without it, production crashes are invisible. Only `Log.d`/`Log.e` statements exist, which are stripped from release builds by ProGuard. Consider: `firebase-crashlytics` for standard, no-op for freenet.
-
-- **`showYesterdayComparison` setting is not wired to rendering**  
-  The toggle exists in `UserPreferences` (line 348) and renders in `SettingsScreen` (line 675), but `MainScreen.kt:654` passes `state.yesterdayHigh` to `CurrentConditionsHeader` unconditionally. The component renders the comparison based on `yesterdayHigh != null`, never checking the boolean preference. The setting has no effect.
-
-- **Environment Canada forecast adapter is stubbed**  
-  `WeatherSourceManager` returns `NotImplementedError` for Environment Canada forecast requests (line 71). Only the alert adapter (`EnvironmentCanadaAlertAdapter.kt`) is functional. Canadian users who select Environment Canada as primary source get no forecast data.
-
-- **No API rate-limit awareness**  
-  5 background workers fire at 15–60 min intervals. Open-Meteo is permissive but OWM free tier allows only 1,000 calls/day. No response header parsing (`X-RateLimit-Remaining`), no client-side throttle, no backoff on 429 responses. Heavy multi-location usage could silently exhaust quotas.
+- [CLOSED v1.16.0] ~~Missing ProGuard rule for Gemini Nano~~ — added `-keep class com.google.ai.edge.**` + `-dontwarn` in `app/proguard-rules.pro`.
+- [CLOSED v1.16.0] ~~No production crash reporting~~ — ACRA 5.13.1 (GMS-free, both flavors) with consent-gated mail sender + PII redaction. Replaces the Crashlytics path dropped in v1.5.0.
+- [CLOSED v1.16.0] ~~`showYesterdayComparison` setting is not wired~~ — `MainScreen` now passes `null` when the preference is off.
+- [CLOSED v1.16.0] ~~No API rate-limit awareness~~ — `RateLimitInterceptor` (GCRA token bucket + `Retry-After` single retry + fail-fast cap) wired onto OWM / OWM-AQI / Pirate Weather at rates sized to free tiers. OkHttp retry also covers 5xx with exponential backoff.
 
 ---
 
 ### MEDIUM PRIORITY
 
-- **Zero localization support**  
+- **[OPEN] Zero localization support**  
   No `values-*/strings.xml` locale variants exist. Only 10 `stringResource()`/`getString()` calls across 157 source files — all other user-facing text is hardcoded in Kotlin. Extracting strings retroactively across 28 card types, 17 settings sections, 5 screens, and 4 widget types is a significant effort that compounds with each new feature.
 
-- **Accessibility gaps on Canvas-drawn elements**  
+- **[OPEN] Accessibility gaps on Canvas-drawn elements**  
   65 `contentDescription` usages across 27 files is decent, but Canvas-drawn graphics (temperature graph, moon phase arc, sun ephemeris arc, AQI gauge, pressure trend, wind trend, cloud cover bars, visibility scale) lack semantic descriptions for screen readers. `semantics`/`liveRegion` only appear in 5 files. No automated a11y testing in CI.
 
-- **CI/CD does not build Wear OS module**  
-  `build.yml` and `release.yml` only build `app/` module (`assembleStandardDebug`, `assembleFreenetDebug`). The `wear/` module is never built or tested in CI. Wear regressions are caught only during local builds.
+- **[OPEN] No certificate pinning on API endpoints**  
+  `network_security_config.xml` uses system trust anchors only. Acceptable for public weather APIs, but if OWM/Pirate Weather API keys are user-supplied, a MITM proxy on untrusted networks could intercept them. Consider pinning for endpoints that transmit API keys. (v1.16.0 mitigated the related risk of keys leaking to logcat via the redacting logger.)
 
-- **CI release workflow builds debug APKs, not release**  
-  `release.yml` (triggered on `v*` tags) runs `assembleStandardDebug` and `assembleFreenetDebug` — not release variants. The `build.yml` release job builds unsigned release APKs (no keystore in CI). Neither workflow produces signed release artifacts suitable for distribution.
-
-- **No static analysis beyond Android Lint**  
-  CI runs `lintStandardDebug` only. No Detekt (Kotlin static analysis), no ktlint (formatting), no dependency vulnerability scanning (e.g., Dependabot, OWASP dependency-check). Lint alone misses Kotlin-specific code smells, complexity warnings, and security patterns.
-
-- **Room `exportSchema = false` prevents migration validation**  
-  `NimbusDatabase` (line 5) disables schema export. This means Room cannot validate migration correctness at compile time. If a future migration (v2 -> v3) is needed, there's no JSON schema to diff against. Re-enabling `exportSchema = true` and committing `schemas/` to the repo is a low-cost safety net.
-
-- **No certificate pinning on API endpoints**  
-  `network_security_config.xml` uses system trust anchors only. Acceptable for public weather APIs, but if OWM/Pirate Weather API keys are user-supplied, a MITM proxy on untrusted networks could intercept them. Consider pinning for endpoints that transmit API keys.
-
-- **Wear OS has no error recovery UI for sync failures**  
-  If `WeatherDataListenerService.onDataChanged()` throws (caught and logged), the watch shows stale data with no user-visible indication of sync failure. No "Last synced X min ago" indicator exists on watch screens. The 30-minute TTL silently expires and the watch falls back to direct API, but the user has no visibility into why data might be outdated.
+- [CLOSED v1.16.0] ~~CI/CD does not build Wear OS module~~ — `build.yml` now compiles + tests the wear module on every push; `release.yml` builds wear release variants.
+- [CLOSED v1.16.0] ~~CI release workflow builds debug APKs~~ — `release.yml` now builds `assembleStandardRelease` / `assembleFreenetRelease` / `wear:assembleRelease`, reconstructs signing credentials from GitHub secrets, and uploads renamed APKs per variant to the matching Release.
+- [CLOSED v1.16.0] ~~No static analysis beyond Android Lint~~ — Detekt 1.23.8 with baseline mode wired into `build.yml` + Gradle root `detekt` task. Dependabot (weekly Gradle, monthly Actions).
+- [CLOSED v1.16.0] ~~Room `exportSchema = false`~~ — flipped to `true` with output routed to `app/schemas/` via KSP arg; baseline schema checked in.
+- [CLOSED v1.16.0] ~~Wear OS has no error recovery UI for sync failures~~ — CurrentScreen renders a footer pill showing data source ("Phone" vs "Watch") + freshness ("4m ago") and taps to force a re-sync through `WearWeatherViewModel.loadWeather()`.
 
 ---
 
@@ -85,8 +69,8 @@
 - **Freenet flavor cannot sync to Wear OS at all**  
   `WearSyncManager` is a no-op in `freenet`. F-Droid users with a Wear OS watch get zero phone-to-watch sync. The watch falls back to direct API calls, which works but defeats the efficiency gain. Consider a non-GMS sync mechanism (Bluetooth serial, companion device manager) for freenet.
 
-- **No deep link handling for weather alerts**  
-  `zeuswatch://` scheme supports location and radar deep links, but notification taps for alerts/nowcast/health/custom don't deep link to the relevant screen — they open `MainActivity` at the default tab. Tapping a migraine alert should navigate to the health detail card.
+- **[PARTIAL] Deep link handling for notifications**  
+  v1.16.0 routed custom-rule notification taps to `Routes.CUSTOM_ALERTS` via `zeuswatch://custom_alerts`. Severe alert, health, and nowcast taps still land on the default tab (main screen) — could still deep-link to the specific card that triggered.
 
 ---
 
@@ -104,8 +88,7 @@
 - **Widget interaction: tap-to-refresh**  
   Widgets currently only refresh on the WorkManager schedule. Adding a tap-to-refresh action (via `GlanceAppWidget` action callback) would let users force-update without opening the app.
 
-- **Notification grouping**  
-  4 notification channels can fire independently (alerts, health, nowcast, custom). When multiple triggers fire simultaneously, notifications stack ungrouped. `NotificationCompat.Builder.setGroup()` with a summary notification would clean up the shade.
+- [CLOSED v1.16.0] ~~Notification grouping~~ — nowcast + health + custom-rule notifications now share `AMBIENT_GROUP_ID` with a group-summary row; severe alerts keep their existing severity group.
 
 - **Offline-first architecture for saved locations**  
   Currently, switching to a saved location triggers a fresh API call. Caching the last-known weather per saved location (Room, keyed by location ID) would allow instant location switching with a background refresh — better perceived performance.
