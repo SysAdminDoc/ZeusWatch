@@ -42,6 +42,10 @@ enum class WeatherSourceProvider(
         displayName = "Bright Sky (DWD)",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.ALERTS),
     ),
+    MET_NORWAY(
+        displayName = "MET Norway",
+        supportedTypes = setOf(WeatherDataType.FORECAST),
+    ),
     ENVIRONMENT_CANADA(
         displayName = "Environment Canada",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.ALERTS),

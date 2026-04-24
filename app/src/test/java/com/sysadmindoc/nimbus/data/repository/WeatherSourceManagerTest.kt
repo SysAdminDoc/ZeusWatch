@@ -24,6 +24,7 @@ class WeatherSourceManagerTest {
     private lateinit var pirateWeatherAdapter: PirateWeatherForecastAdapter
     private lateinit var brightSkyForecastAdapter: BrightSkyForecastAdapter
     private lateinit var brightSkyAlertAdapter: BrightSkyAlertAdapter
+    private lateinit var metNorwayForecastAdapter: MetNorwayForecastAdapter
     private lateinit var manager: WeatherSourceManager
 
     private val testWeatherData = WeatherData(
@@ -64,6 +65,7 @@ class WeatherSourceManagerTest {
         pirateWeatherAdapter = mockk()
         brightSkyForecastAdapter = mockk()
         brightSkyAlertAdapter = mockk()
+        metNorwayForecastAdapter = mockk()
         every { prefs.settings } returns flowOf(defaultSettings)
         manager = WeatherSourceManager(
             prefs = prefs,
@@ -77,6 +79,7 @@ class WeatherSourceManagerTest {
             pirateWeatherAdapter = pirateWeatherAdapter,
             brightSkyForecastAdapter = brightSkyForecastAdapter,
             brightSkyAlertAdapter = brightSkyAlertAdapter,
+            metNorwayForecastAdapter = metNorwayForecastAdapter,
         )
     }
 
