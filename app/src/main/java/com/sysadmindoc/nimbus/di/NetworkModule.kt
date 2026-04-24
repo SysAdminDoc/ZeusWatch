@@ -19,6 +19,7 @@ import com.sysadmindoc.nimbus.data.api.OpenMeteoArchiveApi
 import com.sysadmindoc.nimbus.data.api.OpenWeatherMapApi
 import com.sysadmindoc.nimbus.data.api.PirateWeatherApi
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
+import com.sysadmindoc.nimbus.data.api.RateLimitInterceptor
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -34,6 +35,25 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.inject.Singleton
 
+/**
+ * Redacts OWM/Pirate-Weather API keys from logcat output so debug builds
+ * don't leak user-supplied credentials in screen recordings or bug reports.
+ *
+ * Lookbehind with alternation has historically been brittle in the JVM
+ * regex engine, so we capture the leading `?name=` / `&name=` as group 1
+ * and rewrite the value with a back-reference.
+ */
+private val REDACT_REGEX = Regex(
+    "([?&](?:appid|apikey|api_key|key)=)[^&\\s]+",
+    RegexOption.IGNORE_CASE,
+)
+
+private object ApiKeyRedactingLogger : HttpLoggingInterceptor.Logger {
+    override fun log(message: String) {
+        android.util.Log.d("OkHttp", REDACT_REGEX.replace(message, "$1***"))
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
@@ -44,23 +64,36 @@ object NetworkModule {
         coerceInputValues = true
     }
 
-    /** Retry interceptor: retries on IOException up to 2 times with exponential backoff. */
+    /**
+     * Retry interceptor: retries on IOException or transient 5xx up to 2 times
+     * with exponential backoff (1s, 2s). Runs on OkHttp's dispatcher thread —
+     * `Thread.sleep` is acceptable there (it is not a coroutine context), but
+     * we always pipe the backoff through an interruptible wait so a cancelled
+     * request tears down promptly instead of pinning the thread.
+     *
+     * 429 rate-limit responses are *not* retried here; [RateLimitInterceptor]
+     * handles those with a single `Retry-After`-honoring retry.
+     */
     private val retryInterceptor = Interceptor { chain ->
         val request = chain.request()
         var lastException: IOException? = null
         for (attempt in 0..2) {
             try {
-                return@Interceptor chain.proceed(request)
+                val response = chain.proceed(request)
+                if (response.code in 500..599 && attempt < 2) {
+                    response.close()
+                } else {
+                    return@Interceptor response
+                }
             } catch (e: IOException) {
                 lastException = e
-                if (attempt < 2) {
-                    try {
-                        Thread.sleep(1000L * (1 shl attempt)) // 1s, 2s
-                    } catch (interrupted: InterruptedException) {
-                        Thread.currentThread().interrupt()
-                        throw IOException("Retry interrupted", interrupted)
-                    }
-                }
+                if (attempt >= 2) throw e
+            }
+            try {
+                Thread.sleep(1_000L * (1 shl attempt)) // 1s, 2s
+            } catch (interrupted: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw IOException("Retry interrupted", interrupted)
             }
         }
         throw lastException ?: IOException("Request failed after retries")
@@ -76,9 +109,14 @@ object NetworkModule {
             .addInterceptor(retryInterceptor)
             .apply {
                 if (BuildConfig.DEBUG) {
+                    // OkHttp 4.x's HttpLoggingInterceptor doesn't support query-param
+                    // redaction, so we route log output through a custom Logger that
+                    // scrubs user-supplied API keys (OWM ?appid=, Pirate Weather
+                    // ?apikey=) before they hit logcat.
                     addInterceptor(
-                        HttpLoggingInterceptor().apply {
+                        HttpLoggingInterceptor(ApiKeyRedactingLogger).apply {
                             level = HttpLoggingInterceptor.Level.BASIC
+                            redactHeader("Authorization")
                         }
                     )
                 }
@@ -274,9 +312,13 @@ object NetworkModule {
     @Singleton
     @Named("owm")
     fun provideOwmRetrofit(client: OkHttpClient): Retrofit {
+        // OWM free tier: 60 calls/min, 1M/month. Cap at ~1 req/s with burst 5.
+        val owmClient = client.newBuilder()
+            .addInterceptor(RateLimitInterceptor("openweathermap", rate = 1.0, burst = 5))
+            .build()
         return Retrofit.Builder()
             .baseUrl(OpenWeatherMapApi.BASE_URL)
-            .client(client)
+            .client(owmClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
     }
@@ -292,9 +334,12 @@ object NetworkModule {
     @Singleton
     @Named("owm_aqi")
     fun provideOwmAqiRetrofit(client: OkHttpClient): Retrofit {
+        val owmAqiClient = client.newBuilder()
+            .addInterceptor(RateLimitInterceptor("openweathermap-aqi", rate = 1.0, burst = 5))
+            .build()
         return Retrofit.Builder()
             .baseUrl(OpenWeatherMapApi.AIR_POLLUTION_BASE_URL)
-            .client(client)
+            .client(owmAqiClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
     }
@@ -312,9 +357,15 @@ object NetworkModule {
     @Singleton
     @Named("pirateweather")
     fun providePirateWeatherRetrofit(client: OkHttpClient): Retrofit {
+        // Pirate Weather free tier: ~10,000 calls/month ≈ 14/hour — keep a
+        // conservative per-second cap so widget refresh + main screen burst
+        // doesn't eat the hourly budget on rapid location switches.
+        val pwClient = client.newBuilder()
+            .addInterceptor(RateLimitInterceptor("pirateweather", rate = 0.5, burst = 4))
+            .build()
         return Retrofit.Builder()
             .baseUrl(PirateWeatherApi.BASE_URL)
-            .client(client)
+            .client(pwClient)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
     }
