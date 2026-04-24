@@ -117,6 +117,11 @@ class UserPreferencesTest {
 
     @Test
     fun sourceConfigNormalizedFallsBackFromUnsupportedPrimarySelections() {
+        // Pirate Weather doesn't support alerts; NWS doesn't support
+        // air quality; OpenWeatherMap doesn't support minutely — all
+        // three should normalize back to their safe defaults. ECCC
+        // forecasts are now implemented, so the forecast primary is
+        // allowed to remain ECCC.
         val normalized = SourceConfig(
             forecast = WeatherSourceProvider.ENVIRONMENT_CANADA,
             alerts = WeatherSourceProvider.PIRATE_WEATHER,
@@ -124,14 +129,16 @@ class UserPreferencesTest {
             minutely = WeatherSourceProvider.OPEN_WEATHER_MAP,
         ).normalized()
 
-        assertEquals(WeatherSourceProvider.OPEN_METEO, normalized.forecast)
+        assertEquals(WeatherSourceProvider.ENVIRONMENT_CANADA, normalized.forecast)
         assertEquals(WeatherSourceProvider.NWS, normalized.alerts)
         assertEquals(WeatherSourceProvider.OPEN_METEO, normalized.airQuality)
         assertEquals(WeatherSourceProvider.OPEN_METEO, normalized.minutely)
     }
 
     @Test
-    fun sourceConfigNormalizedClearsUnsupportedOrDuplicateFallbacks() {
+    fun sourceConfigNormalizedClearsDuplicateFallbacks() {
+        // Duplicate primary/fallback still clears the fallback; ECCC as
+        // a forecastFallback is now a valid selection so it's kept.
         val normalized = SourceConfig(
             forecast = WeatherSourceProvider.OPEN_METEO,
             forecastFallback = WeatherSourceProvider.ENVIRONMENT_CANADA,
@@ -139,7 +146,10 @@ class UserPreferencesTest {
             alertsFallback = WeatherSourceProvider.NWS,
         ).normalized()
 
-        assertNull(normalized.forecastFallback)
+        assertEquals(
+            WeatherSourceProvider.ENVIRONMENT_CANADA,
+            normalized.forecastFallback,
+        )
         assertNull(normalized.alertsFallback)
     }
 

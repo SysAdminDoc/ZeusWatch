@@ -8,6 +8,7 @@ import com.sysadmindoc.nimbus.data.api.ApiCertificatePins
 import com.sysadmindoc.nimbus.data.api.BrightSkyApi
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertAdapter
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertApi
+import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaForecastApi
 import com.sysadmindoc.nimbus.data.api.GeocodingApi
 import com.sysadmindoc.nimbus.data.api.JmaAlertAdapter
 import com.sysadmindoc.nimbus.data.api.JmaAlertApi
@@ -295,6 +296,31 @@ object NetworkModule {
     @Singleton
     fun provideEnvironmentCanadaAlertApi(@Named("eccc") retrofit: Retrofit): EnvironmentCanadaAlertApi {
         return retrofit.create(EnvironmentCanadaAlertApi::class.java)
+    }
+
+    /**
+     * ECCC forecast API lives at a different host
+     * (api.weather.gc.ca vs. weather.gc.ca for alerts), so a separate
+     * Retrofit instance is required. Both are keyless, both honour the
+     * global User-Agent + retry interceptors.
+     */
+    @Provides
+    @Singleton
+    @Named("eccc_forecast")
+    fun provideEnvironmentCanadaForecastRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(EnvironmentCanadaForecastApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideEnvironmentCanadaForecastApi(
+        @Named("eccc_forecast") retrofit: Retrofit,
+    ): EnvironmentCanadaForecastApi {
+        return retrofit.create(EnvironmentCanadaForecastApi::class.java)
     }
 
     @Provides
