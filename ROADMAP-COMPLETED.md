@@ -17,3 +17,7 @@
 | v1.12.0 | Health alert system — real barometric pressure, migraine/respiratory/arthritis triggers, HealthAlertWorker | — |
 | v1.13.0 | Wear OS DataLayer sync — phone-to-watch push, SyncedWeatherStore, tile/complication prefer synced data | — |
 | v1.14.0 | Wear OS alerts/daily/AQI — AlertsScreen, DailyScreen, alert banner, AQI chip, background sync via WidgetRefreshWorker | — |
+| v1.14.1 | Engineering audit round 1 — 10 bugs across 9 files (visibility unit mismatch, Set ordering, CAS lambda side effects, BrightSky UTC, Mercator clamp, notif ID collisions, null humidity, recomposition storm) | 2026-04-17 |
+| v1.14.2 | Engineering audit round 2 — 4 bugs across 2 files (WeatherSummaryEngine timezone greetings, wind band, precip labels, OnThisDay Feb 29 crash) | 2026-04-17 |
+| v1.15.0 | UI modernization — shared chrome layer (`NimbusChrome.kt` + `WearChrome.kt` + `WidgetTheme.kt`) collapses ~1400 lines across 6 screens + 11 components + 4 wear screens + 4 widgets | 2026-04-22 |
+| v1.16.0 | Resilience + audit-closure pass — ACRA crash reporting (GMS-free, both flavors), RateLimitInterceptor (GCRA + Retry-After + 5xx retry), API-key debug-log redaction, Wear sync freshness indicator + refresh hint, Gemini Nano R8 keep rule, Room schema export, showYesterdayComparison wiring, ambient notification grouping + custom-rule deep link, CI wear module + release variants + Detekt, Dependabot | 2026-04-24 |
