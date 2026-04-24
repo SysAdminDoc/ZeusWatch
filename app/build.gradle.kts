@@ -7,7 +7,14 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
-    id("com.google.gms.google-services")
+}
+
+// `google-services.json` is gitignored, so the plugin can't run in CI without
+// secret restoration. Apply only when the file is present — local developers
+// keep Firebase working, CI without the file still builds a distributable APK
+// (Firestore community-reports dependency stays inert in that case).
+if (rootProject.file("app/google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 android {
