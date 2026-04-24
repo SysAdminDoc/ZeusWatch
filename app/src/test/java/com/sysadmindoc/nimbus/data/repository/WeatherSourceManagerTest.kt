@@ -25,6 +25,7 @@ class WeatherSourceManagerTest {
     private lateinit var brightSkyForecastAdapter: BrightSkyForecastAdapter
     private lateinit var brightSkyAlertAdapter: BrightSkyAlertAdapter
     private lateinit var metNorwayForecastAdapter: MetNorwayForecastAdapter
+    private lateinit var ecccForecastAdapter: EnvironmentCanadaForecastAdapter
     private lateinit var manager: WeatherSourceManager
 
     private val testWeatherData = WeatherData(
@@ -66,6 +67,7 @@ class WeatherSourceManagerTest {
         brightSkyForecastAdapter = mockk()
         brightSkyAlertAdapter = mockk()
         metNorwayForecastAdapter = mockk()
+        ecccForecastAdapter = mockk()
         every { prefs.settings } returns flowOf(defaultSettings)
         manager = WeatherSourceManager(
             prefs = prefs,
@@ -80,6 +82,7 @@ class WeatherSourceManagerTest {
             brightSkyForecastAdapter = brightSkyForecastAdapter,
             brightSkyAlertAdapter = brightSkyAlertAdapter,
             metNorwayForecastAdapter = metNorwayForecastAdapter,
+            ecccForecastAdapter = ecccForecastAdapter,
         )
     }
 
@@ -219,9 +222,13 @@ class WeatherSourceManagerTest {
         assertTrue("Pirate Weather should be present", forecastProviders.contains(WeatherSourceProvider.PIRATE_WEATHER))
         assertTrue("Bright Sky should be present", forecastProviders.contains(WeatherSourceProvider.BRIGHT_SKY))
         assertTrue("Open-Meteo should be present", forecastProviders.contains(WeatherSourceProvider.OPEN_METEO))
-        assertFalse(
-            "Environment Canada forecast should stay hidden until implemented",
-            forecastProviders.contains(WeatherSourceProvider.ENVIRONMENT_CANADA)
+        assertTrue(
+            "MET Norway should be present once implemented",
+            forecastProviders.contains(WeatherSourceProvider.MET_NORWAY),
+        )
+        assertTrue(
+            "Environment Canada forecast should be present once implemented",
+            forecastProviders.contains(WeatherSourceProvider.ENVIRONMENT_CANADA),
         )
     }
 
