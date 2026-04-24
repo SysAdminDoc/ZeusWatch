@@ -2,6 +2,25 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.16.0] - 2026-04-24 (in progress)
+
+### Added
+- **GMS-free crash reporting** — integrated ACRA (5.13.1) as the successor to the Crashlytics path removed in v1.5.0. Runs in both `standard` and `freenet` flavors: crashes do *not* auto-upload; ACRA opens a dialog offering to email a sanitized report (no PII, no API keys, no coordinates) so the freenet flavor remains F-Droid-compliant. Redaction patterns cover `.*apikey.*`, `.*api_key.*`, `.*owm_key.*`, `.*pirate_key.*`, `.*last_location.*`. Skipped in debug builds.
+- **Per-host rate limiter** — new `RateLimitInterceptor` (GCRA token bucket + `Retry-After`-aware single retry + fail-fast 429 above cap). Wired onto OpenWeatherMap, OpenWeatherMap AQI, and Pirate Weather OkHttp clients with conservative rate/burst settings sized to free-tier quotas. `Retry-After` is capped at 5s so a misconfigured server can't stall workers. Open-Meteo / Bright Sky / NWS / Environment Canada (free, high-quota) are unrate-limited.
+- **OkHttp retry now recovers 5xx** — previously only retried IOException; now also retries HTTP 500-599 responses once with exponential backoff. 429 is delegated to `RateLimitInterceptor`.
+- **API key redaction in debug logs** — custom `HttpLoggingInterceptor.Logger` scrubs `?appid=`, `?apikey=`, `?api_key=`, `?key=` values before they hit logcat so screen recordings of debug builds don't leak user-supplied OWM/Pirate Weather credentials.
+- **Wear OS sync freshness indicator** — CurrentScreen now shows a footer pill ("Phone • 4m ago • tap to refresh" / "Watch • just now • tap to refresh") so users can see whether the data came from the paired phone via DataLayer sync or from a direct API call, how stale it is, and tap to force a re-sync. Closes the roadmap "no error recovery UI for sync failures" gap.
+
+### Changed
+- **ProGuard: Gemini Nano `-keep` rule** — added `-keep class com.google.ai.edge.** { *; }` and matching `-dontwarn` block. Without this, R8 was stripping AI Core reflection targets and standard-flavor release builds would crash on first `GeminiNanoSummaryEngine` call. ACRA classes also now have explicit keep rules.
+- **Room schema export re-enabled** — `NimbusDatabase` now has `exportSchema = true` with output routed to `app/schemas/` via KSP. Migrations can now be diffed against committed baselines in code review and regression-tested.
+- **`showYesterdayComparison` setting is now honored** — the toggle existed in `UserPreferences` and `SettingsScreen` but `MainScreen` was passing `state.yesterdayHigh` to `CurrentConditionsHeader` unconditionally. The header now receives `null` when the preference is off, hiding the comparison.
+- **CI build expansion** — `build.yml` now compiles and uploads wear debug APKs, runs wear unit tests, and builds R8 release variants on main (catching shrinker regressions before release). `release.yml` rebuilds with proper release variants (not debug), reconstructs the signing keystore from GitHub secrets when present, produces `ZeusWatch-standard-*.apk` / `ZeusWatch-freenet-*.apk` / `ZeusWatch-wear-*.apk`, and uploads them to the GitHub Release tied to the pushed tag (or `workflow_dispatch` input).
+
+### Version
+- phone versionCode 78 → 79, versionName 1.15.0 → 1.16.0
+- wear versionCode 54 → 55, versionName 1.15.0 → 1.16.0
+
 ## [1.15.0] - 2026-04-22
 
 ### Changed
