@@ -49,7 +49,6 @@ enum class WeatherSourceProvider(
     ENVIRONMENT_CANADA(
         displayName = "Environment Canada",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.ALERTS),
-        implementedTypes = setOf(WeatherDataType.ALERTS),
     ),
     METEOALARM(
         displayName = "MeteoAlarm (EUMETNET)",
