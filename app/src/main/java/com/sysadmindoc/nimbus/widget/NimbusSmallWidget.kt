@@ -87,7 +87,11 @@ private fun SmallWidgetContent(data: WidgetWeatherData?) {
                     )
                 }
                 widgetUpdatedLabel(data.updatedAt)?.let { label ->
-                    WidgetPill(text = label)
+                    WidgetPill(
+                        text = label,
+                        onClick = widgetRefreshPillAction(),
+                        contentDescription = "Data updated $label ago. Tap to refresh now.",
+                    )
                 }
             }
 
