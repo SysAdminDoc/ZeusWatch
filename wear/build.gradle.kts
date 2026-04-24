@@ -21,17 +21,25 @@ android {
         versionName = "1.16.0"
     }
 
-    signingConfigs {
-        create("release") {
-            val props = Properties()
-            val propsFile = rootProject.file("local.properties")
-            if (propsFile.exists()) {
-                propsFile.inputStream().use { stream -> props.load(stream) }
+    // Same conditional-signing pattern as :app — absent keystore produces
+    // an unsigned APK instead of failing the build.
+    val releaseProps = Properties().apply {
+        val propsFile = rootProject.file("local.properties")
+        if (propsFile.exists()) {
+            propsFile.inputStream().use { load(it) }
+        }
+    }
+    val releaseKeystore = file(releaseProps.getProperty("RELEASE_STORE_FILE", "../zeuswatch.jks"))
+    val hasReleaseKeystore = releaseKeystore.exists()
+
+    if (hasReleaseKeystore) {
+        signingConfigs {
+            create("release") {
+                storeFile = releaseKeystore
+                storePassword = releaseProps.getProperty("RELEASE_STORE_PASSWORD", "")
+                keyAlias = releaseProps.getProperty("RELEASE_KEY_ALIAS", "")
+                keyPassword = releaseProps.getProperty("RELEASE_KEY_PASSWORD", "")
             }
-            storeFile = file(props.getProperty("RELEASE_STORE_FILE", "../zeuswatch.jks"))
-            storePassword = props.getProperty("RELEASE_STORE_PASSWORD", "")
-            keyAlias = props.getProperty("RELEASE_KEY_ALIAS", "")
-            keyPassword = props.getProperty("RELEASE_KEY_PASSWORD", "")
         }
     }
 
@@ -39,7 +47,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
