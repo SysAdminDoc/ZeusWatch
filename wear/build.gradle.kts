@@ -73,9 +73,9 @@ dependencies {
     // Wear OS Tiles
     implementation("androidx.wear.tiles:tiles:1.4.1")
     implementation("androidx.wear.tiles:tiles-material:1.4.1")
-    implementation("androidx.wear.protolayout:protolayout:1.2.1")
-    implementation("androidx.wear.protolayout:protolayout-material:1.2.1")
-    implementation("androidx.wear.protolayout:protolayout-expression:1.2.1")
+    implementation("androidx.wear.protolayout:protolayout:1.4.0")
+    implementation("androidx.wear.protolayout:protolayout-material:1.4.0")
+    implementation("androidx.wear.protolayout:protolayout-expression:1.4.0")
 
     // Complications
     implementation("androidx.wear.watchface:watchface-complications-data-source-ktx:1.2.1")
