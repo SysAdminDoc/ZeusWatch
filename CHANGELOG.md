@@ -2,6 +2,26 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.17.0] - 2026-04-24
+
+Provider expansion + security hardening + accessibility release. Closes the last HIGH-priority open roadmap item (Environment Canada forecast) and adds MET Norway as a new provider for uncontested Nordic coverage. All prior tests plus 20+ new test assertions pass.
+
+### Added
+- **MET Norway LocationForecast 2.0 as a forecast provider** — richest free weather API in the landscape, now selectable in Settings > Data Sources > Forecast. `MetNorwayForecastAdapter` consumes `/locationforecast/2.0/complete`, maps to `WeatherData` with m/s → km/h wind conversion, and extracts precipitation probability, thunder probability, UV index, gusts, dew point, and cloud-layer fractions (high/medium/low). `MetSymbolMapper` translates MET's `symbol_code` vocabulary (clearsky_day, rainandthunder, lightsleetshowers, etc.) into WMO codes, falling back to cloud-fraction classification when symbols are absent. Daily is aggregated from hourly because MET doesn't publish a daily block. Global User-Agent already satisfies MET's non-default-UA requirement. Data license: CC BY 4.0 (attribution surfaces in About + README).
+- **Environment Canada forecast adapter (unstub)** — closes the last HIGH-priority open roadmap item. `EnvironmentCanadaForecastAdapter` queries the OGC API Features `citypageweather-realtime` collection on `api.weather.gc.ca`, picks the nearest feature within a 0.5° bbox (widening to 1.5° for sparse/remote regions), maps `currentConditions` → `CurrentConditions` (kPa → hPa pressure, km → m visibility, humidex → windChill → temperature feels-like fallback) and `forecastGroup.forecast[]` → `DailyConditions` by pairing day and night period entries. `iconCode` → WMO via a %30-folded lookup (handles day/night symmetry) with a condition-text fallback. Hourly is empty — ECCC's free OGC tier doesn't publish hourly forecast data.
+- **Certificate pinning scaffolding for API-key endpoints** — `ApiCertificatePins.build()` wires a `CertificatePinner` into the OWM forecast, OWM AQI, and Pirate Weather OkHttp clients. Keyless public APIs (Open-Meteo, NWS, DWD Bright Sky, MeteoAlarm, JMA, ECCC, MET Norway) stay unpinned — pinning them would add fragility without security benefit. `hostPins` ships empty; pins are captured per-release via `tools/capture_api_pins.sh` rather than hardcoded so certificate rotation doesn't brick the app between releases. When the map is empty, `build()` returns `CertificatePinner.DEFAULT` (no-op) so runtime is unchanged. The two-pin invariant (leaf + intermediate per host) is enforced by unit test.
+- **Widget freshness pill is now a tap-to-refresh control** — the "4m" / "Live" / "2h" pill on loaded home-screen widgets was decorative; body taps opened the app and there was no way to force refresh short of waiting for the 30-minute WorkManager schedule. The pill is now clickable and routes through `WidgetRefreshAction`. TalkBack announces "Data updated Xm ago. Tap to refresh now." The existing battery-saver short-circuit in `WidgetRefreshWorker` (skip at ≤15%) still guards the enqueued work.
+- **Canvas-drawn cards expose a11y semantics** — five Canvas-heavy cards were previously invisible to TalkBack. `AqiGauge` (with `LiveRegionMode.Polite` so AQI updates auto-announce), `TemperatureGraph` (range + direction summary), `PressureTrendCard` (current + trend + 24h delta), `MoonPhaseCard` (sunrise/sunset/day-length + phase + illumination), and `CloudCoverCard` (current + 24h min/max) now carry `mergeDescendants = true` `contentDescription` blocks sourced from their live data.
+- **New tests** — `MetNorwayAdapterTest` (happy path + sparse data + empty timeseries + symbol mapping + day/night suffix), `EnvironmentCanadaForecastAdapterTest` (nearest-feature selection + kPa/km unit conversion + day/night pairing + empty collection failure + iconCode mapping + condition-text fallback + malformed JSON + unknown-condition default), `ApiCertificatePinsTest` (default-pinner contract + two-pin invariant + sha256/ format + 44-char base64 length check). `WeatherSourceManagerTest` + `UserPreferencesTest` updated to reflect the new MET_NORWAY and ENVIRONMENT_CANADA forecast capabilities.
+
+### Changed
+- **ECCC alert Retrofit split from forecast Retrofit** — alerts live at `weather.gc.ca` (Atom feeds) while forecasts live at `api.weather.gc.ca` (OGC API). New `@Named("eccc_forecast")` Retrofit added alongside the existing `@Named("eccc")` one. Both keyless, both honour the global User-Agent + retry interceptors.
+- **`WeatherSourceProvider.ENVIRONMENT_CANADA`** no longer has an `implementedTypes` override — forecast is now a first-class capability, so Settings > Data Sources shows ECCC as a selectable forecast primary and fallback.
+
+### Version
+- phone versionCode 79 → 80, versionName 1.16.0 → 1.17.0
+- wear versionCode 55 → 56, versionName 1.16.0 → 1.17.0
+
 ## [1.16.0] - 2026-04-24
 
 Resilience + roadmap-closure release. Closed 8 HIGH/MEDIUM ROADMAP items from the v1.14.0 architectural audit plus 2 audit-round follow-ups. 331 unit tests pass (+10 new: RateLimitInterceptor, ApiKeyRedaction). One HIGH item — Environment Canada forecast adapter — deferred to v1.17.0 because it needs full citypageweather-realtime GeoJSON mapping.
