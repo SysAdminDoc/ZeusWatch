@@ -4,6 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.glance.color.ColorProvider
 import androidx.glance.GlanceModifier
+import androidx.glance.action.Action
+import androidx.glance.action.clickable
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -12,6 +15,8 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.semantics.contentDescription
+import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -132,12 +137,21 @@ fun widgetUpdatedLabel(updatedAt: Long): String? {
 fun WidgetPill(
     text: String,
     modifier: GlanceModifier = GlanceModifier,
+    onClick: Action? = null,
+    contentDescription: String? = null,
 ) {
+    val base = modifier
+        .cornerRadius(999.dp)
+        .background(WidgetTheme.pillColor)
+        .padding(horizontal = 8.dp, vertical = 4.dp)
+    val withSemantics = if (contentDescription != null) {
+        base.semantics { this.contentDescription = contentDescription }
+    } else {
+        base
+    }
+    val final = if (onClick != null) withSemantics.clickable(onClick) else withSemantics
     Box(
-        modifier = modifier
-            .cornerRadius(999.dp)
-            .background(WidgetTheme.pillColor)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+        modifier = final,
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -147,6 +161,14 @@ fun WidgetPill(
         )
     }
 }
+
+/**
+ * Convenience factory for a freshness pill that forces an immediate
+ * refresh when tapped. Prefer over plain [WidgetPill] on data-loaded
+ * widgets so users can force-refresh without opening the app.
+ */
+@Composable
+fun widgetRefreshPillAction(): Action = actionRunCallback<WidgetRefreshAction>()
 
 @Composable
 fun WidgetEmptyState(
