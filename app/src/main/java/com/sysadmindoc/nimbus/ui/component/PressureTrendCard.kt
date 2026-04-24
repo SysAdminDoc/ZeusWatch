@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -60,7 +62,18 @@ fun PressureTrendCard(
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
 
-    WeatherCard(title = "Pressure Trend", modifier = modifier) {
+    val firstPressure = data.first().second
+    val lastPressure = data.last().second
+    val delta24h = lastPressure - firstPressure
+    val semanticSummary = "Pressure trend. Current ${WeatherFormatter.formatPressure(currentPressure, s)}. " +
+        "${trend ?: "Steady"}. 24-hour change ${"%+.1f".format(delta24h)} hectopascals."
+
+    WeatherCard(
+        title = "Pressure Trend",
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = semanticSummary
+        },
+    ) {
         Row(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
