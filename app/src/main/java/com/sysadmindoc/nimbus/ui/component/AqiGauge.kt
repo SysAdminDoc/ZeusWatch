@@ -14,6 +14,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -39,9 +43,17 @@ fun AqiGauge(
     val maxAqi = 300f
     val progress = (aqi.toFloat() / maxAqi).coerceIn(0f, 1f)
 
+    val semanticLabel = "Air quality index: $aqi, ${level.label}."
     Box(
         contentAlignment = Alignment.Center,
-        modifier = modifier.size(size),
+        modifier = modifier
+            .size(size)
+            .semantics(mergeDescendants = true) {
+                contentDescription = semanticLabel
+                // AQI values change with each fetch; announce updates to
+                // TalkBack users without them needing to re-focus the card.
+                liveRegion = LiveRegionMode.Polite
+            },
     ) {
         Canvas(modifier = Modifier.size(size)) {
             val strokeWidth = 10f

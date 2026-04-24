@@ -19,6 +19,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.AstronomyData
@@ -39,7 +41,19 @@ fun MoonPhaseCard(
     sunset: String? = null,
     referenceTime: java.time.LocalDateTime? = null,
 ) {
-    WeatherCard(title = "Astronomy", modifier = modifier) {
+    val astroSummary = buildString {
+        append("Astronomy. ")
+        if (sunrise != null) append("Sunrise $sunrise. ")
+        if (sunset != null) append("Sunset $sunset. ")
+        astronomy.dayLength?.let { append("Day length $it. ") }
+        append("Moon ${astronomy.moonPhase.label}, ${astronomy.moonIllumination.toInt()}% illuminated.")
+    }
+    WeatherCard(
+        title = "Astronomy",
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = astroSummary
+        },
+    ) {
         // Sunrise / Sunset row
         if (sunrise != null || sunset != null) {
             val s = LocalUnitSettings.current
