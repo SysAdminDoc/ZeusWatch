@@ -4,6 +4,7 @@ import com.sysadmindoc.nimbus.BuildConfig
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.sysadmindoc.nimbus.data.api.AirQualityApi
 import com.sysadmindoc.nimbus.data.api.AlertSourceAdapter
+import com.sysadmindoc.nimbus.data.api.ApiCertificatePins
 import com.sysadmindoc.nimbus.data.api.BrightSkyApi
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertAdapter
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertApi
@@ -313,8 +314,11 @@ object NetworkModule {
     @Named("owm")
     fun provideOwmRetrofit(client: OkHttpClient): Retrofit {
         // OWM free tier: 60 calls/min, 1M/month. Cap at ~1 req/s with burst 5.
+        // Certificate pinning mitigates MITM exfiltration of the user's
+        // `?appid=<key>` API key on untrusted networks (see ApiCertificatePins).
         val owmClient = client.newBuilder()
             .addInterceptor(RateLimitInterceptor("openweathermap", rate = 1.0, burst = 5))
+            .certificatePinner(ApiCertificatePins.build())
             .build()
         return Retrofit.Builder()
             .baseUrl(OpenWeatherMapApi.BASE_URL)
@@ -334,8 +338,10 @@ object NetworkModule {
     @Singleton
     @Named("owm_aqi")
     fun provideOwmAqiRetrofit(client: OkHttpClient): Retrofit {
+        // Same pinner as OWM forecast — same vendor TLS terminator.
         val owmAqiClient = client.newBuilder()
             .addInterceptor(RateLimitInterceptor("openweathermap-aqi", rate = 1.0, burst = 5))
+            .certificatePinner(ApiCertificatePins.build())
             .build()
         return Retrofit.Builder()
             .baseUrl(OpenWeatherMapApi.AIR_POLLUTION_BASE_URL)
@@ -360,8 +366,12 @@ object NetworkModule {
         // Pirate Weather free tier: ~10,000 calls/month ≈ 14/hour — keep a
         // conservative per-second cap so widget refresh + main screen burst
         // doesn't eat the hourly budget on rapid location switches.
+        // Pirate Weather embeds the API key in the URL path
+        // (/forecast/{key}/lat,lon) so a MITM can steal it silently —
+        // pinning is as critical here as for OWM.
         val pwClient = client.newBuilder()
             .addInterceptor(RateLimitInterceptor("pirateweather", rate = 0.5, burst = 4))
+            .certificatePinner(ApiCertificatePins.build())
             .build()
         return Retrofit.Builder()
             .baseUrl(PirateWeatherApi.BASE_URL)
