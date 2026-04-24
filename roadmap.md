@@ -334,3 +334,66 @@ updates:
 #### Rate Limiting
 
 No library needed. Implement a custom OkHttp `Interceptor` using `AtomicInteger` token bucket (~30 lines). Resilience4j v1.7.1 (`io.github.resilience4j:resilience4j-ratelimiter`, Apache-2.0) is the only version compatible with Android's runtime -- v2.x+ requires Java 17 which Android doesn't support.
+
+## Open-Source Research (Round 2)
+
+### Related OSS Projects
+- **aarash709/Weather** — https://github.com/aarash709/Weather — Kotlin/Compose, Open-Meteo backend, offline-first, WorkManager background fetch; Detekt/Kotlinter pipeline
+- **GustavLindberg99/AndroidWeather** — https://github.com/GustavLindberg99/AndroidWeather — GPL weather app with four launcher widgets (transparent clock + three weather variants) — reference for widget design
+- **Breezy Weather** — https://github.com/breezy-weather/breezy-weather — multi-provider forecasts (Open-Meteo, MET Norway, Accu, DWD, etc.), air quality, allergen/pollen, radar, Material You; best-in-class FOSS weather app
+- **Geometric Weather** — https://github.com/WangDaYeeeeee/GeometricWeather — mature weather app with animated icons and atmosphere particle effects
+- **aishwarya-kamal/Weather** — https://github.com/aishwarya-kamal/Weather — clean MVVM/Compose reference
+- **daniel-waiguru/WeatherApp** — https://github.com/daniel-waiguru/WeatherApp — offline-first Compose architecture with Jetpack components
+- **ChrisTs8920/Weatherly** — https://github.com/ChrisTs8920/Weatherly — Compose + OpenWeatherMap
+
+### Features to Borrow
+- Multi-provider forecast fusion: run 3+ providers, show agreement range and divergence flag (Breezy Weather)
+- Air-quality, pollen, and allergen cards with local thresholds (Breezy Weather)
+- Animated precipitation particle overlay keyed to current conditions (Geometric Weather)
+- Glance widgets in 3 sizes (2x1 transparent clock, 2x2 current, 4x2 forecast) with same rendering path as in-app cards (GustavLindberg99)
+- Offline-first repository that serves cached forecast instantly, updates in background (aarash709)
+- Per-location background-update cadence tied to BatteryManager state (Breezy Weather pattern)
+- Material You dynamic-color card theming derived from weather condition (Material You docs; Breezy applies this)
+- Per-card settings menu: reorder, hide, customize unit on a card-by-card basis (Breezy Weather)
+- SMS-on-severe-weather rule with a user-defined trigger (hail > X mm, wind > Y mph) (niche, community fork pattern)
+- Wear OS Complication types: short-text, ranged-value for UV index, photo for radar snapshot (Wear samples)
+
+### Patterns & Architectures Worth Studying
+- Modular provider pattern: every forecast source is a WeatherSource interface implementation, pluggable and user-enable-able (Breezy Weather)
+- Single Repository + Flow + StateFlow single-source-of-truth with WorkManager for background refresh (aarash709)
+- Glance + Compose shared rendering: write the card once as a Composable and a matching GlanceComposable, share the data class (Google Glance samples)
+- Provider-agnostic unit system: store SI internally, convert only at render (Breezy Weather)
+- DataLayer sync via MessageClient with "lastMessageId" dedupe (Wear OS DataLayer patterns)
+
+## Implementation Deep Dive (Round 3)
+
+### Reference Implementations to Study
+- **breezy-weather/breezy-weather/app/src/main/java/org/breezyweather/sources/** — https://github.com/breezy-weather/breezy-weather/tree/main/app/src/main/java/org/breezyweather/sources — canonical multi-provider architecture. Each source is a separate package implementing a common `WeatherSource` interface. Direct blueprint for ZeusWatch's `WeatherSourceManager` + `AlertSourceAdapter` generalization.
+- **breezy-weather/breezy-weather/docs/SOURCES.md** — https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md — 50+ sources with per-source capability matrix (supports forecast? alerts? AQI? pollen?). Template for ZeusWatch's roadmap item "per-card settings menu".
+- **breezy-weather/breezy-weather/app/src/main/java/org/breezyweather/sources/openmeteo/OpenMeteoService.kt** — https://github.com/breezy-weather/breezy-weather/blob/main/app/src/main/java/org/breezyweather/sources/openmeteo/OpenMeteoService.kt — reference Open-Meteo adapter with proper unit normalization. Compare against ZeusWatch's `OpenMeteoApi`.
+- **android/wear-os-samples/DataLayer/Wearable/src/main/java/com/example/android/wearable/datalayer/MainActivity.kt** — https://github.com/android/wear-os-samples/tree/master/DataLayer — official DataClient + `setUrgent()` pattern. Compare against ZeusWatch's `WearSyncManager`.
+- **google/horologist/datalayer** — https://github.com/google/horologist/tree/main/datalayer — higher-level wrapper for `DataClient` with DataStore-backed proto persistence. Template for removing boilerplate from `SyncedWeatherStore` (currently SharedPreferences).
+- **WangDaYeeeeee/GeometricWeather/app/src/main/java/wangdaye/com/geometricweather/ui/widget/weatherView/WeatherView.kt** — https://github.com/WangDaYeeeeee/GeometricWeather — animated precipitation particle overlay reference. Direct template for ZeusWatch's roadmap item "animated precipitation overlay".
+- **breezy-weather/breezy-weather/app/src/main/java/org/breezyweather/common/basic/models/options/unit/TemperatureUnit.kt** — https://github.com/breezy-weather/breezy-weather/blob/main/app/src/main/java/org/breezyweather/common/basic/models/options/unit — provider-agnostic unit enum with conversion. Template for ZeusWatch's unit system cleanup.
+- **KieronQuinn/Smartspacer/app-legacy/src/main/java/com/kieronquinn/app/smartspacer/targets/weather/WeatherTarget.kt** — https://github.com/KieronQuinn/Smartspacer — reference Smartspacer target exposing weather as a system-level at-a-glance. Future-hook for ZeusWatch to participate in Pixel Launcher at-a-glance via Smartspacer.
+- **nwrkhd/breezy-weather-nwrkhd-fork** or various Breezy forks — check for per-card reorder persistence patterns; ZeusWatch already has card reorder but look at their bug-fix history for edge cases.
+
+### Known Pitfalls from Similar Projects
+- **DataClient has a 30-minute default sync delay without `.setUrgent()`** — battery-saver throttling. ZeusWatch must call `PutDataMapRequest...asPutDataRequest().setUrgent()` or weather updates land up to 30min late on watch. https://developer.android.com/training/wearables/data/data-items
+- **DataClient silently drops duplicate payloads** — if content of `DataMap` is byte-identical to the previously-sent item, `onDataChanged` does not fire. Always include a nonce (timestamp or requestId) field. ZeusWatch's sync already includes timestamp — verify.
+- **DataLayer payload limit 100KB** — exceed that and `putDataItem` silently fails. 12-hour hourly forecast with extended fields can approach this; use `Asset` for larger payloads or truncate to essentials.
+- **Force-stopping the app breaks DataClient sync until reopen** — known platform behavior. User-facing mitigation: a "Troubleshoot sync" button that opens app settings + an explicit re-sync call.
+- **WearableListenerService needs `RECEIVE_BOOT_COMPLETED` permission and intent filter** — missing either silently suppresses reconnect after device reboot. ZeusWatch's `WeatherDataListenerService` must declare both.
+- **Open-Meteo `timezone=auto` returns observations in location-local time, not UTC** — v1.14.1 already documents this bug fix in `AirQualityRepository`; verify all other adapters follow the same pattern.
+- **NWS `/alerts/active` 404s silently for coordinates outside US** — already handled in v1.6.5 (HttpException check). If adding MeteoAlarm / JMA, replicate the same pattern.
+- **`Geocoder` is unreliable on devices without Google Play Services on F-Droid build** — `freenet` flavor must use `Nominatim` or similar free alternative. Currently Nominatim via HTTP is in ZeusWatch; verify rate-limit compliance (1 req/sec per IP).
+- **MapLibre 11.x native library not included in x86_64 emulator build by default** — requires explicit `abiFilters` declaration. Check `app/build.gradle.kts`.
+- **Lottie 6.6 breaking change: `LottieCompositionFactory.fromRawRes` is now suspending on newer versions** — ZeusWatch's Meteocon renderer must handle async composition load.
+- **RainViewer radar tiles API — 5-minute update interval, historical tiles expire after 2h** — v1.6.2 already throttles 5-min; verify radar playback handles expired tiles gracefully (404 → skip frame).
+
+### Library Integration Checklist
+- **Google Play Wearable DataClient** — `com.google.android.gms:play-services-wearable:18.2.0` (already pinned) — entry: `Wearable.getDataClient(context).putDataItem(PutDataMapRequest.create("/weather/current").apply { dataMap.putFloat("temp", t) }.asPutDataRequest().setUrgent())`. Gotcha: `.setUrgent()` is mandatory for near-real-time; without it the 30min battery-saver throttle applies.
+- **MapLibre Android (native radar)** — `org.maplibre.gl:android-sdk:11.5.2` — entry: `MapLibre.getInstance(context); mapView.getMapAsync { map -> map.setStyle(Style.Builder().fromUri("...")) }`. Gotcha: MapLibre requires OpenGL ES 3.0 minimum; on devices reporting GL ES 2.0 (rare, old), fall back to Windy WebView provider.
+- **Horologist DataLayer (Wear sync helper)** — `com.google.android.horologist:horologist-datalayer:0.6.17` — entry: `wearDataLayerRegistry.protoFlow(key = "weather")` + `wearDataLayerRegistry.serializedProto(Weather.serializer(), data)`. Gotcha: Horologist requires `com.google.android.horologist:horologist-datalayer-phone` on phone and `-watch` on wear module — mismatched versions silently break sync.
+
+
