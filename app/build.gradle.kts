@@ -37,17 +37,28 @@ android {
         }
     }
 
-    signingConfigs {
-        create("release") {
-            val props = Properties()
-            val propsFile = rootProject.file("local.properties")
-            if (propsFile.exists()) {
-                propsFile.inputStream().use { stream -> props.load(stream) }
+    // Read signing credentials from local.properties (or local env in CI).
+    // If the keystore file is missing (CI run without restored secrets) we
+    // skip `signingConfigs` entirely so `validateSigningStandardRelease`
+    // doesn't abort the build — the resulting APK is unsigned and users
+    // or the release workflow must sign it before distribution.
+    val releaseProps = Properties().apply {
+        val propsFile = rootProject.file("local.properties")
+        if (propsFile.exists()) {
+            propsFile.inputStream().use { load(it) }
+        }
+    }
+    val releaseKeystore = file(releaseProps.getProperty("RELEASE_STORE_FILE", "../zeuswatch.jks"))
+    val hasReleaseKeystore = releaseKeystore.exists()
+
+    if (hasReleaseKeystore) {
+        signingConfigs {
+            create("release") {
+                storeFile = releaseKeystore
+                storePassword = releaseProps.getProperty("RELEASE_STORE_PASSWORD", "")
+                keyAlias = releaseProps.getProperty("RELEASE_KEY_ALIAS", "")
+                keyPassword = releaseProps.getProperty("RELEASE_KEY_PASSWORD", "")
             }
-            storeFile = file(props.getProperty("RELEASE_STORE_FILE", "../zeuswatch.jks"))
-            storePassword = props.getProperty("RELEASE_STORE_PASSWORD", "")
-            keyAlias = props.getProperty("RELEASE_KEY_ALIAS", "")
-            keyPassword = props.getProperty("RELEASE_KEY_PASSWORD", "")
         }
     }
 
@@ -55,7 +66,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
