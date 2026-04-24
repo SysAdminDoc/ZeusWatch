@@ -3,6 +3,7 @@ package com.sysadmindoc.nimbus.wear
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sysadmindoc.nimbus.wear.data.DataSource
 import com.sysadmindoc.nimbus.wear.data.HourlyEntry
 import com.sysadmindoc.nimbus.wear.data.WearAlertEntry
 import com.sysadmindoc.nimbus.wear.data.WearDailyEntry
@@ -58,6 +59,8 @@ class WearWeatherViewModel @Inject constructor(
                             alerts = data.alerts,
                             aqi = data.aqi,
                             aqiLabel = data.aqiLabel,
+                            dataSource = data.dataSource,
+                            syncedAtMs = data.syncedAtMs,
                         )
                     }
                 },
@@ -93,4 +96,8 @@ data class WearUiState(
     val alerts: List<WearAlertEntry> = emptyList(),
     val aqi: Int = -1,
     val aqiLabel: String = "",
+    /** Whether the last successful payload came from the phone or a watch API call. */
+    val dataSource: DataSource = DataSource.UNKNOWN,
+    /** Epoch ms the current payload was produced (phone-sync time or fetch time). */
+    val syncedAtMs: Long = 0L,
 )
