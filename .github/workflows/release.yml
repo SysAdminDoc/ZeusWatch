@@ -5,12 +5,18 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to release (e.g., v1.16.0)'
+        required: false
+        type: string
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -34,28 +40,78 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      # Reconstruct local.properties + keystore from GitHub secrets so
+      # release APKs can be signed in CI without committing credentials.
+      # Secrets required (all optional — unsigned APKs still upload):
+      #   SIGNING_KEYSTORE_BASE64, SIGNING_STORE_PASSWORD,
+      #   SIGNING_KEY_ALIAS, SIGNING_KEY_PASSWORD.
+      - name: Reconstruct signing config (if secrets present)
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          HAS_KEYSTORE: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
+          KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          STORE_PW: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > zeuswatch.jks
+          {
+            echo "RELEASE_STORE_FILE=../zeuswatch.jks"
+            echo "RELEASE_STORE_PASSWORD=$STORE_PW"
+            echo "RELEASE_KEY_ALIAS=$KEY_ALIAS"
+            echo "RELEASE_KEY_PASSWORD=$KEY_PW"
+          } >> local.properties
+
       # ZeusWatch has two product flavors:
-      # standard = Google Play Services location (default)
+      # standard = Google Play Services location + Wearable DataLayer + Gemini Nano
       # freenet  = F-Droid compatible, no proprietary dependencies
-      - name: Build Standard Debug APK
-        run: ./gradlew assembleStandardDebug
+      - name: Build phone release APKs (standard + freenet)
+        run: |
+          ./gradlew :app:assembleStandardRelease --no-daemon
+          ./gradlew :app:assembleFreenetRelease --no-daemon
 
-      - name: Build Freenet Debug APK
-        run: ./gradlew assembleFreenetDebug
+      - name: Build wear release APK
+        run: ./gradlew :wear:assembleRelease --no-daemon
 
-      - name: Find APKs
+      - name: Resolve release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
+            echo "name=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.ref_name }}" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "name=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "name=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Collect + rename APKs
         id: apks
         run: |
-          STD=$(find app/build/outputs/apk/standard/debug -name "*.apk" | head -1)
-          FN=$(find app/build/outputs/apk/freenet/debug -name "*.apk" | head -1)
-          echo "standard=$STD" >> $GITHUB_OUTPUT
-          echo "freenet=$FN" >> $GITHUB_OUTPUT
+          mkdir -p dist
+          TAG="${{ steps.tag.outputs.name }}"
+          VER="${TAG#v}"
+          [ -z "$VER" ] && VER="$(date +%Y%m%d-%H%M%S)"
+          STD=$(find app/build/outputs/apk/standard/release -name "*.apk" | head -1)
+          FN=$(find app/build/outputs/apk/freenet/release -name "*.apk" | head -1)
+          WR=$(find wear/build/outputs/apk/release -name "*.apk" | head -1)
+          cp "$STD" "dist/ZeusWatch-standard-v${VER}.apk"
+          cp "$FN"  "dist/ZeusWatch-freenet-v${VER}.apk"
+          cp "$WR"  "dist/ZeusWatch-wear-v${VER}.apk"
+          ls -lh dist/
 
-      - name: Upload APKs to Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+      - name: Upload release APKs as workflow artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: |
-            ${{ steps.apks.outputs.standard }}
-            ${{ steps.apks.outputs.freenet }}
-          fail_on_unmatched_files: true
+          name: release-apks
+          path: dist/*.apk
+
+      - name: Upload APKs to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && steps.tag.outputs.name != '')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.tag.outputs.name }}"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --generate-notes --title "ZeusWatch $TAG"
+          fi
+          gh release upload "$TAG" dist/*.apk --clobber
