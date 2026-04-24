@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus
 
 import android.app.Application
+import android.content.Context
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil3.ImageLoader
@@ -12,6 +13,7 @@ import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
+import com.sysadmindoc.nimbus.util.CrashReporting
 import com.sysadmindoc.nimbus.util.CustomAlertWorker
 import com.sysadmindoc.nimbus.util.HealthAlertWorker
 import com.sysadmindoc.nimbus.util.NowcastAlertWorker
@@ -42,6 +44,13 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
             .build()
+
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base)
+        // ACRA must initialise in attachBaseContext so its sentinel process
+        // starts before any other component can trigger a crash.
+        CrashReporting.install(this)
+    }
 
     override fun onCreate() {
         super.onCreate()
