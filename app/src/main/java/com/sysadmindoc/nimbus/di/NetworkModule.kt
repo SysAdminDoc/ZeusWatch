@@ -11,6 +11,7 @@ import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertApi
 import com.sysadmindoc.nimbus.data.api.GeocodingApi
 import com.sysadmindoc.nimbus.data.api.JmaAlertAdapter
 import com.sysadmindoc.nimbus.data.api.JmaAlertApi
+import com.sysadmindoc.nimbus.data.api.MetNorwayApi
 import com.sysadmindoc.nimbus.data.api.MeteoAlarmAdapter
 import com.sysadmindoc.nimbus.data.api.MeteoAlarmApi
 import com.sysadmindoc.nimbus.data.api.NwsAlertAdapter
@@ -384,6 +385,30 @@ object NetworkModule {
     @Singleton
     fun providePirateWeatherApi(@Named("pirateweather") retrofit: Retrofit): PirateWeatherApi {
         return retrofit.create(PirateWeatherApi::class.java)
+    }
+
+    // --- MET Norway (LocationForecast 2.0) ---
+
+    @Provides
+    @Singleton
+    @Named("metnorway")
+    fun provideMetNorwayRetrofit(client: OkHttpClient): Retrofit {
+        // MET's terms ban the default `okhttp/X.Y` User-Agent. The global
+        // interceptor already sets `ZeusWatch/<ver> (Android; Open-Source)`
+        // which is compliant. Rate limiting is their 20 req/s aggregate
+        // cap — we sit far below that on the phone, so no extra throttle
+        // here beyond the global retry interceptor.
+        return Retrofit.Builder()
+            .baseUrl(MetNorwayApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideMetNorwayApi(@Named("metnorway") retrofit: Retrofit): MetNorwayApi {
+        return retrofit.create(MetNorwayApi::class.java)
     }
 
     // --- Bright Sky (DWD) ---
