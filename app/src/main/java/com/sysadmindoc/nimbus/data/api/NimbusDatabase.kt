@@ -10,7 +10,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherCacheEntity
 @Database(
     entities = [WeatherCacheEntity::class, SavedLocationEntity::class],
     version = 2,
-    exportSchema = false,
+    exportSchema = true,
 )
 abstract class NimbusDatabase : RoomDatabase() {
     abstract fun weatherDao(): WeatherDao

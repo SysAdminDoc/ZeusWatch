@@ -18,10 +18,16 @@ android {
         applicationId = "com.sysadmindoc.nimbus"
         minSdk = 26
         targetSdk = 35
-        versionCode = 78
-        versionName = "1.15.0"
+        versionCode = 79
+        versionName = "1.16.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Emit Room schema JSON to `app/schemas/` so migrations can be diffed
+        // against committed baselines in code review and regression-tested.
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
+        }
     }
 
     signingConfigs {
@@ -185,6 +191,13 @@ dependencies {
     // Configure at https://console.firebase.google.com and download the config file.
     "standardImplementation"(platform("com.google.firebase:firebase-bom:33.7.0"))
     "standardImplementation"("com.google.firebase:firebase-firestore-ktx")
+
+    // ACRA — crash reporting that works in both standard and freenet flavors
+    // (no Google Play Services dependency). Core + mail sender so F-Droid
+    // users can opt-in to emailing logs without any remote backend.
+    implementation(libs.acra.core)
+    implementation(libs.acra.mail)
+    implementation(libs.acra.dialog)
 
     // Desugaring
     coreLibraryDesugaring(libs.desugar)
