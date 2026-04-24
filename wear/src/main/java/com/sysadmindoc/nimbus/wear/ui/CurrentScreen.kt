@@ -20,7 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material3.Text
 import com.sysadmindoc.nimbus.wear.WearUiState
+import com.sysadmindoc.nimbus.wear.data.DataSource
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
+import kotlin.math.max
 
 @Composable
 fun CurrentScreen(
@@ -55,7 +57,7 @@ fun CurrentScreen(
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
         } else {
-            WeatherContent(state, onHourlyTap, onDailyTap, onAlertsTap)
+            WeatherContent(state, onHourlyTap, onDailyTap, onAlertsTap, onRefresh)
         }
     }
 }
@@ -66,6 +68,7 @@ private fun WeatherContent(
     onHourlyTap: () -> Unit,
     onDailyTap: () -> Unit,
     onAlertsTap: () -> Unit,
+    onRefresh: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -128,6 +131,54 @@ private fun WeatherContent(
             secondary = if (state.daily.isNotEmpty()) "7-Day ›" to onDailyTap else null,
             modifier = Modifier.padding(top = 2.dp),
         )
+
+        SyncFooter(
+            dataSource = state.dataSource,
+            syncedAtMs = state.syncedAtMs,
+            onRefresh = onRefresh,
+        )
+    }
+}
+
+@Composable
+private fun SyncFooter(
+    dataSource: DataSource,
+    syncedAtMs: Long,
+    onRefresh: () -> Unit,
+) {
+    val ageLabel = freshnessLabel(syncedAtMs)
+    val sourceLabel = when (dataSource) {
+        DataSource.PHONE_SYNC -> "Phone"
+        DataSource.DIRECT_API -> "Watch"
+        DataSource.UNKNOWN -> "—"
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onRefresh)
+            .padding(top = 2.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "$sourceLabel • $ageLabel • tap to refresh",
+            fontSize = 9.sp,
+            color = WearTextTertiary,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+private fun freshnessLabel(syncedAtMs: Long): String {
+    if (syncedAtMs <= 0L) return "no sync yet"
+    val ageMs = max(0L, System.currentTimeMillis() - syncedAtMs)
+    val minutes = (ageMs / 60_000L).toInt()
+    return when {
+        minutes < 1 -> "just now"
+        minutes < 60 -> "${minutes}m ago"
+        minutes < 1440 -> "${minutes / 60}h ago"
+        else -> "${minutes / 1440}d ago"
     }
 }
 
