@@ -34,8 +34,11 @@ class WearWeatherRepository @Inject constructor(
         // Prefer phone-synced data if fresh (< 30 min)
         val synced = syncedStore.getFreshData()
         if (synced != null) {
-            Log.d(TAG, "Using phone-synced weather data (age ${(System.currentTimeMillis() - syncedStore.lastSyncTimestamp()) / 1000}s)")
-            return@withContext Result.success(synced)
+            val lastSync = syncedStore.lastSyncTimestamp()
+            Log.d(TAG, "Using phone-synced weather data (age ${(System.currentTimeMillis() - lastSync) / 1000}s)")
+            return@withContext Result.success(
+                synced.copy(dataSource = DataSource.PHONE_SYNC, syncedAtMs = lastSync),
+            )
         }
         Log.d(TAG, "No fresh synced data, fetching from API")
         try {
@@ -82,6 +85,8 @@ class WearWeatherRepository @Inject constructor(
                         isDay = (current.isDay ?: 1) == 1,
                         weatherCode = current.weatherCode ?: 0,
                         hourly = buildHourlyList(data.hourly),
+                        dataSource = DataSource.DIRECT_API,
+                        syncedAtMs = System.currentTimeMillis(),
                     ),
                 )
             }
@@ -141,6 +146,15 @@ class WearWeatherRepository @Inject constructor(
     }
 }
 
+enum class DataSource {
+    /** Unknown — initial state only. */
+    UNKNOWN,
+    /** Data came from phone via DataLayer sync. */
+    PHONE_SYNC,
+    /** Data came from a direct API call from the watch. */
+    DIRECT_API,
+}
+
 data class WearWeatherData(
     val temperature: Int,
     val condition: String,
@@ -158,6 +172,8 @@ data class WearWeatherData(
     val alerts: List<WearAlertEntry> = emptyList(),
     val aqi: Int = -1,
     val aqiLabel: String = "",
+    val dataSource: DataSource = DataSource.UNKNOWN,
+    val syncedAtMs: Long = 0L,
 )
 
 data class HourlyEntry(
