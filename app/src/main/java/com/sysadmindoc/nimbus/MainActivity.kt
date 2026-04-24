@@ -81,6 +81,8 @@ class MainActivity : ComponentActivity() {
             "settings" -> "settings"
             "radar" -> "radar/0.0/0.0" // Uses last-known location via ViewModel fallback
             "compare" -> "compare"
+            "custom_alerts" -> "custom_alerts"
+            "main" -> null // explicit root — no navigation, handled as default
             else -> null
         }
     }

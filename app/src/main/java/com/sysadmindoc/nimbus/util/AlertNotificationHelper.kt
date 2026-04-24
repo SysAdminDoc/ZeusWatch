@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
@@ -25,6 +26,11 @@ object AlertNotificationHelper {
     private const val GROUP_ID = "nimbus_alert_group"
     private const val GROUP_NAME = "Weather Alerts"
     private const val SUMMARY_NOTIFICATION_ID = 0x1000
+
+    // Ambient group — nowcast + health + custom rules. Separate from severe
+    // alerts so a tornado warning doesn't collapse into an "it's cloudy" stack.
+    private const val AMBIENT_GROUP_ID = "nimbus_ambient_group"
+    private const val AMBIENT_SUMMARY_NOTIFICATION_ID = 0x1001
 
     // Separate channels per severity tier
     private const val CHANNEL_EXTREME = "nimbus_alerts_extreme"
@@ -142,12 +148,8 @@ object AlertNotificationHelper {
     ): Boolean {
         if (!hasNotificationPermission(context)) return false
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            context, NOTIFICATION_ID_NOWCAST, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        val pendingIntent = deepLinkPendingIntent(
+            context, requestCode = NOTIFICATION_ID_NOWCAST, uri = "zeuswatch://main",
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_NOWCAST)
@@ -159,10 +161,13 @@ object AlertNotificationHelper {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setGroup(AMBIENT_GROUP_ID)
             .build()
 
         try {
-            NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_NOWCAST, notification)
+            val nm = NotificationManagerCompat.from(context)
+            nm.notify(NOTIFICATION_ID_NOWCAST, notification)
+            nm.notify(AMBIENT_SUMMARY_NOTIFICATION_ID, ambientSummary(context))
             return true
         } catch (_: SecurityException) {
             // Permission revoked after check
@@ -184,13 +189,9 @@ object AlertNotificationHelper {
     ): Boolean {
         if (!hasNotificationPermission(context)) return false
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
         val notifId = NOTIFICATION_ID_HEALTH_BASE + (title.hashCode() and 0xFFFF)
-        val pendingIntent = PendingIntent.getActivity(
-            context, notifId, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        val pendingIntent = deepLinkPendingIntent(
+            context, requestCode = notifId, uri = "zeuswatch://main",
         )
 
         val bigText = if (detail.isNotBlank()) "$body\n\n$detail" else body
@@ -208,10 +209,13 @@ object AlertNotificationHelper {
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setColor(severity.color.toArgb())
+            .setGroup(AMBIENT_GROUP_ID)
             .build()
 
         try {
-            NotificationManagerCompat.from(context).notify(notifId, notification)
+            val nm = NotificationManagerCompat.from(context)
+            nm.notify(notifId, notification)
+            nm.notify(AMBIENT_SUMMARY_NOTIFICATION_ID, ambientSummary(context))
             return true
         } catch (_: SecurityException) {
             // Permission revoked after check
@@ -232,12 +236,9 @@ object AlertNotificationHelper {
     ): Boolean {
         if (!hasNotificationPermission(context)) return false
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            context, ruleKey.hashCode(), intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        val id = NOTIFICATION_ID_CUSTOM_BASE + (ruleKey.hashCode() and 0xFFFF)
+        val pendingIntent = deepLinkPendingIntent(
+            context, requestCode = id, uri = "zeuswatch://custom_alerts",
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_CUSTOM)
             .setSmallIcon(R.drawable.ic_alert)
@@ -248,16 +249,41 @@ object AlertNotificationHelper {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
+            .setGroup(AMBIENT_GROUP_ID)
             .build()
         try {
-            val id = NOTIFICATION_ID_CUSTOM_BASE + (ruleKey.hashCode() and 0xFFFF)
-            NotificationManagerCompat.from(context).notify(id, notification)
+            val nm = NotificationManagerCompat.from(context)
+            nm.notify(id, notification)
+            nm.notify(AMBIENT_SUMMARY_NOTIFICATION_ID, ambientSummary(context))
             return true
         } catch (_: SecurityException) {
             // Permission revoked after check
             return false
         }
     }
+
+    private fun deepLinkPendingIntent(
+        context: Context,
+        requestCode: Int,
+        uri: String,
+    ): PendingIntent {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri), context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        return PendingIntent.getActivity(
+            context, requestCode, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    private fun ambientSummary(context: Context): android.app.Notification =
+        NotificationCompat.Builder(context, CHANNEL_NOWCAST)
+            .setSmallIcon(R.drawable.ic_alert)
+            .setContentTitle("Weather updates")
+            .setContentText("Health, nowcast, and custom-rule notifications")
+            .setGroup(AMBIENT_GROUP_ID)
+            .setGroupSummary(true)
+            .setAutoCancel(true)
+            .build()
 
     fun channelForSeverity(severity: AlertSeverity): String = when (severity) {
         AlertSeverity.EXTREME -> CHANNEL_EXTREME
@@ -364,10 +390,18 @@ object AlertNotificationHelper {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             nm.activeNotifications
-                .filter { it.id == SUMMARY_NOTIFICATION_ID || it.notification.group == GROUP_ID }
+                .filter {
+                    it.id == SUMMARY_NOTIFICATION_ID ||
+                        it.id == AMBIENT_SUMMARY_NOTIFICATION_ID ||
+                        it.notification.group == GROUP_ID ||
+                        it.notification.group == AMBIENT_GROUP_ID
+                }
                 .forEach { nm.cancel(it.id) }
         } else {
-            NotificationManagerCompat.from(context).cancel(SUMMARY_NOTIFICATION_ID)
+            NotificationManagerCompat.from(context).apply {
+                cancel(SUMMARY_NOTIFICATION_ID)
+                cancel(AMBIENT_SUMMARY_NOTIFICATION_ID)
+            }
         }
     }
 }
