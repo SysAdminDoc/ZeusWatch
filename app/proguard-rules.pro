@@ -55,6 +55,18 @@
 -keep class com.google.android.gms.wearable.** { *; }
 -dontwarn com.google.android.gms.wearable.**
 
+# Gemini Nano on-device AI (standard flavor only — com.google.ai.edge.aicore).
+# Without these, R8 strips/obfuscates classes GenerativeModel / GenerationConfig
+# resolve via reflection, and standard release builds crash on first AI call.
+-keep class com.google.ai.edge.** { *; }
+-keep interface com.google.ai.edge.** { *; }
+-dontwarn com.google.ai.edge.**
+
+# ACRA crash reporting (both flavors). Keeps reporter factories + config classes.
+-keep class org.acra.** { *; }
+-keep @org.acra.annotation.* class * { *; }
+-dontwarn org.acra.**
+
 # Coroutines
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
