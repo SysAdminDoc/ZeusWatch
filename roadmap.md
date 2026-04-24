@@ -20,9 +20,7 @@
 
 ### HIGH PRIORITY
 
-- **[OPEN] Environment Canada forecast adapter is stubbed**  
-  `WeatherSourceManager` returns `NotImplementedError` for Environment Canada forecast requests (line 71). Only the alert adapter (`EnvironmentCanadaAlertAdapter.kt`) is functional. Canadian users who select Environment Canada as primary source get no forecast data. Deferred from v1.16.0 — requires full `citypageweather-realtime` GeoJSON parsing + forecast/hourly mapping; planned for v1.17.0.
-
+- [CLOSED v1.17.0] ~~Environment Canada forecast adapter is stubbed~~ — `EnvironmentCanadaForecastAdapter` consumes `api.weather.gc.ca/collections/citypageweather-realtime`, picks the nearest feature inside a 0.5° → 1.5° fallback bbox, and maps `currentConditions` + `forecastGroup.forecast[]` to `WeatherData`. kPa → hPa pressure, km → m visibility, day/night forecast period pairs merged into a single `DailyConditions`. Hourly is empty by design (not published on ECCC's free OGC tier).
 - [CLOSED v1.16.0] ~~Missing ProGuard rule for Gemini Nano~~ — added `-keep class com.google.ai.edge.**` + `-dontwarn` in `app/proguard-rules.pro`.
 - [CLOSED v1.16.0] ~~No production crash reporting~~ — ACRA 5.13.1 (GMS-free, both flavors) with consent-gated mail sender + PII redaction. Replaces the Crashlytics path dropped in v1.5.0.
 - [CLOSED v1.16.0] ~~`showYesterdayComparison` setting is not wired~~ — `MainScreen` now passes `null` when the preference is off.
@@ -35,11 +33,11 @@
 - **[OPEN] Zero localization support**  
   No `values-*/strings.xml` locale variants exist. Only 10 `stringResource()`/`getString()` calls across 157 source files — all other user-facing text is hardcoded in Kotlin. Extracting strings retroactively across 28 card types, 17 settings sections, 5 screens, and 4 widget types is a significant effort that compounds with each new feature.
 
-- **[OPEN] Accessibility gaps on Canvas-drawn elements**  
-  65 `contentDescription` usages across 27 files is decent, but Canvas-drawn graphics (temperature graph, moon phase arc, sun ephemeris arc, AQI gauge, pressure trend, wind trend, cloud cover bars, visibility scale) lack semantic descriptions for screen readers. `semantics`/`liveRegion` only appear in 5 files. No automated a11y testing in CI.
+- **[PARTIAL] Accessibility gaps on Canvas-drawn elements**  
+  v1.17.0 added `mergeDescendants` `contentDescription` + `liveRegion` semantics to 5 Canvas-heavy cards: AqiGauge, TemperatureGraph, PressureTrendCard, MoonPhaseCard, CloudCoverCard. Remaining Canvas elements without semantics: wind compass, sun ephemeris arc, wind trend, visibility scale, precipitation chart, humidity card, UV index bar, nowcast card, on-this-day card, outdoor score card, sunshine duration card. No automated a11y testing in CI yet.
 
-- **[OPEN] No certificate pinning on API endpoints**  
-  `network_security_config.xml` uses system trust anchors only. Acceptable for public weather APIs, but if OWM/Pirate Weather API keys are user-supplied, a MITM proxy on untrusted networks could intercept them. Consider pinning for endpoints that transmit API keys. (v1.16.0 mitigated the related risk of keys leaking to logcat via the redacting logger.)
+- **[PARTIAL] Certificate pinning on API endpoints**  
+  v1.17.0 shipped the scaffolding: `ApiCertificatePins.build()` is wired into the OWM / OWM-AQI / Pirate Weather OkHttp clients. `hostPins` is intentionally empty until captured per-release via `tools/capture_api_pins.sh`. Keyless public endpoints (Open-Meteo, NWS, Bright Sky, MET Norway, ECCC) stay unpinned by design. Next step: run the capture script as part of the v1.17.1 release prep and populate the map.
 
 - [CLOSED v1.16.0] ~~CI/CD does not build Wear OS module~~ — `build.yml` now compiles + tests the wear module on every push; `release.yml` builds wear release variants.
 - [CLOSED v1.16.0] ~~CI release workflow builds debug APKs~~ — `release.yml` now builds `assembleStandardRelease` / `assembleFreenetRelease` / `wear:assembleRelease`, reconstructs signing credentials from GitHub secrets, and uploads renamed APKs per variant to the matching Release.
@@ -79,14 +77,12 @@
 - **Wear OS watch face**  
   The watch has tile, complication, and 3 screens — but no custom watch face. A weather-aware watch face (temp on dial, condition background, complication slots) would be the highest-visibility Wear feature.
 
-- **Weather source: MET Norway (Yr.no)**  
-  Free, no-key, high-quality forecasts for Northern Europe. Would complement Bright Sky (Germany-focused) and fill the gap for Scandinavian users. Uses LocationForecast 2.0 API with WMO-compatible codes.
+- [CLOSED v1.17.0] ~~Weather source: MET Norway (Yr.no)~~ — `MetNorwayForecastAdapter` + `MetNorwayApi` + `MetSymbolMapper` shipped; selectable in Settings > Data Sources. Global coverage, highest detail in Nordic region. CC BY 4.0 attribution in README.
 
 - **Weather source: Bureau of Meteorology (Australia)**  
   BOM provides free forecast and warning APIs. Australian users currently rely on Open-Meteo or OWM. A dedicated adapter would provide better severe weather coverage for the Southern Hemisphere.
 
-- **Widget interaction: tap-to-refresh**  
-  Widgets currently only refresh on the WorkManager schedule. Adding a tap-to-refresh action (via `GlanceAppWidget` action callback) would let users force-update without opening the app.
+- [CLOSED v1.17.0] ~~Widget interaction: tap-to-refresh~~ — freshness pill on each loaded widget is now clickable (routes through `WidgetRefreshAction`). Empty-state body tap behavior preserved. Battery-saver short-circuit in `WidgetRefreshWorker` (skip at ≤15%) still guards the enqueued work.
 
 - [CLOSED v1.16.0] ~~Notification grouping~~ — nowcast + health + custom-rule notifications now share `AMBIENT_GROUP_ID` with a group-summary row; severe alerts keep their existing severity group.
 
