@@ -666,7 +666,7 @@ private fun WeatherContent(
                     CurrentConditionsHeader(
                         current = data.current,
                         locationName = data.location.name,
-                        yesterdayHigh = state.yesterdayHigh,
+                        yesterdayHigh = state.yesterdayHigh.takeIf { settings.showYesterdayComparison },
                     )
                 }
             }
