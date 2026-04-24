@@ -1,0 +1,95 @@
+# ZeusWatch Detekt configuration.
+#
+# Tuned to be advisory (findings surfaced, build does not fail) while the
+# baseline is being established. After the first few clean releases, flip
+# `build.maxIssues` to 0 and remove the `:suppress` markers.
+
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+  weights: {}
+
+config:
+  validation: true
+  warningsAsErrors: false
+  checkExhaustiveness: false
+
+processors:
+  active: true
+
+output-reports:
+  active: true
+
+comments:
+  active: false
+
+complexity:
+  active: true
+  LongMethod:
+    active: true
+    threshold: 160
+  LongParameterList:
+    active: true
+    functionThreshold: 10
+    constructorThreshold: 12
+    ignoreDefaultParameters: true
+    ignoreDataClasses: true
+    ignoreAnnotatedParameter: []
+  TooManyFunctions:
+    active: false
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 30
+  NestedBlockDepth:
+    active: true
+    threshold: 6
+
+empty-blocks:
+  active: true
+  EmptyFunctionBlock:
+    active: true
+    ignoreOverridden: true
+
+exceptions:
+  active: true
+  TooGenericExceptionCaught:
+    active: false
+  SwallowedException:
+    active: false
+
+naming:
+  active: true
+  TopLevelPropertyNaming:
+    active: true
+    constantPattern: '[A-Z][_A-Z0-9]*|[a-z][A-Za-z0-9]*'
+  MatchingDeclarationName:
+    active: false
+
+performance:
+  active: true
+
+potential-bugs:
+  active: true
+  UnsafeCallOnNullableType:
+    active: true
+  LateinitUsage:
+    active: false
+
+style:
+  active: true
+  MagicNumber:
+    active: false
+  ReturnCount:
+    active: false
+  UnusedPrivateMember:
+    active: true
+  WildcardImport:
+    active: false
+  MaxLineLength:
+    active: false
+  ForbiddenComment:
+    active: false
+  NewLineAtEndOfFile:
+    active: true
+  UseCheckOrError:
+    active: false
