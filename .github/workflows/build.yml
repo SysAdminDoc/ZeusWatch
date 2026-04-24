@@ -52,23 +52,32 @@ jobs:
           name: lint-results
           path: app/build/reports/lint-results-*.html
 
-      - name: Build standard debug APK
-        run: ./gradlew assembleStandardDebug --no-daemon
+      - name: Build phone (standard) debug APK
+        run: ./gradlew :app:assembleStandardDebug --no-daemon
 
-      - name: Build freenet debug APK
-        run: ./gradlew assembleFreenetDebug --no-daemon
+      - name: Build phone (freenet) debug APK
+        run: ./gradlew :app:assembleFreenetDebug --no-daemon
 
-      - name: Upload standard APK
+      - name: Build wear debug APK
+        run: ./gradlew :wear:assembleDebug --no-daemon
+
+      - name: Upload phone standard APK
         uses: actions/upload-artifact@v4
         with:
           name: nimbus-standard-debug
           path: app/build/outputs/apk/standard/debug/*.apk
 
-      - name: Upload freenet APK
+      - name: Upload phone freenet APK
         uses: actions/upload-artifact@v4
         with:
           name: nimbus-freenet-debug
           path: app/build/outputs/apk/freenet/debug/*.apk
+
+      - name: Upload wear APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nimbus-wear-debug
+          path: wear/build/outputs/apk/debug/*.apk
 
   test:
     name: Unit Tests
@@ -101,18 +110,23 @@ jobs:
       - name: Grant execute permission
         run: chmod +x gradlew
 
-      - name: Run unit tests
-        run: ./gradlew testStandardDebugUnitTest --no-daemon
+      - name: Run phone unit tests
+        run: ./gradlew :app:testStandardDebugUnitTest --no-daemon
+
+      - name: Run wear unit tests
+        run: ./gradlew :wear:testDebugUnitTest --no-daemon
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: app/build/reports/tests/
+          path: |
+            app/build/reports/tests/
+            wear/build/reports/tests/
 
-  release:
-    name: Build Release APK
+  release-build:
+    name: Build Release APK (unsigned verification)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -143,13 +157,25 @@ jobs:
       - name: Grant execute permission
         run: chmod +x gradlew
 
-      - name: Build release APKs
+      # Builds release-variant bytecode through R8 / ProGuard so CI catches
+      # shrinker regressions (e.g. missing keep rules for Gemini Nano) early.
+      # Signing is performed in release.yml where the keystore secrets live.
+      - name: Build phone release APKs
         run: |
-          ./gradlew assembleStandardRelease --no-daemon
-          ./gradlew assembleFreenetRelease --no-daemon
+          ./gradlew :app:assembleStandardRelease --no-daemon
+          ./gradlew :app:assembleFreenetRelease --no-daemon
 
-      - name: Upload release APKs
+      - name: Build wear release APK
+        run: ./gradlew :wear:assembleRelease --no-daemon
+
+      - name: Upload phone release APKs
         uses: actions/upload-artifact@v4
         with:
           name: nimbus-release-apks
           path: app/build/outputs/apk/*/release/*.apk
+
+      - name: Upload wear release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nimbus-wear-release-apk
+          path: wear/build/outputs/apk/release/*.apk
