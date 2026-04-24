@@ -21,6 +21,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -69,7 +71,18 @@ fun CloudCoverCard(
         else -> NimbusTextTertiary
     }
 
-    WeatherCard(modifier = modifier, title = "Cloud Cover") {
+    val cloudsOverTime = next24.mapNotNull { it.cloudCover }
+    val peak = cloudsOverTime.maxOrNull() ?: currentCloud
+    val trough = cloudsOverTime.minOrNull() ?: currentCloud
+    val cloudSummary = "Cloud cover. Currently $currentCloud%, $cloudLabel. " +
+        "Next 24 hours between $trough% and $peak%."
+
+    WeatherCard(
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = cloudSummary
+        },
+        title = "Cloud Cover",
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

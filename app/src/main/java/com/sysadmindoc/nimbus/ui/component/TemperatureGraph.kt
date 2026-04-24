@@ -27,6 +27,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -66,9 +68,27 @@ fun TemperatureGraph(
     var inspectX by remember { mutableFloatStateOf(-1f) }
     var isInspecting by remember { mutableStateOf(false) }
 
+    // Summarize the series for TalkBack — exact drag interaction isn't
+    // meaningful to a screen reader, but the shape of the curve is.
+    val trendSummary = remember(data, s.tempUnit) {
+        val temps = data.map { WeatherFormatter.convertedTemp(it.temperature, s) }
+        val first = temps.first()
+        val last = temps.last()
+        val low = temps.min()
+        val high = temps.max()
+        val direction = when {
+            last > first + 1 -> "trending warmer"
+            last < first - 1 -> "trending cooler"
+            else -> "steady"
+        }
+        "Next ${data.size} hours: low ${low.toInt()}°, high ${high.toInt()}°, $direction."
+    }
+
     WeatherCard(
         title = "Temperature Trend",
-        modifier = modifier,
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = "Temperature trend graph. $trendSummary"
+        },
     ) {
         Box {
             Canvas(
