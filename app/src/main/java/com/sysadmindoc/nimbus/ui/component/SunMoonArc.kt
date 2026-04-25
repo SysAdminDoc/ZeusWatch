@@ -10,11 +10,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusMoonBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusSunYellow
@@ -44,6 +47,14 @@ fun SunArc(
     if (sunrise == null || sunset == null) return
 
     val settings = LocalUnitSettings.current
+    val semanticSummary = AccessibilityHelper.sunArc(
+        sunrise = sunrise,
+        sunset = sunset,
+        moonrise = moonrise,
+        moonset = moonset,
+        referenceTime = referenceTime,
+        s = settings,
+    )
     val now = referenceTime ?: LocalDateTime.now()
     val fmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     val riseTime = try { LocalDateTime.parse(sunrise, fmt) } catch (_: Exception) { return }
@@ -75,6 +86,9 @@ fun SunArc(
 
     Canvas(
         modifier = modifier
+            .semantics(mergeDescendants = true) {
+                contentDescription = semanticSummary
+            }
             .fillMaxWidth()
             .height(if (hasMoon) 100.dp else 70.dp),
     ) {

@@ -149,6 +149,138 @@ class AccessibilityHelperTest {
         assertTrue(desc.contains("High"))
     }
 
+    @Test
+    fun `uvIndex with peak includes peak hour and safe exposure`() {
+        val now = LocalDateTime.of(2026, 4, 25, 10, 0)
+        val desc = AccessibilityHelper.uvIndex(
+            uvIndex = 4.0,
+            peakTime = now.plusHours(2),
+            peakUv = 8.0,
+            referenceTime = now,
+            s = celsiusSettings,
+        )
+
+        assertTrue(desc.contains("UV index 4"))
+        assertTrue(desc.contains("Peaks at"))
+        assertTrue(desc.contains("safe sun exposure"))
+    }
+
+    @Test
+    fun `humidity includes comfort and dew point`() {
+        val desc = AccessibilityHelper.humidity(55, 12.0, celsiusSettings)
+
+        assertTrue(desc.contains("55 percent"))
+        assertTrue(desc.contains("comfortable"))
+        assertTrue(desc.contains("Dew point"))
+    }
+
+    @Test
+    fun `nowcast summarizes rain timing and peak`() {
+        val now = LocalDateTime.of(2026, 4, 25, 9, 0)
+        val data = listOf(
+            MinutelyPrecipitation(now, 0.0),
+            MinutelyPrecipitation(now.plusMinutes(15), 0.0),
+            MinutelyPrecipitation(now.plusMinutes(30), 0.8),
+            MinutelyPrecipitation(now.plusMinutes(45), 0.2),
+        )
+
+        val desc = AccessibilityHelper.nowcast(data, now, celsiusSettings)
+
+        assertTrue(desc.contains("Rain next hour chart"))
+        assertTrue(desc.contains("Rain starting"))
+        assertTrue(desc.contains("Peak"))
+    }
+
+    @Test
+    fun `outdoorScore includes score and factor breakdown`() {
+        val desc = AccessibilityHelper.outdoorScore(
+            score = 72,
+            tempCelsius = 20.0,
+            humidity = 45,
+            windKmh = 10.0,
+            uvIndex = 4.0,
+            precipProbability = 20,
+        )
+
+        assertTrue(desc.contains("72 out of 100"))
+        assertTrue(desc.contains("Good"))
+        assertTrue(desc.contains("Factor scores"))
+    }
+
+    @Test
+    fun `precipitationForecast describes peak chance and total`() {
+        val now = LocalDateTime.of(2026, 4, 25, 9, 0)
+        val hourly = makeHourly(4).mapIndexed { i, hour ->
+            hour.copy(
+                time = now.plusHours(i.toLong()),
+                precipitationProbability = i * 25,
+                precipitation = i * 0.5,
+            )
+        }
+
+        val desc = AccessibilityHelper.precipitationForecast(hourly, now, celsiusSettings)
+
+        assertTrue(desc.contains("Precipitation forecast chart"))
+        assertTrue(desc.contains("75 percent"))
+        assertTrue(desc.contains("Total accumulation"))
+    }
+
+    @Test
+    fun `sunArc formats sun state and moon times`() {
+        val now = LocalDateTime.of(2026, 4, 25, 12, 0)
+        val desc = AccessibilityHelper.sunArc(
+            sunrise = "2026-04-25T06:30:00",
+            sunset = "2026-04-25T20:00:00",
+            moonrise = "2026-04-25T22:00:00",
+            moonset = "2026-04-25T07:30:00",
+            referenceTime = now,
+            s = celsiusSettings,
+        )
+
+        assertTrue(desc.contains("Sun path chart"))
+        assertTrue(desc.contains("Daylight"))
+        assertTrue(desc.contains("Moonrise"))
+    }
+
+    @Test
+    fun `sunshineDuration includes daylight percentage`() {
+        val desc = AccessibilityHelper.sunshineDuration(6 * 3600.0, 12 * 60)
+
+        assertTrue(desc.contains("6h 0m"))
+        assertTrue(desc.contains("50 percent"))
+    }
+
+    @Test
+    fun `visibility includes current tier and trend range`() {
+        val hourly = makeHourly(6).mapIndexed { i, hour ->
+            hour.copy(visibility = (i + 1) * 3000.0)
+        }
+
+        val desc = AccessibilityHelper.visibility(9000.0, hourly, celsiusSettings)
+
+        assertTrue(desc.contains("Visibility chart"))
+        assertTrue(desc.contains("moderate"))
+        assertTrue(desc.contains("Next 24 hours range"))
+    }
+
+    @Test
+    fun `windTrend includes peak and gusts`() {
+        val now = LocalDateTime.of(2026, 4, 25, 9, 0)
+        val hourly = makeHourly(6).mapIndexed { i, hour ->
+            hour.copy(
+                time = now.plusHours(i.toLong()),
+                windSpeed = 10.0 + i,
+                windGusts = if (i == 5) 30.0 else 12.0,
+            )
+        }
+
+        val desc = AccessibilityHelper.windTrend(hourly, now, celsiusSettings)
+
+        assertTrue(desc.contains("Wind forecast chart"))
+        assertTrue(desc.contains("Peak"))
+        assertTrue(desc.contains("Gusts up to"))
+    }
+
     // --- Air quality ---
 
     @Test
