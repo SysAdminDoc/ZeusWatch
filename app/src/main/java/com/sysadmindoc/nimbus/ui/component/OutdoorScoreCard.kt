@@ -24,11 +24,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -53,10 +55,27 @@ fun OutdoorScoreCard(
         score >= 20 -> Color(0xFFFF5722)
         else -> Color(0xFFF44336)
     }
+    val factors = listOf(
+        "Temp" to factorScore(tempCelsius, 15.0, 25.0, 5.0, 35.0),
+        "Wind" to (100 - (windKmh / 50.0 * 100).toInt()).coerceIn(0, 100),
+        "Rain" to (100 - precipProbability).coerceIn(0, 100),
+        "UV" to (100 - (uvIndex / 11.0 * 100).toInt()).coerceIn(0, 100),
+        "Humidity" to factorScore(humidity.toDouble(), 30.0, 60.0, 10.0, 85.0),
+    )
+    val semanticSummary = AccessibilityHelper.outdoorScore(
+        score = score,
+        tempCelsius = tempCelsius,
+        humidity = humidity,
+        windKmh = windKmh,
+        uvIndex = uvIndex,
+        precipProbability = precipProbability,
+    )
 
     WeatherCard(
         title = "Outdoor Activity",
-        modifier = modifier,
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = semanticSummary
+        },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -126,13 +145,6 @@ fun OutdoorScoreCard(
 
         // Factor breakdown
         Spacer(modifier = Modifier.height(12.dp))
-        val factors = listOf(
-            "Temp" to factorScore(tempCelsius, 15.0, 25.0, 5.0, 35.0),
-            "Wind" to (100 - (windKmh / 50.0 * 100).toInt()).coerceIn(0, 100),
-            "Rain" to (100 - precipProbability).coerceIn(0, 100),
-            "UV" to (100 - (uvIndex / 11.0 * 100).toInt()).coerceIn(0, 100),
-            "Humidity" to factorScore(humidity.toDouble(), 30.0, 60.0, 10.0, 85.0),
-        )
         factors.forEach { (name, value) ->
             FactorBar(name = name, value = value)
         }

@@ -18,11 +18,13 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -36,8 +38,14 @@ fun HumidityCard(
 ) {
     val s = LocalUnitSettings.current
     val comfort = humidityComfort(humidity)
+    val semanticSummary = AccessibilityHelper.humidity(humidity, dewPoint, s)
 
-    WeatherCard(title = "Humidity", modifier = modifier) {
+    WeatherCard(
+        title = "Humidity",
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = semanticSummary
+        },
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,

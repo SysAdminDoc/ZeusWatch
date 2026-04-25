@@ -20,12 +20,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.theme.*
+import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /**
  * UV Index display with a color-coded gradient bar and marker.
@@ -39,16 +40,23 @@ fun UvIndexBar(
     hourly: List<HourlyConditions> = emptyList(),
     referenceTime: java.time.LocalDateTime? = hourly.firstOrNull()?.time,
 ) {
+    val s = LocalUnitSettings.current
     val level = WeatherFormatter.uvDescription(uvIndex)
 
     // Find peak UV hour from hourly data
+    val peakHour = hourly.take(12).maxByOrNull { it.uvIndex ?: 0.0 }
     val peakUvNote = if (hourly.isNotEmpty()) {
-        val peakHour = hourly.take(12).maxByOrNull { it.uvIndex ?: 0.0 }
         if (peakHour != null && (peakHour.uvIndex ?: 0.0) > uvIndex) {
-            val s = LocalUnitSettings.current
             "Peaks at ${WeatherFormatter.formatRelativeHourLabel(peakHour.time, referenceTime, s)}"
         } else null
     } else null
+    val semanticSummary = AccessibilityHelper.uvIndex(
+        uvIndex = uvIndex,
+        peakTime = peakHour?.time,
+        peakUv = peakHour?.uvIndex,
+        referenceTime = referenceTime,
+        s = s,
+    )
     val levelColor = when {
         uvIndex < 3 -> NimbusUvLow
         uvIndex < 6 -> NimbusUvModerate
@@ -59,7 +67,9 @@ fun UvIndexBar(
 
     WeatherCard(
         title = "UV Index",
-        modifier = modifier,
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = semanticSummary
+        },
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
