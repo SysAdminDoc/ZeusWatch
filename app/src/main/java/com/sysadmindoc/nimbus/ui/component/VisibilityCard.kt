@@ -20,6 +20,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +37,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.ui.theme.NimbusUvHigh
 import com.sysadmindoc.nimbus.ui.theme.NimbusUvModerate
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
+import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.format.DateTimeFormatter
 
@@ -55,8 +58,14 @@ fun VisibilityCard(
 
     val visKm = visibilityMeters / 1000.0
     val tier = visibilityTier(visKm)
+    val semanticSummary = AccessibilityHelper.visibility(visibilityMeters, hourly, settings)
 
-    WeatherCard(modifier = modifier, title = "Visibility") {
+    WeatherCard(
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = semanticSummary
+        },
+        title = "Visibility",
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
