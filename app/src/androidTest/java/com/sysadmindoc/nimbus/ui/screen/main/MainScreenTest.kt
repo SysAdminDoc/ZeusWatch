@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.sysadmindoc.nimbus.data.model.*
+import com.sysadmindoc.nimbus.testing.setContentWithAccessibilityChecks
 import com.sysadmindoc.nimbus.ui.component.LocalUnitSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState
@@ -23,8 +24,8 @@ class MainScreenTest {
     private val testWeatherData = WeatherData(
         location = LocationInfo("Denver", "Colorado", "US", 39.7, -104.9),
         current = CurrentConditions(
-            temperature = 72.0,
-            feelsLike = 70.0,
+            temperature = 22.2,
+            feelsLike = 21.1,
             humidity = 45,
             weatherCode = WeatherCode.CLEAR_SKY,
             isDay = true,
@@ -34,19 +35,19 @@ class MainScreenTest {
             pressure = 1013.25,
             uvIndex = 5.0,
             visibility = 16000.0,
-            dewPoint = 50.0,
+            dewPoint = 10.0,
             cloudCover = 20,
             precipitation = 0.0,
-            dailyHigh = 80.0,
-            dailyLow = 55.0,
+            dailyHigh = 26.7,
+            dailyLow = 12.8,
             sunrise = "2025-01-15T07:00:00",
             sunset = "2025-01-15T17:30:00",
         ),
         hourly = (0 until 12).map { i ->
             HourlyConditions(
                 time = LocalDateTime.now().plusHours(i.toLong()),
-                temperature = 70.0 + i,
-                feelsLike = 68.0 + i,
+                temperature = 21.0 + i,
+                feelsLike = 20.0 + i,
                 weatherCode = WeatherCode.CLEAR_SKY,
                 isDay = true,
                 precipitationProbability = 0,
@@ -63,8 +64,8 @@ class MainScreenTest {
             DailyConditions(
                 date = LocalDate.now().plusDays(i.toLong()),
                 weatherCode = WeatherCode.PARTLY_CLOUDY,
-                temperatureHigh = 80.0 + i,
-                temperatureLow = 55.0 - i,
+                temperatureHigh = 26.7 + i,
+                temperatureLow = 12.8 - i,
                 precipitationProbability = 10 * i,
                 precipitationSum = null,
                 sunrise = "2025-01-15T07:00:00",
@@ -78,7 +79,7 @@ class MainScreenTest {
 
     @Test
     fun loadingState_showsShimmerSkeleton() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 MainScreenContent(
                     state = MainUiState(isLoading = true, weatherData = null),
@@ -93,7 +94,7 @@ class MainScreenTest {
 
     @Test
     fun errorState_showsErrorMessageAndRetryButton() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 MainScreenContent(
                     state = MainUiState(
@@ -111,7 +112,7 @@ class MainScreenTest {
 
     @Test
     fun permissionError_showsGrantLocationAction() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 MainScreenContent(
                     state = MainUiState(
@@ -128,7 +129,7 @@ class MainScreenTest {
 
     @Test
     fun weatherState_showsLocationNameAndTemperature() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 MainScreenContent(
                     state = MainUiState(
@@ -145,7 +146,7 @@ class MainScreenTest {
 
     @Test
     fun weatherState_showsConditionDescription() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 MainScreenContent(
                     state = MainUiState(
@@ -161,7 +162,7 @@ class MainScreenTest {
 
     @Test
     fun weatherState_showsHighAndLow() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 MainScreenContent(
                     state = MainUiState(
@@ -172,13 +173,15 @@ class MainScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("H:80\u00B0").assertIsDisplayed()
-        composeTestRule.onNodeWithText("L:55\u00B0").assertIsDisplayed()
+        composeTestRule.onNodeWithText("High").assertIsDisplayed()
+        composeTestRule.onNodeWithText("80\u00B0").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Low").assertIsDisplayed()
+        composeTestRule.onNodeWithText("55\u00B0").assertIsDisplayed()
     }
 
     @Test
     fun cachedState_showsCachedBanner() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 MainScreenContent(
                     state = MainUiState(

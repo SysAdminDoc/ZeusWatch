@@ -301,29 +301,39 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         private fun conditionTextToWmo(text: String?): Int {
             if (text.isNullOrBlank()) return 0
             val lower = text.lowercase()
-            return when {
-                "blizzard" in lower -> 99
-                "thunder" in lower && "heavy" in lower -> 96
-                "thunder" in lower -> 95
-                "freezing rain" in lower -> 66
-                "freezing drizzle" in lower -> 57
-                "heavy rain" in lower -> 65
-                "rain shower" in lower -> 80
-                "rain" in lower || "showers" in lower -> 63
-                "drizzle" in lower -> 53
-                "heavy snow" in lower -> 75
-                "snow shower" in lower -> 85
-                "snow" in lower || "flurries" in lower -> 73
-                "sleet" in lower || "ice pellet" in lower -> 66
-                "fog" in lower -> 45
-                "haze" in lower || "mist" in lower -> 45
-                "overcast" in lower -> 3
-                "mostly cloudy" in lower -> 3
-                "partly cloudy" in lower || "partly sunny" in lower -> 2
-                "mostly sunny" in lower || "mainly sunny" in lower -> 1
-                "sunny" in lower || "clear" in lower -> 0
-                else -> 0
-            }
+            return CONDITION_TEXT_RULES.firstOrNull { it.matches(lower) }?.code ?: 0
+        }
+
+        private val CONDITION_TEXT_RULES = listOf(
+            ConditionTextRule(code = 99, allOf = listOf("blizzard")),
+            ConditionTextRule(code = 96, allOf = listOf("thunder", "heavy")),
+            ConditionTextRule(code = 95, allOf = listOf("thunder")),
+            ConditionTextRule(code = 66, allOf = listOf("freezing rain")),
+            ConditionTextRule(code = 57, allOf = listOf("freezing drizzle")),
+            ConditionTextRule(code = 65, allOf = listOf("heavy rain")),
+            ConditionTextRule(code = 80, allOf = listOf("rain shower")),
+            ConditionTextRule(code = 63, anyOf = listOf("rain", "showers")),
+            ConditionTextRule(code = 53, allOf = listOf("drizzle")),
+            ConditionTextRule(code = 75, allOf = listOf("heavy snow")),
+            ConditionTextRule(code = 85, allOf = listOf("snow shower")),
+            ConditionTextRule(code = 73, anyOf = listOf("snow", "flurries")),
+            ConditionTextRule(code = 66, anyOf = listOf("sleet", "ice pellet")),
+            ConditionTextRule(code = 45, allOf = listOf("fog")),
+            ConditionTextRule(code = 45, anyOf = listOf("haze", "mist")),
+            ConditionTextRule(code = 3, allOf = listOf("overcast")),
+            ConditionTextRule(code = 3, allOf = listOf("mostly cloudy")),
+            ConditionTextRule(code = 2, anyOf = listOf("partly cloudy", "partly sunny")),
+            ConditionTextRule(code = 1, anyOf = listOf("mostly sunny", "mainly sunny")),
+            ConditionTextRule(code = 0, anyOf = listOf("sunny", "clear")),
+        )
+
+        private data class ConditionTextRule(
+            val code: Int,
+            val allOf: List<String> = emptyList(),
+            val anyOf: List<String> = emptyList(),
+        ) {
+            fun matches(text: String): Boolean =
+                allOf.all { it in text } && (anyOf.isEmpty() || anyOf.any { it in text })
         }
     }
 }
