@@ -52,10 +52,14 @@ fun WindCompass(
     modifier: Modifier = Modifier,
 ) {
     val textMeasurer = rememberTextMeasurer()
+    val s = LocalUnitSettings.current
+    val compassDescription = AccessibilityHelper.windCompass(windSpeed, windDirection, windGusts, s)
 
     WeatherCard(
         title = "Wind",
-        modifier = modifier,
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = compassDescription
+        },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -66,14 +70,12 @@ fun WindCompass(
                 modifier = Modifier.size(120.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                val s = LocalUnitSettings.current
                 val ringColor = if (s.showBeaufortColors) {
                     Color(WeatherFormatter.beaufortScale(windSpeed).colorHex)
                 } else {
                     Color.White.copy(alpha = 0.1f)
                 }
                 val ringWidth = if (s.showBeaufortColors) 3f else 1.5f
-                val compassDescription = AccessibilityHelper.windCompass(windSpeed, windDirection, windGusts, s)
                 Canvas(modifier = Modifier.size(120.dp).semantics { contentDescription = compassDescription }) {
                     val cx = size.width / 2f
                     val cy = size.height / 2f
@@ -156,7 +158,6 @@ fun WindCompass(
 
             // Wind details
             Column {
-                val s = LocalUnitSettings.current
                 Text(
                     text = WeatherFormatter.formatWindSpeed(windSpeed, s),
                     style = MaterialTheme.typography.headlineMedium,
