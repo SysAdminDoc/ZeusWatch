@@ -18,6 +18,8 @@ private const val TAG = "WeatherSourceManager"
  * primary source and optional fallback. If the primary fails, the fallback
  * is attempted transparently.
  */
+// Hilt fan-in is intentional: this manager coordinates fallback across every provider family.
+@Suppress("LongParameterList")
 @Singleton
 class WeatherSourceManager @Inject constructor(
     private val prefs: UserPreferences,
