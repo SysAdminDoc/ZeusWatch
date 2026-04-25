@@ -21,11 +21,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.ui.theme.NimbusSunYellow
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -42,10 +45,13 @@ fun SunshineDurationCard(
     val sunshineHours = sunshineDurationSeconds / 3600.0
     val maxHours = (dayLengthMinutes?.toDouble() ?: (14 * 60.0)) / 60.0
     val progress = (sunshineHours / maxHours).coerceIn(0.0, 1.0).toFloat()
+    val semanticSummary = AccessibilityHelper.sunshineDuration(sunshineDurationSeconds, dayLengthMinutes)
 
     WeatherCard(
         title = "Sunshine",
-        modifier = modifier,
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = semanticSummary
+        },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

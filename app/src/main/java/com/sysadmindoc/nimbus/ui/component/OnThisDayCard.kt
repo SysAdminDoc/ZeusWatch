@@ -56,8 +56,21 @@ fun OnThisDayCard(
     modifier: Modifier = Modifier,
 ) {
     val s = LocalUnitSettings.current
+    val cardModifier = if (data == null || data.priorYears.isEmpty()) {
+        modifier
+    } else {
+        val delta = forecastHighC?.let { it - data.averageHighC }
+        val deltaText = delta?.let { deltaLabel(it, s) } ?: "forecast comparison unavailable"
+        modifier.semantics(mergeDescendants = true) {
+            contentDescription = "On this day. ${data.priorYears.size}-year average high " +
+                "${WeatherFormatter.formatTemperature(data.averageHighC, s)}. " +
+                "Record high ${WeatherFormatter.formatTemperature(data.recordHighC, s)}, " +
+                "record low ${WeatherFormatter.formatTemperature(data.recordLowC, s)}. " +
+                "Today's forecast is $deltaText."
+        }
+    }
 
-    WeatherCard(title = "On This Day", modifier = modifier) {
+    WeatherCard(title = "On This Day", modifier = cardModifier) {
         if (data == null || data.priorYears.isEmpty()) {
             Text(
                 text = "Historical data unavailable for this location.",
