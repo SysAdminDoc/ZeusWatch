@@ -29,6 +29,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusMoonBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.WeatherFormatter
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -41,12 +42,19 @@ fun MoonPhaseCard(
     sunset: String? = null,
     referenceTime: java.time.LocalDateTime? = null,
 ) {
+    val s = LocalUnitSettings.current
+    val sunriseLabel = sunrise?.let { WeatherFormatter.formatTime(it, s) }
+    val sunsetLabel = sunset?.let { WeatherFormatter.formatTime(it, s) }
+    val moonriseLabel = astronomy.moonrise?.let { WeatherFormatter.formatTime(it, s) }
+    val moonsetLabel = astronomy.moonset?.let { WeatherFormatter.formatTime(it, s) }
     val astroSummary = buildString {
         append("Astronomy. ")
-        if (sunrise != null) append("Sunrise $sunrise. ")
-        if (sunset != null) append("Sunset $sunset. ")
+        if (sunriseLabel != null) append("Sunrise $sunriseLabel. ")
+        if (sunsetLabel != null) append("Sunset $sunsetLabel. ")
         astronomy.dayLength?.let { append("Day length $it. ") }
         append("Moon ${astronomy.moonPhase.label}, ${astronomy.moonIllumination.toInt()}% illuminated.")
+        if (moonriseLabel != null) append(" Moonrise $moonriseLabel.")
+        if (moonsetLabel != null) append(" Moonset $moonsetLabel.")
     }
     WeatherCard(
         title = "Astronomy",
@@ -56,13 +64,12 @@ fun MoonPhaseCard(
     ) {
         // Sunrise / Sunset row
         if (sunrise != null || sunset != null) {
-            val s = LocalUnitSettings.current
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                AstroDetail("Sunrise", com.sysadmindoc.nimbus.util.WeatherFormatter.formatTime(sunrise, s))
-                AstroDetail("Sunset", com.sysadmindoc.nimbus.util.WeatherFormatter.formatTime(sunset, s))
+                AstroDetail("Sunrise", WeatherFormatter.formatTime(sunrise, s))
+                AstroDetail("Sunset", WeatherFormatter.formatTime(sunset, s))
                 astronomy.dayLength?.let { AstroDetail("Day Length", it) }
             }
 
