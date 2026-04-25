@@ -36,6 +36,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
@@ -70,19 +71,7 @@ fun TemperatureGraph(
 
     // Summarize the series for TalkBack — exact drag interaction isn't
     // meaningful to a screen reader, but the shape of the curve is.
-    val trendSummary = remember(data, s.tempUnit) {
-        val temps = data.map { WeatherFormatter.convertedTemp(it.temperature, s) }
-        val first = temps.first()
-        val last = temps.last()
-        val low = temps.min()
-        val high = temps.max()
-        val direction = when {
-            last > first + 1 -> "trending warmer"
-            last < first - 1 -> "trending cooler"
-            else -> "steady"
-        }
-        "Next ${data.size} hours: low ${low.toInt()}°, high ${high.toInt()}°, $direction."
-    }
+    val trendSummary = remember(data, s.tempUnit) { buildTemperatureTrendSummary(data, s) }
 
     WeatherCard(
         title = "Temperature Trend",
@@ -321,4 +310,21 @@ fun TemperatureGraph(
             }
         }
     }
+}
+
+private fun buildTemperatureTrendSummary(
+    data: List<HourlyConditions>,
+    settings: NimbusSettings,
+): String {
+    val temps = data.map { WeatherFormatter.convertedTemp(it.temperature, settings) }
+    val first = temps.first()
+    val last = temps.last()
+    val low = temps.min()
+    val high = temps.max()
+    val direction = when {
+        last > first + 1 -> "trending warmer"
+        last < first - 1 -> "trending cooler"
+        else -> "steady"
+    }
+    return "Next ${data.size} hours: low ${low.toInt()}°, high ${high.toInt()}°, $direction."
 }

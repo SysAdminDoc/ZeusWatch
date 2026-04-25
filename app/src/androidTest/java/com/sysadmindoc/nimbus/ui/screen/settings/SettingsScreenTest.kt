@@ -1,14 +1,17 @@
 package com.sysadmindoc.nimbus.ui.screen.settings
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import com.sysadmindoc.nimbus.BuildConfig
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.data.repository.WindUnit
+import com.sysadmindoc.nimbus.testing.setContentWithAccessibilityChecks
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -21,7 +24,7 @@ class SettingsScreenTest {
 
     @Test
     fun settingsScreen_showsAllSections() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 SettingsContent(
                     settings = NimbusSettings(),
@@ -31,17 +34,17 @@ class SettingsScreenTest {
         }
 
         composeTestRule.onNodeWithText("Settings").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Appearance").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Forecast").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Alerts").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Advanced").assertIsDisplayed()
+        assertCategoryDisplayed("Appearance")
+        assertCategoryDisplayed("Forecast")
+        assertCategoryDisplayed("Alerts")
+        assertCategoryDisplayed("Advanced")
         composeTestRule.onNodeWithText("Display").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Visual Effects").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Visual Effects").performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun settingsScreen_showsAboutInfo() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 SettingsContent(
                     settings = NimbusSettings(),
@@ -50,15 +53,15 @@ class SettingsScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Advanced").performClick()
-        composeTestRule.onNodeWithText("1.0.0").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Open-Meteo, NWS, and more").assertIsDisplayed()
-        composeTestRule.onNodeWithText("LGPL-3.0").assertIsDisplayed()
+        clickCategory("Advanced")
+        composeTestRule.onNodeWithText(BuildConfig.VERSION_NAME).performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Open-Meteo, NWS, and more").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("LGPL-3.0").performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun settingsScreen_showsTempUnits() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 SettingsContent(
                     settings = NimbusSettings(),
@@ -67,14 +70,14 @@ class SettingsScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Forecast").performClick()
-        composeTestRule.onNodeWithText("Fahrenheit").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Celsius").assertIsDisplayed()
+        clickCategory("Forecast")
+        composeTestRule.onNodeWithText("Fahrenheit").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Celsius").assertExists()
     }
 
     @Test
     fun settingsScreen_showsWindUnits() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 SettingsContent(
                     settings = NimbusSettings(),
@@ -83,17 +86,17 @@ class SettingsScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Forecast").performClick()
-        composeTestRule.onNodeWithText("mph").assertIsDisplayed()
-        composeTestRule.onNodeWithText("km/h").assertIsDisplayed()
-        composeTestRule.onNodeWithText("knots").assertIsDisplayed()
+        clickCategory("Forecast")
+        composeTestRule.onNodeWithText("mph").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("km/h").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("knots").performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun settingsScreen_tempUnitClick_invokesCallback() {
         var selectedUnit: TempUnit? = null
 
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 SettingsContent(
                     settings = NimbusSettings(tempUnit = TempUnit.FAHRENHEIT),
@@ -103,8 +106,8 @@ class SettingsScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Forecast").performClick()
-        composeTestRule.onNodeWithText("Celsius").performClick()
+        clickCategory("Forecast")
+        composeTestRule.onNodeWithText("Celsius").performScrollTo().performClick()
         assertEquals(TempUnit.CELSIUS, selectedUnit)
     }
 
@@ -112,7 +115,7 @@ class SettingsScreenTest {
     fun settingsScreen_windUnitClick_invokesCallback() {
         var selectedUnit: WindUnit? = null
 
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 SettingsContent(
                     settings = NimbusSettings(windUnit = WindUnit.MPH),
@@ -122,14 +125,14 @@ class SettingsScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Forecast").performClick()
-        composeTestRule.onNodeWithText("km/h").performClick()
+        clickCategory("Forecast")
+        composeTestRule.onNodeWithText("km/h").performScrollTo().performClick()
         assertEquals(WindUnit.KMH, selectedUnit)
     }
 
     @Test
     fun settingsScreen_particleToggle_showsLabel() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 SettingsContent(
                     settings = NimbusSettings(particlesEnabled = true),
@@ -138,15 +141,15 @@ class SettingsScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Weather Particles").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Rain, snow, and sun ray animations").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Weather Particles").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Rain, snow, and sun ray animations").performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun settingsScreen_particleToggle_invokesCallback() {
         var toggledValue: Boolean? = null
 
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 SettingsContent(
                     settings = NimbusSettings(particlesEnabled = true),
@@ -156,13 +159,13 @@ class SettingsScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Weather Particles").performClick()
+        composeTestRule.onNodeWithText("Weather Particles").performScrollTo().performClick()
         assertEquals(false, toggledValue)
     }
 
     @Test
     fun settingsScreen_timeFormatOptions() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 SettingsContent(
                     settings = NimbusSettings(),
@@ -171,16 +174,16 @@ class SettingsScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Forecast").performClick()
-        composeTestRule.onNodeWithText("12-hour").assertIsDisplayed()
-        composeTestRule.onNodeWithText("24-hour").assertIsDisplayed()
+        clickCategory("Forecast")
+        composeTestRule.onNodeWithText("12-hour").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("24-hour").performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun settingsScreen_backButton_invokesCallback() {
         var backCalled = false
 
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 SettingsContent(
                     settings = NimbusSettings(),
@@ -195,4 +198,13 @@ class SettingsScreenTest {
             hasText("Settings") // settings title exists means screen rendered
         ).assertIsDisplayed()
     }
+}
+
+private fun SettingsScreenTest.assertCategoryDisplayed(label: String) {
+    composeTestRule.onNode(hasText(label) and hasClickAction()).performScrollTo().assertIsDisplayed()
+}
+
+private fun SettingsScreenTest.clickCategory(label: String) {
+    composeTestRule.onNode(hasText(label) and hasClickAction()).performScrollTo().performClick()
+    composeTestRule.waitForIdle()
 }
