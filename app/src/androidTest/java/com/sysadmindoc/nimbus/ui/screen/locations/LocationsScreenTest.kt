@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
+import com.sysadmindoc.nimbus.testing.setContentWithAccessibilityChecks
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import org.junit.Rule
 import org.junit.Test
@@ -33,13 +34,13 @@ class LocationsScreenTest {
         ),
         GeocodingResult(
             id = 101, name = "San Diego", latitude = 32.7, longitude = -117.2,
-            country = "United States", admin1 = "California",
+            country = "United States", admin1 = "Southern California",
         ),
     )
 
     @Test
     fun locationsScreen_showsTitleAndSearchBar() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 LocationsContent(
                     saved = emptyList(),
@@ -50,12 +51,12 @@ class LocationsScreenTest {
         }
 
         composeTestRule.onNodeWithText("Locations").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Search city or zip code...").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Search Locations").assertIsDisplayed()
     }
 
     @Test
     fun locationsScreen_showsSavedLocations() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 LocationsContent(
                     saved = savedLocations,
@@ -72,7 +73,7 @@ class LocationsScreenTest {
 
     @Test
     fun locationsScreen_showsCurrentLocationSubtitle() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 LocationsContent(
                     saved = savedLocations,
@@ -88,7 +89,7 @@ class LocationsScreenTest {
 
     @Test
     fun locationsScreen_showsRegionForSavedLocation() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 LocationsContent(
                     saved = savedLocations,
@@ -103,7 +104,7 @@ class LocationsScreenTest {
 
     @Test
     fun locationsScreen_showsSearchResults() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 LocationsContent(
                     saved = emptyList(),
@@ -120,12 +121,13 @@ class LocationsScreenTest {
         composeTestRule.onNodeWithText("Search Results").assertIsDisplayed()
         composeTestRule.onNodeWithText("San Francisco").assertIsDisplayed()
         composeTestRule.onNodeWithText("San Diego").assertIsDisplayed()
-        composeTestRule.onNodeWithText("California").assertIsDisplayed()
+        composeTestRule.onNodeWithText("California, United States").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Southern California, United States").assertIsDisplayed()
     }
 
     @Test
     fun locationsScreen_showsNoResultsMessage() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 LocationsContent(
                     saved = emptyList(),
@@ -144,7 +146,7 @@ class LocationsScreenTest {
 
     @Test
     fun locationsScreen_shortQuery_hidesResults() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 LocationsContent(
                     saved = savedLocations,
@@ -161,7 +163,7 @@ class LocationsScreenTest {
 
     @Test
     fun locationsScreen_emptyState_showsSearchBarOnly() {
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 LocationsContent(
                     saved = emptyList(),
