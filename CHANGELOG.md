@@ -2,11 +2,24 @@
 
 All notable changes to Nimbus Weather are documented here.
 
-## [Unreleased]
+## [1.18.0] - 2026-06-24
+
+Test coverage expansion + notification deep linking + background refresh cadence.
+
+### Added
+- **Adapter unit tests — OWM** — `OwmForecastAdapterTest` covers wind m/s→km/h, visibility passthrough, WMO code mapping, day/night icon suffix, precipitation-probability fraction→percent, clamping, and blank-API-key failure. `OwmAlertAdapterTest` covers severity tag mapping, empty alert list, and missing key. `OwmAqiAdapterTest` covers PM2.5/PM10/O3 AQI breakpoints, empty-list failure, and missing key.
+- **Adapter unit tests — BrightSky** — `BrightSkyForecastAdapterTest` covers station name, custom-name override, condition→WMO mapping, day/night icon suffix, visibility-in-meters passthrough, daily high/low aggregation, multi-day sorted output, and circular wind mean for north-spanning ranges (e.g. 350°+10° yields a north-ish bearing, not ~180°). `BrightSkyAlertAdapterTest` covers EN-over-DE preference, German fallback, blank-alertId→`dwd-{id}` synthetic key, EN description preference, severity mapping, and `senderName` always "DWD".
+- **Adapter unit tests — Environment Canada** — `EnvironmentCanadaAlertAdapterTest` covers `resolveProvince()` for all 13 provinces/territories by representative city, 3 non-Canadian coordinates returning null, `getAlerts()` for non-Canadian coords → empty, "No watches or warnings" / "No warnings in effect" filter text, null-title filter, severity mapping, `senderName`, synthetic-ID generation, and `areaDesc` passthrough.
+- **Adapter unit tests — MeteoAlarm** — `MeteoAlarmAdapterTest` covers `getAlerts()` always-empty contract (country detection is at AlertRepository level), `getAlertsForCountry()` full field mapping, lowercase country code, null identifier → synthetic ID, null event → skip, multiple info blocks, multi-area join, null areaDesc fallback, MINOR/EXTREME severity, empty warning list, and `senderName` fallback chain (info.senderName → warning.sender → displayName).
+- **Adapter unit tests — JMA** — `JmaAlertAdapterTest` covers happy-path full field mapping, null title filter, author→senderName, null author→displayName, null area→"Japan", onset→effective, null onset fallback to updated, null id→synthetic, unknown/null severity→UNKNOWN, null instruction always null, multiple entries, empty list, and API exception → failure result.
 
 ### Changed
 - **Background weather freshness is more aggressive** — `WidgetRefreshWorker` now schedules periodic weather, widget, persistent-notification, and Wear sync refreshes every 15 minutes instead of 30 minutes, using WorkManager's update policy so existing installs adopt the faster cadence on the next schedule sync.
 - **Notification taps now land on the relevant weather surface** — severe-alert notifications open the active alert banner, rain-nowcast notifications open the Rain Next Hour card, and health notifications open the Health Alerts card. The Today screen temporarily exposes a targeted card when it was hidden in the user's card layout, then scrolls there instead of dropping users at the default forecast top.
+
+### Version
+- phone versionCode 80 → 81, versionName 1.17.0 → 1.18.0
+- wear versionCode 56 → 57, versionName 1.17.0 → 1.18.0
 
 ## [1.17.0] - 2026-04-24
 
