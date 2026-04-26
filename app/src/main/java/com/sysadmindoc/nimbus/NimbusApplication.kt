@@ -15,6 +15,7 @@ import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
 import com.sysadmindoc.nimbus.util.CrashReporting
 import com.sysadmindoc.nimbus.util.CustomAlertWorker
+import com.sysadmindoc.nimbus.util.DatabaseMaintenanceWorker
 import com.sysadmindoc.nimbus.util.HealthAlertWorker
 import com.sysadmindoc.nimbus.util.NowcastAlertWorker
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
@@ -56,6 +57,7 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
         super.onCreate()
         AlertNotificationHelper.createChannels(this)
         WeatherNotificationHelper.createChannel(this)
+        DatabaseMaintenanceWorker.schedule(this)
 
         CoroutineScope(SupervisorJob() + defaultDispatcher).launch {
             val settings = prefs.settings.first()
