@@ -29,6 +29,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
@@ -111,23 +113,7 @@ fun HourlyTab(
                     referenceDate != null && date == referenceDate.plusDays(1) -> "Tomorrow"
                     else -> date.format(dayFormatter)
                 }
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(NimbusBackgroundGradient),
-                ) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        dayLabel,
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = NimbusBlueAccent,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(NimbusCardBg)
-                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(14.dp))
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                    )
-                }
+                HourlyDayHeader(dayLabel = dayLabel)
             }
             itemsIndexed(hours, key = { _, h -> h.time.toString() }) { index, hour ->
                 HourlyRow(
@@ -140,6 +126,35 @@ fun HourlyTab(
 
         item { Spacer(modifier = Modifier.height(80.dp)) }
     }
+    }
+}
+
+@Composable
+private fun HourlyDayHeader(dayLabel: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            dayLabel,
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            color = NimbusBlueAccent,
+            modifier = Modifier
+                .semantics { heading() }
+                .clip(RoundedCornerShape(16.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            NimbusBlueAccent.copy(alpha = 0.18f),
+                            NimbusCardBg,
+                        ),
+                    ),
+                )
+                .border(1.dp, NimbusBlueAccent.copy(alpha = 0.32f), RoundedCornerShape(16.dp))
+                .padding(horizontal = 13.dp, vertical = 7.dp),
+        )
     }
 }
 
