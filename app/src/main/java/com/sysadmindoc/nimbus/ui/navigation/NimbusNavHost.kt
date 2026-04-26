@@ -25,7 +25,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +58,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 object Routes {
     const val MAIN = "main"
     const val MAIN_LOCATION = "main/{locationId}"
+    const val MAIN_TARGET = "main/target/{target}"
     const val SETTINGS = "settings"
     const val RADAR = "radar/{lat}/{lon}"
     const val LOCATIONS = "locations"
@@ -64,6 +67,47 @@ object Routes {
 
     fun radar(lat: Double, lon: Double): String = "radar/$lat/$lon"
     fun mainWithLocation(id: Long): String = "main/$id"
+    fun mainTarget(target: MainDeepLinkTarget): String = "main/target/${target.routeValue}"
+}
+
+enum class MainDeepLinkTarget(val routeValue: String) {
+    WEATHER_ALERTS("weather_alerts"),
+    NOWCAST("nowcast"),
+    HEALTH("health"),
+    ;
+
+    companion object {
+        fun fromRouteValue(value: String?): MainDeepLinkTarget? {
+            val normalized = value?.trim()?.lowercase().orEmpty()
+            return entries.firstOrNull { it.routeValue == normalized } ?: when (normalized) {
+                "alerts", "alert", "severe", "severe_weather" -> WEATHER_ALERTS
+                "rain", "rain_next_hour" -> NOWCAST
+                "health_alerts", "migraine", "respiratory", "arthritis" -> HEALTH
+                else -> null
+            }
+        }
+    }
+}
+
+val LocalMainDeepLinkTarget = staticCompositionLocalOf<MainDeepLinkTarget?> { null }
+
+internal fun resolveZeusWatchDeepLinkRoute(
+    host: String?,
+    target: String? = null,
+    card: String? = null,
+): String? {
+    return when (host?.lowercase()) {
+        "locations" -> Routes.LOCATIONS
+        "settings" -> Routes.SETTINGS
+        "radar" -> Routes.radar(0.0, 0.0)
+        "compare" -> Routes.COMPARE
+        "custom_alerts" -> Routes.CUSTOM_ALERTS
+        "alerts", "weather_alerts" -> Routes.mainTarget(MainDeepLinkTarget.WEATHER_ALERTS)
+        "nowcast" -> Routes.mainTarget(MainDeepLinkTarget.NOWCAST)
+        "health", "health_alerts" -> Routes.mainTarget(MainDeepLinkTarget.HEALTH)
+        "main" -> MainDeepLinkTarget.fromRouteValue(target ?: card)?.let(Routes::mainTarget)
+        else -> null
+    }
 }
 
 enum class BottomTab(
@@ -116,6 +160,22 @@ fun NimbusNavHost(
                 onNavigateToLocations = { navController.navigate(Routes.LOCATIONS) },
                 onNavigateToCompare = { navController.navigate(Routes.COMPARE) },
             )
+        }
+        composable(
+            route = Routes.MAIN_TARGET,
+            arguments = listOf(navArgument("target") { type = NavType.StringType }),
+        ) { backStack ->
+            val target = MainDeepLinkTarget.fromRouteValue(backStack.arguments?.getString("target"))
+            CompositionLocalProvider(LocalMainDeepLinkTarget provides target) {
+                MainScreen(
+                    onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
+                    onNavigateToRadar = { lat, lon ->
+                        navController.navigate(Routes.radar(lat, lon))
+                    },
+                    onNavigateToLocations = { navController.navigate(Routes.LOCATIONS) },
+                    onNavigateToCompare = { navController.navigate(Routes.COMPARE) },
+                )
+            }
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(
