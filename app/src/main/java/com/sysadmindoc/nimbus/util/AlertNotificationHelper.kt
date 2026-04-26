@@ -26,6 +26,11 @@ object AlertNotificationHelper {
     private const val GROUP_ID = "nimbus_alert_group"
     private const val GROUP_NAME = "Weather Alerts"
     private const val SUMMARY_NOTIFICATION_ID = 0x1000
+    private const val URI_MAIN = "zeuswatch://main"
+    private const val URI_WEATHER_ALERTS = "zeuswatch://main?target=weather_alerts"
+    private const val URI_NOWCAST = "zeuswatch://main?target=nowcast"
+    private const val URI_HEALTH = "zeuswatch://main?target=health"
+    private const val URI_CUSTOM_ALERTS = "zeuswatch://custom_alerts"
 
     // Ambient group — nowcast + health + custom rules. Separate from severe
     // alerts so a tornado warning doesn't collapse into an "it's cloudy" stack.
@@ -149,7 +154,7 @@ object AlertNotificationHelper {
         if (!hasNotificationPermission(context)) return false
 
         val pendingIntent = deepLinkPendingIntent(
-            context, requestCode = NOTIFICATION_ID_NOWCAST, uri = "zeuswatch://main",
+            context, requestCode = NOTIFICATION_ID_NOWCAST, uri = URI_NOWCAST,
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_NOWCAST)
@@ -191,7 +196,7 @@ object AlertNotificationHelper {
 
         val notifId = NOTIFICATION_ID_HEALTH_BASE + (title.hashCode() and 0xFFFF)
         val pendingIntent = deepLinkPendingIntent(
-            context, requestCode = notifId, uri = "zeuswatch://main",
+            context, requestCode = notifId, uri = URI_HEALTH,
         )
 
         val bigText = if (detail.isNotBlank()) "$body\n\n$detail" else body
@@ -238,7 +243,7 @@ object AlertNotificationHelper {
 
         val id = NOTIFICATION_ID_CUSTOM_BASE + (ruleKey.hashCode() and 0xFFFF)
         val pendingIntent = deepLinkPendingIntent(
-            context, requestCode = id, uri = "zeuswatch://custom_alerts",
+            context, requestCode = id, uri = URI_CUSTOM_ALERTS,
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_CUSTOM)
             .setSmallIcon(R.drawable.ic_alert)
@@ -280,6 +285,13 @@ object AlertNotificationHelper {
             .setSmallIcon(R.drawable.ic_alert)
             .setContentTitle("Weather updates")
             .setContentText("Health, nowcast, and custom-rule notifications")
+            .setContentIntent(
+                deepLinkPendingIntent(
+                    context,
+                    requestCode = AMBIENT_SUMMARY_NOTIFICATION_ID,
+                    uri = URI_MAIN,
+                ),
+            )
             .setGroup(AMBIENT_GROUP_ID)
             .setGroupSummary(true)
             .setAutoCancel(true)
@@ -303,12 +315,10 @@ object AlertNotificationHelper {
     ): Boolean {
         if (!hasNotificationPermission(context)) return false
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            context, alert.id.hashCode(), intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        val pendingIntent = deepLinkPendingIntent(
+            context,
+            requestCode = alert.id.hashCode(),
+            uri = URI_WEATHER_ALERTS,
         )
 
         val channel = channelForSeverity(alert.severity)
@@ -351,6 +361,13 @@ object AlertNotificationHelper {
                 .setSmallIcon(R.drawable.ic_alert)
                 .setContentTitle("Weather Alerts")
                 .setContentText("Active weather alerts in your area")
+                .setContentIntent(
+                    deepLinkPendingIntent(
+                        context,
+                        requestCode = SUMMARY_NOTIFICATION_ID,
+                        uri = URI_WEATHER_ALERTS,
+                    ),
+                )
                 .setGroup(GROUP_ID)
                 .setGroupSummary(true)
                 .setAutoCancel(true)

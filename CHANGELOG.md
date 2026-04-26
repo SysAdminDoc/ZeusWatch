@@ -6,6 +6,7 @@ All notable changes to Nimbus Weather are documented here.
 
 ### Changed
 - **Background weather freshness is more aggressive** — `WidgetRefreshWorker` now schedules periodic weather, widget, persistent-notification, and Wear sync refreshes every 15 minutes instead of 30 minutes, using WorkManager's update policy so existing installs adopt the faster cadence on the next schedule sync.
+- **Notification taps now land on the relevant weather surface** — severe-alert notifications open the active alert banner, rain-nowcast notifications open the Rain Next Hour card, and health notifications open the Health Alerts card. The Today screen temporarily exposes a targeted card when it was hidden in the user's card layout, then scrolls there instead of dropping users at the default forecast top.
 
 ## [1.17.0] - 2026-04-24
 

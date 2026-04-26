@@ -22,6 +22,7 @@ import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.ui.component.AdaptiveLayoutInfo
 import com.sysadmindoc.nimbus.ui.component.LocalAdaptiveLayout
 import com.sysadmindoc.nimbus.ui.navigation.NimbusNavHost
+import com.sysadmindoc.nimbus.ui.navigation.resolveZeusWatchDeepLinkRoute
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -76,15 +77,11 @@ class MainActivity : ComponentActivity() {
     private fun resolveDeepLink(intent: Intent?): String? {
         val uri = intent?.data ?: return null
         if (uri.scheme != "zeuswatch") return null
-        return when (uri.host) {
-            "locations" -> "locations"
-            "settings" -> "settings"
-            "radar" -> "radar/0.0/0.0" // Uses last-known location via ViewModel fallback
-            "compare" -> "compare"
-            "custom_alerts" -> "custom_alerts"
-            "main" -> null // explicit root — no navigation, handled as default
-            else -> null
-        }
+        return resolveZeusWatchDeepLinkRoute(
+            host = uri.host,
+            target = uri.getQueryParameter("target"),
+            card = uri.getQueryParameter("card"),
+        )
     }
 
     private fun applyImmersiveMode() {

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -130,6 +131,8 @@ import com.sysadmindoc.nimbus.ui.component.WeatherParticles
 import com.sysadmindoc.nimbus.ui.component.WindCompass
 import com.sysadmindoc.nimbus.ui.component.PremiumMessageCard
 import com.sysadmindoc.nimbus.ui.navigation.BottomTab
+import com.sysadmindoc.nimbus.ui.navigation.LocalMainDeepLinkTarget
+import com.sysadmindoc.nimbus.ui.navigation.MainDeepLinkTarget
 import com.sysadmindoc.nimbus.ui.navigation.ZeusWatchBottomNav
 import com.sysadmindoc.nimbus.ui.screen.radar.RadarTab
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -163,6 +166,7 @@ fun MainScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    val deepLinkTarget = LocalMainDeepLinkTarget.current
 
     // Track whether we've already prompted in this session
     var hasPromptedPermissions by rememberSaveable { mutableStateOf(false) }
@@ -231,6 +235,12 @@ fun MainScreen(
     LaunchedEffect(isTablet, selectedTab, activeSelectedTab) {
         if (activeSelectedTab != selectedTab) {
             selectedTab = activeSelectedTab
+        }
+    }
+
+    LaunchedEffect(deepLinkTarget) {
+        if (deepLinkTarget != null && selectedTab != BottomTab.TODAY.ordinal) {
+            selectedTab = BottomTab.TODAY.ordinal
         }
     }
 
@@ -509,6 +519,7 @@ private fun WeatherContent(
     )
     val context = LocalContext.current
     val layout = LocalAdaptiveLayout.current
+    val deepLinkTarget = LocalMainDeepLinkTarget.current
 
     var selectedAlert by remember { mutableStateOf<WeatherAlert?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -527,6 +538,11 @@ private fun WeatherContent(
     val enabledCards = remember(settings.cardOrder, settings.disabledCards) {
         settings.cardOrder.filter { card -> card.name !in settings.disabledCards }
     }
+    val focusedCard = mainDeepLinkCardTarget(deepLinkTarget)
+    val visibleCards = remember(enabledCards, focusedCard) {
+        cardsForDeepLinkTarget(enabledCards, focusedCard)
+    }
+    val listState = rememberLazyListState()
 
     // Precipitation chance + updated time state
     val todayPrecipChance = data.daily.firstOrNull()?.precipitationProbability ?: 0
@@ -549,8 +565,28 @@ private fun WeatherContent(
         modifier = Modifier.fillMaxSize(),
     ) {
         val cardPad = Modifier.padding(horizontal = layout.contentPadding)
+        val hasLocationBar = savedLocations.size > 1
+        val hasAlertBanner = alerts.isNotEmpty()
+        val focusedItemIndex = weatherContentItemIndexForDeepLinkTarget(
+            target = deepLinkTarget,
+            visibleCards = visibleCards,
+            hasOfflineBanner = state.isOffline,
+            hasLocationBar = hasLocationBar,
+            hasAlertBanner = hasAlertBanner,
+        )
+
+        LaunchedEffect(
+            deepLinkTarget,
+            focusedItemIndex,
+            alerts.size,
+            state.nowcastData.size,
+            state.healthAlerts.size,
+        ) {
+            focusedItemIndex?.let { listState.animateScrollToItem(it) }
+        }
 
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .background(bgBrush)
@@ -625,7 +661,7 @@ private fun WeatherContent(
             }
 
             // ── Location Selector Bar ────────────────────────────────
-            if (savedLocations.size > 1) {
+            if (hasLocationBar) {
                 item(key = "location_bar") {
                     LocationSelectorBar(
                         locations = savedLocations,
@@ -637,7 +673,7 @@ private fun WeatherContent(
             }
 
             // ── Alert Banner ─────────────────────────────────────────
-            if (alerts.isNotEmpty()) {
+            if (hasAlertBanner) {
                 item(key = "alert_banner") {
                     AlertBanner(
                         alerts = alerts,
@@ -713,7 +749,7 @@ private fun WeatherContent(
 
             // ── Dynamic Cards (truly lazy now) ───────────────────────
             items(
-                items = enabledCards,
+                items = visibleCards,
                 key = { it.name },
                 contentType = { it.name },
             ) { cardType ->
@@ -814,6 +850,7 @@ private fun RenderCard(
 ) {
     val referenceTime = data.current.observationTime
     val referenceDate = referenceTime?.toLocalDate() ?: data.daily.firstOrNull()?.date
+    val isDeepLinkTarget = cardType == mainDeepLinkCardTarget(LocalMainDeepLinkTarget.current)
 
     when (cardType) {
         CardType.WEATHER_SUMMARY -> {
@@ -832,6 +869,14 @@ private fun RenderCard(
                 NowcastCard(
                     data = state.nowcastData,
                     referenceTime = referenceTime,
+                    modifier = modifier,
+                )
+            } else if (isDeepLinkTarget) {
+                InlineNoticeCard(
+                    title = "Rain nowcast unavailable",
+                    message = "Minute-by-minute precipitation data is not available for this location right now.",
+                    icon = Icons.Filled.WaterDrop,
+                    tint = NimbusBlueAccent,
                     modifier = modifier,
                 )
             }
@@ -928,6 +973,14 @@ private fun RenderCard(
         CardType.HEALTH_ALERTS -> {
             if (state.healthAlerts.isNotEmpty()) {
                 HealthAlertCard(alerts = state.healthAlerts, modifier = modifier)
+            } else if (isDeepLinkTarget) {
+                InlineNoticeCard(
+                    title = "No active health trigger",
+                    message = "The latest forecast no longer meets your health alert thresholds.",
+                    icon = Icons.Filled.ErrorOutline,
+                    tint = NimbusTextSecondary,
+                    modifier = modifier,
+                )
             }
         }
         CardType.CLOTHING -> {
@@ -1202,6 +1255,50 @@ private fun isLocationPermissionError(message: String?): Boolean {
     if (message.isNullOrBlank()) return false
     return message.contains("permission", ignoreCase = true) ||
         message.contains("grant location", ignoreCase = true)
+}
+
+internal fun mainDeepLinkCardTarget(target: MainDeepLinkTarget?): CardType? = when (target) {
+    MainDeepLinkTarget.NOWCAST -> CardType.NOWCAST
+    MainDeepLinkTarget.HEALTH -> CardType.HEALTH_ALERTS
+    MainDeepLinkTarget.WEATHER_ALERTS, null -> null
+}
+
+internal fun cardsForDeepLinkTarget(
+    enabledCards: List<CardType>,
+    focusedCard: CardType?,
+): List<CardType> {
+    if (focusedCard == null || focusedCard in enabledCards) return enabledCards
+    return listOf(focusedCard) + enabledCards
+}
+
+internal fun weatherContentItemIndexForDeepLinkTarget(
+    target: MainDeepLinkTarget?,
+    visibleCards: List<CardType>,
+    hasOfflineBanner: Boolean,
+    hasLocationBar: Boolean,
+    hasAlertBanner: Boolean,
+): Int? {
+    if (target == null) return null
+
+    var index = 0 // toolbar
+    index++
+    if (hasOfflineBanner) index++
+    if (hasLocationBar) index++
+
+    if (hasAlertBanner) {
+        if (target == MainDeepLinkTarget.WEATHER_ALERTS) return index
+        index++
+    } else if (target == MainDeepLinkTarget.WEATHER_ALERTS) {
+        return 0
+    }
+
+    index++ // hero
+    index++ // updated row
+    index++ // pre-card spacer
+
+    val card = mainDeepLinkCardTarget(target) ?: return null
+    val cardIndex = visibleCards.indexOf(card)
+    return if (cardIndex >= 0) index + cardIndex else null
 }
 
 internal fun visibleMainTabs(isTablet: Boolean): List<BottomTab> {

@@ -67,8 +67,8 @@
 - **Freenet flavor cannot sync to Wear OS at all**  
   `WearSyncManager` is a no-op in `freenet`. F-Droid users with a Wear OS watch get zero phone-to-watch sync. The watch falls back to direct API calls, which works but defeats the efficiency gain. Consider a non-GMS sync mechanism (Bluetooth serial, companion device manager) for freenet.
 
-- **[PARTIAL] Deep link handling for notifications**  
-  v1.16.0 routed custom-rule notification taps to `Routes.CUSTOM_ALERTS` via `zeuswatch://custom_alerts`. Severe alert, health, and nowcast taps still land on the default tab (main screen) — could still deep-link to the specific card that triggered.
+- **[CLOSED 2026-04-26] ~~Deep link handling for notifications~~**
+  Custom-rule notifications route to `Routes.CUSTOM_ALERTS`; severe alert notifications now open the Today alert surface, nowcast notifications open the Rain Next Hour card, and health notifications open the Health Alerts card. MainScreen scrolls to the targeted surface and temporarily exposes hidden target cards for notification-open flows without changing the saved card layout.
 
 ---
 
