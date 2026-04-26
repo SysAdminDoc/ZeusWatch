@@ -2,6 +2,11 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [Unreleased]
+
+### Changed
+- **Background weather freshness is more aggressive** — `WidgetRefreshWorker` now schedules periodic weather, widget, persistent-notification, and Wear sync refreshes every 15 minutes instead of 30 minutes, using WorkManager's update policy so existing installs adopt the faster cadence on the next schedule sync.
+
 ## [1.17.0] - 2026-04-24
 
 Provider expansion + security hardening + accessibility release. Closes the last HIGH-priority open roadmap item (Environment Canada forecast) and adds MET Norway as a new provider for uncontested Nordic coverage. All prior tests plus 20+ new test assertions pass.
