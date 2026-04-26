@@ -1,6 +1,6 @@
 # ZeusWatch Roadmap
 
-**Current Version**: v1.14.0  
+**Current Version**: v1.18.0  
 **Architecture**: Kotlin 2.1.0 / Jetpack Compose / Hilt / MVVM / Multi-module (phone + wear)  
 **Flavors**: `standard` (Google Play) / `freenet` (F-Droid)
 
@@ -49,8 +49,8 @@
 
 ### LOW PRIORITY
 
-- **Test coverage gaps in adapters and Wear OS**  
-  31 test files (5,535 LOC) cover repos, ViewModels, evaluators, and workers well. Missing: no tests for `OwmAdapters`, `PirateWeatherAdapter`, `BrightSkyAdapters`, `EnvironmentCanadaAlertAdapter`, `MeteoAlarmAdapter`, `JmaAlertAdapter`. No tests for any Wear OS code (tile, complication, sync, screens). No tests for `GeminiNanoSummaryEngine`.
+- **[CLOSED v1.18.0] ~~Test coverage gaps in adapters and Wear OS~~**
+  v1.18.0 added test classes for all five previously untested adapters: `OwmForecastAdapter`, `OwmAlertAdapter`, `OwmAqiAdapter`, `BrightSkyForecastAdapter`, `BrightSkyAlertAdapter`, `EnvironmentCanadaAlertAdapter`, `MeteoAlarmAdapter`, and `JmaAlertAdapter` — 87 new assertions covering AQI breakpoints, circular wind mean, WMO mapping, severity parsing, synthetic-ID generation, and error paths. Remaining gaps: no tests for `PirateWeatherAdapter`, any Wear OS code (tile, complication, sync, screens), or `GeminiNanoSummaryEngine`.
 
 - **OkHttp retry uses `Thread.sleep()` in coroutine context**  
   `NetworkModule` retry interceptor (lines 47–67) uses `Thread.sleep()` for exponential backoff. While this works (OkHttp interceptors run on OkHttp's dispatcher thread, not the coroutine dispatcher), it blocks the OkHttp thread pool slot. Using `delay()` isn't possible in an interceptor, but an alternative is to implement retry at the repository level with coroutine `delay()`.
