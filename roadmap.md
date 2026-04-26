@@ -1,6 +1,6 @@
 # ZeusWatch Roadmap
 
-**Current Version**: v1.19.0  
+**Current Version**: v1.20.0  
 **Architecture**: Kotlin 2.1.0 / Jetpack Compose / Hilt / MVVM / Multi-module (phone + wear)  
 **Flavors**: `standard` (Google Play) / `freenet` (F-Droid)
 
@@ -49,8 +49,8 @@
 
 ### LOW PRIORITY
 
-- **[CLOSED v1.19.0] ~~Test coverage gaps in adapters and Wear OS~~**
-  v1.18.0 added test classes for all five previously untested adapters: `OwmForecastAdapter`, `OwmAlertAdapter`, `OwmAqiAdapter`, `BrightSkyForecastAdapter`, `BrightSkyAlertAdapter`, `EnvironmentCanadaAlertAdapter`, `MeteoAlarmAdapter`, and `JmaAlertAdapter` — 87 new assertions. v1.19.0 adds `PirateWeatherForecastAdapterTest` (13 tests) and `PwIconMapperTest` (22 tests) covering all icon→WMO mappings, `isDayFromIcon`, hourly past-entry filter, daily mm/h→mm/day conversion, snow precipType, sunrise/sunset ISO format, and error paths. Remaining gaps: no tests for any Wear OS code (tile, complication, sync, screens) or `GeminiNanoSummaryEngine`.
+- **[CLOSED v1.19.0 + v1.20.0] ~~Test coverage gaps in adapters and Wear OS~~**
+  v1.18.0: `OwmForecastAdapter`, `OwmAlertAdapter`, `OwmAqiAdapter`, `BrightSkyForecastAdapter`, `BrightSkyAlertAdapter`, `EnvironmentCanadaAlertAdapter`, `MeteoAlarmAdapter`, `JmaAlertAdapter` — 87 assertions. v1.19.0: `PirateWeatherForecastAdapterTest` (13 tests) + `PwIconMapperTest` (22 tests). v1.20.0: `WeatherSummaryEngineTest` (25 tests), `WeatherSummaryEnginePrecipTest` (8 tests), `WeatherSummaryEngineWithStyleTest` (5 tests) — covers all time-of-day slots, all condition phrases, wind/UV/humidity notes, yesterday comparison, all 7 precipitation outlook branches, and AI engine delegate/fallback/null/exception paths. Remaining gaps: no tests for any Wear OS code (tile, complication, sync, screens) or `GeminiNanoSummaryEngine`.
 
 - **OkHttp retry uses `Thread.sleep()` in coroutine context**  
   `NetworkModule` retry interceptor (lines 47–67) uses `Thread.sleep()` for exponential backoff. While this works (OkHttp interceptors run on OkHttp's dispatcher thread, not the coroutine dispatcher), it blocks the OkHttp thread pool slot. Using `delay()` isn't possible in an interceptor, but an alternative is to implement retry at the repository level with coroutine `delay()`.
@@ -61,8 +61,8 @@
 - **`WeatherSummaryEngine` duplicates context between template and AI paths**  
   Both `generate()` (template) and `generateWithStyle()` (AI wrapper) construct weather context strings independently. A shared context builder would reduce drift between what the template sees and what the AI prompt contains.
 
-- **No database VACUUM or WAL checkpoint**  
-  `NimbusDatabase` uses Room defaults (WAL mode). Long-running devices that accumulate and evict cache entries may grow the WAL file. Not critical at current data volumes (2 tables, <1000 rows typical), but a periodic `PRAGMA wal_checkpoint(TRUNCATE)` in a maintenance worker would be defensive.
+- **[CLOSED v1.20.0] ~~No database VACUUM or WAL checkpoint~~**
+  `DatabaseMaintenanceWorker` (`@HiltWorker CoroutineWorker`) runs `PRAGMA wal_checkpoint(TRUNCATE)` weekly. Scheduled unconditionally at app startup via `ExistingPeriodicWorkPolicy.KEEP`; no network required.
 
 - **Freenet flavor cannot sync to Wear OS at all**  
   `WearSyncManager` is a no-op in `freenet`. F-Droid users with a Wear OS watch get zero phone-to-watch sync. The watch falls back to direct API calls, which works but defeats the efficiency gain. Consider a non-GMS sync mechanism (Bluetooth serial, companion device manager) for freenet.

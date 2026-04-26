@@ -2,7 +2,21 @@
 
 All notable changes to Nimbus Weather are documented here.
 
-## [1.19.0] - 2026-06-24
+## [1.20.0] - 2026-06-24
+
+WAL checkpoint maintenance worker + WeatherSummaryEngine unit tests.
+
+### Added
+- **`DatabaseMaintenanceWorker`** — `@HiltWorker CoroutineWorker` that runs `PRAGMA wal_checkpoint(TRUNCATE)` weekly via `WorkManager` with `ExistingPeriodicWorkPolicy.KEEP`. Prevents unbounded WAL growth on long-running devices. No network required, no user-facing setting. Scheduled unconditionally at application startup.
+- **`WeatherSummaryEngineTest`** (25 tests) — covers all four time-of-day slots (morning/afternoon/evening/tonight), all condition phrase variants for major `WeatherCode` values, daytime/nighttime temperature label selection (`Highs`/`Lows`) using the daily `temperatureHigh`/`temperatureLow`, wind note thresholds (30/40/60 km/h), UV index high/very-high warnings and night suppression, muggy humidity note with temperature gating, and yesterday-comparison logic (warmer/cooler/within-range/null cases).
+- **`WeatherSummaryEnginePrecipTest`** (8 tests) — exercises all 7 branches of `precipitationOutlook()` (empty hourly, maxProb < 20, ≥ 8 rainy hours, 4+ early / 4+ late / 4+ mid, single-hour > 60% / single-hour ≤ 60%) plus the null-when-empty guard.
+- **`WeatherSummaryEngineWithStyleTest`** (5 tests) — verifies that `generateWithStyle()` returns the template for `TEMPLATE` style, falls back to template when `aiEngine` is null, delegates to the engine and returns its text when it produces a result, and falls back to template when the engine returns null or throws.
+
+### Version
+- phone versionCode 82 → 83, versionName 1.19.0 → 1.20.0
+- wear versionCode 58 → 59, versionName 1.19.0 → 1.20.0
+
+
 
 PirateWeather adapter test coverage.
 
