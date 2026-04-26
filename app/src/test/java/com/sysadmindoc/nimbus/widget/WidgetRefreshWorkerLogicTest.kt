@@ -13,6 +13,11 @@ import java.time.LocalDateTime
 class WidgetRefreshWorkerLogicTest {
 
     @Test
+    fun `background refresh cadence uses Android periodic work minimum`() {
+        assertEquals(15L, WIDGET_BACKGROUND_REFRESH_INTERVAL_MINUTES)
+    }
+
+    @Test
     fun `buildWidgetRefreshPlan groups duplicate coordinates but preserves widget labels`() {
         val savedLocations = listOf(
             SavedLocationEntity(
