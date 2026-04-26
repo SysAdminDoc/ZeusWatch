@@ -2,7 +2,18 @@
 
 All notable changes to Nimbus Weather are documented here.
 
-## [1.18.0] - 2026-06-24
+## [1.19.0] - 2026-06-24
+
+PirateWeather adapter test coverage.
+
+### Added
+- **Adapter unit tests — PirateWeather** — `PirateWeatherForecastAdapterTest` covers the core data-mapping paths: happy-path success, blank API key → failure, null `currently` block → failure, `IOException` propagation, `precipType = "snow"` → `snowfall` populated, `precipType = "rain"` → `snowfall` null, hourly past-entry filter (entries >1 h before now are excluded, entries at the exact boundary are retained), hourly snow `precipType` → `snowfall`, daily `precipIntensity` mm/h × 24 → mm/day, daily snow `precipType` → `snowfallSum`, null `precipType` → `snowfallSum` null, first-daily `temperatureHigh`/`temperatureLow` → `current.dailyHigh`/`current.dailyLow`, daily wind m/s → km/h, and sunrise/sunset ISO 8601 format. `PwIconMapperTest` exhaustively covers all 15 icon-to-WMO-code mappings (clear, partly-cloudy, cloudy, wind, fog, rain, rain+sleet, sleet, snow, hail, thunderstorm, tornado, unknown → -1) and all 7 `isDayFromIcon` cases (day suffix, night suffix, bare rain/fog/snow, and `partly-cloudy-night`).
+
+### Version
+- phone versionCode 81 → 82, versionName 1.18.0 → 1.19.0
+- wear versionCode 57 → 58, versionName 1.18.0 → 1.19.0
+
+
 
 Test coverage expansion + notification deep linking + background refresh cadence.
 
