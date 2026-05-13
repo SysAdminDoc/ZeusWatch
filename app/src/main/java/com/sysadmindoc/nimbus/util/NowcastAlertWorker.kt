@@ -132,9 +132,28 @@ class NowcastAlertWorker @AssistedInject constructor(
 
 internal fun nowcastReferenceTime(series: List<com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation>): LocalDateTime {
     // Minutely API returns buckets in the forecast LOCATION's local time
-    // (timezone=auto). We anchor "now" on the earliest bucket so remote-location
-    // nowcasts aren't broken by the device clock being in a different timezone.
-    return series.minByOrNull { it.time }?.time ?: LocalDateTime.now()
+    // (timezone=auto). When the wall clock falls inside (or very near) the
+    // series window, use it directly — the previous implementation anchored
+    // on the earliest bucket unconditionally, which meant `minutesUntil` was
+    // counted from the *oldest* bucket and reported "rain in 30 min" when
+    // the series-relative truth was "rain in 5 min".
+    //
+    // For remote-location buckets that don't align with the device clock
+    // we still fall back to the earliest bucket so `detectNowcastTransition`
+    // walks the series relative to itself rather than against an unrelated
+    // wall clock.
+    if (series.isEmpty()) return LocalDateTime.now()
+    val earliestTime = series.minOf { it.time }
+    val latestTime = series.maxOf { it.time }
+    val wallClock = LocalDateTime.now()
+    val withinWindow = !wallClock.isBefore(earliestTime) && !wallClock.isAfter(latestTime)
+    return if (withinWindow ||
+        kotlin.math.abs(java.time.Duration.between(earliestTime, wallClock).toMinutes()) <= 60
+    ) {
+        wallClock
+    } else {
+        earliestTime
+    }
 }
 
 /**

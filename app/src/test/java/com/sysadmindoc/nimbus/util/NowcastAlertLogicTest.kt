@@ -107,7 +107,12 @@ class NowcastAlertLogicTest {
     }
 
     @Test
-    fun `nowcastReferenceTime anchors to earliest forecast bucket instead of device clock`() {
+    fun `nowcastReferenceTime falls back to earliest bucket when wall clock is far away`() {
+        // Series timestamps are pinned to 2026-04-12 (well in the past for
+        // the device clock running this test) — so the wall clock is not
+        // within the bucket window and the function should fall back to
+        // the earliest bucket (by time, not by list position) rather than
+        // anchoring on a clearly-wrong wall clock.
         val series = listOf(
             bucket(45, 0.0),
             bucket(0, 0.2),
@@ -115,5 +120,27 @@ class NowcastAlertLogicTest {
         )
 
         assertEquals(now, nowcastReferenceTime(series))
+    }
+
+    @Test
+    fun `nowcastReferenceTime uses wall clock when buckets are aligned with device time`() {
+        // When the buckets straddle the wall clock — the common case for
+        // a user's own current location — the anchor is the wall clock
+        // itself so `minutesUntil` reflects honest deltas instead of the
+        // distance to the first bucket.
+        val wallClock = LocalDateTime.now()
+        val series = listOf(
+            MinutelyPrecipitation(time = wallClock.minusMinutes(15), precipitation = 0.0),
+            MinutelyPrecipitation(time = wallClock.plusMinutes(15), precipitation = 0.3),
+            MinutelyPrecipitation(time = wallClock.plusMinutes(30), precipitation = 0.4),
+        )
+        val result = nowcastReferenceTime(series)
+        // Allow a few seconds of drift between the test setup and the
+        // function's internal `LocalDateTime.now()` call.
+        val drift = java.time.Duration.between(wallClock, result).abs()
+        assertTrue(
+            "expected wall-clock anchor, drift=$drift",
+            drift.seconds < 5,
+        )
     }
 }

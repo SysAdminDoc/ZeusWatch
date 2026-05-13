@@ -36,8 +36,23 @@ class EnvironmentCanadaAlertAdapterTest {
 
     @Test
     fun `Edmonton resolves to Alberta`() {
-        // Calgary (-114.07°W) falls inside BC's eastern bbox edge; use Edmonton (-113.49°W)
         assertEquals("ab", adapter.resolveProvince(53.55, -113.49))
+    }
+
+    @Test
+    fun `Calgary resolves to Alberta`() {
+        // Calgary at -114.07°W used to fall inside BC's old bbox
+        // (-139.1..-114.0). The corrected BC east edge is -120.0 (the
+        // Continental Divide / actual BC-AB border), so the foothills
+        // (Calgary, Banff, Lake Louise, Canmore) now resolve to AB.
+        assertEquals("ab", adapter.resolveProvince(51.05, -114.07))
+    }
+
+    @Test
+    fun `Banff resolves to Alberta`() {
+        // Banff (51.18°N, -115.57°W) is in the AB Rockies; previously
+        // misclassified as BC.
+        assertEquals("ab", adapter.resolveProvince(51.18, -115.57))
     }
 
     @Test
