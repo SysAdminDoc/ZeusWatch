@@ -14,6 +14,7 @@ Premium UX polish pass across phone, Wear OS, widgets, and project screenshots.
 - Tightened the remaining secondary icon/status backdrops to square-rounded shapes so the interface no longer mixes circles, pills, and crisper cards.
 - Improved settings, location, compare, and custom alert control semantics so toggles, radio rows, chips, dropdown rows, delete controls, and section expanders announce clearer labels and selected/on/off state.
 - Fixed the weekly database WAL checkpoint worker to run its `PRAGMA wal_checkpoint(TRUNCATE)` through a query cursor, removing a launch-time SQLite warning from the background maintenance path.
+- Stabilized the connected Today-screen UI test so duplicate visible temperature text no longer breaks the full device accessibility suite.
 - Added real-device screenshots for Today, Settings, and Radar to replace the README screenshot placeholder.
 
 ### Verified
