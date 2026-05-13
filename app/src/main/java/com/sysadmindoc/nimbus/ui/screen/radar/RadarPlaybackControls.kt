@@ -63,7 +63,7 @@ fun RadarPlaybackControls(
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 8.dp)
             .widthIn(max = 520.dp)
-            .clip(RoundedCornerShape(26.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -72,7 +72,7 @@ fun RadarPlaybackControls(
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(26.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp),
     ) {
         Row(
@@ -152,7 +152,7 @@ fun RadarPlaybackControls(
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isForecast) NimbusBlueAccent else NimbusTextSecondary,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(999.dp))
+                            .clip(RoundedCornerShape(6.dp))
                             .background(
                                 if (isForecast) NimbusBlueAccent.copy(alpha = 0.14f)
                                 else Color.White.copy(alpha = 0.06f),

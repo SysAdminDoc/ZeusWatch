@@ -41,7 +41,7 @@ fun WeatherCard(
     title: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val shape = RoundedCornerShape(28.dp)
+    val shape = RoundedCornerShape(12.dp)
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -102,7 +102,7 @@ fun WeatherCard(
                         text = title.uppercase(),
                         style = MaterialTheme.typography.labelMedium.copy(
                             fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 1.2.sp,
+                            letterSpacing = 0.sp,
                         ),
                         color = NimbusTextSecondary,
                     )

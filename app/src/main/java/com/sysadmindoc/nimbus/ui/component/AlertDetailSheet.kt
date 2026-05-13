@@ -64,7 +64,6 @@ fun AlertDetailSheet(
                     .padding(vertical = 10.dp)
                     .width(40.dp)
                     .height(4.dp)
-                    .clip(RoundedCornerShape(999.dp))
                     .background(Color.White.copy(alpha = 0.16f)),
             )
         },
@@ -130,9 +129,9 @@ fun AlertDetailSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(Color.White.copy(alpha = 0.03f))
-                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(20.dp))
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
                     .padding(horizontal = 16.dp, vertical = 14.dp),
             ) {
                 Text(
@@ -207,7 +206,7 @@ private fun AlertSheetPill(
 ) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(background)
             .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {

@@ -83,7 +83,7 @@ private fun AlertRow(alert: WearAlertEntry) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 6.dp)
-            .background(WearPanelTop, androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
+            .background(WearPanelTop, androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         Row(

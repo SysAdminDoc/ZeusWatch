@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -48,9 +47,9 @@ internal fun WearPanel(
                         WearPanelBottom,
                     ),
                 ),
-                RoundedCornerShape(20.dp),
+                RoundedCornerShape(10.dp),
             )
-            .border(1.dp, WearPanelBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, WearPanelBorder, RoundedCornerShape(10.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         content = content,
@@ -100,7 +99,7 @@ internal fun WearStateCard(
         Box(
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
-                .background(accent.copy(alpha = 0.14f), CircleShape)
+                .background(accent.copy(alpha = 0.14f), RoundedCornerShape(8.dp))
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             Text(text = icon, fontSize = 18.sp)
@@ -147,8 +146,8 @@ internal fun WearMiniPill(
         fontSize = 10.sp,
         color = accent,
         modifier = modifier
-            .background(accent.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
-            .border(1.dp, accent.copy(alpha = 0.18f), RoundedCornerShape(12.dp))
+            .background(accent.copy(alpha = 0.14f), RoundedCornerShape(6.dp))
+            .border(1.dp, accent.copy(alpha = 0.18f), RoundedCornerShape(6.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp),
     )
 }

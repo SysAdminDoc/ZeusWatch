@@ -159,7 +159,7 @@ private fun DailyTrendTabChip(
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(8.dp)
     Text(
         text = label,
         style = MaterialTheme.typography.labelMedium.copy(
@@ -419,7 +419,7 @@ private fun ExpandableDailyRow(
     val s = LocalUnitSettings.current
     var expanded by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(if (expanded) 180f else 0f, tween(200), label = "arrow")
-    val rowShape = RoundedCornerShape(24.dp)
+    val rowShape = RoundedCornerShape(10.dp)
 
     Column(
         modifier = Modifier
@@ -531,7 +531,7 @@ private fun ExpandableDailyRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 6.dp, end = 6.dp, bottom = 8.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(Color.White.copy(alpha = 0.04f)),
             ) {
                 DailyDetail(day, LocalUnitSettings.current)

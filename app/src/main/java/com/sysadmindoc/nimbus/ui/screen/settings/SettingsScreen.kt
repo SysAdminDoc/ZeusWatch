@@ -950,7 +950,7 @@ private fun SettingsOverviewCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -960,7 +960,7 @@ private fun SettingsOverviewCard(
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(26.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
             .padding(horizontal = 18.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -1010,9 +1010,9 @@ private fun SettingsCategoryPicker(
             val isSelected = category == selectedCategory
             Column(
                 modifier = Modifier
-                    .widthIn(min = 164.dp)
+                    .width(156.dp)
                     .heightIn(min = 88.dp)
-                    .clip(RoundedCornerShape(22.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(
                         Brush.verticalGradient(
                             colors = if (isSelected) {
@@ -1032,7 +1032,7 @@ private fun SettingsCategoryPicker(
                     .border(
                         1.dp,
                         if (isSelected) NimbusBlueAccent.copy(alpha = 0.44f) else NimbusCardBorder,
-                        RoundedCornerShape(22.dp),
+                        RoundedCornerShape(10.dp),
                     )
                     .selectable(
                         selected = isSelected,
@@ -1080,7 +1080,7 @@ private fun SettingSection(
     Column(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(12.dp))
             .animateContentSize()
             .background(
                 Brush.verticalGradient(
@@ -1091,7 +1091,7 @@ private fun SettingSection(
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(24.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
             .padding(horizontal = 18.dp, vertical = 18.dp),
     ) {
         Row(
@@ -1159,7 +1159,7 @@ private fun SettingRadio(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 68.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(
                 Brush.verticalGradient(
                     colors = if (selected) {
@@ -1175,7 +1175,7 @@ private fun SettingRadio(
                     },
                 ),
             )
-            .border(1.dp, if (selected) NimbusBlueAccent.copy(alpha = 0.38f) else NimbusCardBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, if (selected) NimbusBlueAccent.copy(alpha = 0.38f) else NimbusCardBorder, RoundedCornerShape(10.dp))
             .selectable(
                 selected = selected,
                 onClick = onClick,
@@ -1213,7 +1213,7 @@ private fun SettingToggle(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 68.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(
                 Brush.verticalGradient(
                     colors = if (checked) {
@@ -1229,7 +1229,7 @@ private fun SettingToggle(
                     },
                 ),
             )
-            .border(1.dp, if (checked) NimbusBlueAccent.copy(alpha = 0.34f) else NimbusCardBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, if (checked) NimbusBlueAccent.copy(alpha = 0.34f) else NimbusCardBorder, RoundedCornerShape(10.dp))
             .toggleable(
                 value = checked,
                 onValueChange = onCheckedChange,
@@ -1263,7 +1263,7 @@ private fun SettingInfo(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -1272,7 +1272,7 @@ private fun SettingInfo(label: String, value: String) {
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -1307,7 +1307,7 @@ private fun SourceDropdown(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
@@ -1316,7 +1316,7 @@ private fun SourceDropdown(
                             ),
                         ),
                     )
-                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
                     .clickable { expanded = true }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1377,7 +1377,7 @@ private fun SourceDropdownNullable(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
@@ -1386,7 +1386,7 @@ private fun SourceDropdownNullable(
                             ),
                         ),
                     )
-                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
                     .clickable { expanded = true }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1505,7 +1505,7 @@ private fun ApiKeyField(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
@@ -1517,7 +1517,7 @@ private fun ApiKeyField(
                         .border(
                             1.dp,
                             if (isFocused) NimbusBlueAccent.copy(alpha = 0.48f) else NimbusCardBorder,
-                            RoundedCornerShape(18.dp),
+                            RoundedCornerShape(8.dp),
                         )
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                 ) {

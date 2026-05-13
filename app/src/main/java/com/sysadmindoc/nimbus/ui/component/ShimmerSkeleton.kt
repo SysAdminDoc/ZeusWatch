@@ -89,7 +89,7 @@ fun ShimmerLoadingSkeleton(modifier: Modifier = Modifier) {
 
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(8.dp))
                 .background(NimbusBlueAccent.copy(alpha = 0.12f))
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
@@ -104,7 +104,7 @@ fun ShimmerLoadingSkeleton(modifier: Modifier = Modifier) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(30.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
@@ -175,9 +175,9 @@ private fun ShimmerBox(
         modifier = modifier
             .width(width)
             .height(height)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(NimbusCardBg)
-            .border(1.dp, NimbusCardBorder.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .border(1.dp, NimbusCardBorder.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
             .background(Color.White.copy(alpha = 0.02f))
             .background(brush)
     )
@@ -193,7 +193,7 @@ private fun ShimmerCard(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(NimbusCardBg)
             .background(Color.White.copy(alpha = 0.02f))
             .background(

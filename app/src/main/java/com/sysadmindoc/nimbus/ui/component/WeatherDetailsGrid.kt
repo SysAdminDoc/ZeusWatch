@@ -129,9 +129,9 @@ private fun DetailRow(left: DetailItem, right: DetailItem) {
 private fun DetailCell(item: DetailItem, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(Color.White.copy(alpha = 0.04f))
-            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(22.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
             .padding(horizontal = 14.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
