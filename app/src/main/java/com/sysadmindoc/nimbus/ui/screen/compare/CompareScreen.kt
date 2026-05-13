@@ -130,7 +130,7 @@ fun CompareScreen(
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
-                            .clip(RoundedCornerShape(28.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(
                                 Brush.verticalGradient(
                                     colors = listOf(
@@ -139,7 +139,7 @@ fun CompareScreen(
                                     ),
                                 ),
                             )
-                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(28.dp))
+                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
                             .padding(horizontal = 18.dp, vertical = 18.dp),
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -227,7 +227,7 @@ fun CompareScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
-                            .clip(RoundedCornerShape(30.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(
                                 Brush.verticalGradient(
                                     colors = listOf(
@@ -236,7 +236,7 @@ fun CompareScreen(
                                     ),
                                 ),
                             )
-                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(30.dp))
+                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
                             .padding(horizontal = 16.dp, vertical = 18.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically,
@@ -399,7 +399,7 @@ private fun LocationSelector(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 86.dp)
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(10.dp))
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
@@ -408,7 +408,7 @@ private fun LocationSelector(
                         ),
                     ),
                 )
-                .border(1.dp, NimbusCardBorder, RoundedCornerShape(20.dp))
+                .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
                 .clickable { expanded = true }
                 .padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
@@ -476,7 +476,7 @@ private fun CompareRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -485,7 +485,7 @@ private fun CompareRow(
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(22.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
             .padding(horizontal = 16.dp, vertical = 4.dp),
     ) {
         Row(
@@ -501,7 +501,7 @@ private fun CompareRow(
                 color = color1,
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(if (highlightFirst) NimbusBlueAccent.copy(alpha = 0.12f) else Color.Transparent)
                     .padding(horizontal = 8.dp, vertical = 10.dp),
                 textAlign = TextAlign.Center,
@@ -525,7 +525,7 @@ private fun CompareRow(
                 color = color2,
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(if (highlightSecond) NimbusBlueAccent.copy(alpha = 0.12f) else Color.Transparent)
                     .padding(horizontal = 8.dp, vertical = 10.dp),
                 textAlign = TextAlign.Center,
@@ -542,7 +542,7 @@ private fun CompareIntroCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -551,7 +551,7 @@ private fun CompareIntroCard(
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(26.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
             .padding(horizontal = 18.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -615,7 +615,7 @@ private fun CompareSummaryCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -625,7 +625,7 @@ private fun CompareSummaryCard(
                     ),
                 ),
             )
-            .border(1.dp, NimbusBlueAccent.copy(alpha = 0.24f), RoundedCornerShape(28.dp))
+            .border(1.dp, NimbusBlueAccent.copy(alpha = 0.24f), RoundedCornerShape(12.dp))
             .padding(horizontal = 18.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -663,9 +663,9 @@ private fun CompareSummaryPill(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(Color.White.copy(alpha = 0.06f))
-            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(18.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         Text(

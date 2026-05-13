@@ -807,7 +807,7 @@ private fun StatusBadge(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(8.dp)
     Row(
         modifier = modifier
             .clip(shape)
@@ -1066,7 +1066,7 @@ private fun LocationSelectorBar(
         ) {
             locations.forEachIndexed { index, loc ->
                 val isActive = index == currentIndex
-                val chipShape = RoundedCornerShape(22.dp)
+                val chipShape = RoundedCornerShape(10.dp)
                 val chipBrush = if (isActive) {
                     Brush.verticalGradient(
                         colors = listOf(

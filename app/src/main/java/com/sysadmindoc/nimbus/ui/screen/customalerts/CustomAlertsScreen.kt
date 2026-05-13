@@ -220,7 +220,7 @@ private fun RuleRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -232,7 +232,7 @@ private fun RuleRow(
             .border(
                 1.dp,
                 if (rule.enabled) NimbusBlueAccent.copy(alpha = 0.22f) else NimbusCardBorder,
-                RoundedCornerShape(22.dp),
+                RoundedCornerShape(10.dp),
             )
             .clickable(onClick = onEdit)
             .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -377,7 +377,7 @@ private fun RuleEditor(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
@@ -389,7 +389,7 @@ private fun RuleEditor(
                     .border(
                         1.dp,
                         if (parsedThreshold != null) NimbusCardBorder else Color.Red.copy(alpha = 0.3f),
-                        RoundedCornerShape(18.dp),
+                        RoundedCornerShape(8.dp),
                     )
                     .padding(horizontal = 12.dp, vertical = 12.dp),
             )
@@ -410,7 +410,7 @@ private fun RuleEditor(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(10.dp))
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
@@ -422,7 +422,7 @@ private fun RuleEditor(
                 .border(
                     1.dp,
                     if (enabled) NimbusBlueAccent.copy(alpha = 0.26f) else NimbusCardBorder,
-                    RoundedCornerShape(20.dp),
+                    RoundedCornerShape(10.dp),
                 )
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -482,7 +482,7 @@ private fun <T> ChipSelector(
             val isSelected = option == selected
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(
                         Brush.verticalGradient(
                             colors = if (isSelected) {
@@ -501,7 +501,7 @@ private fun <T> ChipSelector(
                     .border(
                         1.dp,
                         if (isSelected) NimbusBlueAccent.copy(alpha = 0.34f) else NimbusCardBorder,
-                        RoundedCornerShape(20.dp),
+                        RoundedCornerShape(8.dp),
                     )
                     .clickable { onSelect(option) }
                     .padding(horizontal = 14.dp, vertical = 8.dp),
@@ -525,7 +525,7 @@ private fun CustomAlertsIntroCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -534,7 +534,7 @@ private fun CustomAlertsIntroCard(
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(24.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -576,9 +576,9 @@ private fun AlertHintPill(
 ) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(tint.copy(alpha = 0.10f))
-            .border(1.dp, tint.copy(alpha = 0.18f), RoundedCornerShape(16.dp))
+            .border(1.dp, tint.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Text(

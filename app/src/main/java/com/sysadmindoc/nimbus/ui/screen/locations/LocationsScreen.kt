@@ -328,8 +328,8 @@ private fun SearchBar(
             onValueChange = onQueryChanged,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
-                .border(1.dp, NimbusCardBorder, RoundedCornerShape(22.dp)),
+                .clip(RoundedCornerShape(10.dp))
+                .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp)),
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium.copy(color = NimbusTextPrimary),
             placeholder = {
@@ -396,7 +396,7 @@ private fun SearchResultItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -405,7 +405,7 @@ private fun SearchResultItem(
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(22.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
             .clickable(onClick = onAdd)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -464,7 +464,7 @@ private fun SavedLocationItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(
                 Brush.verticalGradient(
                     colors = if (location.isCurrentLocation) {
@@ -483,7 +483,7 @@ private fun SavedLocationItem(
             .border(
                 1.dp,
                 if (location.isCurrentLocation) NimbusBlueAccent.copy(alpha = 0.55f) else NimbusCardBorder,
-                RoundedCornerShape(22.dp),
+                RoundedCornerShape(10.dp),
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 15.dp),
