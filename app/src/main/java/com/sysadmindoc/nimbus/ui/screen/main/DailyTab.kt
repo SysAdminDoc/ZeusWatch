@@ -83,9 +83,9 @@ fun DailyTab(
                 color = NimbusTextSecondary,
                 modifier = Modifier
                     .padding(top = 8.dp)
-                    .clip(RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(NimbusCardBg)
-                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
                     .padding(horizontal = 12.dp, vertical = 8.dp),
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -115,7 +115,7 @@ private fun DailyDetailRow(
     dateLabel: String,
 ) {
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(12.dp)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -202,9 +202,9 @@ private fun DailyDetailRow(
 private fun DetailChip(label: String, value: String) {
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(NimbusCardBg)
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(16.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

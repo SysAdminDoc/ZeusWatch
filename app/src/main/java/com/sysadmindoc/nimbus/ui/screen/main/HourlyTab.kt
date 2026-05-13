@@ -93,9 +93,9 @@ fun HourlyTab(
                 color = NimbusTextSecondary,
                 modifier = Modifier
                     .padding(top = 8.dp)
-                    .clip(RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(NimbusCardBg)
-                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
                     .padding(horizontal = 12.dp, vertical = 8.dp),
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -143,7 +143,7 @@ private fun HourlyDayHeader(dayLabel: String) {
             color = NimbusBlueAccent,
             modifier = Modifier
                 .semantics { heading() }
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(8.dp))
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
@@ -152,7 +152,7 @@ private fun HourlyDayHeader(dayLabel: String) {
                         ),
                     ),
                 )
-                .border(1.dp, NimbusBlueAccent.copy(alpha = 0.32f), RoundedCornerShape(16.dp))
+                .border(1.dp, NimbusBlueAccent.copy(alpha = 0.32f), RoundedCornerShape(8.dp))
                 .padding(horizontal = 13.dp, vertical = 7.dp),
         )
     }
@@ -165,7 +165,7 @@ private fun HourlyRow(
     referenceTime: java.time.LocalDateTime?,
 ) {
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(12.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()

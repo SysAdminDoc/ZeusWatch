@@ -36,6 +36,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,7 +59,7 @@ fun GlassActionButton(
     modifier: Modifier = Modifier,
     highlighted: Boolean = false,
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(10.dp)
     Box(
         modifier = modifier
             .size(48.dp)
@@ -82,6 +84,9 @@ fun GlassActionButton(
                 color = if (highlighted) NimbusBlueAccent.copy(alpha = 0.42f) else NimbusCardBorder,
                 shape = shape,
             )
+            .semantics {
+                this.contentDescription = contentDescription
+            }
             .clickable(
                 onClick = onClick,
                 role = Role.Button,
@@ -90,7 +95,7 @@ fun GlassActionButton(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = contentDescription,
+            contentDescription = null,
             tint = NimbusTextPrimary.copy(alpha = 0.92f),
             modifier = Modifier.size(20.dp),
         )
@@ -176,7 +181,7 @@ fun PremiumMessageCard(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = modifier
             .widthIn(max = 460.dp)
-            .clip(RoundedCornerShape(30.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -190,7 +195,7 @@ fun PremiumMessageCard(
             .border(
                 width = 1.dp,
                 color = tint.copy(alpha = 0.24f),
-                shape = RoundedCornerShape(30.dp),
+                shape = RoundedCornerShape(12.dp),
             )
             .padding(horizontal = 24.dp, vertical = 28.dp),
     ) {
@@ -238,9 +243,9 @@ fun PremiumMessageCard(
         if (!badgeText.isNullOrBlank()) {
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(Color.White.copy(alpha = 0.05f))
-                    .border(1.dp, tint.copy(alpha = 0.18f), RoundedCornerShape(18.dp))
+                    .border(1.dp, tint.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
                     .padding(horizontal = 12.dp, vertical = 8.dp),
             ) {
                 Text(
@@ -258,6 +263,7 @@ fun PremiumMessageCard(
             Button(
                 onClick = onPrimaryAction,
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = tint,
                     contentColor = NimbusTextPrimary,
@@ -271,6 +277,7 @@ fun PremiumMessageCard(
             OutlinedButton(
                 onClick = onSecondaryAction,
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
                 border = BorderStroke(1.dp, tint.copy(alpha = 0.24f)),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = NimbusTextPrimary,
@@ -306,7 +313,7 @@ fun InlineNoticeCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -315,7 +322,7 @@ fun InlineNoticeCard(
                     ),
                 ),
             )
-            .border(1.dp, tint.copy(alpha = 0.22f), RoundedCornerShape(22.dp))
+            .border(1.dp, tint.copy(alpha = 0.22f), RoundedCornerShape(10.dp))
             .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,

@@ -5,12 +5,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -25,8 +23,6 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.PollenData
 import com.sysadmindoc.nimbus.data.model.PollenLevel
 import com.sysadmindoc.nimbus.data.model.PollenReading
-import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
-import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 
@@ -35,47 +31,25 @@ fun PollenCard(
     pollen: PollenData,
     modifier: Modifier = Modifier,
 ) {
-    if (!pollen.hasData) {
-        // Show card with "none detected" message instead of hiding
-        Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(NimbusCardBg)
-                .padding(16.dp),
-        ) {
+    WeatherCard(title = "Pollen", modifier = modifier) {
+        if (!pollen.hasData) {
             Text(
-                "Pollen",
-                style = MaterialTheme.typography.titleMedium,
-                color = NimbusTextPrimary,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                "No pollen detected in your area",
+                "Pollen readings are low or unavailable for this location right now.",
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextTertiary,
             )
+            return@WeatherCard
         }
-        return
-    }
 
-    val shape = RoundedCornerShape(16.dp)
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(NimbusCardBg)
-            .padding(16.dp),
-    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Pollen",
-                style = MaterialTheme.typography.titleMedium,
-                color = NimbusTextPrimary,
+                "Overall",
+                style = MaterialTheme.typography.labelMedium,
+                color = NimbusTextSecondary,
             )
             Text(
                 pollen.overallLevel.label,

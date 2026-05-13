@@ -222,7 +222,7 @@ private fun LocationOption(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -232,7 +232,7 @@ private fun LocationOption(
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(22.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -266,7 +266,7 @@ private fun LocationOption(
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(999.dp))
+                            .clip(RoundedCornerShape(8.dp))
                             .background(NimbusBlueAccent.copy(alpha = 0.12f))
                             .padding(horizontal = 10.dp, vertical = 5.dp),
                     ) {
