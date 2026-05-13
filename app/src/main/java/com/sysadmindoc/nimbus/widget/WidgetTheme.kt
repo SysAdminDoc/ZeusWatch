@@ -141,7 +141,7 @@ fun WidgetPill(
     contentDescription: String? = null,
 ) {
     val base = modifier
-        .cornerRadius(999.dp)
+        .cornerRadius(8.dp)
         .background(WidgetTheme.pillColor)
         .padding(horizontal = 8.dp, vertical = 4.dp)
     val withSemantics = if (contentDescription != null) {

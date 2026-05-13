@@ -2,6 +2,21 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [Unreleased] - 2026-05-13
+
+Premium UX polish pass across phone, Wear OS, widgets, and project screenshots.
+
+### Changed
+- Normalized the visual system around crisper 8-12dp surfaces, tighter component rhythm, and non-rounded action controls across weather cards, radar controls, settings, locations, compare, custom alerts, widgets, and Wear OS surfaces.
+- Removed negative letter spacing from the Compose type scale so headings and compact labels render more cleanly across densities.
+- Reworked the pollen card into the shared weather-card surface and replaced the weak empty state with calmer, more useful copy.
+- Improved accessibility semantics for icon-only toolbar, bottom navigation, and radar report controls so TalkBack focuses the actual tappable controls instead of unlabeled containers or duplicate child icons.
+- Added real-device screenshots for Today, Settings, and Radar to replace the README screenshot placeholder.
+
+### Verified
+- Compiled phone and Wear Kotlin targets.
+- Installed and launched the standard debug build on a connected Android device for visual smoke testing.
+
 ## [1.20.2] - 2026-05-13
 
 Engineering audit pass round 2 — six more bugs found by a deep adversarial sweep on top of v1.20.1.

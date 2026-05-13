@@ -49,6 +49,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -250,15 +252,16 @@ fun RadarScreen(
                     onClick = { showReportSheet = true },
                     containerColor = NimbusBlueAccent.copy(alpha = 0.95f),
                     contentColor = NimbusTextPrimary,
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .windowInsetsPadding(WindowInsets.safeDrawing)
+                        .semantics { contentDescription = "Report weather conditions" }
                         .padding(end = 16.dp, bottom = fullScreenFabBottomPadding),
                 ) {
                     Icon(
                         Icons.Filled.Add,
-                        contentDescription = "Report weather conditions",
+                        contentDescription = null,
                     )
                 }
             }
@@ -447,15 +450,16 @@ fun RadarTab(
                 onClick = { showReportSheet = true },
                 containerColor = NimbusBlueAccent,
                 contentColor = NimbusTextPrimary,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .semantics { contentDescription = "Report weather conditions" }
                     .padding(end = 16.dp, bottom = tabFabBottomPadding),
             ) {
                 Icon(
                     Icons.Filled.Add,
-                    contentDescription = "Report weather conditions",
+                    contentDescription = null,
                 )
             }
         }
@@ -675,7 +679,7 @@ private fun RadarInfoPill(
 ) {
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -684,7 +688,7 @@ private fun RadarInfoPill(
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(18.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Text(
