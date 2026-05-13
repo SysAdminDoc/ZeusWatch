@@ -49,7 +49,7 @@ fun CurrentConditionsHeader(
     yesterdayHigh: Double? = null,
 ) {
     val s = LocalUnitSettings.current
-    val shape = RoundedCornerShape(34.dp)
+    val shape = RoundedCornerShape(12.dp)
     val feelsLikeReason = WeatherFormatter.feelsLikeReason(
         current.temperature, current.feelsLike, current.windSpeed, current.humidity,
     )
@@ -226,9 +226,9 @@ private fun HeroPill(
 ) {
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(Color.White.copy(alpha = 0.04f))
-            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(18.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(8.dp))
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -255,9 +255,9 @@ private fun HeroMetricChip(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(Color.White.copy(alpha = 0.04f))
-            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(22.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp),
     ) {
         Text(

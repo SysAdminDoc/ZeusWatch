@@ -77,7 +77,7 @@ private fun BriefChip(text: String) {
         style = MaterialTheme.typography.labelSmall,
         color = NimbusBlueAccent,
         modifier = Modifier
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(14.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -85,7 +85,7 @@ private fun BriefChip(text: String) {
                         NimbusGlassBottom.copy(alpha = 0.92f),
                     ),
                 ),
-                RoundedCornerShape(14.dp),
+                RoundedCornerShape(8.dp),
             )
             .padding(horizontal = 10.dp, vertical = 6.dp),
     )

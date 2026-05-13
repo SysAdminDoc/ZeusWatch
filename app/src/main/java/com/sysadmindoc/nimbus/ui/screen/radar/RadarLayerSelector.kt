@@ -64,7 +64,7 @@ fun RadarLayerSelector(
         modifier = modifier
             .widthIn(max = 520.dp)
             .horizontalScroll(rememberScrollState())
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -73,7 +73,7 @@ fun RadarLayerSelector(
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(22.dp))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
             .selectableGroup()
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -100,9 +100,9 @@ fun RadarLayerSelector(
             Row(
                 modifier = Modifier
                     .heightIn(min = 40.dp)
-                    .clip(RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(bg)
-                    .border(1.dp, if (isSelected) NimbusBlueAccent.copy(alpha = 0.5f) else NimbusCardBorder, RoundedCornerShape(18.dp))
+                    .border(1.dp, if (isSelected) NimbusBlueAccent.copy(alpha = 0.5f) else NimbusCardBorder, RoundedCornerShape(8.dp))
                     .selectable(
                         selected = isSelected,
                         onClick = { onLayerSelected(layer) },
@@ -115,7 +115,7 @@ fun RadarLayerSelector(
                 Box(
                     modifier = Modifier
                         .size(if (isSelected) 10.dp else 8.dp)
-                        .clip(RoundedCornerShape(999.dp))
+                        .clip(RoundedCornerShape(4.dp))
                         .background(
                             if (isSelected) NimbusBlueAccent.copy(alpha = 0.95f)
                             else NimbusTextTertiary.copy(alpha = 0.35f),
