@@ -1,11 +1,21 @@
 package com.sysadmindoc.nimbus.data.repository
 
 import com.sysadmindoc.nimbus.data.api.BrightSkyApi
+import com.sysadmindoc.nimbus.data.api.MetNorwayApi
 import com.sysadmindoc.nimbus.data.api.OpenWeatherMapApi
 import com.sysadmindoc.nimbus.data.api.PirateWeatherApi
 import com.sysadmindoc.nimbus.data.model.BrightSkyWeatherResponse
 import com.sysadmindoc.nimbus.data.model.BsSource
 import com.sysadmindoc.nimbus.data.model.BsWeatherEntry
+import com.sysadmindoc.nimbus.data.model.MetEntryData
+import com.sysadmindoc.nimbus.data.model.MetInstant
+import com.sysadmindoc.nimbus.data.model.MetInstantDetails
+import com.sysadmindoc.nimbus.data.model.MetNorwayResponse
+import com.sysadmindoc.nimbus.data.model.MetPeriod
+import com.sysadmindoc.nimbus.data.model.MetPeriodDetails
+import com.sysadmindoc.nimbus.data.model.MetProperties
+import com.sysadmindoc.nimbus.data.model.MetSummary
+import com.sysadmindoc.nimbus.data.model.MetTimeseriesEntry
 import com.sysadmindoc.nimbus.data.model.OwmCurrent
 import com.sysadmindoc.nimbus.data.model.OwmDaily
 import com.sysadmindoc.nimbus.data.model.OwmDailyTemp
@@ -18,6 +28,7 @@ import com.sysadmindoc.nimbus.data.model.PwDaily
 import com.sysadmindoc.nimbus.data.model.PwDailyBlock
 import com.sysadmindoc.nimbus.data.model.PwHourly
 import com.sysadmindoc.nimbus.data.model.PwHourlyBlock
+import com.sysadmindoc.nimbus.data.model.WeatherCode
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -172,6 +183,79 @@ class ForecastAdapterTimezoneTest {
             assertEquals("Pago Pago", result.location.name)
             assertEquals(4, result.hourly.size)
             assertEquals(18.0, result.current.temperature, 0.01)
+        }
+    }
+
+    @Test
+    fun `met norway projects UTC timestamps into the device timezone`() = runTest {
+        // MET Norway's API returns UTC-tagged timestamps with no timezone
+        // metadata in the body. Before the timezone fix, the adapter
+        // stripped the offset and rendered UTC components as if they
+        // were local — for the test below this would have shown a
+        // forecast hour labelled "20:00" while the user's wall clock
+        // read "16:00" (a four-hour drift, the worst-case for
+        // continental US users browsing a Nordic city).
+        withDefaultTimeZone("America/New_York") {
+            val nyZone = ZoneId.of("America/New_York")
+            val api = mockk<MetNorwayApi>()
+            val adapter = MetNorwayForecastAdapter(api)
+            val baseUtc = OffsetDateTime.now(ZoneOffset.UTC)
+                .withMinute(0).withSecond(0).withNano(0)
+
+            val entries = (0L..3L).map { hourOffset ->
+                MetTimeseriesEntry(
+                    time = baseUtc.plusHours(hourOffset).toString(),
+                    data = MetEntryData(
+                        instant = MetInstant(
+                            details = MetInstantDetails(
+                                airTemperature = 10.0 + hourOffset,
+                                relativeHumidity = 60.0,
+                                airPressureAtSeaLevel = 1012.0,
+                                cloudAreaFraction = 25.0,
+                                windSpeed = 3.0,
+                                windFromDirection = 200.0,
+                                windSpeedOfGust = 5.0,
+                                ultravioletIndexClearSky = 1.0,
+                                dewPointTemperature = 5.0 + hourOffset,
+                            ),
+                        ),
+                        next1Hours = MetPeriod(
+                            summary = MetSummary(symbolCode = "partlycloudy_day"),
+                            details = MetPeriodDetails(
+                                precipitationAmount = 0.0,
+                                probabilityOfPrecipitation = 0.0,
+                            ),
+                        ),
+                    ),
+                )
+            }
+            coEvery { api.getForecast(any(), any(), any()) } returns MetNorwayResponse(
+                type = "Feature",
+                properties = MetProperties(timeseries = entries),
+            )
+
+            val data = adapter.getWeather(60.39, 5.32, "Bergen").getOrThrow()
+
+            // Sanity: still resolves to MET's PARTLY_CLOUDY symbol.
+            assertEquals(WeatherCode.PARTLY_CLOUDY, data.current.weatherCode)
+
+            // The first hourly's wall-clock must match the UTC instant
+            // re-projected into the device's New York zone, NOT the raw
+            // UTC clock that the legacy adapter exposed.
+            val expectedNyLocal = baseUtc.atZoneSameInstant(nyZone).toLocalDateTime()
+            assertEquals(
+                "first hourly time must be in the device timezone, not UTC",
+                expectedNyLocal,
+                data.hourly.first().time,
+            )
+
+            // observationTime must follow the same rule — used downstream
+            // as the anchor for `today` and the on-this-day card.
+            assertEquals(
+                "observationTime must be in the device timezone, not UTC",
+                expectedNyLocal,
+                data.current.observationTime,
+            )
         }
     }
 

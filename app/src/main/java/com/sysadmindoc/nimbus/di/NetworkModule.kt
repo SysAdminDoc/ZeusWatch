@@ -51,9 +51,23 @@ private val REDACT_REGEX = Regex(
     RegexOption.IGNORE_CASE,
 )
 
+/**
+ * Pirate Weather embeds its API key as a path segment
+ * (`/forecast/{key}/{lat},{lon}` and `/forecast/{key},{exclude}/{lat},{lon}`),
+ * so query-param redaction misses it. This regex captures the `/forecast/`
+ * prefix and re-anchors on the coordinate pair so we only redact the
+ * key segment — never a literal "forecast" path part further down the URL.
+ */
+private val PIRATE_WEATHER_PATH_KEY_REGEX = Regex(
+    "(/forecast/)[^/\\s?#]+(?=/-?\\d)",
+    RegexOption.IGNORE_CASE,
+)
+
 private object ApiKeyRedactingLogger : HttpLoggingInterceptor.Logger {
     override fun log(message: String) {
-        android.util.Log.d("OkHttp", REDACT_REGEX.replace(message, "$1***"))
+        val queryRedacted = REDACT_REGEX.replace(message, "$1***")
+        val pathRedacted = PIRATE_WEATHER_PATH_KEY_REGEX.replace(queryRedacted, "$1***")
+        android.util.Log.d("OkHttp", pathRedacted)
     }
 }
 

@@ -19,6 +19,7 @@ import kotlinx.serialization.json.intOrNull
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeParseException
 import javax.inject.Inject
@@ -60,7 +61,7 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
     ): Result<WeatherData> = runCatching {
         val feature = findNearestFeature(latitude, longitude)
             ?: error("No ECCC city within 1.5° of ($latitude, $longitude)")
-        mapToWeatherData(feature, latitude, longitude, locationName)
+        mapToWeatherData(feature, latitude, longitude, locationName, ZoneId.systemDefault())
     }.onFailure { Log.w(TAG, "ECCC forecast failed", it) }
 
     private suspend fun findNearestFeature(lat: Double, lon: Double): EcccFeature? {
@@ -81,20 +82,29 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
             }
     }
 
+    /**
+     * ECCC stamps its observation/forecast metadata with `…Utc` ISO-8601
+     * timestamps, but the rest of the app — and the user — wants the
+     * forecast in their local frame of reference. Project the UTC instant
+     * into [zone] before dropping the offset, otherwise the daily-period
+     * indexing in [buildDailyFromForecastGroup] anchors to the UTC date
+     * (off by up to one day for western Canadian timezones late at night).
+     */
     internal fun mapToWeatherData(
         feature: EcccFeature,
         requestedLat: Double,
         requestedLon: Double,
         locationName: String?,
+        zone: ZoneId = ZoneId.systemDefault(),
     ): WeatherData {
         val props = feature.properties
             ?: error("ECCC feature missing properties")
         val cc = props.currentConditions
         val forecastEntries = props.forecastGroup?.forecast.orEmpty()
 
-        val observationTime = parseObservation(cc?.observationDateTimeUtc)
-            ?: parseObservation(props.timestampUtc)
-            ?: LocalDateTime.now()
+        val observationTime = parseObservation(cc?.observationDateTimeUtc, zone)
+            ?: parseObservation(props.timestampUtc, zone)
+            ?: LocalDateTime.now(zone)
         val today = observationTime.toLocalDate()
 
         val pressureHpa = cc?.pressureValue?.let { it * 10.0 } ?: 0.0 // kPa → hPa
@@ -200,13 +210,13 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         var night: EcccForecastEntry? = null,
     )
 
-    private fun parseObservation(timestamp: String?): LocalDateTime? {
+    private fun parseObservation(timestamp: String?, zone: ZoneId): LocalDateTime? {
         if (timestamp.isNullOrBlank()) return null
         return try {
-            OffsetDateTime.parse(timestamp).toLocalDateTime()
+            OffsetDateTime.parse(timestamp).atZoneSameInstant(zone).toLocalDateTime()
         } catch (_: DateTimeParseException) {
             try {
-                // Some ECCC fields use compact YYYYMMDDhhmmss
+                // Some ECCC fields use compact YYYYMMDDhhmmss (always UTC).
                 if (timestamp.length >= 14) {
                     LocalDateTime.of(
                         timestamp.substring(0, 4).toInt(),
@@ -215,7 +225,7 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
                         timestamp.substring(8, 10).toInt(),
                         timestamp.substring(10, 12).toInt(),
                         timestamp.substring(12, 14).toInt(),
-                    ).atOffset(ZoneOffset.UTC).toLocalDateTime()
+                    ).atOffset(ZoneOffset.UTC).atZoneSameInstant(zone).toLocalDateTime()
                 } else null
             } catch (_: Exception) {
                 null
