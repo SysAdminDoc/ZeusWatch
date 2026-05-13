@@ -137,7 +137,7 @@ private fun AlertBannerItem(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(severityColor.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center,
             ) {

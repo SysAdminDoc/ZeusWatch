@@ -31,7 +31,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -46,7 +45,6 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -71,9 +69,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -477,6 +479,14 @@ internal fun SettingsContent(
                             uncheckedThumbColor = NimbusTextTertiary,
                             uncheckedTrackColor = NimbusCardBg,
                         ),
+                        modifier = Modifier.semantics {
+                            contentDescription = if (enabled) {
+                                "Hide ${card.label} card"
+                            } else {
+                                "Show ${card.label} card"
+                            }
+                            stateDescription = if (enabled) "On" else "Off"
+                        },
                     )
                 }
             }
@@ -627,7 +637,13 @@ internal fun SettingsContent(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .background(NimbusCardBg)
-                    .clickable(onClick = onNavigateToCustomAlerts)
+                    .clickable(
+                        onClick = onNavigateToCustomAlerts,
+                        role = Role.Button,
+                    )
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = "Custom Alert Rules, set thresholds for temperature, wind, rain, and UV"
+                    }
                     .padding(horizontal = 14.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -971,7 +987,7 @@ private fun SettingsOverviewCard(
             Box(
                 modifier = Modifier
                     .size(9.dp)
-                    .clip(CircleShape)
+                    .clip(RoundedCornerShape(3.dp))
                     .background(NimbusBlueAccent),
             )
             Text(
@@ -1045,7 +1061,7 @@ private fun SettingsCategoryPicker(
                     Box(
                         modifier = Modifier
                             .size(8.dp)
-                            .clip(CircleShape)
+                            .clip(RoundedCornerShape(3.dp))
                             .background(
                                 if (isSelected) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.45f),
                             ),
@@ -1101,7 +1117,14 @@ private fun SettingSection(
                     onClick = { expanded = !expanded },
                     role = Role.Button,
                 )
-                .padding(bottom = if (expanded) 14.dp else 0.dp),
+                .semantics(mergeDescendants = true) {
+                    contentDescription = if (expanded) {
+                        "Collapse $title section"
+                    } else {
+                        "Expand $title section"
+                    }
+                    stateDescription = if (expanded) "Expanded" else "Collapsed"
+                },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -1121,27 +1144,28 @@ private fun SettingSection(
             }
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(NimbusBlueAccent.copy(alpha = if (expanded) 0.18f else 0.10f))
                     .border(
                         1.dp,
                         NimbusBlueAccent.copy(alpha = if (expanded) 0.28f else 0.16f),
-                        RoundedCornerShape(14.dp),
+                        RoundedCornerShape(8.dp),
                     )
                     .padding(6.dp),
             ) {
                 Icon(
                     imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                    contentDescription = if (expanded) "Collapse section" else "Expand section",
+                    contentDescription = null,
                     tint = NimbusBlueAccent,
                     modifier = Modifier.size(18.dp),
                 )
             }
         }
         if (expanded) {
-            HorizontalDivider(color = NimbusCardBorder.copy(alpha = 0.65f))
-            Spacer(modifier = Modifier.height(14.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.padding(top = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 content()
             }
         }
@@ -1181,17 +1205,23 @@ private fun SettingRadio(
                 onClick = onClick,
                 role = Role.RadioButton,
             )
+            .semantics(mergeDescendants = true) {
+                contentDescription = listOfNotNull(label, sublabel).joinToString(", ")
+                stateDescription = if (selected) "Selected" else "Not selected"
+            }
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(
             selected = selected,
-            onClick = onClick,
+            onClick = null,
             colors = RadioButtonDefaults.colors(
                 selectedColor = NimbusBlueAccent,
                 unselectedColor = NimbusTextTertiary,
             ),
-            modifier = Modifier.size(36.dp),
+            modifier = Modifier
+                .size(36.dp)
+                .clearAndSetSemantics {},
         )
         Column(modifier = Modifier.padding(start = 4.dp)) {
             Text(text = label, style = MaterialTheme.typography.bodyLarge, color = NimbusTextPrimary)
@@ -1235,6 +1265,10 @@ private fun SettingToggle(
                 onValueChange = onCheckedChange,
                 role = Role.Switch,
             )
+            .semantics(mergeDescendants = true) {
+                contentDescription = listOfNotNull(label, sublabel).joinToString(", ")
+                stateDescription = if (checked) "On" else "Off"
+            }
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1247,13 +1281,14 @@ private fun SettingToggle(
         }
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange,
+            onCheckedChange = null,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = NimbusBlueAccent,
                 checkedTrackColor = NimbusBlueAccent.copy(alpha = 0.3f),
                 uncheckedThumbColor = NimbusTextTertiary,
                 uncheckedTrackColor = NimbusCardBg,
             ),
+            modifier = Modifier.clearAndSetSemantics {},
         )
     }
 }
@@ -1317,7 +1352,14 @@ private fun SourceDropdown(
                         ),
                     )
                     .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
-                    .clickable { expanded = true }
+                    .clickable(
+                        onClick = { expanded = true },
+                        role = Role.Button,
+                    )
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = "$label, ${selected.displayName}"
+                        stateDescription = if (expanded) "Expanded" else "Collapsed"
+                    }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
@@ -1328,7 +1370,7 @@ private fun SourceDropdown(
                 )
                 Icon(
                     imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                    contentDescription = if (expanded) "Collapse options" else "Expand options",
+                    contentDescription = null,
                     tint = NimbusTextSecondary,
                     modifier = Modifier.size(18.dp),
                 )
@@ -1387,7 +1429,14 @@ private fun SourceDropdownNullable(
                         ),
                     )
                     .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
-                    .clickable { expanded = true }
+                    .clickable(
+                        onClick = { expanded = true },
+                        role = Role.Button,
+                    )
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = "$label, ${selected?.displayName ?: "None"}"
+                        stateDescription = if (expanded) "Expanded" else "Collapsed"
+                    }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
@@ -1399,7 +1448,7 @@ private fun SourceDropdownNullable(
                 )
                 Icon(
                     imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                    contentDescription = if (expanded) "Collapse options" else "Expand options",
+                    contentDescription = null,
                     tint = NimbusTextSecondary,
                     modifier = Modifier.size(18.dp),
                 )
