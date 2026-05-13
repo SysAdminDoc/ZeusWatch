@@ -15,6 +15,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
@@ -43,25 +44,35 @@ class MetNorwayForecastAdapter @Inject constructor(
         locationName: String? = null,
     ): Result<WeatherData> = runCatching {
         val response = api.getForecast(latitude, longitude)
-        mapToWeatherData(response, latitude, longitude, locationName)
+        mapToWeatherData(response, latitude, longitude, locationName, ZoneId.systemDefault())
     }.onFailure { Log.w(TAG, "MET Norway forecast failed", it) }
 
+    /**
+     * MET Norway always emits UTC timestamps (the response carries no
+     * timezone metadata), so we resolve them into a concrete [ZoneId] —
+     * the device's current zone by default — before exposing them to the
+     * UI. Without this, hourly labels and the "today" daily lookup are
+     * off by the user's UTC offset, which is visible whenever the offset
+     * isn't zero (i.e., for nearly every MET Norway user).
+     */
     internal fun mapToWeatherData(
         response: MetNorwayResponse,
         lat: Double,
         lon: Double,
         locationName: String?,
+        zone: ZoneId = ZoneId.systemDefault(),
     ): WeatherData {
         val timeseries = response.properties?.timeseries.orEmpty()
         require(timeseries.isNotEmpty()) { "No timeseries data from MET Norway" }
 
         val currentEntry = findCurrentEntry(timeseries) ?: timeseries.first()
         val currentInstant = currentEntry.data?.instant?.details
-        val currentLocalTime = parseLocalDateTime(currentEntry.time) ?: LocalDateTime.now()
+        val currentLocalTime = parseZonedLocalDateTime(currentEntry.time, zone)
+            ?: LocalDateTime.now(zone)
         val today = currentLocalTime.toLocalDate()
 
-        val hourly = mapHourly(timeseries, currentLocalTime)
-        val daily = aggregateDaily(timeseries)
+        val hourly = mapHourly(timeseries, currentLocalTime, zone)
+        val daily = aggregateDaily(timeseries, zone)
         val todayDaily = daily.firstOrNull { it.date == today }
 
         // Current weather code uses the `next_1_hours` summary if present,
@@ -116,9 +127,10 @@ class MetNorwayForecastAdapter @Inject constructor(
     private fun mapHourly(
         timeseries: List<MetTimeseriesEntry>,
         now: LocalDateTime,
+        zone: ZoneId,
     ): List<HourlyConditions> {
         return timeseries.mapNotNull { entry ->
-            val time = parseLocalDateTime(entry.time) ?: return@mapNotNull null
+            val time = parseZonedLocalDateTime(entry.time, zone) ?: return@mapNotNull null
             if (time.isBefore(now.minusHours(1))) return@mapNotNull null
             val details = entry.data?.instant?.details
             val next1 = entry.data?.next1Hours
@@ -155,8 +167,9 @@ class MetNorwayForecastAdapter @Inject constructor(
      */
     private fun aggregateDaily(
         timeseries: List<MetTimeseriesEntry>,
+        zone: ZoneId,
     ): List<DailyConditions> {
-        return timeseries.groupBy { entry -> parseLocalDateTime(entry.time)?.toLocalDate() }
+        return timeseries.groupBy { entry -> parseZonedLocalDateTime(entry.time, zone)?.toLocalDate() }
             .filterKeys { it != null }
             .map { (date, dayEntries) ->
                 val temps = dayEntries.mapNotNull { it.data?.instant?.details?.airTemperature }
@@ -213,8 +226,16 @@ class MetNorwayForecastAdapter @Inject constructor(
             .sortedBy { it.date }
     }
 
-    private fun parseLocalDateTime(timestamp: String): LocalDateTime? = try {
-        OffsetDateTime.parse(timestamp).toLocalDateTime()
+    /**
+     * Parse a MET-Norway UTC timestamp and project it into [zone] before
+     * dropping the offset. `OffsetDateTime.toLocalDateTime()` directly
+     * would discard the offset and treat the UTC clock as if it were the
+     * user's local clock, which produces hourly labels off by the user's
+     * UTC offset. Going through `atZoneSameInstant` first preserves the
+     * instant and renders it in the requested zone.
+     */
+    private fun parseZonedLocalDateTime(timestamp: String, zone: ZoneId): LocalDateTime? = try {
+        OffsetDateTime.parse(timestamp).atZoneSameInstant(zone).toLocalDateTime()
     } catch (_: Exception) {
         null
     }

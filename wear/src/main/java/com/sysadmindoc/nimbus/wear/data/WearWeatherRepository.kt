@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.wear.data
 
 import android.util.Log
+import com.sysadmindoc.nimbus.wear.BuildConfig
 import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -52,7 +53,10 @@ class WearWeatherRepository @Inject constructor(
 
             val request = Request.Builder()
                 .url(url)
-                .header("User-Agent", "ZeusWatch-Wear/1.14.0")
+                .header(
+                    "User-Agent",
+                    "ZeusWatch-Wear/${BuildConfig.VERSION_NAME} (Android Wear; Open-Source)",
+                )
                 .build()
 
             client.newCall(request).execute().use { response ->

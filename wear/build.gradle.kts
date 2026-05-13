@@ -17,8 +17,8 @@ android {
         applicationId = "com.sysadmindoc.nimbus.wear"
         minSdk = 30
         targetSdk = 35
-        versionCode = 59
-        versionName = "1.20.0"
+        versionCode = 60
+        versionName = "1.20.1"
     }
 
     // Same conditional-signing pattern as :app — absent keystore produces
@@ -69,6 +69,10 @@ android {
 
     buildFeatures {
         compose = true
+        // Exposes BuildConfig.VERSION_NAME so the wear weather repository
+        // can stamp the correct version into its HTTP User-Agent without
+        // hardcoding a string literal that drifts from the manifest.
+        buildConfig = true
     }
 }
 

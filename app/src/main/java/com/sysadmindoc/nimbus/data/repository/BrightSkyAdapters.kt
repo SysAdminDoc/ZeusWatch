@@ -8,6 +8,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -47,15 +48,24 @@ class BrightSkyForecastAdapter @Inject constructor(
             api.getCurrentWeather(latitude, longitude)
         }.getOrNull()
 
-        mapToWeatherData(response, currentResponse, latitude, longitude, locationName)
+        mapToWeatherData(response, currentResponse, latitude, longitude, locationName, ZoneId.systemDefault())
     }.onFailure { Log.w(TAG, "Bright Sky forecast failed", it) }
 
+    /**
+     * Bright Sky responses arrive in UTC (we request `tz=Etc/UTC` so the
+     * Retrofit interface keeps a single deterministic shape). Render them
+     * in [zone] before exposing them to the UI — otherwise the hourly
+     * strip is off by 1–2h for the API's primary audience (Germany,
+     * Europe/Berlin) and the "today" daily key can disagree with the
+     * user's calendar around midnight UTC.
+     */
     private fun mapToWeatherData(
         forecast: BrightSkyWeatherResponse,
         currentResp: BrightSkyWeatherResponse?,
         lat: Double,
         lon: Double,
         locationName: String?,
+        zone: ZoneId = ZoneId.systemDefault(),
     ): WeatherData {
         val entries = forecast.weather
         require(entries.isNotEmpty()) { "No weather data from Bright Sky" }
@@ -63,16 +73,16 @@ class BrightSkyForecastAdapter @Inject constructor(
         // Use current_weather endpoint if available, otherwise latest observation
         val currentEntry = currentResp?.weather?.firstOrNull() ?: findCurrentEntry(entries)
         ?: entries.first()
-        val currentLocalTime = parseTimestamp(currentEntry.timestamp)
-            ?: entries.firstNotNullOfOrNull { parseTimestamp(it.timestamp) }
-            ?: LocalDateTime.now()
+        val currentLocalTime = parseTimestamp(currentEntry.timestamp, zone)
+            ?: entries.firstNotNullOfOrNull { parseTimestamp(it.timestamp, zone) }
+            ?: LocalDateTime.now(zone)
         val today = currentLocalTime.toLocalDate()
 
         // Build hourly from forecast entries
-        val hourly = mapHourly(entries, currentLocalTime)
+        val hourly = mapHourly(entries, currentLocalTime, zone)
 
         // Aggregate daily from hourly entries
-        val daily = aggregateDaily(entries)
+        val daily = aggregateDaily(entries, zone)
 
         // Today's high/low from daily aggregation
         val todayDaily = daily.firstOrNull { it.date == today }
@@ -128,9 +138,9 @@ class BrightSkyForecastAdapter @Inject constructor(
         }
     }
 
-    private fun mapHourly(entries: List<BsWeatherEntry>, now: LocalDateTime): List<HourlyConditions> {
+    private fun mapHourly(entries: List<BsWeatherEntry>, now: LocalDateTime, zone: ZoneId): List<HourlyConditions> {
         return entries.mapNotNull { e ->
-            val time = parseTimestamp(e.timestamp) ?: return@mapNotNull null
+            val time = parseTimestamp(e.timestamp, zone) ?: return@mapNotNull null
             if (time.isBefore(now.minusHours(1))) return@mapNotNull null
             HourlyConditions(
                 time = time,
@@ -161,9 +171,9 @@ class BrightSkyForecastAdapter @Inject constructor(
      * Aggregate hourly entries into daily summaries.
      * Groups by date, computes high/low/dominant weather/max wind/total precip.
      */
-    private fun aggregateDaily(entries: List<BsWeatherEntry>): List<DailyConditions> {
+    private fun aggregateDaily(entries: List<BsWeatherEntry>, zone: ZoneId): List<DailyConditions> {
         return entries.groupBy { entry ->
-            parseTimestamp(entry.timestamp)?.toLocalDate()
+            parseTimestamp(entry.timestamp, zone)?.toLocalDate()
         }.filterKeys { it != null }.map { (date, dayEntries) ->
             val temps = dayEntries.mapNotNull { it.temperature }
             val winds = dayEntries.mapNotNull { it.windSpeed }
@@ -208,10 +218,20 @@ class BrightSkyForecastAdapter @Inject constructor(
         }.sortedBy { it.date }
     }
 
-    private fun parseTimestamp(ts: String): LocalDateTime? = try {
-        OffsetDateTime.parse(ts).toLocalDateTime()
+    /**
+     * Parse a Bright Sky timestamp into a [LocalDateTime] expressed in
+     * [zone]. Bright Sky stamps each entry with an explicit offset (the
+     * `tz` query param controls it, and the Retrofit interface pins that
+     * to `Etc/UTC`), so we always have enough information to re-project
+     * the instant into the user's frame rather than silently dropping the
+     * offset like a plain `toLocalDateTime()` would.
+     */
+    private fun parseTimestamp(ts: String, zone: ZoneId): LocalDateTime? = try {
+        OffsetDateTime.parse(ts).atZoneSameInstant(zone).toLocalDateTime()
     } catch (_: Exception) {
         try {
+            // Falls through here for legacy responses without offset; we have
+            // no instant to anchor against, so consume the wall-clock as-is.
             LocalDateTime.parse(ts, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         } catch (_: Exception) {
             null
