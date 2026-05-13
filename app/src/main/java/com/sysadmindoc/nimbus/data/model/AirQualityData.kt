@@ -168,7 +168,13 @@ enum class MoonPhase(val label: String, val emoji: String) {
          * Open-Meteo doesn't directly provide phase, so we derive from day of lunar cycle.
          */
         fun fromDayOfCycle(day: Double): MoonPhase {
-            val normalized = day % 29.53 // Synodic month
+            // Java's % preserves the sign of the dividend; for a date before the
+            // reference new moon (or any negative caller drift) the raw modulo
+            // would be negative and silently fall into NEW_MOON via the
+            // `normalized < 1.85` branch, mislabeling the phase. Normalize into
+            // [0, 29.53) via the +period-then-mod trick.
+            val synodic = 29.53
+            val normalized = ((day % synodic) + synodic) % synodic
             return when {
                 normalized < 1.85 -> NEW_MOON
                 normalized < 7.38 -> WAXING_CRESCENT

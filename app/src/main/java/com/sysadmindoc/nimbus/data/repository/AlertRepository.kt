@@ -75,11 +75,24 @@ class AlertRepository @Inject constructor(
                     selectedAdapters.map { adapter ->
                         async {
                             try {
-                                // MeteoAlarm needs country-specific call
-                                if (adapter is MeteoAlarmAdapter && countryCode != null) {
-                                    adapter.getAlertsForCountry(countryCode)
-                                } else {
-                                    adapter.getAlerts(latitude, longitude)
+                                when {
+                                    // MeteoAlarm's `getAlerts(lat, lon)` is a no-op stub —
+                                    // the API needs an ISO country code. Skip it cleanly
+                                    // (a) when the country isn't known yet and
+                                    // (b) when the user's country is outside MeteoAlarm's
+                                    // EUMETNET coverage — otherwise `ALL_SOURCES` mode
+                                    // would silently swallow MeteoAlarm whenever the
+                                    // device falls outside Europe.
+                                    adapter is MeteoAlarmAdapter -> {
+                                        if (countryCode != null &&
+                                            countryCode in adapter.supportedRegions
+                                        ) {
+                                            adapter.getAlertsForCountry(countryCode)
+                                        } else {
+                                            Result.success(emptyList())
+                                        }
+                                    }
+                                    else -> adapter.getAlerts(latitude, longitude)
                                 }
                             } catch (e: Exception) {
                                 Log.w(TAG, "Adapter ${adapter.sourceId} failed: ${e.message}")
