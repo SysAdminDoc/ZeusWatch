@@ -315,7 +315,7 @@ fun ZeusWatchBottomNav(
                         Box(
                             modifier = Modifier
                                 .size(6.dp)
-                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
                                 .background(Color.White.copy(alpha = 0.95f)),
                         )
                         Spacer(modifier = Modifier.height(4.dp))
