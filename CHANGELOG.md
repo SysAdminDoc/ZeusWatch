@@ -2,7 +2,7 @@
 
 All notable changes to Nimbus Weather are documented here.
 
-## [Unreleased] - 2026-05-13
+## [1.20.3] - 2026-05-13
 
 Premium UX polish pass across phone, Wear OS, widgets, and project screenshots.
 
@@ -21,6 +21,7 @@ Premium UX polish pass across phone, Wear OS, widgets, and project screenshots.
 ### Verified
 - Compiled phone and Wear Kotlin targets.
 - Installed and launched the standard debug build on a connected Android device for visual smoke testing.
+- Built the signed standard release APK for distribution and device installation.
 
 ## [1.20.2] - 2026-05-13
 
