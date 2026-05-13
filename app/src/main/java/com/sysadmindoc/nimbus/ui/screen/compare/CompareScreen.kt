@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -44,6 +43,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -409,14 +412,23 @@ private fun LocationSelector(
                     ),
                 )
                 .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
-                .clickable { expanded = true }
+                .clickable(
+                    onClick = { expanded = true },
+                    role = Role.Button,
+                )
+                .semantics(mergeDescendants = true) {
+                    val selectedLabel = selected?.let { if (it.isCurrentLocation) "My Location" else it.name }
+                        ?: "Choose location"
+                    contentDescription = "$label, $selectedLabel"
+                    stateDescription = if (expanded) "Expanded" else "Collapsed"
+                }
                 .padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .size(8.dp)
-                        .clip(CircleShape)
+                        .clip(RoundedCornerShape(3.dp))
                         .background(if (selected != null) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.45f)),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -558,7 +570,7 @@ private fun CompareIntroCard(
         Box(
             modifier = Modifier
                 .size(42.dp)
-                .clip(CircleShape)
+                .clip(RoundedCornerShape(10.dp))
                 .background(NimbusBlueAccent.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center,
         ) {

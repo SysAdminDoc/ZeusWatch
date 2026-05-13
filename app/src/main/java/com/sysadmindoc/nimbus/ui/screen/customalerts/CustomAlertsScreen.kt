@@ -24,7 +24,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -55,6 +56,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -110,9 +116,11 @@ fun CustomAlertsScreen(
                     onClick = { editing = EditorState(existing = null, draft = viewModel.defaultRule()) },
                     containerColor = NimbusBlueAccent,
                     contentColor = NimbusTextPrimary,
-                    modifier = Modifier.navigationBarsPadding(),
+                    modifier = Modifier
+                        .navigationBarsPadding()
+                        .semantics { contentDescription = "Add custom alert" },
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Add custom alert")
+                    Icon(Icons.Filled.Add, contentDescription = null)
                 }
             },
         ) { innerPadding ->
@@ -217,6 +225,10 @@ private fun RuleRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val ruleLabel = "${rule.metric.label} ${rule.operator.symbol} ${formatThreshold(rule, settings)}"
+    val ruleDescription = "${rule.metric.label} ${rule.operator.label} ${formatThreshold(rule, settings)}"
+    val ruleState = if (rule.enabled) "active" else "paused"
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -234,7 +246,13 @@ private fun RuleRow(
                 if (rule.enabled) NimbusBlueAccent.copy(alpha = 0.22f) else NimbusCardBorder,
                 RoundedCornerShape(10.dp),
             )
-            .clickable(onClick = onEdit)
+            .clickable(
+                onClick = onEdit,
+                role = Role.Button,
+            )
+            .semantics(mergeDescendants = false) {
+                contentDescription = "Edit $ruleState custom alert, $ruleDescription"
+            }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -245,7 +263,7 @@ private fun RuleRow(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "${rule.metric.label} ${rule.operator.symbol} ${formatThreshold(rule, settings)}",
+                text = ruleLabel,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                 color = if (rule.enabled) NimbusTextPrimary else NimbusTextTertiary,
             )
@@ -255,19 +273,34 @@ private fun RuleRow(
                 color = NimbusTextTertiary,
             )
         }
-        Switch(checked = rule.enabled, onCheckedChange = { onToggle() })
+        Switch(
+            checked = rule.enabled,
+            onCheckedChange = { onToggle() },
+            modifier = Modifier.semantics {
+                contentDescription = if (rule.enabled) {
+                    "Pause $ruleDescription alert"
+                } else {
+                    "Resume $ruleDescription alert"
+                }
+                stateDescription = if (rule.enabled) "On" else "Off"
+            },
+        )
         Box(
             modifier = Modifier
                 .padding(start = 6.dp)
                 .size(34.dp)
-                .clip(CircleShape)
+                .clip(RoundedCornerShape(8.dp))
                 .background(Color.White.copy(alpha = 0.06f))
-                .clickable(onClick = onDelete),
+                .clickable(
+                    onClick = onDelete,
+                    role = Role.Button,
+                )
+                .semantics { contentDescription = "Delete $ruleDescription alert" },
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 Icons.Filled.Delete,
-                contentDescription = "Delete rule",
+                contentDescription = null,
                 tint = NimbusTextTertiary,
                 modifier = Modifier.size(18.dp),
             )
@@ -424,6 +457,15 @@ private fun RuleEditor(
                     if (enabled) NimbusBlueAccent.copy(alpha = 0.26f) else NimbusCardBorder,
                     RoundedCornerShape(10.dp),
                 )
+                .toggleable(
+                    value = enabled,
+                    onValueChange = { enabled = it },
+                    role = Role.Switch,
+                )
+                .semantics(mergeDescendants = true) {
+                    contentDescription = "Enabled, ${if (enabled) "this rule can send notifications" else "notifications are paused"}"
+                    stateDescription = if (enabled) "On" else "Off"
+                }
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -436,7 +478,11 @@ private fun RuleEditor(
                     color = NimbusTextSecondary,
                 )
             }
-            Switch(checked = enabled, onCheckedChange = { enabled = it })
+            Switch(
+                checked = enabled,
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics {},
+            )
         }
 
         // Buttons
@@ -480,6 +526,7 @@ private fun <T> ChipSelector(
     ) {
         options.forEach { option ->
             val isSelected = option == selected
+            val optionLabel = label(option)
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
@@ -503,11 +550,19 @@ private fun <T> ChipSelector(
                         if (isSelected) NimbusBlueAccent.copy(alpha = 0.34f) else NimbusCardBorder,
                         RoundedCornerShape(8.dp),
                     )
-                    .clickable { onSelect(option) }
+                    .selectable(
+                        selected = isSelected,
+                        onClick = { onSelect(option) },
+                        role = Role.RadioButton,
+                    )
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = optionLabel
+                        stateDescription = if (isSelected) "Selected" else "Not selected"
+                    }
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = label(option),
+                    text = optionLabel,
                     style = MaterialTheme.typography.labelLarge,
                     color = if (isSelected) Color.White else NimbusTextSecondary,
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
@@ -541,7 +596,7 @@ private fun CustomAlertsIntroCard(
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(CircleShape)
+                .clip(RoundedCornerShape(10.dp))
                 .background(NimbusBlueAccent.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center,
         ) {
