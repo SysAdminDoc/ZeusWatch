@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -57,6 +56,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -406,14 +408,25 @@ private fun SearchResultItem(
                 ),
             )
             .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
-            .clickable(onClick = onAdd)
+            .clickable(
+                onClick = onAdd,
+                role = Role.Button,
+            )
+            .semantics(mergeDescendants = true) {
+                val region = listOfNotNull(result.admin1, result.country).joinToString(", ")
+                contentDescription = if (region.isNotBlank()) {
+                    "Add ${result.name}, $region"
+                } else {
+                    "Add ${result.name}"
+                }
+            }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
                 .size(34.dp)
-                .clip(CircleShape)
+                .clip(RoundedCornerShape(10.dp))
                 .background(NimbusBlueAccent.copy(alpha = 0.16f)),
             contentAlignment = Alignment.Center,
         ) {
@@ -438,7 +451,7 @@ private fun SearchResultItem(
         }
         Icon(
             Icons.Filled.Add,
-            contentDescription = "Add",
+            contentDescription = null,
             tint = NimbusBlueAccent,
             modifier = Modifier.size(20.dp),
         )
@@ -485,7 +498,14 @@ private fun SavedLocationItem(
                 if (location.isCurrentLocation) NimbusBlueAccent.copy(alpha = 0.55f) else NimbusCardBorder,
                 RoundedCornerShape(10.dp),
             )
-            .clickable(onClick = onClick)
+            .clickable(
+                onClick = onClick,
+                role = Role.Button,
+            )
+            .semantics {
+                val name = if (location.isCurrentLocation) "My Location" else location.name
+                contentDescription = "Open $name weather"
+            }
             .padding(horizontal = 16.dp, vertical = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -513,7 +533,7 @@ private fun SavedLocationItem(
             Box(
                 modifier = Modifier
                     .size(34.dp)
-                    .clip(CircleShape)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(NimbusBlueAccent.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center,
             ) {
@@ -549,7 +569,7 @@ private fun SavedLocationItem(
         if (weatherCode != null) {
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(NimbusCardBg)
                     .padding(horizontal = 8.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center,
@@ -574,12 +594,16 @@ private fun SavedLocationItem(
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .clip(CircleShape)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(NimbusError.copy(alpha = 0.12f))
-                    .clickable(onClick = onRemove),
+                    .clickable(
+                        onClick = onRemove,
+                        role = Role.Button,
+                    )
+                    .semantics { contentDescription = "Remove ${location.name}" },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Filled.Close, "Remove", tint = NimbusError.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
+                Icon(Icons.Filled.Close, null, tint = NimbusError.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
             }
         }
     }

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
@@ -167,7 +166,7 @@ fun CurrentConditionsHeader(
             Box(
                 modifier = Modifier
                     .size(88.dp)
-                    .clip(CircleShape)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(
                         Brush.radialGradient(
                             colors = listOf(
@@ -177,7 +176,7 @@ fun CurrentConditionsHeader(
                             ),
                         ),
                     )
-                    .border(1.dp, NimbusCardBorder, CircleShape),
+                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 AnimatedWeatherIcon(
