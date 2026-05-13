@@ -36,6 +36,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
@@ -229,7 +234,7 @@ fun ZeusWatchBottomNav(
     modifier: Modifier = Modifier,
     visibleTabs: List<BottomTab> = BottomTab.entries,
 ) {
-    val dockShape = androidx.compose.foundation.shape.RoundedCornerShape(26.dp)
+    val dockShape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -260,7 +265,7 @@ fun ZeusWatchBottomNav(
             visibleTabs.forEach { tab ->
                 val index = tab.ordinal
                 val isSelected = selectedTab == index
-                val tabShape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
+                val tabShape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -293,6 +298,15 @@ fun ZeusWatchBottomNav(
                             onClick = { onTabSelected(index) },
                             role = Role.Tab,
                         )
+                        .clearAndSetSemantics {
+                            contentDescription = tab.label
+                            selected = isSelected
+                            role = Role.Tab
+                            onClick(label = "Show ${tab.label}") {
+                                onTabSelected(index)
+                                true
+                            }
+                        }
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -308,7 +322,7 @@ fun ZeusWatchBottomNav(
                     }
                     Icon(
                         tab.icon,
-                        contentDescription = tab.label,
+                        contentDescription = null,
                         modifier = Modifier.size(20.dp),
                         tint = if (isSelected) Color.White else NimbusTextTertiary,
                     )

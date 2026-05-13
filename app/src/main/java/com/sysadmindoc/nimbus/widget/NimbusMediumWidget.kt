@@ -55,7 +55,7 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .cornerRadius(18.dp)
+            .cornerRadius(12.dp)
             .background(WidgetTheme.bgColor)
             .clickable(
                 if (data != null) actionStartActivity<MainActivity>()

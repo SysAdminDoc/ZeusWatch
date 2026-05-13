@@ -153,7 +153,7 @@ private fun TrendTabChip(
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(8.dp)
     Text(
         text = label,
         style = MaterialTheme.typography.labelMedium.copy(
@@ -192,7 +192,7 @@ private fun HourlyItemShell(
     content: @Composable () -> Unit,
 ) {
     val s = LocalUnitSettings.current
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(10.dp)
     val cardBrush = if (highlighted) {
         Brush.verticalGradient(
             colors = listOf(

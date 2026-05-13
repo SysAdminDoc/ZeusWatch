@@ -54,7 +54,7 @@ fun RadarPreviewCard(
     radarTileUrl: String? = null,
     baseMapTileUrl: String? = null,
 ) {
-    val shape = RoundedCornerShape(24.dp)
+    val shape = RoundedCornerShape(12.dp)
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -75,7 +75,7 @@ fun RadarPreviewCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(164.dp)
-                .clip(RoundedCornerShape(topStart = 23.dp, topEnd = 23.dp))
+                .clip(RoundedCornerShape(topStart = 11.dp, topEnd = 11.dp))
                 .background(NimbusSurfaceVariant),
         ) {
             if (baseMapTileUrl != null) {
@@ -148,7 +148,7 @@ fun RadarPreviewCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.34f))
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                 ) {

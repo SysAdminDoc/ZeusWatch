@@ -208,7 +208,7 @@ private fun AlertMetaPill(
 ) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(background)
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {

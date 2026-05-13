@@ -10,8 +10,11 @@
 
 > A free, open-source Android weather app with a premium dark UI, 28 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, and Environment Canada.
 
-<!-- Screenshots go here after first release build -->
-<!-- ![Screenshots](docs/screenshots.png) -->
+## Screenshots
+
+| Today | Settings | Radar |
+|-------|----------|-------|
+| ![ZeusWatch Today screen with current conditions and forecast cards](docs/screenshots/phone-home.png) | ![ZeusWatch Settings screen with refined category cards](docs/screenshots/phone-settings.png) | ![ZeusWatch Radar screen with live map controls](docs/screenshots/phone-radar.png) |
 
 ## Quick Start
 
