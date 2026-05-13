@@ -161,7 +161,11 @@ class AirQualityRepository @Inject constructor(
         if (m <= 2) { y -= 1; m += 12 }
         val jd = (365.25 * (y + 4716)).toInt() + (30.6001 * (m + 1)).toInt() + day - 1524.5
         val daysSinceNew = jd - 2451550.1 // Known new moon: Jan 6 2000
-        return daysSinceNew % 29.53058867
+        // Normalize into [0, period): Java's % keeps the sign of the dividend,
+        // so any pre-2000 caller (or future bug producing a negative jd) would
+        // otherwise yield a negative lunar age and a wrong MoonPhase bucket.
+        val synodic = 29.53058867
+        return ((daysSinceNew % synodic) + synodic) % synodic
     }
 
     private fun calculateIllumination(lunarAge: Double): Double {

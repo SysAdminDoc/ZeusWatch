@@ -42,6 +42,12 @@ class DatabaseMaintenanceWorker @AssistedInject constructor(
             }
             Log.d(TAG, "WAL checkpoint completed")
             Result.success()
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            // WorkManager cancels the worker via its Job; re-throw so the
+            // generic catch below doesn't mask cancellation as a permanent
+            // failure (which would not retry on the next scheduled run but
+            // would also block cooperative cleanup).
+            throw cancelled
         } catch (e: Exception) {
             Log.w(TAG, "WAL checkpoint failed", e)
             Result.failure()
