@@ -11,6 +11,9 @@ Premium UX polish pass across phone, Wear OS, widgets, and project screenshots.
 - Removed negative letter spacing from the Compose type scale so headings and compact labels render more cleanly across densities.
 - Reworked the pollen card into the shared weather-card surface and replaced the weak empty state with calmer, more useful copy.
 - Improved accessibility semantics for icon-only toolbar, bottom navigation, and radar report controls so TalkBack focuses the actual tappable controls instead of unlabeled containers or duplicate child icons.
+- Tightened the remaining secondary icon/status backdrops to square-rounded shapes so the interface no longer mixes circles, pills, and crisper cards.
+- Improved settings, location, compare, and custom alert control semantics so toggles, radio rows, chips, dropdown rows, delete controls, and section expanders announce clearer labels and selected/on/off state.
+- Fixed the weekly database WAL checkpoint worker to run its `PRAGMA wal_checkpoint(TRUNCATE)` through a query cursor, removing a launch-time SQLite warning from the background maintenance path.
 - Added real-device screenshots for Today, Settings, and Radar to replace the README screenshot placeholder.
 
 ### Verified

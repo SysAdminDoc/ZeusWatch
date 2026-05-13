@@ -38,9 +38,21 @@ class DatabaseMaintenanceWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         return try {
             withContext(Dispatchers.IO) {
-                db.openHelper.writableDatabase.execSQL("PRAGMA wal_checkpoint(TRUNCATE)")
+                db.openHelper.writableDatabase
+                    .query("PRAGMA wal_checkpoint(TRUNCATE)")
+                    .use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val busy = cursor.getInt(0)
+                            val logFrames = cursor.getInt(1)
+                            val checkpointedFrames = cursor.getInt(2)
+                            Log.d(
+                                TAG,
+                                "WAL checkpoint completed: busy=$busy, logFrames=$logFrames, " +
+                                    "checkpointedFrames=$checkpointedFrames",
+                            )
+                        }
+                    }
             }
-            Log.d(TAG, "WAL checkpoint completed")
             Result.success()
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             // WorkManager cancels the worker via its Job; re-throw so the
