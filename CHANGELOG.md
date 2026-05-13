@@ -2,6 +2,27 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.20.1] - 2026-05-13
+
+Engineering audit pass — five bugs across forecast adapters, wear sync, lightning service, and debug log redaction.
+
+### Fixed
+- **MET Norway forecast adapter** — UTC timestamps were rendered as if they were location-local. `OffsetDateTime.parse(timestamp).toLocalDateTime()` discards the `Z` offset, so every hourly time and the derived `today` daily key was shifted by the user's UTC offset (visible whenever it isn't zero, i.e. essentially every MET Norway user — the API is Nordic-focused, all of which sit at UTC+1/+2). Replaced with `atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()` and threaded the zone through `mapHourly` / `aggregateDaily` so the projection stays consistent with the rest of the rendering pipeline.
+- **Environment Canada forecast adapter** — Same class of bug as MET Norway. `observationDateTimeUtc` and the compact-format fallback were both being stripped of their UTC offset and used as a local clock. Western Canadian timezones (PST/MST, -7/-8) saw the `today` date silently drift to the next UTC day late in the evening, mislabeling the "Today/Tonight" daily pair as belonging to tomorrow. Fix mirrors the MET Norway approach.
+- **Bright Sky (DWD) forecast adapter** — `tz=Etc/UTC` makes every entry come back with a `+00:00` offset; the adapter stripped the offset, anchoring all forecast hours to UTC components. German users (DWD's primary audience) saw a 1–2h drift (CET/CEST). Projection through `atZoneSameInstant(ZoneId.systemDefault())` now keeps the wall clock aligned with the device.
+- **Wear `WearWeatherRepository` User-Agent** — hardcoded literal `"ZeusWatch-Wear/1.14.0"` had drifted six versions behind the manifest. Enabled `buildConfig = true` on the wear module and switched the header to `"ZeusWatch-Wear/${BuildConfig.VERSION_NAME} (Android Wear; Open-Source)"` so future version bumps stay in sync.
+- **`BlitzortungService.connect()` double-open race** — gating on `isConnected` (which is only flipped from the WebSocket listener's `onOpen` callback) left a window where a second `connect()` call from the UI could create a parallel WebSocket while the first was still mid-handshake, doubling subscription traffic and leaking the first socket. Gating on `webSocket != null` closes the window because the reference is set synchronously inside the `@Synchronized` block.
+- **Pirate Weather path-embedded API key log leak** — `HttpLoggingInterceptor` at `BASIC` level logs the request URL; Pirate Weather embeds its API key as a path segment (`/forecast/{key}/{lat},{lon}`), which the query-param-only redactor in `NetworkModule` missed. Added a second pass that captures the `/forecast/` prefix and re-anchors on the coordinate pair, scrubbing the key in both the bare and `,exclude=…`-suffixed forms. Was previously documented as an accepted limitation; debug builds no longer carry the key into logcat.
+
+### Tests
+- New regression test `met norway projects UTC timestamps into the device timezone` in `ForecastAdapterTimezoneTest` — locks the JVM default zone to America/New_York and asserts that both `hourly.first().time` and `current.observationTime` come back projected into NY rather than as raw UTC components.
+- `ApiKeyRedactionTest` rewritten to cover the new two-pass redaction: replaced the "documents-the-leak" test with `strips Pirate Weather path-embedded key` plus `redacts Pirate Weather path key alongside exclude suffix`.
+
+### Version
+- phone versionCode 83 → 84, versionName 1.20.0 → 1.20.1
+- wear versionCode 59 → 60, versionName 1.20.0 → 1.20.1
+
+
 ## [1.20.0] - 2026-06-24
 
 WAL checkpoint maintenance worker + WeatherSummaryEngine unit tests.
