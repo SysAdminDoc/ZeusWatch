@@ -5,7 +5,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,8 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,6 +39,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -74,7 +81,18 @@ fun ReportSubmitSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = NimbusNavyDark,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = NimbusTextTertiary) },
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 10.dp)
+                    .width(40.dp)
+                    .height(4.dp)
+                    .background(Color.White.copy(alpha = 0.16f))
+                    .clearAndSetSemantics {
+                        contentDescription = "Bottom sheet handle"
+                    },
+            )
+        },
     ) {
         Column(
             modifier = Modifier
@@ -84,7 +102,7 @@ fun ReportSubmitSheet(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Report Current Conditions",
+                text = "Report conditions",
                 color = NimbusTextPrimary,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
@@ -93,16 +111,19 @@ fun ReportSubmitSheet(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Help others by sharing what you see outside",
+                text = "Share what you see right now. Reports are anonymous and help nearby users.",
                 color = NimbusTextSecondary,
                 style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Condition selection grid
             FlowRow(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .selectableGroup(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -170,7 +191,14 @@ fun ReportSubmitSheet(
                         strokeWidth = 2.dp,
                     )
                 } else {
-                    Text("Submit Report", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = if (selectedCondition == null) {
+                            "Choose a condition"
+                        } else {
+                            "Submit report"
+                        },
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
             }
 
@@ -182,7 +210,11 @@ fun ReportSubmitSheet(
             ) {
                 val isSuccess = submitResult == "success"
                 Text(
-                    text = if (isSuccess) "Report submitted! Thanks for helping your community." else (submitResult ?: ""),
+                    text = if (isSuccess) {
+                        "Report submitted. Thanks for helping nearby users."
+                    } else {
+                        submitResult ?: ""
+                    },
                     color = if (isSuccess) NimbusSuccess else NimbusError,
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
@@ -212,13 +244,22 @@ private fun ConditionChip(
             .clip(shape)
             .background(bgColor)
             .border(1.dp, borderColor, shape)
-            .clickable(onClick = onClick)
+            .selectable(
+                selected = isSelected,
+                onClick = onClick,
+                role = Role.RadioButton,
+            )
+            .semantics(mergeDescendants = true) {
+                contentDescription = "${condition.label} condition"
+                stateDescription = if (isSelected) "Selected" else "Not selected"
+            }
             .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = condition.emoji,
+                modifier = Modifier.clearAndSetSemantics {},
                 style = MaterialTheme.typography.headlineSmall,
             )
             Text(

@@ -28,6 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
@@ -64,7 +66,10 @@ fun AlertDetailSheet(
                     .padding(vertical = 10.dp)
                     .width(40.dp)
                     .height(4.dp)
-                    .background(Color.White.copy(alpha = 0.16f)),
+                    .background(Color.White.copy(alpha = 0.16f))
+                    .clearAndSetSemantics {
+                        contentDescription = "Bottom sheet handle"
+                    },
             )
         },
     ) {
