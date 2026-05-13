@@ -178,6 +178,12 @@ class WidgetRefreshWorker @AssistedInject constructor(
                 attemptedNetworkRefresh -> Result.retry()
                 else -> Result.success()
             }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            // WorkManager cancels the worker via the coroutine's Job; re-throw
+            // so cooperative cancellation runs the surrounding teardown rather
+            // than masking the cancel as a Result.retry() and tying the worker
+            // up indefinitely.
+            throw cancelled
         } catch (_: Exception) {
             Result.retry()
         }

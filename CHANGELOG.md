@@ -2,6 +2,30 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [1.20.2] - 2026-05-13
+
+Engineering audit pass round 2 — six more bugs found by a deep adversarial sweep on top of v1.20.1.
+
+### Fixed
+- **`MoonPhase.fromDayOfCycle` + `calculateLunarAge` negative-modulo trap** — Java's `%` operator preserves the sign of the dividend, so any caller passing a negative day-of-cycle value (or any future bug producing one) silently fell into the `normalized < 1.85` branch and reported the wrong phase. Both call sites now normalize with the `((x % p) + p) % p` idiom into `[0, period)`. Regression test exercises -3, -15, and -29.53 day inputs.
+- **`NowcastAlertWorker.nowcastReferenceTime` anchored on the wrong bucket** — the previous logic used `series.minByOrNull { it.time }?.time` (the earliest bucket) as the anchor for "now", which meant `detectNowcastTransition` reported `minutesUntil = 30` when the truth, relative to the device wall clock, was `minutesUntil = 5`. The worker fires for `prefs.lastLocation` — the user's own current location — so the wall clock IS the right anchor when it falls within the series window. The new logic prefers the wall clock when the series straddles it (or is within 60 min) and falls back to the earliest bucket otherwise, so remote-timezone series still behave correctly.
+- **`SyncedWeatherStore.save()` could lose data on Wear OS process kill** — the editor used `.apply()` (async write) inside a `WearableListenerService`, which Wear OS kills aggressively after `onDataChanged` returns; if the process exited before the disk write completed, the watch fell back to stale or empty data on next wakeup. Switched to `.commit()` (synchronous) and added per-index key cleanup so shrinking the hourly/daily/alert arrays doesn't leave stale entries in the prefs file forever.
+- **`AlertRepository` silently dropped MeteoAlarm in `ALL_SOURCES` mode** — `MeteoAlarmAdapter.getAlerts(lat, lon)` is a no-op stub returning `emptyList()` because the EUMETNET feed requires an ISO country code. The dispatch code only routed to `getAlertsForCountry` when `countryCode != null`, so any `ALL_SOURCES` query without a detected country (no Geocoder + non-European timezone) dropped MeteoAlarm entirely. Worse, the country-aware path made `getWarnings("us")`-style doomed calls for non-European country codes. The fix gates the country-aware call on `countryCode in adapter.supportedRegions` and short-circuits otherwise. Three regression tests cover: no-country short-circuit, non-European country short-circuit, and supported-country pass-through.
+- **`WidgetRefreshWorker` + `DatabaseMaintenanceWorker` + standard-flavor `WearSyncManager` swallowed `CancellationException`** — each had an outer `catch (_: Exception)` that masked WorkManager / structured-concurrency cancels as either `Result.retry()` or a silent "sync failed" log line, preventing cooperative cancellation and leaving cancelled coroutines technically still alive. All three now re-throw `CancellationException` before the generic catch.
+- **Environment Canada province bbox put Calgary/Banff in British Columbia** — `bc`'s longitude range was `-139.1..-114.0`, which overlapped with `ab`'s `-120.0..-110.0`. The `linkedMapOf` was iterated in declaration order, so BC won the tie for everything west of -114°W in southern Alberta (Calgary at -114.07, Banff at -115.57, Canmore, Lake Louise). The real BC-AB border sits at the Continental Divide near -120°W, so the BC east edge was tightened to `-139.1..-120.0`. Tests added for both Calgary and Banff.
+
+### Tests
+- `AirQualityRepositoryTest.MoonPhase fromDayOfCycle handles negative cycle days` — covers the +period-then-mod normalization for -3, -15, and -29.53 day inputs.
+- `EnvironmentCanadaAlertAdapterTest.Calgary resolves to Alberta` and `Banff resolves to Alberta` — pin the corrected BC east edge.
+- `AlertRepositoryTest.MeteoAlarm short-circuits cleanly when no country code is detected`, `MeteoAlarm only fires for supported European countries`, `MeteoAlarm runs for supported European country` — three-way test of the new gating logic.
+- `NowcastAlertLogicTest.nowcastReferenceTime uses wall clock when buckets are aligned with device time` — covers the in-window path; the old "anchor to earliest" test was rewritten to cover only the remote-timezone fallback path.
+- Stabilized the v1.20.1 `met norway projects UTC timestamps into the device timezone` test against wall-clock minute drift — the previous version was flaky after the half-hour mark because `findCurrentEntry` would pick the next-hour entry instead of `baseUtc`.
+
+### Version
+- phone versionCode 84 → 85, versionName 1.20.1 → 1.20.2
+- wear versionCode 60 → 61, versionName 1.20.1 → 1.20.2
+
+
 ## [1.20.1] - 2026-05-13
 
 Engineering audit pass — five bugs across forecast adapters, wear sync, lightning service, and debug log redaction.

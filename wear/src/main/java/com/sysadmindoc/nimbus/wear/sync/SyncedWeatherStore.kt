@@ -62,53 +62,82 @@ class SyncedWeatherStore @Inject constructor(
         aqi: Int = -1,
         aqiLabel: String = "",
     ) {
-        prefs.edit().apply {
-            putInt(KEY_TEMPERATURE, temperature)
-            putString(KEY_CONDITION, condition)
-            putInt(KEY_HIGH, high)
-            putInt(KEY_LOW, low)
-            putString(KEY_LOCATION_NAME, locationName)
-            putInt(KEY_HUMIDITY, humidity)
-            putInt(KEY_WIND_SPEED, windSpeed)
-            putInt(KEY_UV_INDEX, uvIndex)
-            putInt(KEY_PRECIP_CHANCE, precipChance)
-            putBoolean(KEY_IS_DAY, isDay)
-            putInt(KEY_WEATHER_CODE, weatherCode)
-            putLong(KEY_SYNC_TIMESTAMP, timestampMs)
-            putInt(KEY_AQI, aqi)
-            putString(KEY_AQI_LABEL, aqiLabel)
+        // commit() (not apply()) so a sync that arrives moments before the
+        // WearableListenerService process is killed actually lands on disk —
+        // the Wear OS system kills these services aggressively after they
+        // return from onDataChanged, and apply()'s async write is allowed
+        // to be dropped if the process exits first.
+        val previousCounts = Triple(
+            prefs.getInt(KEY_HOURLY_COUNT, 0),
+            prefs.getInt(KEY_DAILY_COUNT, 0),
+            prefs.getInt(KEY_ALERT_COUNT, 0),
+        )
+        val editor = prefs.edit()
+        editor.putInt(KEY_TEMPERATURE, temperature)
+        editor.putString(KEY_CONDITION, condition)
+        editor.putInt(KEY_HIGH, high)
+        editor.putInt(KEY_LOW, low)
+        editor.putString(KEY_LOCATION_NAME, locationName)
+        editor.putInt(KEY_HUMIDITY, humidity)
+        editor.putInt(KEY_WIND_SPEED, windSpeed)
+        editor.putInt(KEY_UV_INDEX, uvIndex)
+        editor.putInt(KEY_PRECIP_CHANCE, precipChance)
+        editor.putBoolean(KEY_IS_DAY, isDay)
+        editor.putInt(KEY_WEATHER_CODE, weatherCode)
+        editor.putLong(KEY_SYNC_TIMESTAMP, timestampMs)
+        editor.putInt(KEY_AQI, aqi)
+        editor.putString(KEY_AQI_LABEL, aqiLabel)
 
-            // Store hourly entries as indexed keys
-            putInt(KEY_HOURLY_COUNT, hourly.size)
-            hourly.forEachIndexed { i, entry ->
-                putString("hourly_${i}_time", entry.time)
-                putInt("hourly_${i}_temp", entry.temperature)
-                putInt("hourly_${i}_code", entry.weatherCode)
-                putInt("hourly_${i}_precip", entry.precipChance)
-                putInt("hourly_${i}_wind", entry.windSpeed)
-            }
-
-            // Store daily entries
-            putInt(KEY_DAILY_COUNT, daily.size)
-            daily.forEachIndexed { i, entry ->
-                putString("daily_${i}_date", entry.date)
-                putInt("daily_${i}_code", entry.weatherCode)
-                putInt("daily_${i}_high", entry.high)
-                putInt("daily_${i}_low", entry.low)
-                putInt("daily_${i}_precip", entry.precipChance)
-            }
-
-            // Store alerts
-            putInt(KEY_ALERT_COUNT, alerts.size)
-            alerts.forEachIndexed { i, alert ->
-                putString("alert_${i}_event", alert.event)
-                putString("alert_${i}_severity", alert.severity)
-                putString("alert_${i}_headline", alert.headline)
-                putString("alert_${i}_expires", alert.expires)
-            }
-
-            apply()
+        editor.putInt(KEY_HOURLY_COUNT, hourly.size)
+        hourly.forEachIndexed { i, entry ->
+            editor.putString("hourly_${i}_time", entry.time)
+            editor.putInt("hourly_${i}_temp", entry.temperature)
+            editor.putInt("hourly_${i}_code", entry.weatherCode)
+            editor.putInt("hourly_${i}_precip", entry.precipChance)
+            editor.putInt("hourly_${i}_wind", entry.windSpeed)
         }
+        // Remove any stale indexed keys from a previous (larger) save so
+        // the prefs file doesn't grow without bound and a future reader
+        // can't accidentally pick up data from an old, larger payload.
+        for (i in hourly.size until previousCounts.first) {
+            editor.remove("hourly_${i}_time")
+            editor.remove("hourly_${i}_temp")
+            editor.remove("hourly_${i}_code")
+            editor.remove("hourly_${i}_precip")
+            editor.remove("hourly_${i}_wind")
+        }
+
+        editor.putInt(KEY_DAILY_COUNT, daily.size)
+        daily.forEachIndexed { i, entry ->
+            editor.putString("daily_${i}_date", entry.date)
+            editor.putInt("daily_${i}_code", entry.weatherCode)
+            editor.putInt("daily_${i}_high", entry.high)
+            editor.putInt("daily_${i}_low", entry.low)
+            editor.putInt("daily_${i}_precip", entry.precipChance)
+        }
+        for (i in daily.size until previousCounts.second) {
+            editor.remove("daily_${i}_date")
+            editor.remove("daily_${i}_code")
+            editor.remove("daily_${i}_high")
+            editor.remove("daily_${i}_low")
+            editor.remove("daily_${i}_precip")
+        }
+
+        editor.putInt(KEY_ALERT_COUNT, alerts.size)
+        alerts.forEachIndexed { i, alert ->
+            editor.putString("alert_${i}_event", alert.event)
+            editor.putString("alert_${i}_severity", alert.severity)
+            editor.putString("alert_${i}_headline", alert.headline)
+            editor.putString("alert_${i}_expires", alert.expires)
+        }
+        for (i in alerts.size until previousCounts.third) {
+            editor.remove("alert_${i}_event")
+            editor.remove("alert_${i}_severity")
+            editor.remove("alert_${i}_headline")
+            editor.remove("alert_${i}_expires")
+        }
+
+        editor.commit()
     }
 
     /**
