@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -92,7 +91,7 @@ fun WeatherCard(
                     Box(
                         modifier = Modifier
                             .padding(top = 4.dp)
-                            .clip(CircleShape)
+                            .clip(RoundedCornerShape(3.dp))
                             .background(NimbusBlueAccent.copy(alpha = 0.82f))
                             .width(8.dp)
                             .height(8.dp),

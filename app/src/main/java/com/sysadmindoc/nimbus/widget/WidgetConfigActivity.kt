@@ -240,7 +240,7 @@ private fun LocationOption(
         Box(
             modifier = Modifier
                 .size(42.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(10.dp))
                 .background(NimbusBlueAccent.copy(alpha = if (isCurrentLocation) 0.16f else 0.10f)),
             contentAlignment = Alignment.Center,
         ) {
