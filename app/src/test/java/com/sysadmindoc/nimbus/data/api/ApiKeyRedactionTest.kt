@@ -10,15 +10,23 @@ import org.junit.Test
  */
 class ApiKeyRedactionTest {
 
-    private val redact = Regex(
+    private val queryRedact = Regex(
         "([?&](?:appid|apikey|api_key|key)=)[^&\\s]+",
         RegexOption.IGNORE_CASE,
     )
 
+    private val pathRedact = Regex(
+        "(/forecast/)[^/\\s?#]+(?=/-?\\d)",
+        RegexOption.IGNORE_CASE,
+    )
+
+    private fun redact(line: String): String =
+        pathRedact.replace(queryRedact.replace(line, "$1***"), "$1***")
+
     @Test
     fun `strips OWM appid from url`() {
         val line = "--> GET https://api.openweathermap.org/data/3.0/onecall?lat=1&lon=2&appid=SECRETKEY"
-        val redacted = redact.replace(line, "$1***")
+        val redacted = redact(line)
         assertFalse("must not contain the key", redacted.contains("SECRETKEY"))
         assertEquals(
             "--> GET https://api.openweathermap.org/data/3.0/onecall?lat=1&lon=2&appid=***",
@@ -27,19 +35,32 @@ class ApiKeyRedactionTest {
     }
 
     @Test
-    fun `does not rewrite path-embedded keys (Pirate Weather)`() {
+    fun `strips Pirate Weather path-embedded key`() {
         val line = "--> GET https://api.pirateweather.net/forecast/MYKEY/1.0,2.0"
-        // Pirate Weather embeds the key in the path; we intentionally only
-        // redact query params so this line is unchanged. Documenting the
-        // limitation here so future readers don't think the regex is broken.
-        val redacted = redact.replace(line, "$1***")
-        assertEquals(line, redacted)
+        val redacted = redact(line)
+        assertFalse("must not contain the key", redacted.contains("MYKEY"))
+        assertEquals(
+            "--> GET https://api.pirateweather.net/forecast/***/1.0,2.0",
+            redacted,
+        )
+    }
+
+    @Test
+    fun `redacts Pirate Weather path key alongside exclude suffix`() {
+        // Pirate Weather lets callers append `,exclude=…` to the key segment.
+        val line = "--> GET https://api.pirateweather.net/forecast/MYKEY,exclude=minutely/-14.0,170.5"
+        val redacted = redact(line)
+        assertFalse("must not contain the key", redacted.contains("MYKEY"))
+        assertEquals(
+            "--> GET https://api.pirateweather.net/forecast/***/-14.0,170.5",
+            redacted,
+        )
     }
 
     @Test
     fun `strips query apikey parameter`() {
         val line = "--> GET https://example.com?apikey=XYZ123&lang=en"
-        val redacted = redact.replace(line, "$1***")
+        val redacted = redact(line)
         assertFalse(redacted.contains("XYZ123"))
         assertEquals("--> GET https://example.com?apikey=***&lang=en", redacted)
     }
@@ -47,14 +68,14 @@ class ApiKeyRedactionTest {
     @Test
     fun `is case insensitive`() {
         val line = "--> GET https://example.com?APIKEY=XYZ"
-        val redacted = redact.replace(line, "$1***")
+        val redacted = redact(line)
         assertFalse(redacted.contains("XYZ"))
     }
 
     @Test
     fun `leaves non-secret params alone`() {
         val line = "--> GET https://api.open-meteo.com/v1/forecast?latitude=40.7&longitude=-74.0"
-        val redacted = redact.replace(line, "$1***")
+        val redacted = redact(line)
         assertEquals(line, redacted)
     }
 }

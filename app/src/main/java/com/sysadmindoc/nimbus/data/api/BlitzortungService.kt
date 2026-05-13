@@ -54,11 +54,18 @@ class BlitzortungService @Inject constructor(
 
     /**
      * Open the WebSocket connection and begin receiving lightning data.
-     * Safe to call multiple times — reconnects only if not already connected.
+     * Safe to call multiple times — only opens a new socket if one isn't
+     * already pending or connected.
+     *
+     * Gating on `webSocket != null` (rather than `isConnected`) closes a
+     * window where the WS has been created but `onOpen` hasn't flipped
+     * `isConnected` yet: a second `connect()` call entering during that
+     * window would otherwise leak the in-flight socket and start a second
+     * subscription, doubling Blitzortung's incoming message rate.
      */
     @Synchronized
     fun connect() {
-        if (isConnected) return
+        if (webSocket != null) return
 
         val request = Request.Builder()
             .url(WS_URL)
