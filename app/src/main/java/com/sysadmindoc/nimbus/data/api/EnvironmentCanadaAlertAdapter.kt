@@ -80,7 +80,10 @@ class EnvironmentCanadaAlertAdapter @Inject constructor(
         // Coarse bounding boxes — good enough for province-level resolution.
         // Overlaps are resolved by first-match (ordered west to east).
         private val PROVINCE_BOUNDS = linkedMapOf(
-            "bc" to ProvinceBounds(48.3..60.0, -139.1..-114.0),
+            // BC's east edge is the Continental Divide (~120°W in the
+            // foothills), not -114°W; -114 caused Banff/Lake Louise/Canmore
+            // to resolve as BC and pull the wrong provincial warning feed.
+            "bc" to ProvinceBounds(48.3..60.0, -139.1..-120.0),
             "ab" to ProvinceBounds(49.0..60.0, -120.0..-110.0),
             "sk" to ProvinceBounds(49.0..60.0, -110.0..-101.4),
             "mb" to ProvinceBounds(49.0..60.0, -102.0..-88.9),

@@ -104,6 +104,12 @@ class WearSyncManager @Inject constructor(
                 .await()
 
             Log.d(TAG, "Synced weather to watch: ${data.location.name} ${data.current.temperature}° (${alerts.size} alerts, AQI=${airQuality?.usAqi ?: -1})")
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            // Propagate cancellation so the caller's structured concurrency
+            // sees the cancel — otherwise a fast `putDataItem().await()`
+            // cancellation would be silently masked as a "sync failure"
+            // and parent jobs would never unwind.
+            throw cancelled
         } catch (e: Exception) {
             // Non-fatal — watch falls back to its own API calls
             Log.w(TAG, "Failed to sync weather to watch", e)

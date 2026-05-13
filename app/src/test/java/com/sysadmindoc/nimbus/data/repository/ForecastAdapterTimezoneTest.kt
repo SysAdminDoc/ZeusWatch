@@ -242,18 +242,34 @@ class ForecastAdapterTimezoneTest {
             // The first hourly's wall-clock must match the UTC instant
             // re-projected into the device's New York zone, NOT the raw
             // UTC clock that the legacy adapter exposed.
-            val expectedNyLocal = baseUtc.atZoneSameInstant(nyZone).toLocalDateTime()
+            val expectedFirstNy = baseUtc.atZoneSameInstant(nyZone).toLocalDateTime()
             assertEquals(
                 "first hourly time must be in the device timezone, not UTC",
-                expectedNyLocal,
+                expectedFirstNy,
                 data.hourly.first().time,
             )
 
             // observationTime must follow the same rule — used downstream
-            // as the anchor for `today` and the on-this-day card.
+            // as the anchor for `today` and the on-this-day card. We
+            // can't pin which entry `findCurrentEntry` picks because it
+            // races the wall clock minute, so derive the expectation from
+            // the same "closest-to-now-instant" logic the adapter uses
+            // (and re-project into NY zone like the adapter does).
+            val nowInstant = Instant.now()
+            val expectedObservationEntry = entries.minBy { entry ->
+                kotlin.math.abs(
+                    java.time.Duration.between(
+                        nowInstant,
+                        OffsetDateTime.parse(entry.time).toInstant(),
+                    ).toMinutes()
+                )
+            }
+            val expectedObservationNy = OffsetDateTime.parse(expectedObservationEntry.time)
+                .atZoneSameInstant(nyZone)
+                .toLocalDateTime()
             assertEquals(
                 "observationTime must be in the device timezone, not UTC",
-                expectedNyLocal,
+                expectedObservationNy,
                 data.current.observationTime,
             )
         }
