@@ -3,6 +3,7 @@ package com.sysadmindoc.nimbus.ui.screen.main
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.sysadmindoc.nimbus.data.model.*
@@ -141,7 +142,7 @@ class MainScreenTest {
         }
 
         composeTestRule.onNodeWithText("Denver").assertIsDisplayed()
-        composeTestRule.onNodeWithText("72\u00B0").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("72\u00B0")[0].assertIsDisplayed()
     }
 
     @Test
