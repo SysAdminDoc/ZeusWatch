@@ -4,6 +4,11 @@ import android.content.Context
 import android.location.Address
 import android.location.Geocoder
 import com.sysadmindoc.nimbus.data.api.AlertSourceAdapter
+import com.sysadmindoc.nimbus.data.api.MeteoAlarmAdapter
+import com.sysadmindoc.nimbus.data.api.MeteoAlarmApi
+import com.sysadmindoc.nimbus.data.api.MeteoAlarmInfo
+import com.sysadmindoc.nimbus.data.api.MeteoAlarmResponse
+import com.sysadmindoc.nimbus.data.api.MeteoAlarmWarning
 import com.sysadmindoc.nimbus.data.api.NwsAlertAdapter
 import com.sysadmindoc.nimbus.data.api.NwsAlertApi
 import com.sysadmindoc.nimbus.data.api.NwsAlertFeature
@@ -191,6 +196,116 @@ class AlertRepositoryTest {
         val result = repository.getAlerts(35.6, 139.7) // Tokyo
         assertTrue(result.isSuccess)
         assertEquals(0, result.getOrThrow().size)
+    }
+
+    @Test
+    fun `MeteoAlarm short-circuits cleanly when no country code is detected`() = runTest {
+        // Pre-fix bug: with ALL_SOURCES (or any pref selecting MeteoAlarm),
+        // AlertRepository fell through to `adapter.getAlerts(lat, lon)` when
+        // countryCode was null — but that override is a no-op stub returning
+        // emptyList(). The fix routes MeteoAlarm through the country-aware
+        // path and short-circuits when the country isn't yet known, so the
+        // API is never called.
+        every { prefs.settings } returns flowOf(
+            NimbusSettings(alertSourcePref = AlertSourcePreference.ALL_SOURCES),
+        )
+        every { anyConstructed<Geocoder>().getFromLocation(any(), any(), any()) } throws
+            RuntimeException("Geocoder unavailable")
+
+        val meteoAlarmApi = mockk<MeteoAlarmApi>()
+        val meteoAlarmAdapter = MeteoAlarmAdapter(meteoAlarmApi)
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse()
+
+        val multiSourceRepo = AlertRepository(
+            context = context,
+            adapters = setOf(nwsAdapter, meteoAlarmAdapter),
+            prefs = prefs,
+        )
+
+        val result = multiSourceRepo.getAlerts(0.0, 0.0)
+        assertTrue(result.isSuccess)
+        assertTrue(result.getOrThrow().isEmpty())
+        coVerify(exactly = 0) { meteoAlarmApi.getWarnings(any()) }
+    }
+
+    @Test
+    fun `MeteoAlarm only fires for supported European countries`() = runTest {
+        // When the detected country is outside MeteoAlarm's EUMETNET
+        // coverage (here: US), the adapter is skipped entirely instead of
+        // making a doomed `getWarnings("us")` call that would either 404
+        // or return junk.
+        every { prefs.settings } returns flowOf(
+            NimbusSettings(alertSourcePref = AlertSourcePreference.ALL_SOURCES),
+        )
+
+        val meteoAlarmApi = mockk<MeteoAlarmApi>()
+        val meteoAlarmAdapter = MeteoAlarmAdapter(meteoAlarmApi)
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse()
+
+        val multiSourceRepo = AlertRepository(
+            context = context,
+            adapters = setOf(nwsAdapter, meteoAlarmAdapter),
+            prefs = prefs,
+        )
+
+        // setup() already mocks the US country code path
+        val result = multiSourceRepo.getAlerts(40.71, -74.01)
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 0) { meteoAlarmApi.getWarnings(any()) }
+    }
+
+    @Test
+    fun `MeteoAlarm runs for supported European country`() = runTest {
+        // Unit tests run with the default JVM timezone; `detectCountry`
+        // would otherwise fall through to the timezone heuristic (no
+        // Geocoder mock for the API 33+ listener overload), so pin the
+        // default zone to Europe/Berlin which maps to "DE" via the
+        // existing fallback chain.
+        val originalTimeZone = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
+        try {
+            every { prefs.settings } returns flowOf(
+                NimbusSettings(alertSourcePref = AlertSourcePreference.ALL_SOURCES),
+            )
+            // Force the Geocoder path to fail so detectCountryFromTimezone
+            // takes over with our pinned Europe/Berlin zone.
+            every {
+                anyConstructed<Geocoder>().getFromLocation(any(), any(), any())
+            } throws RuntimeException("Geocoder unavailable in test")
+
+            val meteoAlarmApi = mockk<MeteoAlarmApi>()
+            val meteoAlarmAdapter = MeteoAlarmAdapter(meteoAlarmApi)
+            coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse()
+            coEvery { meteoAlarmApi.getWarnings("de") } returns MeteoAlarmResponse(
+                warnings = listOf(
+                    MeteoAlarmWarning(
+                        identifier = "de-1",
+                        info = listOf(
+                            MeteoAlarmInfo(
+                                event = "Wind",
+                                severity = "Severe",
+                                urgency = "Immediate",
+                                headline = "Sturmwarnung",
+                            ),
+                        ),
+                    ),
+                ),
+            )
+
+            val multiSourceRepo = AlertRepository(
+                context = context,
+                adapters = setOf(nwsAdapter, meteoAlarmAdapter),
+                prefs = prefs,
+            )
+
+            val result = multiSourceRepo.getAlerts(52.52, 13.40) // Berlin
+            assertTrue(result.isSuccess)
+            assertEquals(1, result.getOrThrow().size)
+            assertEquals("Wind", result.getOrThrow().first().event)
+            coVerify(exactly = 1) { meteoAlarmApi.getWarnings("de") }
+        } finally {
+            TimeZone.setDefault(originalTimeZone)
+        }
     }
 
     @Test

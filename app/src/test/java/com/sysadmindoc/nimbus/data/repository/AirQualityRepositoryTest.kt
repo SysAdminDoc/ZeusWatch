@@ -104,6 +104,20 @@ class AirQualityRepositoryTest {
         assertEquals(MoonPhase.NEW_MOON, MoonPhase.fromDayOfCycle(30.0))
     }
 
+    @Test
+    fun `MoonPhase fromDayOfCycle handles negative cycle days`() {
+        // Java's % keeps the dividend's sign, so before the fix any negative
+        // input fell into NEW_MOON via the `normalized < 1.85` branch and
+        // produced the wrong phase. The +period-then-mod normalization
+        // brings the value into [0, 29.53) regardless of input sign.
+        // -3 days = (29.53 - 3) = 26.53 days into the cycle → WANING_CRESCENT.
+        assertEquals(MoonPhase.WANING_CRESCENT, MoonPhase.fromDayOfCycle(-3.0))
+        // -15 days = (29.53 - 15) = 14.53 days into the cycle → WAXING_GIBBOUS.
+        assertEquals(MoonPhase.WAXING_GIBBOUS, MoonPhase.fromDayOfCycle(-15.0))
+        // -29.53 days = exactly one cycle backwards → NEW_MOON.
+        assertEquals(MoonPhase.NEW_MOON, MoonPhase.fromDayOfCycle(-29.53))
+    }
+
     // --- Pollen ---
 
     @Test
