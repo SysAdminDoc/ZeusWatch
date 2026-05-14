@@ -14,6 +14,7 @@ All notable changes to Nimbus Weather are documented here.
 - Localized top-level Today screen loading, retry/location actions, share menu, offline banner, freshness badges, footer, location chips, and focused empty-card copy.
 - Localized visible Today card header titles through the shared `WeatherCard` resource-title overload.
 - Localized Today alert banner/details, the community report sheet, shared back action, alert severity/urgency labels, and report condition labels.
+- Localized Today card micro-labels for current-condition hero metrics, rain nowcast legend, snowfall units, and radar preview/open states.
 
 ### Verified
 - `./gradlew.bat :app:compileStandardDebugKotlin :wear:compileDebugKotlin --console=plain`

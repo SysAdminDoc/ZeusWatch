@@ -204,6 +204,26 @@
     <string name="card_title_outdoor_activity">Outdoor Activity</string>
     <string name="card_title_sunshine">Sunshine</string>
 
+    <!-- Today card internals -->
+    <string name="current_metric_high">High</string>
+    <string name="current_metric_low">Low</string>
+    <string name="current_metric_trend">Trend</string>
+    <string name="nowcast_legend_light">Light</string>
+    <string name="nowcast_legend_heavy">Heavy</string>
+    <string name="snowfall_per_hour">per hour</string>
+    <string name="snowfall_depth">depth</string>
+    <string name="snowfall_today_total">today total</string>
+    <string name="radar_preview_overlay_cd">Radar overlay</string>
+    <string name="radar_preview_empty_title">Interactive radar</string>
+    <string name="radar_preview_empty_message">Rain bands and storm movement appear here when map data is ready.</string>
+    <string name="radar_preview_live">Live radar</string>
+    <string name="radar_preview_map_preview">Map preview</string>
+    <string name="radar_preview_title">Radar Map</string>
+    <string name="radar_preview_subtitle">Track precipitation movement with the full interactive view.</string>
+    <string name="radar_preview_open_title">Open full radar</string>
+    <string name="radar_preview_open_desc">Better for storm timing, rain coverage, and checking nearby cells.</string>
+    <string name="radar_preview_open_cd">Open radar</string>
+
     <!-- Current Conditions -->
     <string name="feels_like">Feels like %1$s</string>
     <string name="day_night_temp">Day %1$s \u2022 Night %2$s</string>
