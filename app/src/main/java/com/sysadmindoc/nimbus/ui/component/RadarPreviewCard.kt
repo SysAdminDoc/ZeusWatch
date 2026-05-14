@@ -28,10 +28,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
@@ -95,7 +97,7 @@ fun RadarPreviewCard(
                         .data(radarTileUrl)
                         .crossfade(true)
                         .build(),
-                    contentDescription = "Radar overlay",
+                    contentDescription = stringResource(R.string.radar_preview_overlay_cd),
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                     alpha = 0.75f,
@@ -127,13 +129,13 @@ fun RadarPreviewCard(
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Interactive radar",
+                        text = stringResource(R.string.radar_preview_empty_title),
                         style = MaterialTheme.typography.titleSmall,
                         color = NimbusTextPrimary,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Rain bands and storm movement appear here when map data is ready.",
+                        text = stringResource(R.string.radar_preview_empty_message),
                         style = MaterialTheme.typography.bodySmall,
                         color = NimbusTextSecondary,
                     )
@@ -153,7 +155,11 @@ fun RadarPreviewCard(
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                 ) {
                     Text(
-                        text = if (radarTileUrl != null) "Live radar" else "Map preview",
+                        text = if (radarTileUrl != null) {
+                            stringResource(R.string.radar_preview_live)
+                        } else {
+                            stringResource(R.string.radar_preview_map_preview)
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         color = NimbusTextPrimary,
                     )
@@ -166,13 +172,13 @@ fun RadarPreviewCard(
                     .padding(horizontal = 16.dp, vertical = 14.dp),
             ) {
                 Text(
-                    text = "Radar Map",
+                    text = stringResource(R.string.radar_preview_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = NimbusTextPrimary,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Track precipitation movement with the full interactive view.",
+                    text = stringResource(R.string.radar_preview_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                 )
@@ -194,12 +200,12 @@ fun RadarPreviewCard(
             Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Open full radar",
+                    text = stringResource(R.string.radar_preview_open_title),
                     style = MaterialTheme.typography.titleSmall,
                     color = NimbusTextPrimary,
                 )
                 Text(
-                    text = "Better for storm timing, rain coverage, and checking nearby cells.",
+                    text = stringResource(R.string.radar_preview_open_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                 )
@@ -207,7 +213,7 @@ fun RadarPreviewCard(
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "Open radar",
+                contentDescription = stringResource(R.string.radar_preview_open_cd),
                 tint = NimbusBlueAccent,
                 modifier = Modifier.size(18.dp),
             )

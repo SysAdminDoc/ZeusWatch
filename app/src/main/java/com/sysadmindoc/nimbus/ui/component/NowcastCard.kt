@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -141,13 +142,21 @@ fun NowcastCard(
                 drawRect(NimbusBlueAccent.copy(alpha = 0.5f), size = Size(size.width, size.height))
             }
             Spacer(modifier = Modifier.width(4.dp))
-            Text("Light", style = MaterialTheme.typography.labelSmall, color = NimbusTextTertiary)
+            Text(
+                stringResource(R.string.nowcast_legend_light),
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextTertiary,
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Canvas(modifier = Modifier.width(12.dp).height(8.dp)) {
                 drawRect(NimbusRainBlue, size = Size(size.width, size.height))
             }
             Spacer(modifier = Modifier.width(4.dp))
-            Text("Heavy", style = MaterialTheme.typography.labelSmall, color = NimbusTextTertiary)
+            Text(
+                stringResource(R.string.nowcast_legend_heavy),
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextTertiary,
+            )
         }
     }
 }
