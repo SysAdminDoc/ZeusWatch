@@ -18,6 +18,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -25,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
-import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -39,7 +39,15 @@ fun HumidityCard(
 ) {
     val s = LocalUnitSettings.current
     val comfort = humidityComfort(humidity)
-    val semanticSummary = AccessibilityHelper.humidity(humidity, dewPoint, s)
+    val comfortLabel = stringResource(comfort.labelRes)
+    val comfortDescription = stringResource(comfort.descriptionRes)
+    val dewPointValue = dewPoint?.let { WeatherFormatter.formatTemperature(it, s) }
+    val dewComfort = dewPoint?.let { stringResource(dewPointComfortRes(it)) }
+    val semanticSummary = if (dewPointValue != null && dewComfort != null) {
+        stringResource(R.string.humidity_semantics_with_dew, humidity, comfortLabel, dewPointValue, dewComfort)
+    } else {
+        stringResource(R.string.humidity_semantics, humidity, comfortLabel)
+    }
 
     WeatherCard(
         titleRes = R.string.humidity,
@@ -58,18 +66,17 @@ fun HumidityCard(
                     style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
                 )
                 Text(
-                    text = comfort.label,
+                    text = comfortLabel,
                     style = MaterialTheme.typography.bodyMedium,
                     color = comfort.color,
                 )
-                if (dewPoint != null) {
+                if (dewPointValue != null && dewComfort != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Dew point ${WeatherFormatter.formatTemperature(dewPoint, s)}",
+                        text = stringResource(R.string.humidity_dew_point_value, dewPointValue),
                         style = MaterialTheme.typography.bodySmall,
                         color = NimbusTextSecondary,
                     )
-                    val dewComfort = WeatherFormatter.dewPointComfort(dewPoint)
                     Text(
                         text = dewComfort,
                         style = MaterialTheme.typography.labelSmall,
@@ -89,7 +96,7 @@ fun HumidityCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = comfort.description,
+                    text = comfortDescription,
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusTextTertiary,
                 )
@@ -147,16 +154,25 @@ private fun HumidityGauge(
 }
 
 private data class HumidityComfortLevel(
-    val label: String,
-    val description: String,
+    val labelRes: Int,
+    val descriptionRes: Int,
     val color: Color,
 )
 
 private fun humidityComfort(humidity: Int): HumidityComfortLevel = when {
-    humidity < 25 -> HumidityComfortLevel("Very Dry", "May cause dry skin and irritation", Color(0xFFFFB74D))
-    humidity < 30 -> HumidityComfortLevel("Dry", "Low moisture in the air", Color(0xFFFFCC80))
-    humidity in 30..60 -> HumidityComfortLevel("Comfortable", "Ideal humidity range", Color(0xFF81C784))
-    humidity in 61..70 -> HumidityComfortLevel("Slightly Humid", "Noticeable moisture", Color(0xFF4FC3F7))
-    humidity in 71..85 -> HumidityComfortLevel("Humid", "Feels sticky and muggy", Color(0xFF42A5F5))
-    else -> HumidityComfortLevel("Very Humid", "Oppressive moisture level", Color(0xFFEF5350))
+    humidity < 25 -> HumidityComfortLevel(R.string.humidity_level_very_dry, R.string.humidity_desc_very_dry, Color(0xFFFFB74D))
+    humidity < 30 -> HumidityComfortLevel(R.string.humidity_level_dry, R.string.humidity_desc_dry, Color(0xFFFFCC80))
+    humidity in 30..60 -> HumidityComfortLevel(R.string.humidity_level_comfortable, R.string.humidity_desc_comfortable, Color(0xFF81C784))
+    humidity in 61..70 -> HumidityComfortLevel(R.string.humidity_level_slightly_humid, R.string.humidity_desc_slightly_humid, Color(0xFF4FC3F7))
+    humidity in 71..85 -> HumidityComfortLevel(R.string.humidity_level_humid, R.string.humidity_desc_humid, Color(0xFF42A5F5))
+    else -> HumidityComfortLevel(R.string.humidity_level_very_humid, R.string.humidity_desc_very_humid, Color(0xFFEF5350))
+}
+
+private fun dewPointComfortRes(dewPointCelsius: Double): Int = when {
+    dewPointCelsius < 10 -> R.string.dew_point_comfort_dry
+    dewPointCelsius < 16 -> R.string.dew_point_comfort_comfortable
+    dewPointCelsius < 18 -> R.string.dew_point_comfort_pleasant
+    dewPointCelsius < 21 -> R.string.dew_point_comfort_slightly_humid
+    dewPointCelsius < 24 -> R.string.dew_point_comfort_muggy
+    else -> R.string.dew_point_comfort_oppressive
 }

@@ -21,8 +21,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AqiLevel
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
+import com.sysadmindoc.nimbus.util.labelRes
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -42,8 +45,9 @@ fun AqiGauge(
 ) {
     val maxAqi = 300f
     val progress = (aqi.toFloat() / maxAqi).coerceIn(0f, 1f)
+    val levelLabel = stringResource(level.labelRes)
 
-    val semanticLabel = "Air quality index: $aqi, ${level.label}."
+    val semanticLabel = stringResource(R.string.aqi_gauge_semantics, aqi, levelLabel)
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -143,7 +147,7 @@ fun AqiGauge(
                 color = level.color,
             )
             Text(
-                text = level.label,
+                text = levelLabel,
                 style = MaterialTheme.typography.labelSmall,
                 color = NimbusTextSecondary,
             )
