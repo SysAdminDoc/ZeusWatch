@@ -13,6 +13,7 @@ All notable changes to Nimbus Weather are documented here.
 - Localized Settings enum labels for units, radar providers, icon/theme/summary styles, alert filters, alert-source preferences, and weather-source dropdowns.
 - Localized top-level Today screen loading, retry/location actions, share menu, offline banner, freshness badges, footer, location chips, and focused empty-card copy.
 - Localized visible Today card header titles through the shared `WeatherCard` resource-title overload.
+- Localized Today alert banner/details, the community report sheet, shared back action, alert severity/urgency labels, and report condition labels.
 
 ### Verified
 - `./gradlew.bat :app:compileStandardDebugKotlin :wear:compileDebugKotlin --console=plain`
