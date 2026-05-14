@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.util.DrivingAlert
@@ -36,7 +37,7 @@ fun DrivingAlertCard(
     if (alerts.isEmpty()) return
 
     WeatherCard(
-        title = "Driving Conditions",
+        titleRes = R.string.card_type_driving_conditions,
         modifier = modifier,
     ) {
         alerts.forEachIndexed { idx, alert ->

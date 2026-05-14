@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -33,7 +34,7 @@ fun ClothingSuggestionCard(
 ) {
     if (suggestions.isEmpty()) return
 
-    WeatherCard(title = "What to Wear", modifier = modifier) {
+    WeatherCard(titleRes = R.string.card_type_clothing, modifier = modifier) {
         Column(modifier = Modifier.fillMaxWidth()) {
             suggestions.forEach { suggestion ->
                 Row(

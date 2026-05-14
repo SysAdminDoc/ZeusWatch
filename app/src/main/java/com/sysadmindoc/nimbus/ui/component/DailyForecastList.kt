@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -99,7 +100,7 @@ fun DailyForecastList(
         dailyHeaderSummary(daily.take(7), referenceDate, s)
     }
 
-    WeatherCard(title = "Daily Forecast", modifier = modifier) {
+    WeatherCard(titleRes = R.string.card_type_daily_forecast, modifier = modifier) {
         // Tab selector
         Row(
             modifier = Modifier

@@ -39,6 +39,7 @@
   - [x] Moved Home Cards settings labels for all `CardType` values into resources so card ordering, move, and show/hide controls can localize.
   - [x] Moved Settings enum labels for units, radar providers, icon/theme/summary styles, alert filters, alert-source preferences, and weather-source dropdowns into resources.
   - [x] Extracted top-level Today screen loading, retry/location actions, share menu, offline banner, freshness badges, footer, location chips, and focused empty-card copy into resources.
+  - [x] Extracted visible Today card header titles into resources through the shared `WeatherCard` title resource overload.
   - [ ] Continue extraction across remaining Today card internals and remaining dialogs before marking this item closed.
 
 - **[CLOSED v1.18.0] ~~Accessibility gaps on Canvas-drawn elements~~**

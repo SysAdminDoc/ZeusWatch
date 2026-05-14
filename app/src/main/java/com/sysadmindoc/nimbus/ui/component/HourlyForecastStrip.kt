@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -86,7 +87,7 @@ fun HourlyForecastStrip(
     }
 
     WeatherCard(
-        title = "Hourly Forecast",
+        titleRes = R.string.card_type_hourly_forecast,
         modifier = modifier,
     ) {
         // Tab selector row

@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.PollenData
 import com.sysadmindoc.nimbus.data.model.PollenLevel
 import com.sysadmindoc.nimbus.data.model.PollenReading
@@ -31,7 +32,7 @@ fun PollenCard(
     pollen: PollenData,
     modifier: Modifier = Modifier,
 ) {
-    WeatherCard(title = "Pollen", modifier = modifier) {
+    WeatherCard(titleRes = R.string.card_type_pollen, modifier = modifier) {
         if (!pollen.hasData) {
             Text(
                 "Pollen readings are low or unavailable for this location right now.",
