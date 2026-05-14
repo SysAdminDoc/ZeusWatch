@@ -24,9 +24,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
@@ -197,18 +199,18 @@ fun CurrentConditionsHeader(
         {
             HeroMetricChip(
                 modifier = Modifier.weight(1f),
-                label = "High",
+                label = stringResource(R.string.current_metric_high),
                 value = WeatherFormatter.formatTemperature(current.dailyHigh, s),
             )
             HeroMetricChip(
                 modifier = Modifier.weight(1f),
-                label = "Low",
+                label = stringResource(R.string.current_metric_low),
                 value = WeatherFormatter.formatTemperature(current.dailyLow, s),
             )
             comparisonLabel?.let {
                 HeroMetricChip(
                     modifier = Modifier.weight(1f),
-                    label = "Trend",
+                    label = stringResource(R.string.current_metric_trend),
                     value = it,
                     accentColor = comparisonColor,
                 )
