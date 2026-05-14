@@ -43,16 +43,20 @@ class NimbusSmallWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val data = WidgetDataProvider.load(context, appWidgetId)
+        val strings = widgetStrings(context)
         provideContent {
             GlanceTheme {
-                SmallWidgetContent(data)
+                SmallWidgetContent(data, strings)
             }
         }
     }
 }
 
 @Composable
-private fun SmallWidgetContent(data: WidgetWeatherData?) {
+private fun SmallWidgetContent(
+    data: WidgetWeatherData?,
+    strings: WidgetStrings,
+) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -66,8 +70,8 @@ private fun SmallWidgetContent(data: WidgetWeatherData?) {
     ) {
         if (data == null) {
             WidgetEmptyState(
-                title = "ZeusWatch",
-                message = "Tap to open and load a live forecast.",
+                title = strings.emptyTitle,
+                message = strings.smallEmptyMessage,
             )
         } else {
             Row(
@@ -76,7 +80,7 @@ private fun SmallWidgetContent(data: WidgetWeatherData?) {
             ) {
                 Column(modifier = GlanceModifier.defaultWeight()) {
                     Text(
-                        text = "CURRENT",
+                        text = strings.currentEyebrow,
                         style = WidgetTheme.eyebrowStyle,
                     )
                     Spacer(modifier = GlanceModifier.height(3.dp))
@@ -86,11 +90,11 @@ private fun SmallWidgetContent(data: WidgetWeatherData?) {
                         maxLines = 1,
                     )
                 }
-                widgetUpdatedLabel(data.updatedAt)?.let { label ->
+                strings.updatedLabel(data.updatedAt)?.let { label ->
                     WidgetPill(
                         text = label,
                         onClick = widgetRefreshPillAction(),
-                        contentDescription = "Data updated $label ago. Tap to refresh now.",
+                        contentDescription = strings.updatedContentDescription(label),
                     )
                 }
             }
@@ -110,7 +114,7 @@ private fun SmallWidgetContent(data: WidgetWeatherData?) {
                 ) {
                     Image(
                         provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
-                        contentDescription = WidgetUtils.weatherDescription(data.weatherCode, data.isDay),
+                        contentDescription = strings.weatherDescription(data.weatherCode, data.isDay),
                         modifier = GlanceModifier.size(30.dp),
                     )
                 }
@@ -127,7 +131,7 @@ private fun SmallWidgetContent(data: WidgetWeatherData?) {
                         ),
                     )
                     Text(
-                        text = "Feels ${data.feelsLike.toInt()}\u00B0 \u2022 Humidity ${data.humidity}%",
+                        text = strings.feelsHumidity(data.feelsLike.toInt(), data.humidity),
                         style = WidgetTheme.captionStyle,
                         maxLines = 1,
                     )
@@ -135,12 +139,12 @@ private fun SmallWidgetContent(data: WidgetWeatherData?) {
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "H ${data.high.toInt()}\u00B0",
+                        text = strings.highTemp(data.high.toInt()),
                         style = WidgetTheme.labelStyle,
                     )
                     Spacer(modifier = GlanceModifier.height(2.dp))
                     Text(
-                        text = "L ${data.low.toInt()}\u00B0",
+                        text = strings.lowTemp(data.low.toInt()),
                         style = WidgetTheme.captionStyle,
                     )
                 }

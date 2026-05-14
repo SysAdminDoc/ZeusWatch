@@ -42,16 +42,20 @@ class NimbusForecastStripWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val data = WidgetDataProvider.load(context, appWidgetId)
+        val strings = widgetStrings(context)
         provideContent {
             GlanceTheme {
-                ForecastStripContent(data)
+                ForecastStripContent(data, strings)
             }
         }
     }
 }
 
 @Composable
-private fun ForecastStripContent(data: WidgetWeatherData?) {
+private fun ForecastStripContent(
+    data: WidgetWeatherData?,
+    strings: WidgetStrings,
+) {
     Row(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -66,8 +70,8 @@ private fun ForecastStripContent(data: WidgetWeatherData?) {
     ) {
         if (data == null) {
             WidgetEmptyState(
-                title = "ZeusWatch",
-                message = "Tap to load the next few hours.",
+                title = strings.emptyTitle,
+                message = strings.stripEmptyMessage,
             )
         } else {
             Column(
@@ -75,7 +79,7 @@ private fun ForecastStripContent(data: WidgetWeatherData?) {
                 modifier = GlanceModifier.width(64.dp),
             ) {
                 Text(
-                    "NEXT",
+                    strings.nextEyebrow,
                     style = WidgetTheme.eyebrowStyle,
                     maxLines = 1,
                 )
@@ -83,7 +87,7 @@ private fun ForecastStripContent(data: WidgetWeatherData?) {
                 Spacer(modifier = GlanceModifier.height(3.dp))
                 Image(
                     provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
-                    contentDescription = WidgetUtils.weatherDescription(data.weatherCode, data.isDay),
+                    contentDescription = strings.weatherDescription(data.weatherCode, data.isDay),
                     modifier = GlanceModifier.size(18.dp),
                 )
                 Text(
@@ -111,7 +115,7 @@ private fun ForecastStripContent(data: WidgetWeatherData?) {
                     )
                     Image(
                         provider = ImageProvider(weatherIconRes(hour.code, hour.isDay)),
-                        contentDescription = WidgetUtils.weatherDescription(hour.code, hour.isDay),
+                        contentDescription = strings.weatherDescription(hour.code, hour.isDay),
                         modifier = GlanceModifier.size(14.dp),
                     )
                     Text(

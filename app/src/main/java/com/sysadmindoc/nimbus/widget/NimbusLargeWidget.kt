@@ -42,16 +42,20 @@ class NimbusLargeWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val data = WidgetDataProvider.load(context, appWidgetId)
+        val strings = widgetStrings(context)
         provideContent {
             GlanceTheme {
-                LargeWidgetContent(data)
+                LargeWidgetContent(data, strings)
             }
         }
     }
 }
 
 @Composable
-private fun LargeWidgetContent(data: WidgetWeatherData?) {
+private fun LargeWidgetContent(
+    data: WidgetWeatherData?,
+    strings: WidgetStrings,
+) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -65,8 +69,8 @@ private fun LargeWidgetContent(data: WidgetWeatherData?) {
     ) {
         if (data == null) {
             WidgetEmptyState(
-                title = "ZeusWatch",
-                message = "Tap to load current conditions, hourly changes, and the 5-day outlook.",
+                title = strings.emptyTitle,
+                message = strings.largeEmptyMessage,
             )
             return@Column
         }
@@ -77,7 +81,7 @@ private fun LargeWidgetContent(data: WidgetWeatherData?) {
         ) {
             Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(
-                    "DETAILED OUTLOOK",
+                    strings.detailedOutlookEyebrow,
                     style = WidgetTheme.eyebrowStyle,
                 )
                 Spacer(modifier = GlanceModifier.height(3.dp))
@@ -87,11 +91,11 @@ private fun LargeWidgetContent(data: WidgetWeatherData?) {
                     maxLines = 1,
                 )
             }
-            widgetUpdatedLabel(data.updatedAt)?.let { label ->
+            strings.updatedLabel(data.updatedAt)?.let { label ->
                 WidgetPill(
                     text = label,
                     onClick = widgetRefreshPillAction(),
-                    contentDescription = "Data updated $label ago. Tap to refresh now.",
+                    contentDescription = strings.updatedContentDescription(label),
                 )
             }
         }
@@ -104,7 +108,7 @@ private fun LargeWidgetContent(data: WidgetWeatherData?) {
         ) {
             Image(
                 provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
-                contentDescription = WidgetUtils.weatherDescription(data.weatherCode, data.isDay),
+                contentDescription = strings.weatherDescription(data.weatherCode, data.isDay),
                 modifier = GlanceModifier.size(32.dp),
             )
             Spacer(modifier = GlanceModifier.width(10.dp))
@@ -118,21 +122,21 @@ private fun LargeWidgetContent(data: WidgetWeatherData?) {
                     ),
                 )
                 Text(
-                    text = "Feels ${data.feelsLike.toInt()}\u00B0 \u2022 Humidity ${data.humidity}%",
+                    text = strings.feelsHumidity(data.feelsLike.toInt(), data.humidity),
                     style = WidgetTheme.labelStyle,
                     maxLines = 1,
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("H ${data.high.toInt()}\u00B0", style = WidgetTheme.labelStyle)
+                Text(strings.highTemp(data.high.toInt()), style = WidgetTheme.labelStyle)
                 Spacer(modifier = GlanceModifier.height(2.dp))
-                Text("L ${data.low.toInt()}\u00B0", style = WidgetTheme.captionStyle)
+                Text(strings.lowTemp(data.low.toInt()), style = WidgetTheme.captionStyle)
             }
         }
 
         Spacer(modifier = GlanceModifier.height(10.dp))
 
-        Text("NEXT 6 HOURS", style = WidgetTheme.eyebrowStyle)
+        Text(strings.next6Hours, style = WidgetTheme.eyebrowStyle)
         Spacer(modifier = GlanceModifier.height(6.dp))
 
         Row(
@@ -145,13 +149,13 @@ private fun LargeWidgetContent(data: WidgetWeatherData?) {
         ) {
             data.hourly.take(6).forEachIndexed { idx, hour ->
                 if (idx > 0) Spacer(modifier = GlanceModifier.width(2.dp))
-                HourColumn(hour, modifier = GlanceModifier.defaultWeight())
+                HourColumn(hour, strings, modifier = GlanceModifier.defaultWeight())
             }
         }
 
         Spacer(modifier = GlanceModifier.height(10.dp))
 
-        Text("5-DAY OUTLOOK", style = WidgetTheme.eyebrowStyle)
+        Text(strings.fiveDayOutlook, style = WidgetTheme.eyebrowStyle)
         Spacer(modifier = GlanceModifier.height(6.dp))
 
         Column(
@@ -162,14 +166,18 @@ private fun LargeWidgetContent(data: WidgetWeatherData?) {
                 .padding(horizontal = 10.dp, vertical = 6.dp),
         ) {
             data.daily.take(5).forEach { day ->
-                DayRow(day)
+                DayRow(day, strings)
             }
         }
     }
 }
 
 @Composable
-private fun HourColumn(hour: WidgetHourly, modifier: GlanceModifier = GlanceModifier) {
+private fun HourColumn(
+    hour: WidgetHourly,
+    strings: WidgetStrings,
+    modifier: GlanceModifier = GlanceModifier,
+) {
     Column(
         modifier = modifier.padding(vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -181,7 +189,7 @@ private fun HourColumn(hour: WidgetHourly, modifier: GlanceModifier = GlanceModi
         )
         Image(
             provider = ImageProvider(weatherIconRes(hour.code, hour.isDay)),
-            contentDescription = WidgetUtils.weatherDescription(hour.code, hour.isDay),
+            contentDescription = strings.weatherDescription(hour.code, hour.isDay),
             modifier = GlanceModifier.size(16.dp),
         )
         Text("${hour.temp}\u00B0", style = WidgetTheme.tempSmall)
@@ -195,7 +203,10 @@ private fun HourColumn(hour: WidgetHourly, modifier: GlanceModifier = GlanceModi
 }
 
 @Composable
-private fun DayRow(day: WidgetDaily) {
+private fun DayRow(
+    day: WidgetDaily,
+    strings: WidgetStrings,
+) {
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
@@ -212,7 +223,7 @@ private fun DayRow(day: WidgetDaily) {
         // Icon (daily forecasts use daytime icons)
         Image(
             provider = ImageProvider(weatherIconRes(day.code, true)),
-            contentDescription = WidgetUtils.weatherDescription(day.code, true),
+            contentDescription = strings.weatherDescription(day.code, true),
             modifier = GlanceModifier.size(16.dp),
         )
 

@@ -11,11 +11,15 @@ object WidgetUtils {
      * Returns a human-readable weather description for the given WMO code.
      * Uses the [WeatherCode] enum's description property when available.
      */
-    fun weatherDescription(code: Int, isDay: Boolean = true): String {
+    fun weatherDescription(
+        code: Int,
+        isDay: Boolean = true,
+        fallback: String = "Weather icon",
+    ): String {
         return try {
             WeatherCode.fromCode(code).description
         } catch (_: Exception) {
-            "Weather icon"
+            fallback
         }
     }
 }
