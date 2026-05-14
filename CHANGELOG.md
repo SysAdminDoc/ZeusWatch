@@ -20,6 +20,7 @@ All notable changes to Nimbus Weather are documented here.
 - Localized Today overview copy for current conditions, details grid labels, forecast brief chips/footer, and the skeleton loading label.
 - Localized air-quality, humidity comfort, dew-point comfort, and pollen card labels, advice, empty copy, and accessibility summaries.
 - Localized cloud cover, visibility, pressure, temperature graph, UV, and precipitation chart labels and accessibility summaries.
+- Localized astronomy, moon phase, golden-hour, sun path, and sunshine-duration labels, countdowns, and accessibility summaries.
 
 ### Verified
 - `./gradlew.bat :app:compileStandardDebugKotlin :wear:compileDebugKotlin --console=plain`

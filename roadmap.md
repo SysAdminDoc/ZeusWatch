@@ -47,6 +47,7 @@
   - [x] Extracted Today overview copy for current conditions, details grid labels, forecast brief chips/footer, and the skeleton loading label into resources.
   - [x] Extracted air-quality, humidity comfort, dew-point comfort, and pollen card labels/advice/semantics into resources.
   - [x] Extracted cloud cover, visibility, pressure, temperature graph, UV, and precipitation chart labels/semantics into resources.
+  - [x] Extracted astronomy, moon phase, golden-hour, sun path, and sunshine-duration labels/countdowns/semantics into resources.
   - [ ] Continue extraction across remaining Today card internals and remaining dialogs before marking this item closed.
 
 - **[CLOSED v1.18.0] ~~Accessibility gaps on Canvas-drawn elements~~**
