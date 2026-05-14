@@ -2,6 +2,15 @@
 
 All notable changes to Nimbus Weather are documented here.
 
+## [Unreleased]
+
+### Added
+- Started the localization roadmap by moving core navigation, Locations, Compare, and Wear OS state copy into Android string resources, with an initial Spanish resource set for those high-traffic surfaces.
+
+### Verified
+- `./gradlew.bat :app:compileStandardDebugKotlin :wear:compileDebugKotlin --console=plain`
+- `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.ui.screen.locations.LocationsScreenLogicTest --console=plain`
+
 ## [1.20.3] - 2026-05-13
 
 Premium UX polish pass across phone, Wear OS, widgets, and project screenshots.

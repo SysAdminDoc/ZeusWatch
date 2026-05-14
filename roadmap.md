@@ -1,6 +1,6 @@
 # ZeusWatch Roadmap
 
-**Current Version**: v1.20.0  
+**Current Version**: v1.20.3
 **Architecture**: Kotlin 2.1.0 / Jetpack Compose / Hilt / MVVM / Multi-module (phone + wear)  
 **Flavors**: `standard` (Google Play) / `freenet` (F-Droid)
 
@@ -30,8 +30,10 @@
 
 ### MEDIUM PRIORITY
 
-- **[OPEN] Zero localization support**  
+- **[PARTIAL 2026-05-14] Zero localization support**
   No `values-*/strings.xml` locale variants exist. Only 10 `stringResource()`/`getString()` calls across 157 source files — all other user-facing text is hardcoded in Kotlin. Extracting strings retroactively across 28 card types, 17 settings sections, 5 screens, and 4 widget types is a significant effort that compounds with each new feature.
+  - [x] Added resource-backed strings for core bottom navigation, Locations, Compare, and Wear OS loading/empty/header/status copy, plus an initial Spanish `values-es` set for those high-traffic surfaces.
+  - [ ] Continue extraction across Settings sections, Today card copy, widgets, notifications, dialogs, and data-source labels before marking this item closed.
 
 - **[CLOSED v1.18.0] ~~Accessibility gaps on Canvas-drawn elements~~**
   v1.17.0 added `mergeDescendants` `contentDescription` + `liveRegion` semantics to 5 Canvas-heavy cards: AqiGauge, TemperatureGraph, PressureTrendCard, MoonPhaseCard, CloudCoverCard. v1.18.0 extends chart/gauge summaries to wind compass, sun ephemeris arc, wind trend, visibility scale, precipitation chart, humidity card, UV index bar, nowcast card, on-this-day card, outdoor score card, and sunshine duration card, with focused `AccessibilityHelper` coverage so TalkBack copy stays regression-tested. v1.18.0 also adds Compose accessibility checks to the instrumented UI tests and a GitHub Actions emulator job running `connectedStandardDebugAndroidTest` on API 35. Decorative particle canvases remain intentionally silent.

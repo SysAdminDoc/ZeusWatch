@@ -13,12 +13,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material3.Text
+import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.WearUiState
 import com.sysadmindoc.nimbus.wear.data.DataSource
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
@@ -41,17 +43,17 @@ fun CurrentScreen(
     ) {
         if (state.isLoading) {
             WearStateCard(
-                title = "Refreshing forecast",
-                message = "Pulling the latest weather for your current place.",
+                title = stringResource(R.string.wear_refreshing_forecast),
+                message = stringResource(R.string.wear_refreshing_forecast_message),
                 icon = "\uD83C\uDF26\uFE0F",
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
         } else if (state.error != null) {
             WearStateCard(
-                title = "Forecast unavailable",
+                title = stringResource(R.string.wear_forecast_unavailable),
                 message = state.error,
                 icon = "\u26A0\uFE0F",
-                actionLabel = "Retry",
+                actionLabel = stringResource(R.string.retry),
                 onAction = onRefresh,
                 accent = WearAlertAccent,
                 modifier = Modifier.padding(horizontal = 20.dp),
@@ -88,7 +90,11 @@ private fun WeatherContent(
         WearPanel(modifier = Modifier.fillMaxWidth()) {
             WearHeader(
                 title = state.locationName,
-                subtitle = if (state.isDay) "Daylight" else "Overnight",
+                subtitle = if (state.isDay) {
+                    stringResource(R.string.wear_daylight)
+                } else {
+                    stringResource(R.string.wear_overnight)
+                },
             )
             Text(
                 text = WearWeatherRepository.wmoEmoji(state.weatherCode, state.isDay),
@@ -110,7 +116,7 @@ private fun WeatherContent(
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(
-                text = "High ${state.high}\u00B0 • Low ${state.low}\u00B0",
+                text = stringResource(R.string.wear_high_low, state.high, state.low),
                 fontSize = 10.sp,
                 color = WearTextTertiary,
                 textAlign = TextAlign.Center,
@@ -120,7 +126,7 @@ private fun WeatherContent(
 
         WearPanel(modifier = Modifier.fillMaxWidth()) {
             WearMiniPill(
-                text = "Right now",
+                text = stringResource(R.string.wear_right_now),
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
             DetailRow(state)
@@ -148,8 +154,8 @@ private fun SyncFooter(
 ) {
     val ageLabel = freshnessLabel(syncedAtMs)
     val sourceLabel = when (dataSource) {
-        DataSource.PHONE_SYNC -> "Phone"
-        DataSource.DIRECT_API -> "Watch"
+        DataSource.PHONE_SYNC -> stringResource(R.string.wear_data_source_phone)
+        DataSource.DIRECT_API -> stringResource(R.string.wear_data_source_watch)
         DataSource.UNKNOWN -> "—"
     }
     Box(
@@ -160,7 +166,7 @@ private fun SyncFooter(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "$sourceLabel • $ageLabel • tap to refresh",
+            text = stringResource(R.string.wear_tap_to_refresh, sourceLabel, ageLabel),
             fontSize = 9.sp,
             color = WearTextTertiary,
             textAlign = TextAlign.Center,
@@ -193,7 +199,7 @@ private fun AlertBanner(count: Int, topEvent: String, onTap: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = if (count == 1) "\u26A0 $topEvent" else "\u26A0 $count alerts",
+            text = if (count == 1) "\u26A0 $topEvent" else "\u26A0 ${stringResource(R.string.wear_alert_count, count)}",
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium,
             color = WearAlertAccent,

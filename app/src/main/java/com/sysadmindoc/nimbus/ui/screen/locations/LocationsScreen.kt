@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -65,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
@@ -128,10 +130,12 @@ internal fun LocationsContent(
     onMoveLocation: (Int, Int) -> Unit = { _, _ -> },
 ) {
     PredictiveBackScaffold(onBack = onBack) {
+        val emptySubtitle = stringResource(R.string.locations_empty_subtitle)
+        val savedCountSubtitle = stringResource(R.string.locations_saved_count_subtitle, saved.size)
         val savedPlacesSubtitle = if (saved.isEmpty()) {
-            "Search for a city, ZIP code, or region to build a shortlist for widgets, alerts, and quick switching."
+            emptySubtitle
         } else {
-            "${saved.size} saved places ready for quick switching, widgets, and alerts."
+            savedCountSubtitle
         }
         Column(
             modifier = Modifier
@@ -140,9 +144,9 @@ internal fun LocationsContent(
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             ScreenHeader(
-                title = "Locations",
+                title = stringResource(R.string.locations_title),
                 subtitle = savedPlacesSubtitle,
-                eyebrow = "Saved places",
+                eyebrow = stringResource(R.string.locations_eyebrow),
                 onBack = onBack,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             )
@@ -189,7 +193,12 @@ private fun LocationsList(
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
     val itemHeightPx = with(LocalDensity.current) { 62.dp.toPx() }
     val visibleSearchResults = filterDuplicateSearchResults(search.results, saved)
-    val searchEmptyMessage = locationsSearchEmptyMessage(search, visibleSearchResults)
+    val searchEmptyMessage = locationsSearchEmptyMessage(
+        search = search,
+        visibleResults = visibleSearchResults,
+        alreadySavedMessage = stringResource(R.string.locations_already_saved_message),
+        noResultsMessage = stringResource(R.string.locations_no_results_message),
+    )
     val minimumMovableIndex = saved.indexOfFirst { !it.isCurrentLocation }.takeIf { it >= 0 } ?: 0
 
     LazyColumn(
@@ -203,7 +212,7 @@ private fun LocationsList(
             if (visibleSearchResults.isNotEmpty()) {
                 item {
                     Text(
-                        "Search Results",
+                        stringResource(R.string.locations_search_results),
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = NimbusTextTertiary,
                         modifier = Modifier.padding(vertical = 4.dp),
@@ -220,9 +229,9 @@ private fun LocationsList(
                 item {
                     LocationsCalloutCard(
                         title = when {
-                            search.error != null -> "Search unavailable"
-                            search.results.isNotEmpty() -> "Already saved"
-                            else -> "No matches yet"
+                            search.error != null -> stringResource(R.string.locations_search_unavailable)
+                            search.results.isNotEmpty() -> stringResource(R.string.locations_already_saved_title)
+                            else -> stringResource(R.string.locations_no_matches_title)
                         },
                         message = searchEmptyMessage,
                         icon = when {
@@ -241,14 +250,14 @@ private fun LocationsList(
             item {
                 Column(modifier = Modifier.padding(vertical = 4.dp)) {
                     Text(
-                        "Saved Locations",
+                        stringResource(R.string.locations_saved_locations),
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = NimbusTextTertiary,
                     )
                     if (saved.size > 1) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Long-press a handle to reorder your favorites.",
+                            stringResource(R.string.locations_reorder_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = NimbusTextSecondary,
                         )
@@ -297,8 +306,8 @@ private fun LocationsList(
         } else if (search.query.length < 2) {
             item {
                 LocationsCalloutCard(
-                    title = "No saved locations yet",
-                    message = "Search for a city, ZIP code, or region above to build a shortlist you can jump between anytime.",
+                    title = stringResource(R.string.locations_empty_title),
+                    message = stringResource(R.string.locations_empty_message),
                     icon = Icons.Filled.LocationOn,
                     tint = NimbusBlueAccent,
                     modifier = Modifier.padding(top = 8.dp),
@@ -320,7 +329,7 @@ private fun SearchBar(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            "Search Locations",
+            stringResource(R.string.locations_search_label),
             style = MaterialTheme.typography.labelLarge,
             color = NimbusTextSecondary,
             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
@@ -336,21 +345,21 @@ private fun SearchBar(
             textStyle = MaterialTheme.typography.bodyMedium.copy(color = NimbusTextPrimary),
             placeholder = {
                 Text(
-                    "Search city, ZIP code, or region",
+                    stringResource(R.string.locations_search_placeholder),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NimbusTextTertiary,
                 )
             },
             label = {
                 Text(
-                    "City, ZIP, or region",
+                    stringResource(R.string.locations_search_field_label),
                     style = MaterialTheme.typography.bodySmall,
                 )
             },
             leadingIcon = {
                 Icon(
                     Icons.Filled.Search,
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.locations_search_icon_cd),
                     tint = NimbusTextTertiary,
                     modifier = Modifier.size(20.dp),
                 )
@@ -363,7 +372,12 @@ private fun SearchBar(
                         strokeWidth = 2.dp,
                     )
                     query.isNotEmpty() -> IconButton(onClick = onClear, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.Filled.Clear, "Clear", tint = NimbusTextTertiary, modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Filled.Clear,
+                            stringResource(R.string.common_clear),
+                            tint = NimbusTextTertiary,
+                            modifier = Modifier.size(18.dp),
+                        )
                     }
                 }
             },
@@ -395,6 +409,15 @@ private fun SearchResultItem(
     result: GeocodingResult,
     onAdd: () -> Unit,
 ) {
+    val addResultDescription = remember(result.name, result.admin1, result.country) {
+        listOfNotNull(result.admin1, result.country).joinToString(", ")
+    }.let { region ->
+        if (region.isNotBlank()) {
+            stringResource(R.string.locations_add_result_with_region_cd, result.name, region)
+        } else {
+            stringResource(R.string.locations_add_result_cd, result.name)
+        }
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -413,12 +436,7 @@ private fun SearchResultItem(
                 role = Role.Button,
             )
             .semantics(mergeDescendants = true) {
-                val region = listOfNotNull(result.admin1, result.country).joinToString(", ")
-                contentDescription = if (region.isNotBlank()) {
-                    "Add ${result.name}, $region"
-                } else {
-                    "Add ${result.name}"
-                }
+                contentDescription = addResultDescription
             }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -473,6 +491,14 @@ private fun SavedLocationItem(
     onDragEnd: () -> Unit = {},
 ) {
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
+    val displayName = if (location.isCurrentLocation) {
+        stringResource(R.string.common_my_location)
+    } else {
+        location.name
+    }
+    val openWeatherDescription = stringResource(R.string.locations_open_weather_cd, displayName)
+    val dragReorderDescription = stringResource(R.string.locations_drag_reorder_cd)
+    val removeDescription = stringResource(R.string.locations_remove_cd, location.name)
 
     Row(
         modifier = modifier
@@ -503,8 +529,7 @@ private fun SavedLocationItem(
                 role = Role.Button,
             )
             .semantics {
-                val name = if (location.isCurrentLocation) "My Location" else location.name
-                contentDescription = "Open $name weather"
+                contentDescription = openWeatherDescription
             }
             .padding(horizontal = 16.dp, vertical = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -512,7 +537,7 @@ private fun SavedLocationItem(
         if (showDragHandle) {
             Icon(
                 Icons.Filled.DragHandle,
-                contentDescription = "Drag to reorder",
+                contentDescription = dragReorderDescription,
                 tint = NimbusTextTertiary,
                 modifier = Modifier
                     .size(20.dp)
@@ -548,7 +573,7 @@ private fun SavedLocationItem(
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                if (location.isCurrentLocation) "My Location" else location.name,
+                displayName,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                 color = NimbusTextPrimary,
                 maxLines = 1,
@@ -600,7 +625,7 @@ private fun SavedLocationItem(
                         onClick = onRemove,
                         role = Role.Button,
                     )
-                    .semantics { contentDescription = "Remove ${location.name}" },
+                    .semantics { contentDescription = removeDescription },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Filled.Close, null, tint = NimbusError.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
@@ -640,12 +665,14 @@ internal fun filterDuplicateSearchResults(
 internal fun locationsSearchEmptyMessage(
     search: SearchState,
     visibleResults: List<GeocodingResult>,
+    alreadySavedMessage: String = "Location already saved",
+    noResultsMessage: String = "No results found",
 ): String? {
     if (search.query.length < 2 || search.isSearching || visibleResults.isNotEmpty()) return null
     return when {
         search.error != null -> search.error
-        search.results.isNotEmpty() -> "Location already saved"
-        else -> "No results found"
+        search.results.isNotEmpty() -> alreadySavedMessage
+        else -> noResultsMessage
     }
 }
 

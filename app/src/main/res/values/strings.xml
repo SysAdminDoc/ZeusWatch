@@ -43,6 +43,82 @@
     <string name="error_generic">Something went wrong. Pull to refresh.</string>
     <string name="retry">Retry</string>
 
+    <!-- Navigation -->
+    <string name="nav_today">Today</string>
+    <string name="nav_hourly">Hourly</string>
+    <string name="nav_daily">Daily</string>
+    <string name="nav_radar">Radar</string>
+    <string name="nav_show_tab">Show %1$s</string>
+
+    <!-- Common UI -->
+    <string name="common_clear">Clear</string>
+    <string name="common_expanded">Expanded</string>
+    <string name="common_collapsed">Collapsed</string>
+    <string name="common_my_location">My Location</string>
+    <string name="common_choose_location">Choose location</string>
+    <string name="common_current_device_location">Current device location</string>
+    <string name="common_something_went_wrong">Something went wrong</string>
+
+    <!-- Locations -->
+    <string name="locations_title">Locations</string>
+    <string name="locations_eyebrow">Saved places</string>
+    <string name="locations_empty_subtitle">Search for a city, ZIP code, or region to build a shortlist for widgets, alerts, and quick switching.</string>
+    <string name="locations_saved_count_subtitle">%1$d saved places ready for quick switching, widgets, and alerts.</string>
+    <string name="locations_search_results">Search Results</string>
+    <string name="locations_search_unavailable">Search unavailable</string>
+    <string name="locations_already_saved_title">Already saved</string>
+    <string name="locations_no_matches_title">No matches yet</string>
+    <string name="locations_saved_locations">Saved Locations</string>
+    <string name="locations_reorder_hint">Long-press a handle to reorder your favorites.</string>
+    <string name="locations_empty_title">No saved locations yet</string>
+    <string name="locations_empty_message">Search for a city, ZIP code, or region above to build a shortlist you can jump between anytime.</string>
+    <string name="locations_search_label">Search Locations</string>
+    <string name="locations_search_placeholder">Search city, ZIP code, or region</string>
+    <string name="locations_search_field_label">City, ZIP, or region</string>
+    <string name="locations_search_icon_cd">Search</string>
+    <string name="locations_add_result_cd">Add %1$s</string>
+    <string name="locations_add_result_with_region_cd">Add %1$s, %2$s</string>
+    <string name="locations_open_weather_cd">Open %1$s weather</string>
+    <string name="locations_drag_reorder_cd">Drag to reorder</string>
+    <string name="locations_remove_cd">Remove %1$s</string>
+    <string name="locations_already_saved_message">Location already saved</string>
+    <string name="locations_no_results_message">No results found</string>
+
+    <!-- Compare -->
+    <string name="compare_preparing_title">Preparing comparison</string>
+    <string name="compare_preparing_message">Loading your saved places and the latest forecast context.</string>
+    <string name="compare_unavailable_title">Comparison unavailable</string>
+    <string name="compare_title">Compare Weather</string>
+    <string name="compare_subtitle">Pick two saved places and spot the differences that matter fastest.</string>
+    <string name="compare_eyebrow">Side by side</string>
+    <string name="compare_choose_two">Choose two saved places to compare right now.</string>
+    <string name="compare_primary">Primary</string>
+    <string name="compare_against">Compare Against</string>
+    <string name="compare_add_location_title">Add a Location to Start Comparing</string>
+    <string name="compare_add_location_message">Save at least two places to see side-by-side weather, travel differences, and rain risk in one glance.</string>
+    <string name="compare_open_locations">Open Locations</string>
+    <string name="compare_add_one_more_title">Add One More Location</string>
+    <string name="compare_add_one_more_message">%1$s is ready. Save one more place to unlock side-by-side comparisons.</string>
+    <string name="compare_add_another_location">Add Another Location</string>
+    <string name="compare_load_failed_title">Couldn\'t Load Comparison</string>
+    <string name="compare_load_failed_message">Something went wrong while comparing locations.</string>
+    <string name="compare_loading_title">Loading Comparison</string>
+    <string name="compare_loading_message">Pulling fresh forecast data for both locations now.</string>
+    <string name="compare_feels_like_label">Feels Like</string>
+    <string name="compare_uv_index_label">UV Index</string>
+    <string name="compare_high_low_label">High / Low</string>
+    <string name="compare_rain_chance_label">Rain Chance</string>
+    <string name="compare_selector_cd">%1$s, %2$s</string>
+    <string name="compare_ready_title">Comparison deck ready</string>
+    <string name="compare_ready_message">%1$d saved places available for side-by-side weather decisions.</string>
+    <string name="compare_snapshot">Snapshot</string>
+    <string name="compare_currently_identical">%1$s and %2$s currently feel nearly identical.</string>
+    <string name="compare_temperature_delta">%1$s %2$s than %3$s by about %4$d\u00B0.</string>
+    <string name="compare_warmer">is warmer right now</string>
+    <string name="compare_cooler">is cooler right now</string>
+    <string name="compare_humidity_summary">Humidity %1$d%% vs %2$d%%</string>
+    <string name="compare_rain_summary">Rain %1$d%% vs %2$d%%</string>
+
     <!-- Units -->
     <string name="temp_f">%1$d\u00B0</string>
     <string name="temp_f_unit">%1$d\u00B0F</string>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ZeusWatch</string>
+
+    <!-- Navigation -->
+    <string name="nav_today">Hoy</string>
+    <string name="nav_hourly">Por hora</string>
+    <string name="nav_daily">Diario</string>
+    <string name="nav_radar">Radar</string>
+    <string name="nav_show_tab">Mostrar %1$s</string>
+
+    <!-- Common UI -->
+    <string name="common_clear">Borrar</string>
+    <string name="common_expanded">Expandido</string>
+    <string name="common_collapsed">Contraido</string>
+    <string name="common_my_location">Mi ubicacion</string>
+    <string name="common_choose_location">Elegir ubicacion</string>
+    <string name="common_current_device_location">Ubicacion actual del dispositivo</string>
+    <string name="common_something_went_wrong">Algo salio mal</string>
+    <string name="retry">Reintentar</string>
+
+    <!-- Locations -->
+    <string name="locations_title">Ubicaciones</string>
+    <string name="locations_eyebrow">Lugares guardados</string>
+    <string name="locations_empty_subtitle">Busca una ciudad, codigo postal o region para crear una lista para widgets, alertas y cambio rapido.</string>
+    <string name="locations_saved_count_subtitle">%1$d lugares guardados listos para cambio rapido, widgets y alertas.</string>
+    <string name="locations_search_results">Resultados de busqueda</string>
+    <string name="locations_search_unavailable">Busqueda no disponible</string>
+    <string name="locations_already_saved_title">Ya guardado</string>
+    <string name="locations_no_matches_title">Aun no hay coincidencias</string>
+    <string name="locations_saved_locations">Ubicaciones guardadas</string>
+    <string name="locations_reorder_hint">Mantén presionado un controlador para reordenar tus favoritos.</string>
+    <string name="locations_empty_title">Aun no hay ubicaciones guardadas</string>
+    <string name="locations_empty_message">Busca una ciudad, codigo postal o region arriba para crear una lista a la que puedas volver en cualquier momento.</string>
+    <string name="locations_search_label">Buscar ubicaciones</string>
+    <string name="locations_search_placeholder">Busca ciudad, codigo postal o region</string>
+    <string name="locations_search_field_label">Ciudad, ZIP o region</string>
+    <string name="locations_search_icon_cd">Buscar</string>
+    <string name="locations_add_result_cd">Agregar %1$s</string>
+    <string name="locations_add_result_with_region_cd">Agregar %1$s, %2$s</string>
+    <string name="locations_open_weather_cd">Abrir clima de %1$s</string>
+    <string name="locations_drag_reorder_cd">Arrastrar para reordenar</string>
+    <string name="locations_remove_cd">Eliminar %1$s</string>
+    <string name="locations_already_saved_message">Ubicacion ya guardada</string>
+    <string name="locations_no_results_message">No se encontraron resultados</string>
+
+    <!-- Compare -->
+    <string name="compare_preparing_title">Preparando comparacion</string>
+    <string name="compare_preparing_message">Cargando tus lugares guardados y el contexto del pronostico mas reciente.</string>
+    <string name="compare_unavailable_title">Comparacion no disponible</string>
+    <string name="compare_title">Comparar clima</string>
+    <string name="compare_subtitle">Elige dos lugares guardados y detecta rapidamente las diferencias importantes.</string>
+    <string name="compare_eyebrow">Lado a lado</string>
+    <string name="compare_choose_two">Elige dos lugares guardados para compararlos ahora.</string>
+    <string name="compare_primary">Principal</string>
+    <string name="compare_against">Comparar con</string>
+    <string name="compare_add_location_title">Agrega una ubicacion para comenzar</string>
+    <string name="compare_add_location_message">Guarda al menos dos lugares para ver clima, diferencias de viaje y riesgo de lluvia lado a lado.</string>
+    <string name="compare_open_locations">Abrir ubicaciones</string>
+    <string name="compare_add_one_more_title">Agrega una ubicacion mas</string>
+    <string name="compare_add_one_more_message">%1$s esta lista. Guarda un lugar mas para activar comparaciones lado a lado.</string>
+    <string name="compare_add_another_location">Agregar otra ubicacion</string>
+    <string name="compare_load_failed_title">No se pudo cargar la comparacion</string>
+    <string name="compare_load_failed_message">Algo salio mal al comparar ubicaciones.</string>
+    <string name="compare_loading_title">Cargando comparacion</string>
+    <string name="compare_loading_message">Obteniendo pronosticos nuevos para ambas ubicaciones.</string>
+    <string name="compare_feels_like_label">Sensacion</string>
+    <string name="compare_uv_index_label">Indice UV</string>
+    <string name="compare_high_low_label">Max / Min</string>
+    <string name="compare_rain_chance_label">Prob. lluvia</string>
+    <string name="compare_selector_cd">%1$s, %2$s</string>
+    <string name="compare_ready_title">Comparacion lista</string>
+    <string name="compare_ready_message">%1$d lugares guardados disponibles para comparar clima lado a lado.</string>
+    <string name="compare_snapshot">Resumen</string>
+    <string name="compare_currently_identical">%1$s y %2$s se sienten casi iguales ahora.</string>
+    <string name="compare_temperature_delta">%1$s %2$s que %3$s por unos %4$d\u00B0.</string>
+    <string name="compare_warmer">esta mas calido ahora</string>
+    <string name="compare_cooler">esta mas fresco ahora</string>
+    <string name="compare_humidity_summary">Humedad %1$d%% vs %2$d%%</string>
+    <string name="compare_rain_summary">Lluvia %1$d%% vs %2$d%%</string>
+
+    <!-- Existing shared labels used by the localized surfaces -->
+    <string name="humidity">Humedad</string>
+    <string name="wind">Viento</string>
+    <string name="pressure">Presion</string>
+    <string name="visibility">Visibilidad</string>
+    <string name="cloud_cover">Nubosidad</string>
+</resources>

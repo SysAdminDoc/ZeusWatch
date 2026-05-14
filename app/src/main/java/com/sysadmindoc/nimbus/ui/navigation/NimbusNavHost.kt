@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -43,11 +44,13 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.screen.compare.CompareScreen
 import com.sysadmindoc.nimbus.ui.screen.customalerts.CustomAlertsScreen
 import com.sysadmindoc.nimbus.ui.screen.locations.LocationsScreen
@@ -116,13 +119,13 @@ internal fun resolveZeusWatchDeepLinkRoute(
 }
 
 enum class BottomTab(
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector,
 ) {
-    TODAY("Today", Icons.Filled.WbSunny),
-    HOURLY("Hourly", Icons.Filled.Schedule),
-    DAILY("Daily", Icons.Filled.CalendarMonth),
-    RADAR("Radar", Icons.Filled.Map),
+    TODAY(R.string.nav_today, Icons.Filled.WbSunny),
+    HOURLY(R.string.nav_hourly, Icons.Filled.Schedule),
+    DAILY(R.string.nav_daily, Icons.Filled.CalendarMonth),
+    RADAR(R.string.nav_radar, Icons.Filled.Map),
 }
 
 @Composable
@@ -265,6 +268,8 @@ fun ZeusWatchBottomNav(
             visibleTabs.forEach { tab ->
                 val index = tab.ordinal
                 val isSelected = selectedTab == index
+                val tabLabel = stringResource(tab.labelRes)
+                val tabClickLabel = stringResource(R.string.nav_show_tab, tabLabel)
                 val tabShape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
                 Column(
                     modifier = Modifier
@@ -299,10 +304,10 @@ fun ZeusWatchBottomNav(
                             role = Role.Tab,
                         )
                         .clearAndSetSemantics {
-                            contentDescription = tab.label
+                            contentDescription = tabLabel
                             selected = isSelected
                             role = Role.Tab
-                            onClick(label = "Show ${tab.label}") {
+                            onClick(label = tabClickLabel) {
                                 onTabSelected(index)
                                 true
                             }
@@ -328,7 +333,7 @@ fun ZeusWatchBottomNav(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = tab.label,
+                        text = tabLabel,
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                         ),
