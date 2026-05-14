@@ -37,7 +37,8 @@
   - [x] Extracted home-screen widget descriptions, Glance widget labels, empty states, freshness announcements, setup copy, and compact day labels into resources.
   - [x] Extracted Custom Alerts screen/editor copy, rule state semantics, custom-rule notification text, and notification channel labels/descriptions into resources.
   - [x] Moved Home Cards settings labels for all `CardType` values into resources so card ordering, move, and show/hide controls can localize.
-  - [ ] Continue extraction across Today card copy, remaining dialogs, and remaining data-source enum labels before marking this item closed.
+  - [x] Moved Settings enum labels for units, radar providers, icon/theme/summary styles, alert filters, alert-source preferences, and weather-source dropdowns into resources.
+  - [ ] Continue extraction across Today card copy and remaining dialogs before marking this item closed.
 
 - **[CLOSED v1.18.0] ~~Accessibility gaps on Canvas-drawn elements~~**
   v1.17.0 added `mergeDescendants` `contentDescription` + `liveRegion` semantics to 5 Canvas-heavy cards: AqiGauge, TemperatureGraph, PressureTrendCard, MoonPhaseCard, CloudCoverCard. v1.18.0 extends chart/gauge summaries to wind compass, sun ephemeris arc, wind trend, visibility scale, precipitation chart, humidity card, UV index bar, nowcast card, on-this-day card, outdoor score card, and sunshine duration card, with focused `AccessibilityHelper` coverage so TalkBack copy stays regression-tested. v1.18.0 also adds Compose accessibility checks to the instrumented UI tests and a GitHub Actions emulator job running `connectedStandardDebugAndroidTest` on API 35. Decorative particle canvases remain intentionally silent.
