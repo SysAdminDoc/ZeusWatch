@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusSunYellow
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
@@ -48,7 +49,7 @@ fun SunshineDurationCard(
     val semanticSummary = AccessibilityHelper.sunshineDuration(sunshineDurationSeconds, dayLengthMinutes)
 
     WeatherCard(
-        title = "Sunshine",
+        titleRes = R.string.card_title_sunshine,
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = semanticSummary
         },

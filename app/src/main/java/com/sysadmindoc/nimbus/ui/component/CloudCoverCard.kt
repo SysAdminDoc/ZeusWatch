@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusFogGray
@@ -81,7 +82,7 @@ fun CloudCoverCard(
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = cloudSummary
         },
-        title = "Cloud Cover",
+        titleRes = R.string.card_type_cloud_cover,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

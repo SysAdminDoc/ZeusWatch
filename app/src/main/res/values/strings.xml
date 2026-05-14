@@ -150,6 +150,10 @@
     <string name="card_type_cloud_cover">Cloud Cover</string>
     <string name="card_type_visibility">Visibility</string>
     <string name="card_type_on_this_day">On This Day</string>
+    <string name="card_title_astronomy">Astronomy</string>
+    <string name="card_title_forecast_brief">Forecast Brief</string>
+    <string name="card_title_outdoor_activity">Outdoor Activity</string>
+    <string name="card_title_sunshine">Sunshine</string>
 
     <!-- Current Conditions -->
     <string name="feels_like">Feels like %1$s</string>

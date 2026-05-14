@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AstronomyData
 import com.sysadmindoc.nimbus.data.model.MoonPhase
 import com.sysadmindoc.nimbus.ui.theme.NimbusMoonBlue
@@ -57,7 +58,7 @@ fun MoonPhaseCard(
         if (moonsetLabel != null) append(" Moonset $moonsetLabel.")
     }
     WeatherCard(
-        title = "Astronomy",
+        titleRes = R.string.card_title_astronomy,
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = astroSummary
         },

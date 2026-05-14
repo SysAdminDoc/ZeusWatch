@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -74,7 +75,7 @@ fun TemperatureGraph(
     val trendSummary = remember(data, s.tempUnit) { buildTemperatureTrendSummary(data, s) }
 
     WeatherCard(
-        title = "Temperature Trend",
+        titleRes = R.string.card_type_temperature_graph,
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = "Temperature trend graph. $trendSummary"
         },

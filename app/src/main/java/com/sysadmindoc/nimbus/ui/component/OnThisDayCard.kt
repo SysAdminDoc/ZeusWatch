@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.OnThisDayData
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
@@ -70,7 +71,7 @@ fun OnThisDayCard(
         }
     }
 
-    WeatherCard(title = "On This Day", modifier = cardModifier) {
+    WeatherCard(titleRes = R.string.card_type_on_this_day, modifier = cardModifier) {
         if (data == null || data.priorYears.isEmpty()) {
             Text(
                 text = "Historical data unavailable for this location.",

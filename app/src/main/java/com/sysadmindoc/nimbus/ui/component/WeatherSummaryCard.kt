@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
@@ -37,7 +38,7 @@ fun WeatherSummaryCard(
 
     WeatherCard(
         modifier = modifier,
-        title = "Forecast Brief",
+        titleRes = R.string.card_title_forecast_brief,
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),

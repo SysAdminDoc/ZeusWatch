@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.AccessibilityHelper
@@ -72,7 +73,7 @@ fun OutdoorScoreCard(
     )
 
     WeatherCard(
-        title = "Outdoor Activity",
+        titleRes = R.string.card_title_outdoor_activity,
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = semanticSummary
         },

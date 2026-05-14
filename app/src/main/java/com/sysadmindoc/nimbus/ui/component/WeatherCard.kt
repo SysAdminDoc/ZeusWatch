@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.annotation.StringRes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,6 +35,19 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusGlassHighlight
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusHeroGlowSoft
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
+
+@Composable
+fun WeatherCard(
+    modifier: Modifier = Modifier,
+    @StringRes titleRes: Int,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    WeatherCard(
+        modifier = modifier,
+        title = stringResource(titleRes),
+        content = content,
+    )
+}
 
 @Composable
 fun WeatherCard(

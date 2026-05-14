@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -47,7 +48,7 @@ fun SevereWeatherCard(
     }
 
     WeatherCard(
-        title = "Severe Weather Potential",
+        titleRes = R.string.card_type_severe_weather,
         modifier = modifier,
     ) {
         Row(

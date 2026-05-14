@@ -149,6 +149,10 @@
     <string name="card_type_cloud_cover">Nubosidad</string>
     <string name="card_type_visibility">Visibilidad</string>
     <string name="card_type_on_this_day">En esta fecha</string>
+    <string name="card_title_astronomy">Astronomia</string>
+    <string name="card_title_forecast_brief">Resumen del pronostico</string>
+    <string name="card_title_outdoor_activity">Actividad al aire libre</string>
+    <string name="card_title_sunshine">Sol</string>
 
     <!-- Navigation -->
     <string name="nav_today">Hoy</string>

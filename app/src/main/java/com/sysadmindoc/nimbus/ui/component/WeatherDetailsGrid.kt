@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,7 +47,7 @@ fun WeatherDetailsGrid(
     val s = LocalUnitSettings.current
 
     WeatherCard(
-        title = "Today's Details",
+        titleRes = R.string.card_type_details_grid,
         modifier = modifier,
     ) {
         Text(

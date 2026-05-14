@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.HourlyAqi
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
@@ -34,7 +35,7 @@ fun AqiCard(
     data: AirQualityData,
     modifier: Modifier = Modifier,
 ) {
-    WeatherCard(title = "Air Quality", modifier = modifier) {
+    WeatherCard(titleRes = R.string.card_type_air_quality, modifier = modifier) {
 
         // Gauge + info row
         Row(

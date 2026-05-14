@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -69,7 +70,7 @@ fun PressureTrendCard(
         "${trend ?: "Steady"}. 24-hour change ${"%+.1f".format(delta24h)} hectopascals."
 
     WeatherCard(
-        title = "Pressure Trend",
+        titleRes = R.string.card_type_pressure_trend,
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = semanticSummary
         },
