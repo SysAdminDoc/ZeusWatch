@@ -42,16 +42,20 @@ class NimbusMediumWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val data = WidgetDataProvider.load(context, appWidgetId)
+        val strings = widgetStrings(context)
         provideContent {
             GlanceTheme {
-                MediumWidgetContent(data)
+                MediumWidgetContent(data, strings)
             }
         }
     }
 }
 
 @Composable
-private fun MediumWidgetContent(data: WidgetWeatherData?) {
+private fun MediumWidgetContent(
+    data: WidgetWeatherData?,
+    strings: WidgetStrings,
+) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -65,8 +69,8 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
     ) {
         if (data == null) {
             WidgetEmptyState(
-                title = "ZeusWatch",
-                message = "Tap to load the latest forecast and next few days.",
+                title = strings.emptyTitle,
+                message = strings.mediumEmptyMessage,
             )
             return@Column
         }
@@ -77,7 +81,7 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
         ) {
             Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(
-                    "OVERVIEW",
+                    strings.overviewEyebrow,
                     style = WidgetTheme.eyebrowStyle,
                 )
                 Spacer(modifier = GlanceModifier.height(3.dp))
@@ -87,11 +91,11 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
                     maxLines = 1,
                 )
             }
-            widgetUpdatedLabel(data.updatedAt)?.let { label ->
+            strings.updatedLabel(data.updatedAt)?.let { label ->
                 WidgetPill(
                     text = label,
                     onClick = widgetRefreshPillAction(),
-                    contentDescription = "Data updated $label ago. Tap to refresh now.",
+                    contentDescription = strings.updatedContentDescription(label),
                 )
             }
         }
@@ -104,7 +108,7 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
         ) {
             Image(
                 provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
-                contentDescription = WidgetUtils.weatherDescription(data.weatherCode, data.isDay),
+                contentDescription = strings.weatherDescription(data.weatherCode, data.isDay),
                 modifier = GlanceModifier.size(30.dp),
             )
             Spacer(modifier = GlanceModifier.width(10.dp))
@@ -118,19 +122,19 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
                     ),
                 )
                 Text(
-                    text = "Feels ${data.feelsLike.toInt()}\u00B0 \u2022 Humidity ${data.humidity}%",
+                    text = strings.feelsHumidity(data.feelsLike.toInt(), data.humidity),
                     style = WidgetTheme.labelStyle,
                     maxLines = 1,
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "H ${data.high.toInt()}\u00B0",
+                    text = strings.highTemp(data.high.toInt()),
                     style = WidgetTheme.labelStyle,
                 )
                 Spacer(modifier = GlanceModifier.height(2.dp))
                 Text(
-                    text = "L ${data.low.toInt()}\u00B0",
+                    text = strings.lowTemp(data.low.toInt()),
                     style = WidgetTheme.captionStyle,
                 )
             }
@@ -142,9 +146,9 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
             modifier = GlanceModifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("NEXT 3 DAYS", style = WidgetTheme.eyebrowStyle)
+            Text(strings.next3Days, style = WidgetTheme.eyebrowStyle)
             Spacer(modifier = GlanceModifier.defaultWeight())
-            Text("Tap to open", style = WidgetTheme.captionStyle)
+            Text(strings.tapToOpen, style = WidgetTheme.captionStyle)
         }
 
         Spacer(modifier = GlanceModifier.height(6.dp))
@@ -155,14 +159,18 @@ private fun MediumWidgetContent(data: WidgetWeatherData?) {
         ) {
             data.daily.take(3).forEachIndexed { idx, day ->
                 if (idx > 0) Spacer(modifier = GlanceModifier.width(4.dp))
-                DayColumn(day, modifier = GlanceModifier.defaultWeight())
+                DayColumn(day, strings, modifier = GlanceModifier.defaultWeight())
             }
         }
     }
 }
 
 @Composable
-private fun DayColumn(day: WidgetDaily, modifier: GlanceModifier = GlanceModifier) {
+private fun DayColumn(
+    day: WidgetDaily,
+    strings: WidgetStrings,
+    modifier: GlanceModifier = GlanceModifier,
+) {
     Column(
         modifier = modifier
             .cornerRadius(12.dp)
@@ -174,7 +182,7 @@ private fun DayColumn(day: WidgetDaily, modifier: GlanceModifier = GlanceModifie
         Spacer(modifier = GlanceModifier.height(3.dp))
         Image(
             provider = ImageProvider(weatherIconRes(day.code, true)),
-            contentDescription = WidgetUtils.weatherDescription(day.code, true),
+            contentDescription = strings.weatherDescription(day.code, true),
             modifier = GlanceModifier.size(18.dp),
         )
         Spacer(modifier = GlanceModifier.height(4.dp))

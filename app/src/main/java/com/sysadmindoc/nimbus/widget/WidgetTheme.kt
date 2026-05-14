@@ -23,6 +23,7 @@ import androidx.glance.text.TextStyle
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
+import java.util.Locale
 
 /**
  * Shared Glance widget styling constants and helpers.
@@ -123,13 +124,18 @@ object WidgetTheme {
     )
 }
 
-fun widgetUpdatedLabel(updatedAt: Long): String? {
+fun widgetUpdatedLabel(
+    updatedAt: Long,
+    liveLabel: String = "Live",
+    minuteFormat: String = "%1\$dm",
+    hourFormat: String = "%1\$dh",
+): String? {
     if (updatedAt <= 0L) return null
     val mins = ((System.currentTimeMillis() - updatedAt) / 60_000).coerceAtLeast(0L)
     return when {
-        mins < 5 -> "Live"
-        mins < 60 -> "${mins}m"
-        else -> "${mins / 60}h"
+        mins < 5 -> liveLabel
+        mins < 60 -> String.format(Locale.getDefault(), minuteFormat, mins)
+        else -> String.format(Locale.getDefault(), hourFormat, mins / 60)
     }
 }
 

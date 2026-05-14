@@ -16,6 +16,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
@@ -211,7 +212,13 @@ class WidgetRefreshWorker @AssistedInject constructor(
                 weatherData.current.observationTime,
                 convertTemp,
             ),
-            daily = buildWidgetDailyItems(weatherData.daily, locationToday, convertTemp),
+            daily = buildWidgetDailyItems(
+                daily = weatherData.daily,
+                today = locationToday,
+                todayLabel = applicationContext.getString(R.string.today),
+                tomorrowLabel = applicationContext.getString(R.string.widget_tomorrow_short),
+                convertTemp = convertTemp,
+            ),
             updatedAt = weatherData.lastUpdated.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(),
         )
     }
@@ -377,12 +384,14 @@ internal fun buildWidgetHourlyItems(
 internal fun buildWidgetDailyItems(
     daily: List<DailyConditions>,
     today: LocalDate?,
+    todayLabel: String = "Today",
+    tomorrowLabel: String = "Tmrw",
     convertTemp: (Double) -> Double,
 ): List<WidgetDaily> {
     return daily.take(7).map { day ->
         val label = when {
-            today != null && day.date == today -> "Today"
-            today != null && day.date == today.plusDays(1) -> "Tmrw"
+            today != null && day.date == today -> todayLabel
+            today != null && day.date == today.plusDays(1) -> tomorrowLabel
             else -> day.date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
         }
         WidgetDaily(

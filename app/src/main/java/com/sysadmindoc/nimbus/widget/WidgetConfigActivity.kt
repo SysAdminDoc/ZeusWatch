@@ -43,16 +43,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.data.api.SavedLocationDao
+import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
 import com.sysadmindoc.nimbus.ui.component.PremiumMessageCard
 import com.sysadmindoc.nimbus.ui.component.ScreenHeader
 import com.sysadmindoc.nimbus.ui.component.WeatherCard
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
-import com.sysadmindoc.nimbus.data.api.SavedLocationDao
-import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
@@ -146,27 +148,27 @@ private fun WidgetConfigScreen(
     ) {
         item {
             ScreenHeader(
-                title = "Choose Widget Location",
-                subtitle = "Pick the forecast this widget should keep in view. You can always add more widgets for other places later.",
-                eyebrow = "Home Screen Widget",
+                title = stringResource(R.string.widget_config_title),
+                subtitle = stringResource(R.string.widget_config_subtitle),
+                eyebrow = stringResource(R.string.widget_config_eyebrow),
             )
         }
 
         item {
             InlineNoticeCard(
-                title = "Quick setup",
-                message = "Tapping a location finishes setup immediately and keeps this widget focused on that place.",
+                title = stringResource(R.string.widget_config_quick_setup),
+                message = stringResource(R.string.widget_config_quick_setup_message),
                 icon = Icons.Filled.LocationOn,
             )
         }
 
         item {
-            WeatherCard(title = "Recommended") {
+            WeatherCard(title = stringResource(R.string.widget_config_recommended)) {
                 LocationOption(
-                    name = "Follow App Location",
-                    subtitle = "Uses ZeusWatch's current or last loaded location so the widget stays in sync.",
+                    name = stringResource(R.string.widget_config_follow_app_location),
+                    subtitle = stringResource(R.string.widget_config_follow_app_location_desc),
                     isCurrentLocation = true,
-                    badge = "Flexible",
+                    badge = stringResource(R.string.widget_config_flexible),
                     onClick = { onLocationSelected(null) },
                 )
             }
@@ -175,18 +177,18 @@ private fun WidgetConfigScreen(
         if (selectableLocations.isEmpty()) {
             item {
                 PremiumMessageCard(
-                    title = "No saved places yet",
-                    message = "You can finish setup with the app location now, then save favorite places inside ZeusWatch to pin more widgets later.",
+                    title = stringResource(R.string.widget_config_no_saved_title),
+                    message = stringResource(R.string.widget_config_no_saved_message),
                     icon = Icons.Filled.LocationOn,
-                    primaryActionLabel = "Use App Location",
+                    primaryActionLabel = stringResource(R.string.widget_config_use_app_location),
                     onPrimaryAction = { onLocationSelected(null) },
                 )
             }
         } else {
             item {
-                WeatherCard(title = "Saved Locations") {
+                WeatherCard(title = stringResource(R.string.widget_config_saved_locations)) {
                     Text(
-                        text = "Choose a specific place when you want a dedicated home-screen forecast.",
+                        text = stringResource(R.string.widget_config_saved_locations_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = NimbusTextSecondary,
                     )
@@ -200,7 +202,7 @@ private fun WidgetConfigScreen(
                                     loc.country.ifBlank { null },
                                 ).joinToString(", "),
                                 isCurrentLocation = false,
-                                badge = "Pinned",
+                                badge = stringResource(R.string.widget_config_pinned),
                                 onClick = { onLocationSelected(loc.id) },
                             )
                         }
