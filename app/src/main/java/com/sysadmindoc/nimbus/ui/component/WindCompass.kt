@@ -21,6 +21,9 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -33,9 +36,6 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import kotlin.math.PI
 import kotlin.math.cos
@@ -54,7 +54,21 @@ fun WindCompass(
 ) {
     val textMeasurer = rememberTextMeasurer()
     val s = LocalUnitSettings.current
-    val compassDescription = AccessibilityHelper.windCompass(windSpeed, windDirection, windGusts, s)
+    val windDirectionLabel = WeatherFormatter.formatWindDirection(windDirection)
+    val compassDescription = if (windGusts != null && windGusts > windSpeed) {
+        stringResource(
+            R.string.wind_compass_semantics_gusts,
+            windDirectionLabel,
+            WeatherFormatter.formatWindSpeed(windSpeed, s),
+            WeatherFormatter.formatWindSpeed(windGusts, s),
+        )
+    } else {
+        stringResource(
+            R.string.wind_compass_semantics,
+            windDirectionLabel,
+            WeatherFormatter.formatWindSpeed(windSpeed, s),
+        )
+    }
 
     WeatherCard(
         titleRes = R.string.card_type_wind_compass,
@@ -171,9 +185,10 @@ fun WindCompass(
                 // Beaufort scale label (when enabled in settings)
                 if (s.showBeaufortColors) {
                     val beaufort = WeatherFormatter.beaufortScale(windSpeed)
+                    val beaufortLabel = stringResource(beaufortLabelRes(beaufort.scale))
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Beaufort ${beaufort.scale} \u2022 ${beaufort.label}",
+                        text = stringResource(R.string.wind_beaufort_value, beaufort.scale, beaufortLabel),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(beaufort.colorHex),
                     )
@@ -181,7 +196,7 @@ fun WindCompass(
                 if (windGusts != null && windGusts > windSpeed) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Gusts",
+                        text = stringResource(R.string.wind_gusts),
                         style = MaterialTheme.typography.labelMedium,
                         color = NimbusTextTertiary,
                     )
@@ -193,4 +208,20 @@ fun WindCompass(
             }
         }
     }
+}
+
+private fun beaufortLabelRes(scale: Int): Int = when (scale) {
+    0 -> R.string.beaufort_calm
+    1 -> R.string.beaufort_light_air
+    2 -> R.string.beaufort_light_breeze
+    3 -> R.string.beaufort_gentle_breeze
+    4 -> R.string.beaufort_moderate_breeze
+    5 -> R.string.beaufort_fresh_breeze
+    6 -> R.string.beaufort_strong_breeze
+    7 -> R.string.beaufort_near_gale
+    8 -> R.string.beaufort_gale
+    9 -> R.string.beaufort_strong_gale
+    10 -> R.string.beaufort_storm
+    11 -> R.string.beaufort_violent_storm
+    else -> R.string.beaufort_hurricane
 }

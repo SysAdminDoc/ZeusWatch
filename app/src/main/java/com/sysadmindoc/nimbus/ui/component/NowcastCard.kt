@@ -30,7 +30,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
-import com.sysadmindoc.nimbus.util.AccessibilityHelper
+import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.LocalDateTime
 
 /**
@@ -56,22 +56,37 @@ fun NowcastCard(
     val hasRain = filtered.any { it.precipitation > 0.01 }
 
     // Generate summary text
-    val summaryText = remember(filtered) {
+    val summary = remember(filtered) {
         val firstRainIdx = filtered.indexOfFirst { it.precipitation > 0.05 }
         val lastRainIdx = filtered.indexOfLast { it.precipitation > 0.05 }
         when {
-            firstRainIdx < 0 -> "No precipitation expected"
-            firstRainIdx == 0 && lastRainIdx >= filtered.size - 2 -> "Rain continuing"
-            firstRainIdx == 0 -> "Rain ending in ~${(lastRainIdx + 1) * 15} min"
-            else -> "Rain starting in ~${firstRainIdx * 15} min"
+            firstRainIdx < 0 -> NowcastSummary(R.string.nowcast_summary_none)
+            firstRainIdx == 0 && lastRainIdx >= filtered.size - 2 -> NowcastSummary(R.string.nowcast_summary_continuing)
+            firstRainIdx == 0 -> NowcastSummary(R.string.nowcast_summary_ending, (lastRainIdx + 1) * 15)
+            else -> NowcastSummary(R.string.nowcast_summary_starting, firstRainIdx * 15)
         }
+    }
+    val summaryText = if (summary.minutes != null) {
+        stringResource(summary.labelRes, summary.minutes)
+    } else {
+        stringResource(summary.labelRes)
     }
 
     val settings = LocalUnitSettings.current
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
-    val semanticSummary = remember(filtered, referenceTime, settings) {
-        AccessibilityHelper.nowcast(filtered, referenceTime, settings)
+    val peak = filtered.maxByOrNull { it.precipitation }
+    val peakTimeRaw = if (peak != null) WeatherFormatter.formatRelativeHourLabel(peak.time, referenceTime, settings) else null
+    val peakTimeLabel = if (peakTimeRaw == "Now") stringResource(R.string.common_now) else peakTimeRaw
+    val semanticSummary = if (peak != null && peak.precipitation > 0.0) {
+        stringResource(
+            R.string.nowcast_semantics_with_peak,
+            summaryText,
+            WeatherFormatter.formatPrecipitation(peak.precipitation, settings),
+            peakTimeLabel ?: "",
+        )
+    } else {
+        stringResource(R.string.nowcast_semantics, summaryText)
     }
 
     WeatherCard(
@@ -120,7 +135,7 @@ fun NowcastCard(
 
                 // Time labels every other bar
                 if (i % 2 == 0) {
-                    val label = com.sysadmindoc.nimbus.util.WeatherFormatter.formatRelativeHourLabel(
+                    val label = WeatherFormatter.formatRelativeHourLabel(
                         entry.time,
                         referenceTime,
                         settings,
@@ -160,3 +175,8 @@ fun NowcastCard(
         }
     }
 }
+
+private data class NowcastSummary(
+    val labelRes: Int,
+    val minutes: Int? = null,
+)
