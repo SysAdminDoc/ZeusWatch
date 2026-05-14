@@ -71,6 +71,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -79,9 +80,11 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.IconPack
 import com.sysadmindoc.nimbus.data.repository.*
 import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
@@ -214,11 +217,14 @@ fun SettingsScreen(
     )
 }
 
-private enum class SettingsCategory(val label: String, val summary: String) {
-    APPEARANCE("Appearance", "Theme, icons, radar, motion"),
-    FORECAST("Forecast", "Cards, units, detail density"),
-    ALERTS("Alerts", "Notifications, thresholds, haptics"),
-    ADVANCED("Advanced", "Sources, cache, app info"),
+private enum class SettingsCategory(
+    @StringRes val labelRes: Int,
+    @StringRes val summaryRes: Int,
+) {
+    APPEARANCE(R.string.settings_category_appearance, R.string.settings_category_appearance_summary),
+    FORECAST(R.string.settings_category_forecast, R.string.settings_category_forecast_summary),
+    ALERTS(R.string.settings_category_alerts, R.string.settings_category_alerts_summary),
+    ADVANCED(R.string.settings_category_advanced, R.string.settings_category_advanced_summary),
 }
 
 @Composable
@@ -295,9 +301,9 @@ internal fun SettingsContent(
                 .verticalScroll(scrollState),
         ) {
             ScreenHeader(
-                title = "Settings",
-                subtitle = "Tune the forecast, visuals, alerts, and data sources around how you use ZeusWatch.",
-                eyebrow = "Personalize ZeusWatch",
+                title = stringResource(R.string.settings_title),
+                subtitle = stringResource(R.string.settings_subtitle),
+                eyebrow = stringResource(R.string.settings_eyebrow),
                 onBack = onBack,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             )
@@ -321,11 +327,11 @@ internal fun SettingsContent(
         // ── Display ──────────────────────────────────────────
         if (selectedCategory == SettingsCategory.APPEARANCE) {
         SettingSection(
-            title = "Display",
-            description = "Choose the overall visual style, iconography, and forecast voice.",
+            title = stringResource(R.string.settings_display_title),
+            description = stringResource(R.string.settings_display_desc),
         ) {
             Text(
-                text = "Radar Provider",
+                text = stringResource(R.string.settings_radar_provider),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
                 modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
@@ -340,14 +346,14 @@ internal fun SettingsContent(
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Windy is the default for new installs. RainViewer Native keeps ZeusWatch's in-app playback, while the NWS options open official U.S. radar pages.",
+                text = stringResource(R.string.settings_radar_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = NimbusTextTertiary,
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Icon Style",
+                text = stringResource(R.string.settings_icon_style),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
                 modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
@@ -369,7 +375,7 @@ internal fun SettingsContent(
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Theme Mode",
+                text = stringResource(R.string.settings_theme_mode),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
                 modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
@@ -383,7 +389,7 @@ internal fun SettingsContent(
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Weather Summary Style",
+                text = stringResource(R.string.settings_summary_style),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
                 modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
@@ -401,8 +407,8 @@ internal fun SettingsContent(
         // ── Cards (ordered, with move up/down) ─────────────
         if (selectedCategory == SettingsCategory.FORECAST) {
         SettingSection(
-            title = "Home Cards",
-            description = "Decide what shows on the Today screen and which insights stay closest to the top.",
+            title = stringResource(R.string.settings_home_cards_title),
+            description = stringResource(R.string.settings_home_cards_desc),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -410,13 +416,13 @@ internal fun SettingsContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Turn cards on or off, then nudge favorites higher.",
+                    stringResource(R.string.settings_home_cards_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusTextTertiary,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    "Reset",
+                    stringResource(R.string.settings_reset),
                     style = MaterialTheme.typography.labelLarge,
                     color = NimbusBlueAccent,
                     modifier = Modifier.clickable(onClick = onResetCardPreferences),
@@ -443,7 +449,7 @@ internal fun SettingsContent(
                         ) {
                             Icon(
                                 Icons.Filled.KeyboardArrowUp,
-                                contentDescription = "Move ${card.label} up",
+                                contentDescription = stringResource(R.string.settings_move_card_up, card.label),
                                 tint = if (index > 0) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.4f),
                             )
                         }
@@ -458,7 +464,7 @@ internal fun SettingsContent(
                         ) {
                             Icon(
                                 Icons.Filled.KeyboardArrowDown,
-                                contentDescription = "Move ${card.label} down",
+                                contentDescription = stringResource(R.string.settings_move_card_down, card.label),
                                 tint = if (index < settings.cardOrder.lastIndex) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.4f),
                             )
                         }
@@ -470,6 +476,16 @@ internal fun SettingsContent(
                         color = if (enabled) NimbusTextPrimary else NimbusTextTertiary,
                         modifier = Modifier.weight(1f),
                     )
+                    val cardToggleDescription = if (enabled) {
+                        stringResource(R.string.settings_hide_card, card.label)
+                    } else {
+                        stringResource(R.string.settings_show_card, card.label)
+                    }
+                    val cardToggleState = if (enabled) {
+                        stringResource(R.string.common_on)
+                    } else {
+                        stringResource(R.string.common_off)
+                    }
                     Switch(
                         checked = enabled,
                         onCheckedChange = { onCardEnabled(card, it) },
@@ -480,12 +496,8 @@ internal fun SettingsContent(
                             uncheckedTrackColor = NimbusCardBg,
                         ),
                         modifier = Modifier.semantics {
-                            contentDescription = if (enabled) {
-                                "Hide ${card.label} card"
-                            } else {
-                                "Show ${card.label} card"
-                            }
-                            stateDescription = if (enabled) "On" else "Off"
+                            contentDescription = cardToggleDescription
+                            stateDescription = cardToggleState
                         },
                     )
                 }
@@ -495,7 +507,7 @@ internal fun SettingsContent(
         // ── Units ────────────────────────────────────────────
 
         // Temperature
-        SettingSection("Temperature") {
+        SettingSection(stringResource(R.string.settings_temperature)) {
             TempUnit.entries.forEach { unit ->
                 SettingRadio(
                     label = unit.label,
@@ -507,7 +519,7 @@ internal fun SettingsContent(
         }
 
         // Wind Speed
-        SettingSection("Wind Speed") {
+        SettingSection(stringResource(R.string.settings_wind_speed)) {
             WindUnit.entries.forEach { unit ->
                 SettingRadio(
                     label = unit.label,
@@ -518,7 +530,7 @@ internal fun SettingsContent(
         }
 
         // Pressure
-        SettingSection("Pressure") {
+        SettingSection(stringResource(R.string.settings_pressure)) {
             PressureUnit.entries.forEach { unit ->
                 SettingRadio(
                     label = unit.label,
@@ -529,7 +541,7 @@ internal fun SettingsContent(
         }
 
         // Precipitation
-        SettingSection("Precipitation") {
+        SettingSection(stringResource(R.string.settings_precipitation)) {
             PrecipUnit.entries.forEach { unit ->
                 SettingRadio(
                     label = unit.label,
@@ -540,7 +552,7 @@ internal fun SettingsContent(
         }
 
         // Time Format
-        SettingSection("Time Format") {
+        SettingSection(stringResource(R.string.settings_time_format)) {
             TimeFormat.entries.forEach { format ->
                 SettingRadio(
                     label = format.label,
@@ -551,7 +563,7 @@ internal fun SettingsContent(
         }
 
         // Visibility
-        SettingSection("Visibility") {
+        SettingSection(stringResource(R.string.visibility)) {
             VisibilityUnit.entries.forEach { unit ->
                 SettingRadio(
                     label = unit.label,
@@ -565,26 +577,26 @@ internal fun SettingsContent(
         }
         if (selectedCategory == SettingsCategory.ALERTS) {
         SettingSection(
-            title = "Notifications",
-            description = "Control which weather changes can interrupt you and how proactive ZeusWatch should be.",
+            title = stringResource(R.string.settings_notifications_title),
+            description = stringResource(R.string.settings_notifications_desc),
         ) {
             if (!notificationsPermissionGranted) {
                 PermissionNoticeCard(
-                    title = "Notification Permission Off",
-                    message = "Android notifications are blocked for ZeusWatch. Turn them on to receive severe weather alerts and the persistent forecast notification.",
+                    title = stringResource(R.string.settings_notification_permission_off),
+                    message = stringResource(R.string.settings_notification_permission_message),
                 )
                 Spacer(modifier = Modifier.height(6.dp))
             }
             SettingToggle(
-                label = "Alert Notifications",
-                sublabel = "Background checks for severe weather alerts",
+                label = stringResource(R.string.settings_alert_notifications),
+                sublabel = stringResource(R.string.settings_alert_notifications_desc),
                 checked = settings.alertNotificationsEnabled,
                 onCheckedChange = { onAlertNotificationsEnabled(it) },
             )
             if (settings.alertNotificationsEnabled) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Minimum severity",
+                    text = stringResource(R.string.settings_minimum_severity),
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                     modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
@@ -598,15 +610,15 @@ internal fun SettingsContent(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 SettingToggle(
-                    label = "Monitor All Saved Locations",
-                    sublabel = "Check alerts for all your locations, not just the current one",
+                    label = stringResource(R.string.settings_monitor_all_locations),
+                    sublabel = stringResource(R.string.settings_monitor_all_locations_desc),
                     checked = settings.alertCheckAllLocations,
                     onCheckedChange = { onAlertCheckAllLocations(it) },
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Alert source",
+                text = stringResource(R.string.settings_alert_source),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
                 modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
@@ -620,18 +632,19 @@ internal fun SettingsContent(
             }
             Spacer(modifier = Modifier.height(4.dp))
             SettingToggle(
-                label = "Persistent Weather Notification",
-                sublabel = "Always-on notification showing current conditions",
+                label = stringResource(R.string.settings_persistent_notification),
+                sublabel = stringResource(R.string.settings_persistent_notification_desc),
                 checked = settings.persistentWeatherNotif,
                 onCheckedChange = { onPersistentWeatherNotif(it) },
             )
             SettingToggle(
-                label = "Nowcasting Alerts",
-                sublabel = "Alert when rain is approaching",
+                label = stringResource(R.string.settings_nowcasting_alerts),
+                sublabel = stringResource(R.string.settings_nowcasting_alerts_desc),
                 checked = settings.nowcastingAlerts,
                 onCheckedChange = { onNowcastingAlerts(it) },
             )
             Spacer(modifier = Modifier.height(4.dp))
+            val customAlertRulesDescription = stringResource(R.string.settings_custom_alert_rules_cd)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -642,19 +655,19 @@ internal fun SettingsContent(
                         role = Role.Button,
                     )
                     .semantics(mergeDescendants = true) {
-                        contentDescription = "Custom Alert Rules, set thresholds for temperature, wind, rain, and UV"
+                        contentDescription = customAlertRulesDescription
                     }
                     .padding(horizontal = 14.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Custom Alert Rules",
+                        stringResource(R.string.settings_custom_alert_rules),
                         style = MaterialTheme.typography.bodyMedium,
                         color = NimbusTextPrimary,
                     )
                     Text(
-                        "Set thresholds for temperature, wind, rain, UV",
+                        stringResource(R.string.settings_custom_alert_rules_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = NimbusTextSecondary,
                     )
@@ -668,14 +681,14 @@ internal fun SettingsContent(
             }
             Spacer(modifier = Modifier.height(4.dp))
             SettingToggle(
-                label = "Driving Condition Alerts",
-                sublabel = "Alerts for hazardous driving conditions",
+                label = stringResource(R.string.settings_driving_alerts),
+                sublabel = stringResource(R.string.settings_driving_alerts_desc),
                 checked = settings.drivingAlerts,
                 onCheckedChange = { onDrivingAlerts(it) },
             )
             SettingToggle(
-                label = "Health Alerts",
-                sublabel = "Alerts for health-related weather conditions",
+                label = stringResource(R.string.settings_health_alerts),
+                sublabel = stringResource(R.string.settings_health_alerts_desc),
                 checked = settings.healthAlertsEnabled,
                 onCheckedChange = { onHealthAlertsEnabled(it) },
             )
@@ -685,54 +698,54 @@ internal fun SettingsContent(
         }
         if (selectedCategory == SettingsCategory.FORECAST) {
         SettingSection(
-            title = "Data Display",
-            description = "Surface extra forecast detail when you want more context than the default view.",
+            title = stringResource(R.string.settings_data_display_title),
+            description = stringResource(R.string.settings_data_display_desc),
         ) {
             SettingToggle(
-                label = "Yesterday Comparison",
-                sublabel = "Show warmer/cooler trend in the hero header",
+                label = stringResource(R.string.settings_yesterday_comparison),
+                sublabel = stringResource(R.string.settings_yesterday_comparison_desc),
                 checked = settings.showYesterdayComparison,
                 onCheckedChange = { onShowYesterdayComparison(it) },
             )
             SettingToggle(
-                label = "Outdoor Activity Score",
-                sublabel = "Show the blended comfort score card",
+                label = stringResource(R.string.settings_outdoor_score),
+                sublabel = stringResource(R.string.settings_outdoor_score_desc),
                 checked = settings.showOutdoorScore,
                 onCheckedChange = { onShowOutdoorScore(it) },
             )
             SettingToggle(
-                label = "Snowfall Insights",
-                sublabel = "Show snowfall rate and depth cards when available",
+                label = stringResource(R.string.settings_snowfall_insights),
+                sublabel = stringResource(R.string.settings_snowfall_insights_desc),
                 checked = settings.showSnowfall,
                 onCheckedChange = { onShowSnowfall(it) },
             )
             SettingToggle(
-                label = "Storm Potential",
-                sublabel = "Show thunderstorm instability and CAPE cards",
+                label = stringResource(R.string.settings_storm_potential),
+                sublabel = stringResource(R.string.settings_storm_potential_desc),
                 checked = settings.showCape,
                 onCheckedChange = { onShowCape(it) },
             )
             SettingToggle(
-                label = "Golden Hour Times",
-                sublabel = "Include photography-friendly sunrise and sunset windows",
+                label = stringResource(R.string.settings_golden_hour_times),
+                sublabel = stringResource(R.string.settings_golden_hour_times_desc),
                 checked = settings.showGoldenHour,
                 onCheckedChange = { onShowGoldenHour(it) },
             )
             SettingToggle(
-                label = "Sunshine Duration",
-                sublabel = "Show total sunshine progress when forecast data supports it",
+                label = stringResource(R.string.settings_sunshine_duration),
+                sublabel = stringResource(R.string.settings_sunshine_duration_desc),
                 checked = settings.showSunshineDuration,
                 onCheckedChange = { onShowSunshineDuration(it) },
             )
             SettingToggle(
-                label = "Show Beaufort Wind Colors",
+                label = stringResource(R.string.settings_beaufort_colors),
                 checked = settings.showBeaufortColors,
                 onCheckedChange = { onShowBeaufortColors(it) },
             )
 
             // Hourly forecast range
             Text(
-                text = "Hourly forecast range",
+                text = stringResource(R.string.settings_hourly_range),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
                 modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp),
@@ -740,7 +753,7 @@ internal fun SettingsContent(
             listOf(48, 72).forEach { hours ->
                 SettingRadio(
                     label = "${hours}h",
-                    sublabel = if (hours == 72) "More data, slightly larger API response" else null,
+                    sublabel = if (hours == 72) stringResource(R.string.settings_more_data_response) else null,
                     selected = settings.hourlyForecastHours == hours,
                     onClick = { onHourlyForecastHours(hours) },
                 )
@@ -751,18 +764,18 @@ internal fun SettingsContent(
         // ── Health ───────────────────────────────────────────
         if (selectedCategory == SettingsCategory.ALERTS && settings.healthAlertsEnabled) {
         SettingSection(
-            title = "Health",
-            description = "Enable weather-sensitive warnings for migraines, air quality, and other comfort impacts.",
+            title = stringResource(R.string.settings_health_title),
+            description = stringResource(R.string.settings_health_desc),
         ) {
                 SettingToggle(
-                    label = "Migraine Alerts",
-                    sublabel = "Alert on rapid pressure changes",
+                    label = stringResource(R.string.settings_migraine_alerts),
+                    sublabel = stringResource(R.string.settings_migraine_alerts_desc),
                     checked = settings.migraineAlerts,
                     onCheckedChange = { onMigraineAlerts(it) },
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Pressure change threshold",
+                    text = stringResource(R.string.settings_pressure_threshold),
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                     modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
@@ -771,10 +784,10 @@ internal fun SettingsContent(
                     SettingRadio(
                         label = "$threshold hPa/3h",
                         sublabel = when (threshold) {
-                            3.0 -> "Very sensitive"
-                            5.0 -> "Moderate (default)"
-                            7.0 -> "Less sensitive"
-                            10.0 -> "Only major changes"
+                            3.0 -> stringResource(R.string.settings_very_sensitive)
+                            5.0 -> stringResource(R.string.settings_moderate_default)
+                            7.0 -> stringResource(R.string.settings_less_sensitive)
+                            10.0 -> stringResource(R.string.settings_only_major_changes)
                             else -> null
                         },
                         selected = settings.migrainePressureThreshold == threshold,
@@ -787,12 +800,12 @@ internal fun SettingsContent(
         // ── Accessibility ────────────────────────────────────
         if (selectedCategory == SettingsCategory.ALERTS) {
         SettingSection(
-            title = "Accessibility",
-            description = "Keep the interface readable, comfortable, and calm in different conditions.",
+            title = stringResource(R.string.settings_accessibility_title),
+            description = stringResource(R.string.settings_accessibility_desc),
         ) {
             SettingToggle(
-                label = "Haptic Feedback for Alerts",
-                sublabel = "Vibration feedback when alerts are shown",
+                label = stringResource(R.string.settings_haptic_alerts),
+                sublabel = stringResource(R.string.settings_haptic_alerts_desc),
                 checked = settings.hapticFeedbackForAlerts,
                 onCheckedChange = { onHapticFeedbackForAlerts(it) },
             )
@@ -802,12 +815,12 @@ internal fun SettingsContent(
         // ── Visual Effects ───────────────────────────────────
         if (selectedCategory == SettingsCategory.APPEARANCE) {
         SettingSection(
-            title = "Visual Effects",
-            description = "Dial ambient motion up or down to match your preferred level of energy.",
+            title = stringResource(R.string.settings_visual_effects_title),
+            description = stringResource(R.string.settings_visual_effects_desc),
         ) {
             SettingToggle(
-                label = "Weather Particles",
-                sublabel = "Rain, snow, and sun ray animations",
+                label = stringResource(R.string.settings_weather_particles),
+                sublabel = stringResource(R.string.settings_weather_particles_desc),
                 checked = settings.particlesEnabled,
                 onCheckedChange = { onParticlesEnabled(it) },
             )
@@ -817,15 +830,15 @@ internal fun SettingsContent(
         // ── Data Sources ─────────────────────────────────────────
         if (selectedCategory == SettingsCategory.ADVANCED) {
         SettingSection(
-            title = "Data Sources",
-            description = "Pick the providers and fallbacks ZeusWatch uses for forecasts, alerts, and air quality.",
+            title = stringResource(R.string.settings_data_sources_title),
+            description = stringResource(R.string.settings_data_sources_desc),
             initiallyExpanded = false,
         ) {
             val sourceConfig = settings.sourceConfig
 
             // Forecast source
             SourceDropdown(
-                label = "Forecast Source",
+                label = stringResource(R.string.settings_forecast_source),
                 selected = sourceConfig.forecast,
                 options = WeatherSourceProvider.forType(WeatherDataType.FORECAST),
                 onSelected = onSourceForecast,
@@ -835,7 +848,7 @@ internal fun SettingsContent(
 
             // Forecast fallback
             SourceDropdownNullable(
-                label = "Forecast Fallback",
+                label = stringResource(R.string.settings_forecast_fallback),
                 selected = sourceConfig.forecastFallback,
                 options = WeatherSourceProvider.forType(WeatherDataType.FORECAST)
                     .filter { it != sourceConfig.forecast },
@@ -846,7 +859,7 @@ internal fun SettingsContent(
 
             // Alert source
             SourceDropdown(
-                label = "Alert Source",
+                label = stringResource(R.string.settings_alert_source),
                 selected = sourceConfig.alerts,
                 options = WeatherSourceProvider.forType(WeatherDataType.ALERTS),
                 onSelected = onSourceAlerts,
@@ -856,7 +869,7 @@ internal fun SettingsContent(
 
             // Alert fallback
             SourceDropdownNullable(
-                label = "Alert Fallback",
+                label = stringResource(R.string.settings_alert_fallback),
                 selected = sourceConfig.alertsFallback,
                 options = WeatherSourceProvider.forType(WeatherDataType.ALERTS)
                     .filter { it != sourceConfig.alerts },
@@ -867,7 +880,7 @@ internal fun SettingsContent(
 
             // Air quality source
             SourceDropdown(
-                label = "Air Quality Source",
+                label = stringResource(R.string.settings_air_quality_source),
                 selected = sourceConfig.airQuality,
                 options = WeatherSourceProvider.forType(WeatherDataType.AIR_QUALITY),
                 onSelected = onSourceAirQuality,
@@ -877,7 +890,7 @@ internal fun SettingsContent(
 
             // Minutely source
             SourceDropdown(
-                label = "Minutely Precipitation Source",
+                label = stringResource(R.string.settings_minutely_source),
                 selected = sourceConfig.minutely,
                 options = WeatherSourceProvider.forType(WeatherDataType.MINUTELY),
                 onSelected = onSourceMinutely,
@@ -896,7 +909,7 @@ internal fun SettingsContent(
             if (needsOwmKey || needsPirateKey) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "API Keys",
+                    text = stringResource(R.string.settings_api_keys),
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                     modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
@@ -905,7 +918,7 @@ internal fun SettingsContent(
 
             if (needsOwmKey) {
                 ApiKeyField(
-                    label = "OpenWeatherMap API Key",
+                    label = stringResource(R.string.settings_owm_key),
                     value = settings.owmApiKey,
                     onValueChange = onOwmApiKey,
                 )
@@ -913,7 +926,7 @@ internal fun SettingsContent(
 
             if (needsPirateKey) {
                 ApiKeyField(
-                    label = "Pirate Weather API Key",
+                    label = stringResource(R.string.settings_pirate_key),
                     value = settings.pirateWeatherApiKey,
                     onValueChange = onPirateWeatherApiKey,
                 )
@@ -922,18 +935,22 @@ internal fun SettingsContent(
 
         // ── Advanced ───────────────────────────────────────────
         SettingSection(
-            title = "Advanced",
-            description = "Power-user controls for cache behavior and provider troubleshooting.",
+            title = stringResource(R.string.settings_advanced_title),
+            description = stringResource(R.string.settings_advanced_desc),
             initiallyExpanded = false,
         ) {
             Text(
-                "Cache Duration",
+                stringResource(R.string.settings_cache_duration),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
                 modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
             )
             listOf(15, 30, 60, 120).forEach { minutes ->
-                val label = if (minutes < 60) "${minutes} minutes" else "${minutes / 60} hour${if (minutes > 60) "s" else ""}"
+                val label = when {
+                    minutes < 60 -> stringResource(R.string.settings_minutes, minutes)
+                    minutes == 60 -> stringResource(R.string.settings_hour, 1)
+                    else -> stringResource(R.string.settings_hours, minutes / 60)
+                }
                 SettingRadio(
                     label = label,
                     selected = settings.cacheTtlMinutes == minutes,
@@ -944,12 +961,12 @@ internal fun SettingsContent(
 
         // ── About ────────────────────────────────────────────
         SettingSection(
-            title = "About",
-            description = "Version and project details for support, trust, and troubleshooting.",
+            title = stringResource(R.string.settings_about_title),
+            description = stringResource(R.string.settings_about_desc),
         ) {
-            SettingInfo("Version", com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME)
-            SettingInfo("Data Sources", "Open-Meteo, NWS, and more")
-            SettingInfo("License", "LGPL-3.0")
+            SettingInfo(stringResource(R.string.settings_version), com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME)
+            SettingInfo(stringResource(R.string.settings_data_sources_title), stringResource(R.string.settings_data_sources_value))
+            SettingInfo(stringResource(R.string.settings_license), "LGPL-3.0")
         }
         }
 
@@ -963,6 +980,8 @@ private fun SettingsOverviewCard(
     selectedCategory: SettingsCategory,
     modifier: Modifier = Modifier,
 ) {
+    val selectedLabel = stringResource(selectedCategory.labelRes)
+    val selectedSummary = stringResource(selectedCategory.summaryRes)
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -991,18 +1010,18 @@ private fun SettingsOverviewCard(
                     .background(NimbusBlueAccent),
             )
             Text(
-                text = "Focused area",
+                text = stringResource(R.string.settings_focused_area),
                 style = MaterialTheme.typography.labelMedium,
                 color = NimbusTextTertiary,
             )
         }
         Text(
-            text = selectedCategory.label,
+            text = selectedLabel,
             style = MaterialTheme.typography.headlineSmall,
             color = NimbusTextPrimary,
         )
         Text(
-            text = "${selectedCategory.summary}. Swipe categories to move faster, then expand only the sections you want to change.",
+            text = stringResource(R.string.settings_overview_summary, selectedSummary),
             style = MaterialTheme.typography.bodyMedium,
             color = NimbusTextSecondary,
         )
@@ -1024,6 +1043,8 @@ private fun SettingsCategoryPicker(
     ) {
         SettingsCategory.entries.forEach { category ->
             val isSelected = category == selectedCategory
+            val categoryLabel = stringResource(category.labelRes)
+            val categorySummary = stringResource(category.summaryRes)
             Column(
                 modifier = Modifier
                     .width(156.dp)
@@ -1068,14 +1089,14 @@ private fun SettingsCategoryPicker(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = category.label,
+                        text = categoryLabel,
                         style = MaterialTheme.typography.labelLarge,
                         color = if (isSelected) NimbusTextPrimary else NimbusTextSecondary,
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = category.summary,
+                    text = categorySummary,
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isSelected) NimbusTextSecondary else NimbusTextTertiary,
                 )
@@ -1092,6 +1113,14 @@ private fun SettingSection(
     content: @Composable () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(initiallyExpanded) }
+    val expandedLabel = stringResource(R.string.common_expanded)
+    val collapsedLabel = stringResource(R.string.common_collapsed)
+    val sectionDescription = if (expanded) {
+        stringResource(R.string.settings_collapse_section, title)
+    } else {
+        stringResource(R.string.settings_expand_section, title)
+    }
+    val sectionState = if (expanded) expandedLabel else collapsedLabel
 
     Column(
         modifier = Modifier
@@ -1118,12 +1147,8 @@ private fun SettingSection(
                     role = Role.Button,
                 )
                 .semantics(mergeDescendants = true) {
-                    contentDescription = if (expanded) {
-                        "Collapse $title section"
-                    } else {
-                        "Expand $title section"
-                    }
-                    stateDescription = if (expanded) "Expanded" else "Collapsed"
+                    contentDescription = sectionDescription
+                    stateDescription = sectionState
                 },
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1179,6 +1204,8 @@ private fun SettingRadio(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val selectedLabel = stringResource(R.string.common_selected)
+    val notSelectedLabel = stringResource(R.string.common_not_selected)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1207,7 +1234,7 @@ private fun SettingRadio(
             )
             .semantics(mergeDescendants = true) {
                 contentDescription = listOfNotNull(label, sublabel).joinToString(", ")
-                stateDescription = if (selected) "Selected" else "Not selected"
+                stateDescription = if (selected) selectedLabel else notSelectedLabel
             }
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1239,6 +1266,8 @@ private fun SettingToggle(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    val onLabel = stringResource(R.string.common_on)
+    val offLabel = stringResource(R.string.common_off)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1267,7 +1296,7 @@ private fun SettingToggle(
             )
             .semantics(mergeDescendants = true) {
                 contentDescription = listOfNotNull(label, sublabel).joinToString(", ")
-                stateDescription = if (checked) "On" else "Off"
+                stateDescription = if (checked) onLabel else offLabel
             }
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1330,6 +1359,9 @@ private fun SourceDropdown(
     onSelected: (WeatherSourceProvider) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val expandedLabel = stringResource(R.string.common_expanded)
+    val collapsedLabel = stringResource(R.string.common_collapsed)
+    val sourceDescription = stringResource(R.string.settings_source_selector_cd, label, selected.displayName)
 
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Text(
@@ -1357,8 +1389,8 @@ private fun SourceDropdown(
                         role = Role.Button,
                     )
                     .semantics(mergeDescendants = true) {
-                        contentDescription = "$label, ${selected.displayName}"
-                        stateDescription = if (expanded) "Expanded" else "Collapsed"
+                        contentDescription = sourceDescription
+                        stateDescription = if (expanded) expandedLabel else collapsedLabel
                     }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1407,6 +1439,11 @@ private fun SourceDropdownNullable(
     onSelected: (WeatherSourceProvider?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val expandedLabel = stringResource(R.string.common_expanded)
+    val collapsedLabel = stringResource(R.string.common_collapsed)
+    val noneLabel = stringResource(R.string.settings_none)
+    val selectedLabel = selected?.displayName ?: noneLabel
+    val sourceDescription = stringResource(R.string.settings_source_selector_cd, label, selectedLabel)
 
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Text(
@@ -1434,15 +1471,15 @@ private fun SourceDropdownNullable(
                         role = Role.Button,
                     )
                     .semantics(mergeDescendants = true) {
-                        contentDescription = "$label, ${selected?.displayName ?: "None"}"
-                        stateDescription = if (expanded) "Expanded" else "Collapsed"
+                        contentDescription = sourceDescription
+                        stateDescription = if (expanded) expandedLabel else collapsedLabel
                     }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = selected?.displayName ?: "None",
+                    text = selectedLabel,
                     style = MaterialTheme.typography.bodyLarge,
                     color = if (selected == null) NimbusTextTertiary else NimbusTextPrimary,
                 )
@@ -1457,11 +1494,10 @@ private fun SourceDropdownNullable(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
             ) {
-                // "None" option
                 DropdownMenuItem(
                     text = {
                         Text(
-                            text = "None",
+                            text = noneLabel,
                             style = if (selected == null) MaterialTheme.typography.bodyLarge
                             else MaterialTheme.typography.bodyMedium,
                         )
@@ -1525,7 +1561,7 @@ private fun ApiKeyField(
             modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
         )
         Text(
-            text = "Stored on this device and saved when you leave the field",
+            text = stringResource(R.string.settings_api_key_saved_hint),
             style = MaterialTheme.typography.labelSmall,
             color = NimbusTextTertiary,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
@@ -1572,7 +1608,7 @@ private fun ApiKeyField(
                 ) {
                     if (text.isEmpty()) {
                         Text(
-                            text = "Enter API key...",
+                            text = stringResource(R.string.settings_enter_api_key),
                             style = MaterialTheme.typography.bodyMedium,
                             color = NimbusTextTertiary,
                         )
@@ -1606,7 +1642,7 @@ private fun IconPackSelector(
 ) {
     if (packs.isEmpty()) {
         Text(
-            text = "No icon packs installed. Place packs in assets/iconpacks/ or install an app with the com.sysadmindoc.nimbus.ICON_PACK intent.",
+            text = stringResource(R.string.settings_no_icon_packs),
             style = MaterialTheme.typography.bodySmall,
             color = NimbusTextTertiary,
             modifier = Modifier.padding(start = 40.dp, top = 4.dp, end = 16.dp),
@@ -1616,7 +1652,7 @@ private fun IconPackSelector(
 
     Column(modifier = Modifier.padding(start = 24.dp, top = 4.dp)) {
         Text(
-            text = "Select Icon Pack",
+            text = stringResource(R.string.settings_select_icon_pack),
             style = MaterialTheme.typography.bodySmall,
             color = NimbusTextSecondary,
             modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
@@ -1624,7 +1660,7 @@ private fun IconPackSelector(
         packs.forEach { pack ->
             SettingRadio(
                 label = pack.name,
-                sublabel = if (pack.author.isNotBlank()) "by ${pack.author}" else null,
+                sublabel = if (pack.author.isNotBlank()) stringResource(R.string.settings_icon_pack_by, pack.author) else null,
                 selected = selectedPackId == pack.id,
                 onClick = { onPackSelected(pack.id) },
             )
