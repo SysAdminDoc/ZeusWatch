@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.util
 
+import android.content.Context
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CustomAlertMetric
 import com.sysadmindoc.nimbus.data.model.CustomAlertOperator
 import com.sysadmindoc.nimbus.data.model.CustomAlertRule
@@ -63,6 +65,7 @@ internal fun evaluateCustomAlertRules(
  * display units. Used as the notification body.
  */
 internal fun formatTriggeredAlert(
+    context: Context,
     triggered: TriggeredCustomAlert,
     settings: NimbusSettings,
 ): Pair<String, String> {
@@ -73,10 +76,22 @@ internal fun formatTriggeredAlert(
 
     val observedFmt = formatWithPrecision(observed, rule.metric)
     val thresholdFmt = formatWithPrecision(threshold, rule.metric)
+    val thresholdText = "$thresholdFmt$unitLabel"
+    val observedText = "$observedFmt$unitLabel"
 
-    val title = "${rule.metric.label} ${rule.operator.symbol} ${thresholdFmt}${unitLabel}"
-    val body = "${rule.metric.summary} ${rule.operator.label} your threshold " +
-        "(${thresholdFmt}${unitLabel}). Now forecasting ${observedFmt}${unitLabel}."
+    val title = context.getString(
+        R.string.custom_alert_notification_title,
+        context.customAlertMetricLabel(rule.metric),
+        rule.operator.symbol,
+        thresholdText,
+    )
+    val body = context.getString(
+        R.string.custom_alert_notification_body,
+        context.customAlertMetricSummary(rule.metric),
+        context.customAlertOperatorLabel(rule.operator),
+        thresholdText,
+        observedText,
+    )
     return title to body
 }
 
