@@ -29,8 +29,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.component.LocalAdaptiveLayout
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -94,7 +96,7 @@ fun ShimmerLoadingSkeleton(modifier: Modifier = Modifier) {
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             Text(
-                text = "Refreshing forecast",
+                text = stringResource(R.string.loading_refreshing_forecast),
                 style = MaterialTheme.typography.labelMedium,
                 color = NimbusTextSecondary,
             )
