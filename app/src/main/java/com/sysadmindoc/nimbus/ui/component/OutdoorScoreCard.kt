@@ -24,6 +24,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -31,8 +32,6 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
-import com.sysadmindoc.nimbus.util.AccessibilityHelper
-import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
  * Outdoor activity suitability score card.
@@ -48,7 +47,8 @@ fun OutdoorScoreCard(
     uvIndex: Double = 3.0,
     precipProbability: Int = 0,
 ) {
-    val label = WeatherFormatter.outdoorScoreLabel(score)
+    val label = stringResource(outdoorScoreLabelRes(score))
+    val description = stringResource(outdoorScoreDescriptionRes(score))
     val scoreColor = when {
         score >= 80 -> Color(0xFF4CAF50)
         score >= 60 -> Color(0xFF8BC34A)
@@ -56,20 +56,27 @@ fun OutdoorScoreCard(
         score >= 20 -> Color(0xFFFF5722)
         else -> Color(0xFFF44336)
     }
+    val tempScore = factorScore(tempCelsius, 15.0, 25.0, 5.0, 35.0)
+    val windScore = (100 - (windKmh / 50.0 * 100).toInt()).coerceIn(0, 100)
+    val rainScore = (100 - precipProbability).coerceIn(0, 100)
+    val uvScore = (100 - (uvIndex / 11.0 * 100).toInt()).coerceIn(0, 100)
+    val humidityScore = factorScore(humidity.toDouble(), 30.0, 60.0, 10.0, 85.0)
     val factors = listOf(
-        "Temp" to factorScore(tempCelsius, 15.0, 25.0, 5.0, 35.0),
-        "Wind" to (100 - (windKmh / 50.0 * 100).toInt()).coerceIn(0, 100),
-        "Rain" to (100 - precipProbability).coerceIn(0, 100),
-        "UV" to (100 - (uvIndex / 11.0 * 100).toInt()).coerceIn(0, 100),
-        "Humidity" to factorScore(humidity.toDouble(), 30.0, 60.0, 10.0, 85.0),
+        stringResource(R.string.outdoor_factor_temp) to tempScore,
+        stringResource(R.string.outdoor_factor_wind) to windScore,
+        stringResource(R.string.outdoor_factor_rain) to rainScore,
+        stringResource(R.string.outdoor_factor_uv) to uvScore,
+        stringResource(R.string.outdoor_factor_humidity) to humidityScore,
     )
-    val semanticSummary = AccessibilityHelper.outdoorScore(
-        score = score,
-        tempCelsius = tempCelsius,
-        humidity = humidity,
-        windKmh = windKmh,
-        uvIndex = uvIndex,
-        precipProbability = precipProbability,
+    val semanticSummary = stringResource(
+        R.string.outdoor_score_semantics,
+        score,
+        label,
+        tempScore,
+        windScore,
+        rainScore,
+        uvScore,
+        humidityScore,
     )
 
     WeatherCard(
@@ -131,13 +138,7 @@ fun OutdoorScoreCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = when {
-                        score >= 80 -> "Great conditions for outdoor activities"
-                        score >= 60 -> "Good conditions for most activities"
-                        score >= 40 -> "Consider indoor alternatives"
-                        score >= 20 -> "Outdoor activities not recommended"
-                        else -> "Stay indoors if possible"
-                    },
+                    text = description,
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                 )
@@ -150,6 +151,22 @@ fun OutdoorScoreCard(
             FactorBar(name = name, value = value)
         }
     }
+}
+
+private fun outdoorScoreLabelRes(score: Int): Int = when {
+    score >= 80 -> R.string.outdoor_score_excellent
+    score >= 60 -> R.string.outdoor_score_good
+    score >= 40 -> R.string.outdoor_score_fair
+    score >= 20 -> R.string.outdoor_score_poor
+    else -> R.string.outdoor_score_stay_inside
+}
+
+private fun outdoorScoreDescriptionRes(score: Int): Int = when {
+    score >= 80 -> R.string.outdoor_desc_great
+    score >= 60 -> R.string.outdoor_desc_good
+    score >= 40 -> R.string.outdoor_desc_indoor
+    score >= 20 -> R.string.outdoor_desc_not_recommended
+    else -> R.string.outdoor_desc_stay_inside
 }
 
 private fun factorScore(value: Double, idealLow: Double, idealHigh: Double, okLow: Double, okHigh: Double): Int {
