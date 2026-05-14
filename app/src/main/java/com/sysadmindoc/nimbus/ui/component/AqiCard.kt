@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,12 +30,17 @@ import com.sysadmindoc.nimbus.data.model.HourlyAqi
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.adviceRes
+import com.sysadmindoc.nimbus.util.labelRes
 
 @Composable
 fun AqiCard(
     data: AirQualityData,
     modifier: Modifier = Modifier,
 ) {
+    val aqiLevelLabel = stringResource(data.aqiLevel.labelRes)
+    val aqiAdvice = stringResource(data.aqiLevel.adviceRes)
+
     WeatherCard(titleRes = R.string.card_type_air_quality, modifier = modifier) {
 
         // Gauge + info row
@@ -53,19 +59,19 @@ fun AqiCard(
             // Level label + advice
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    data.aqiLevel.label,
+                    aqiLevelLabel,
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = data.aqiLevel.color,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    data.aqiLevel.advice,
+                    aqiAdvice,
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "EU AQI: ${data.europeanAqi}",
+                    stringResource(R.string.aqi_eu_value, data.europeanAqi),
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusTextTertiary,
                 )
@@ -98,7 +104,7 @@ fun AqiCard(
         if (data.hourlyAqi.isNotEmpty()) {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                "24h Trend",
+                stringResource(R.string.aqi_24h_trend),
                 style = MaterialTheme.typography.labelSmall,
                 color = NimbusTextTertiary,
             )
@@ -116,7 +122,7 @@ fun AqiCard(
         if (data.dailyAqi.size > 1) {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                "5-Day Forecast",
+                stringResource(R.string.aqi_five_day_forecast),
                 style = MaterialTheme.typography.labelSmall,
                 color = NimbusTextTertiary,
             )
@@ -151,6 +157,11 @@ private fun PollutantChip(label: String, value: String, unit: String, isWorst: B
 
 @Composable
 private fun HourlyAqiChip(hour: HourlyAqi) {
+    val hourLabel = when (hour.hour) {
+        "Now" -> stringResource(R.string.common_now)
+        else -> hour.hour
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -158,18 +169,24 @@ private fun HourlyAqiChip(hour: HourlyAqi) {
             .background(hour.level.color.copy(alpha = 0.15f))
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        Text(hour.hour, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp), color = NimbusTextTertiary)
+        Text(hourLabel, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp), color = NimbusTextTertiary)
         Text("${hour.aqi}", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium), color = hour.level.color)
     }
 }
 
 @Composable
 private fun DailyAqiBar(day: com.sysadmindoc.nimbus.data.model.DailyAqi) {
+    val dayLabel = when (day.dayLabel) {
+        "Today" -> stringResource(R.string.today)
+        "Tomorrow" -> stringResource(R.string.common_tomorrow)
+        else -> day.dayLabel
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(48.dp),
     ) {
-        Text(day.dayLabel, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp), color = NimbusTextTertiary)
+        Text(dayLabel, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp), color = NimbusTextTertiary)
         Spacer(modifier = Modifier.height(4.dp))
         // Vertical bar proportional to AQI (max 300 for scale)
         val barHeight = (day.maxAqi.coerceIn(0, 300) / 300f * 40f).coerceAtLeast(4f)
