@@ -8,12 +8,14 @@ All notable changes to Nimbus Weather are documented here.
 - Started the localization roadmap by moving core navigation, Locations, Compare, and Wear OS state copy into Android string resources, with an initial Spanish resource set for those high-traffic surfaces.
 - Extended the localization foundation through Settings, including category cards, section headers, control labels, helper copy, source selectors, API-key guidance, and accessibility state descriptions.
 - Localized home-screen widget chrome, including widget descriptions, Glance empty states, section labels, freshness announcements, setup flow copy, and compact Today/Tomorrow day labels.
+- Localized Custom Alerts screen/editor copy, rule status semantics, notification channel labels, and custom-rule notification text.
 
 ### Verified
 - `./gradlew.bat :app:compileStandardDebugKotlin :wear:compileDebugKotlin --console=plain`
 - `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.ui.screen.locations.LocationsScreenLogicTest --console=plain`
 - `./gradlew.bat :app:compileStandardDebugKotlin --console=plain`
 - `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.widget.WidgetRefreshWorkerLogicTest --tests com.sysadmindoc.nimbus.widget.WidgetConfigLogicTest --console=plain`
+- `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.util.AlertCheckWorkerTest --console=plain`
 
 ## [1.20.3] - 2026-05-13
 

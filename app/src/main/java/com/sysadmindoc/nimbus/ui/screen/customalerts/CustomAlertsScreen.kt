@@ -56,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -69,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CustomAlertMetric
 import com.sysadmindoc.nimbus.data.model.CustomAlertOperator
 import com.sysadmindoc.nimbus.data.model.CustomAlertRule
@@ -87,6 +89,9 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.convertForDisplay
 import com.sysadmindoc.nimbus.util.displayUnitLabel
+import com.sysadmindoc.nimbus.util.labelRes
+import com.sysadmindoc.nimbus.util.summaryRes
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,15 +101,16 @@ fun CustomAlertsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<EditorState?>(null) }
+    val addCustomAlertDescription = stringResource(R.string.custom_alerts_add_cd)
 
     PredictiveBackScaffold(onBack = onBack) {
         Scaffold(
             containerColor = NimbusNavyDark,
             topBar = {
                 ScreenHeader(
-                    title = "Custom Alerts",
-                    subtitle = "Create personal forecast triggers for heat, cold, wind, rain, and UV.",
-                    eyebrow = "Rule-based alerts",
+                    title = stringResource(R.string.custom_alerts_title),
+                    subtitle = stringResource(R.string.custom_alerts_subtitle),
+                    eyebrow = stringResource(R.string.custom_alerts_eyebrow),
                     onBack = onBack,
                     modifier = Modifier
                         .windowInsetsPadding(WindowInsets.safeDrawing)
@@ -118,7 +124,7 @@ fun CustomAlertsScreen(
                     contentColor = NimbusTextPrimary,
                     modifier = Modifier
                         .navigationBarsPadding()
-                        .semantics { contentDescription = "Add custom alert" },
+                        .semantics { contentDescription = addCustomAlertDescription },
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = null)
                 }
@@ -209,10 +215,10 @@ private fun EmptyState(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         PremiumMessageCard(
-            title = "No custom alerts yet",
-            message = "Create a rule for heat, low temperatures, heavy rain, strong wind, or high UV so ZeusWatch can watch the forecast for you.",
+            title = stringResource(R.string.custom_alerts_empty_title),
+            message = stringResource(R.string.custom_alerts_empty_message),
             icon = Icons.Filled.Notifications,
-            badgeText = "Use the + button to create your first alert",
+            badgeText = stringResource(R.string.custom_alerts_empty_badge),
         )
     }
 }
@@ -225,9 +231,23 @@ private fun RuleRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val ruleLabel = "${rule.metric.label} ${rule.operator.symbol} ${formatThreshold(rule, settings)}"
-    val ruleDescription = "${rule.metric.label} ${rule.operator.label} ${formatThreshold(rule, settings)}"
-    val ruleState = if (rule.enabled) "active" else "paused"
+    val metricLabel = stringResource(rule.metric.labelRes)
+    val metricSummary = stringResource(rule.metric.summaryRes)
+    val operatorLabel = stringResource(rule.operator.labelRes)
+    val threshold = formatThreshold(rule, settings)
+    val ruleLabel = "$metricLabel ${rule.operator.symbol} $threshold"
+    val ruleDescription = "$metricLabel $operatorLabel $threshold"
+    val ruleState = if (rule.enabled) {
+        stringResource(R.string.custom_alerts_state_active)
+    } else {
+        stringResource(R.string.custom_alerts_state_paused)
+    }
+    val editDescription = stringResource(R.string.custom_alerts_edit_cd, ruleState, ruleDescription)
+    val pauseDescription = stringResource(R.string.custom_alerts_pause_cd, ruleDescription)
+    val resumeDescription = stringResource(R.string.custom_alerts_resume_cd, ruleDescription)
+    val deleteDescription = stringResource(R.string.custom_alerts_delete_cd, ruleDescription)
+    val onDescription = stringResource(R.string.common_on)
+    val offDescription = stringResource(R.string.common_off)
 
     Row(
         modifier = Modifier
@@ -251,14 +271,18 @@ private fun RuleRow(
                 role = Role.Button,
             )
             .semantics(mergeDescendants = false) {
-                contentDescription = "Edit $ruleState custom alert, $ruleDescription"
+                contentDescription = editDescription
             }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             AlertHintPill(
-                text = if (rule.enabled) "Alert active" else "Paused",
+                text = if (rule.enabled) {
+                    stringResource(R.string.custom_alerts_status_active)
+                } else {
+                    stringResource(R.string.custom_alerts_status_paused)
+                },
                 tint = if (rule.enabled) NimbusBlueAccent else NimbusTextTertiary,
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -268,7 +292,7 @@ private fun RuleRow(
                 color = if (rule.enabled) NimbusTextPrimary else NimbusTextTertiary,
             )
             Text(
-                text = rule.metric.summary,
+                text = metricSummary,
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextTertiary,
             )
@@ -278,11 +302,11 @@ private fun RuleRow(
             onCheckedChange = { onToggle() },
             modifier = Modifier.semantics {
                 contentDescription = if (rule.enabled) {
-                    "Pause $ruleDescription alert"
+                    pauseDescription
                 } else {
-                    "Resume $ruleDescription alert"
+                    resumeDescription
                 }
-                stateDescription = if (rule.enabled) "On" else "Off"
+                stateDescription = if (rule.enabled) onDescription else offDescription
             },
         )
         Box(
@@ -295,7 +319,7 @@ private fun RuleRow(
                     onClick = onDelete,
                     role = Role.Button,
                 )
-                .semantics { contentDescription = "Delete $ruleDescription alert" },
+                .semantics { contentDescription = deleteDescription },
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -340,6 +364,24 @@ private fun RuleEditor(
     var enabled by remember { mutableStateOf(initial.enabled) }
     var previousMetric by remember { mutableStateOf(initial.metric) }
     val parsedThreshold = thresholdText.toDoubleOrNull()
+    val metricLabel = stringResource(metric.labelRes)
+    val metricSummary = stringResource(metric.summaryRes)
+    val operatorLabel = stringResource(operator.labelRes)
+    val displayUnit = displayUnitLabel(metric, settings)
+    val thresholdUnitLabel = displayUnit.trim().ifBlank { stringResource(R.string.custom_alerts_threshold_uv) }
+    val enabledStateDescription = if (enabled) {
+        stringResource(R.string.common_on)
+    } else {
+        stringResource(R.string.common_off)
+    }
+    val enabledContentDescription = stringResource(
+        R.string.custom_alerts_enabled_cd,
+        if (enabled) {
+            stringResource(R.string.custom_alerts_enabled_notifications_on)
+        } else {
+            stringResource(R.string.custom_alerts_enabled_notifications_paused)
+        },
+    )
 
     androidx.compose.runtime.LaunchedEffect(metric) {
         if (metric != previousMetric) {
@@ -358,34 +400,52 @@ private fun RuleEditor(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            text = if (isNew) "New custom alert" else "Edit custom alert",
+            text = if (isNew) {
+                stringResource(R.string.custom_alerts_new_title)
+            } else {
+                stringResource(R.string.custom_alerts_edit_title)
+            },
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
             color = NimbusTextPrimary,
         )
         Text(
-            text = "ZeusWatch checks this rule against the forecast and only notifies you when the threshold is met.",
+            text = stringResource(R.string.custom_alerts_editor_help),
             style = MaterialTheme.typography.bodySmall,
             color = NimbusTextSecondary,
         )
 
         // Metric picker
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Metric", style = MaterialTheme.typography.labelMedium, color = NimbusTextSecondary)
+            Text(
+                stringResource(R.string.custom_alerts_metric),
+                style = MaterialTheme.typography.labelMedium,
+                color = NimbusTextSecondary,
+            )
             ChipSelector(
                 options = CustomAlertMetric.entries,
                 selected = metric,
-                label = { it.label },
+                label = { stringResource(it.labelRes) },
                 onSelect = { metric = it },
             )
         }
 
         // Operator picker
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Direction", style = MaterialTheme.typography.labelMedium, color = NimbusTextSecondary)
+            Text(
+                stringResource(R.string.custom_alerts_direction),
+                style = MaterialTheme.typography.labelMedium,
+                color = NimbusTextSecondary,
+            )
             ChipSelector(
                 options = CustomAlertOperator.entries,
                 selected = operator,
-                label = { "${it.symbol} ${it.label}" },
+                label = { option ->
+                    stringResource(
+                        R.string.custom_alerts_operator_chip,
+                        option.symbol,
+                        stringResource(option.labelRes),
+                    )
+                },
                 onSelect = { operator = it },
             )
         }
@@ -393,12 +453,12 @@ private fun RuleEditor(
         // Threshold input
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                "Threshold (${displayUnitLabel(metric, settings).trim().ifBlank { "UV" }})",
+                stringResource(R.string.custom_alerts_threshold_label, thresholdUnitLabel),
                 style = MaterialTheme.typography.labelMedium,
                 color = NimbusTextSecondary,
             )
             Text(
-                text = metric.summary,
+                text = metricSummary,
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextTertiary,
             )
@@ -428,13 +488,19 @@ private fun RuleEditor(
             )
             if (parsedThreshold == null) {
                 Text(
-                    text = "Enter a numeric threshold to save this alert.",
+                    text = stringResource(R.string.custom_alerts_invalid_threshold),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFFFFB4AB),
                 )
             } else {
                 AlertHintPill(
-                    text = "This alert will trigger when ${metric.label.lowercase()} ${operator.label} $thresholdText${displayUnitLabel(metric, settings)}",
+                    text = stringResource(
+                        R.string.custom_alerts_trigger_preview,
+                        metricLabel.lowercase(Locale.getDefault()),
+                        operatorLabel,
+                        thresholdText,
+                        displayUnit,
+                    ),
                 )
             }
         }
@@ -463,17 +529,25 @@ private fun RuleEditor(
                     role = Role.Switch,
                 )
                 .semantics(mergeDescendants = true) {
-                    contentDescription = "Enabled, ${if (enabled) "this rule can send notifications" else "notifications are paused"}"
-                    stateDescription = if (enabled) "On" else "Off"
+                    contentDescription = enabledContentDescription
+                    stateDescription = enabledStateDescription
                 }
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Enabled", color = NimbusTextPrimary, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(R.string.custom_alerts_enabled),
+                    color = NimbusTextPrimary,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = if (enabled) "This rule can send notifications." else "Saved, but notifications are paused.",
+                    text = if (enabled) {
+                        stringResource(R.string.custom_alerts_enabled_desc_on)
+                    } else {
+                        stringResource(R.string.custom_alerts_enabled_desc_off)
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                 )
@@ -491,7 +565,7 @@ private fun RuleEditor(
             horizontalArrangement = Arrangement.End,
         ) {
             TextButton(onClick = onCancel) {
-                Text("Cancel", color = NimbusTextSecondary)
+                Text(stringResource(R.string.common_cancel), color = NimbusTextSecondary)
             }
             Spacer(modifier = Modifier.width(8.dp))
             TextButton(
@@ -501,7 +575,7 @@ private fun RuleEditor(
                     onSave(metric, operator, parsed, enabled)
                 },
             ) {
-                Text("Save", color = NimbusBlueAccent, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.common_save), color = NimbusBlueAccent, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -513,9 +587,12 @@ private fun RuleEditor(
 private fun <T> ChipSelector(
     options: List<T>,
     selected: T,
-    label: (T) -> String,
+    label: @Composable (T) -> String,
     onSelect: (T) -> Unit,
 ) {
+    val selectedDescription = stringResource(R.string.common_selected)
+    val notSelectedDescription = stringResource(R.string.common_not_selected)
+
     // Simple flow-wrapping row via a LazyColumn is overkill; 2 enums with a
     // handful of entries fit on one or two lines of horizontally-scrolling chips.
     Row(
@@ -557,7 +634,7 @@ private fun <T> ChipSelector(
                     )
                     .semantics(mergeDescendants = true) {
                         contentDescription = optionLabel
-                        stateDescription = if (isSelected) "Selected" else "Not selected"
+                        stateDescription = if (isSelected) selectedDescription else notSelectedDescription
                     }
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             ) {
@@ -610,13 +687,17 @@ private fun CustomAlertsIntroCard(
         Spacer(modifier = Modifier.width(12.dp))
         Column {
             Text(
-                text = "Rule center",
+                text = stringResource(R.string.custom_alerts_rule_center),
                 style = MaterialTheme.typography.labelLarge,
                 color = NimbusTextPrimary,
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "$ruleCount custom alert${if (ruleCount == 1) "" else "s"} ready to watch the forecast.",
+                text = if (ruleCount == 1) {
+                    stringResource(R.string.custom_alerts_rule_count_singular)
+                } else {
+                    stringResource(R.string.custom_alerts_rule_count_plural, ruleCount)
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
             )

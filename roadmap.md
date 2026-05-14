@@ -35,7 +35,8 @@
   - [x] Added resource-backed strings for core bottom navigation, Locations, Compare, and Wear OS loading/empty/header/status copy, plus an initial Spanish `values-es` set for those high-traffic surfaces.
   - [x] Extracted Settings screen chrome, category cards, section headers, control labels, helper copy, source selectors, API-key guidance, and accessibility state descriptions into resources.
   - [x] Extracted home-screen widget descriptions, Glance widget labels, empty states, freshness announcements, setup copy, and compact day labels into resources.
-  - [ ] Continue extraction across Today card copy, notifications, dialogs, and remaining data-source/card enum labels before marking this item closed.
+  - [x] Extracted Custom Alerts screen/editor copy, rule state semantics, custom-rule notification text, and notification channel labels/descriptions into resources.
+  - [ ] Continue extraction across Today card copy, remaining dialogs, and remaining data-source/card enum labels before marking this item closed.
 
 - **[CLOSED v1.18.0] ~~Accessibility gaps on Canvas-drawn elements~~**
   v1.17.0 added `mergeDescendants` `contentDescription` + `liveRegion` semantics to 5 Canvas-heavy cards: AqiGauge, TemperatureGraph, PressureTrendCard, MoonPhaseCard, CloudCoverCard. v1.18.0 extends chart/gauge summaries to wind compass, sun ephemeris arc, wind trend, visibility scale, precipitation chart, humidity card, UV index bar, nowcast card, on-this-day card, outdoor score card, and sunshine duration card, with focused `AccessibilityHelper` coverage so TalkBack copy stays regression-tested. v1.18.0 also adds Compose accessibility checks to the instrumented UI tests and a GitHub Actions emulator job running `connectedStandardDebugAndroidTest` on API 35. Decorative particle canvases remain intentionally silent.
