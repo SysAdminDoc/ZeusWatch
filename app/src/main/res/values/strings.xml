@@ -210,6 +210,15 @@
     <string name="current_metric_high">High</string>
     <string name="current_metric_low">Low</string>
     <string name="current_metric_trend">Trend</string>
+    <string name="current_conditions_label">Current Conditions</string>
+    <string name="current_daylight">DAYLIGHT</string>
+    <string name="current_overnight">OVERNIGHT</string>
+    <string name="current_feels_like_with_reason">Feels like %1$s • %2$s</string>
+    <string name="current_wind_meta">Wind %1$s</string>
+    <string name="current_humidity_meta">Humidity %1$d%%</string>
+    <string name="current_uv_meta">UV %1$s</string>
+    <string name="current_trend_warmer">%1$d° warmer</string>
+    <string name="current_trend_cooler">%1$d° cooler</string>
     <string name="nowcast_legend_light">Light</string>
     <string name="nowcast_legend_heavy">Heavy</string>
     <string name="snowfall_per_hour">per hour</string>
@@ -289,6 +298,12 @@
     <string name="forecast_hourly_cloud_elevated">Cloud cover stays elevated for a good part of the day.</string>
     <string name="forecast_hourly_cloud_overcast">Expect mostly overcast skies through this stretch.</string>
     <string name="forecast_hourly_humidity_range">Humidity runs between %1$d%% and %2$d%% over the next %3$d hours.</string>
+    <string name="details_intro">A fast read on moisture, light, pressure, and visibility so the rest of the forecast is easier to act on.</string>
+    <string name="details_snow_depth">Snow Depth</string>
+    <string name="summary_chip_live_conditions">Live conditions</string>
+    <string name="summary_chip_next_swing">Next swing</string>
+    <string name="summary_footer">Updated from current conditions and the near-term daily outlook.</string>
+    <string name="loading_refreshing_forecast">Refreshing forecast</string>
 
     <!-- Current Conditions -->
     <string name="feels_like">Feels like %1$s</string>

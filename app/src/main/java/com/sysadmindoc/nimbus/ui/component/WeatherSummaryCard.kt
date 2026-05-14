@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
@@ -43,8 +44,8 @@ fun WeatherSummaryCard(
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            BriefChip("Live conditions")
-            BriefChip("Next swing")
+            BriefChip(stringResource(R.string.summary_chip_live_conditions))
+            BriefChip(stringResource(R.string.summary_chip_next_swing))
         }
         Spacer(modifier = Modifier.height(10.dp))
         Text(
@@ -63,7 +64,7 @@ fun WeatherSummaryCard(
             )
         }
         Text(
-            text = "Updated from current conditions and the near-term daily outlook.",
+            text = stringResource(R.string.summary_footer),
             style = MaterialTheme.typography.bodySmall,
             color = NimbusTextTertiary,
             modifier = Modifier.padding(top = 12.dp),

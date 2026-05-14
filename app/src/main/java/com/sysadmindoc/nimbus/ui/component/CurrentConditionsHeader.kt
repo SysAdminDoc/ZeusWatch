@@ -54,26 +54,34 @@ fun CurrentConditionsHeader(
     val feelsLikeReason = WeatherFormatter.feelsLikeReason(
         current.temperature, current.feelsLike, current.windSpeed, current.humidity,
     )
-    val feelsLikeText = buildString {
-        append("Feels like ${WeatherFormatter.formatTemperature(current.feelsLike, s)}")
-        if (feelsLikeReason != null) append(" • $feelsLikeReason")
+    val formattedFeelsLike = WeatherFormatter.formatTemperature(current.feelsLike, s)
+    val feelsLikeText = if (feelsLikeReason != null) {
+        stringResource(R.string.current_feels_like_with_reason, formattedFeelsLike, feelsLikeReason)
+    } else {
+        stringResource(R.string.feels_like, formattedFeelsLike)
     }
-    val secondaryMeta = buildString {
-        append("Wind ${WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s)}")
-        append(" • Humidity ${current.humidity}%")
+    val secondaryMeta = buildList {
+        add(stringResource(R.string.current_wind_meta, WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s)))
+        add(stringResource(R.string.current_humidity_meta, current.humidity))
         if (current.uvIndex > 0) {
-            append(" • UV ${WeatherFormatter.formatUvIndex(current.uvIndex)}")
+            add(stringResource(R.string.current_uv_meta, WeatherFormatter.formatUvIndex(current.uvIndex)))
         }
-    }
-    val comparisonLabel = yesterdayHigh?.let {
+    }.joinToString(" • ")
+    val comparisonLabel = if (yesterdayHigh != null) {
         val todayConverted = WeatherFormatter.convertedTemp(current.dailyHigh, s)
-        val yesterdayConverted = WeatherFormatter.convertedTemp(it, s)
+        val yesterdayConverted = WeatherFormatter.convertedTemp(yesterdayHigh, s)
         val diff = (todayConverted - yesterdayConverted).roundToInt()
         if (abs(diff) >= 2) {
-            if (diff > 0) "${diff}° warmer" else "${abs(diff)}° cooler"
+            if (diff > 0) {
+                stringResource(R.string.current_trend_warmer, diff)
+            } else {
+                stringResource(R.string.current_trend_cooler, abs(diff))
+            }
         } else {
             null
         }
+    } else {
+        null
     }
     val comparisonColor = yesterdayHigh?.let {
         val todayConverted = WeatherFormatter.convertedTemp(current.dailyHigh, s)
@@ -116,7 +124,13 @@ fun CurrentConditionsHeader(
                 },
             )
             Spacer(modifier = Modifier.width(10.dp))
-            HeroPill(text = if (current.isDay) "DAYLIGHT" else "OVERNIGHT")
+            HeroPill(
+                text = if (current.isDay) {
+                    stringResource(R.string.current_daylight)
+                } else {
+                    stringResource(R.string.current_overnight)
+                },
+            )
         }
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -130,7 +144,7 @@ fun CurrentConditionsHeader(
                 modifier = Modifier.weight(1f),
             ) {
                 Text(
-                    text = "Current Conditions",
+                    text = stringResource(R.string.current_conditions_label),
                     style = MaterialTheme.typography.labelMedium,
                     color = NimbusBlueAccent,
                 )

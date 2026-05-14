@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
@@ -51,35 +52,37 @@ fun WeatherDetailsGrid(
         modifier = modifier,
     ) {
         Text(
-            text = "A fast read on moisture, light, pressure, and visibility so the rest of the forecast is easier to act on.",
+            text = stringResource(R.string.details_intro),
             style = MaterialTheme.typography.bodySmall,
             color = NimbusTextSecondary,
         )
         Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
-            left = DetailItem(Icons.Filled.WaterDrop, "Humidity", WeatherFormatter.formatHumidity(current.humidity)),
+            left = DetailItem(Icons.Filled.WaterDrop, stringResource(R.string.humidity), WeatherFormatter.formatHumidity(current.humidity)),
             right = DetailItem(
-                Icons.Outlined.Air, "Wind",
+                Icons.Outlined.Air, stringResource(R.string.wind),
                 WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s),
-                subtitle = current.windGusts?.let { "Gusts ${WeatherFormatter.formatWindSpeed(it, s)}" },
+                subtitle = current.windGusts?.let {
+                    stringResource(R.string.forecast_gusts_value, WeatherFormatter.formatWindSpeed(it, s))
+                },
             ),
         )
         Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
-            left = DetailItem(Icons.Outlined.WbSunny, "UV Index", WeatherFormatter.formatUvIndex(current.uvIndex), WeatherFormatter.uvDescription(current.uvIndex)),
+            left = DetailItem(Icons.Outlined.WbSunny, stringResource(R.string.card_type_uv_index), WeatherFormatter.formatUvIndex(current.uvIndex), WeatherFormatter.uvDescription(current.uvIndex)),
             right = DetailItem(
-                Icons.Filled.Compress, "Pressure",
+                Icons.Filled.Compress, stringResource(R.string.pressure),
                 WeatherFormatter.formatPressure(current.pressure, s),
                 subtitle = WeatherFormatter.pressureTrend(hourly),
             ),
         )
         Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
-            left = DetailItem(Icons.Filled.Visibility, "Visibility", WeatherFormatter.formatVisibility(current.visibility, s)),
+            left = DetailItem(Icons.Filled.Visibility, stringResource(R.string.visibility), WeatherFormatter.formatVisibility(current.visibility, s)),
             right = run {
                 val dewComfort = current.dewPoint?.let { WeatherFormatter.dewPointComfort(it) }
                 DetailItem(
-                    Icons.Outlined.Thermostat, "Dew Point",
+                    Icons.Outlined.Thermostat, stringResource(R.string.dew_point),
                     if (current.dewPoint != null) WeatherFormatter.formatDewPoint(current.dewPoint, s) else "--",
                     subtitle = dewComfort,
                     subtitleColor = current.dewPoint?.let { dewPointComfortColor(it) },
@@ -88,20 +91,20 @@ fun WeatherDetailsGrid(
         )
         Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
-            left = DetailItem(Icons.Outlined.WbSunny, "Sunrise", WeatherFormatter.formatTime(current.sunrise, s)),
-            right = DetailItem(Icons.Outlined.WbTwilight, "Sunset", WeatherFormatter.formatTime(current.sunset, s)),
+            left = DetailItem(Icons.Outlined.WbSunny, stringResource(R.string.sunrise), WeatherFormatter.formatTime(current.sunrise, s)),
+            right = DetailItem(Icons.Outlined.WbTwilight, stringResource(R.string.sunset), WeatherFormatter.formatTime(current.sunset, s)),
         )
         Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
-            left = DetailItem(Icons.Outlined.Cloud, "Cloud Cover", WeatherFormatter.formatCloudCover(current.cloudCover)),
-            right = DetailItem(Icons.Filled.WaterDrop, "Precipitation", WeatherFormatter.formatPrecipitation(current.precipitation, s)),
+            left = DetailItem(Icons.Outlined.Cloud, stringResource(R.string.card_type_cloud_cover), WeatherFormatter.formatCloudCover(current.cloudCover)),
+            right = DetailItem(Icons.Filled.WaterDrop, stringResource(R.string.precipitation), WeatherFormatter.formatPrecipitation(current.precipitation, s)),
         )
         // Snowfall row (shown when snow is present)
         if ((current.snowfall ?: 0.0) > 0 || (current.snowDepth ?: 0.0) > 0) {
             Spacer(modifier = Modifier.height(16.dp))
             DetailRow(
-                left = DetailItem(Icons.Outlined.AcUnit, "Snowfall", current.snowfall?.let { WeatherFormatter.formatSnowfall(it, s) } ?: "--"),
-                right = DetailItem(Icons.Outlined.AcUnit, "Snow Depth", current.snowDepth?.let { WeatherFormatter.formatSnowDepth(it, s) } ?: "--"),
+                left = DetailItem(Icons.Outlined.AcUnit, stringResource(R.string.snowfall), current.snowfall?.let { WeatherFormatter.formatSnowfall(it, s) } ?: "--"),
+                right = DetailItem(Icons.Outlined.AcUnit, stringResource(R.string.details_snow_depth), current.snowDepth?.let { WeatherFormatter.formatSnowDepth(it, s) } ?: "--"),
             )
         }
     }

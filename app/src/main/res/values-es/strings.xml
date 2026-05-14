@@ -209,6 +209,15 @@
     <string name="current_metric_high">Maxima</string>
     <string name="current_metric_low">Minima</string>
     <string name="current_metric_trend">Tendencia</string>
+    <string name="current_conditions_label">Condiciones actuales</string>
+    <string name="current_daylight">DIA</string>
+    <string name="current_overnight">NOCHE</string>
+    <string name="current_feels_like_with_reason">Sensacion %1$s • %2$s</string>
+    <string name="current_wind_meta">Viento %1$s</string>
+    <string name="current_humidity_meta">Humedad %1$d%%</string>
+    <string name="current_uv_meta">UV %1$s</string>
+    <string name="current_trend_warmer">%1$d° mas calido</string>
+    <string name="current_trend_cooler">%1$d° mas fresco</string>
     <string name="nowcast_legend_light">Ligera</string>
     <string name="nowcast_legend_heavy">Fuerte</string>
     <string name="snowfall_per_hour">por hora</string>
@@ -288,6 +297,12 @@
     <string name="forecast_hourly_cloud_elevated">La nubosidad se mantiene elevada durante buena parte del dia.</string>
     <string name="forecast_hourly_cloud_overcast">Espera cielos mayormente cubiertos durante este tramo.</string>
     <string name="forecast_hourly_humidity_range">La humedad va de %1$d%% a %2$d%% en las proximas %3$d horas.</string>
+    <string name="details_intro">Una lectura rapida de humedad, luz, presion y visibilidad para entender mejor el resto del pronostico.</string>
+    <string name="details_snow_depth">Profundidad de nieve</string>
+    <string name="summary_chip_live_conditions">Condiciones en vivo</string>
+    <string name="summary_chip_next_swing">Proximo cambio</string>
+    <string name="summary_footer">Actualizado con las condiciones actuales y el pronostico diario cercano.</string>
+    <string name="loading_refreshing_forecast">Actualizando pronostico</string>
 
     <!-- Navigation -->
     <string name="nav_today">Hoy</string>
