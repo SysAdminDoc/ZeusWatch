@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ZeusWatch</string>
+    <string name="complication_label">Clima</string>
+    <string name="tile_label">Clima ZeusWatch</string>
+    <string name="retry">Reintentar</string>
+    <string name="wear_refreshing_forecast">Actualizando pronostico</string>
+    <string name="wear_refreshing_forecast_message">Obteniendo el clima mas reciente para tu lugar actual.</string>
+    <string name="wear_forecast_unavailable">Pronostico no disponible</string>
+    <string name="wear_daylight">De dia</string>
+    <string name="wear_overnight">Noche</string>
+    <string name="wear_high_low">Max %1$d\u00B0 \u2022 Min %2$d\u00B0</string>
+    <string name="wear_right_now">Ahora</string>
+    <string name="wear_data_source_phone">Telefono</string>
+    <string name="wear_data_source_watch">Reloj</string>
+    <string name="wear_tap_to_refresh">%1$s \u2022 %2$s \u2022 toca para actualizar</string>
+    <string name="wear_alert_count">%1$d alertas</string>
+    <string name="wear_no_hourly_forecast">Sin pronostico por hora</string>
+    <string name="wear_no_hourly_forecast_message">El detalle por hora aparecera despues de la proxima sincronizacion del telefono.</string>
+    <string name="wear_hourly_forecast">Pronostico por hora</string>
+    <string name="wear_hourly_subtitle">Temperatura y riesgo de lluvia para las proximas horas</string>
+    <string name="wear_no_daily_forecast">Sin pronostico diario</string>
+    <string name="wear_no_daily_forecast_message">El resumen diario aparecera despues de la proxima sincronizacion del telefono.</string>
+    <string name="wear_daily_forecast">Pronostico 7 dias</string>
+    <string name="wear_daily_subtitle">Maxima, minima y riesgo de lluvia de un vistazo</string>
+    <string name="wear_today">Hoy</string>
+    <string name="wear_tomorrow_short">Mañ.</string>
+    <string name="wear_no_active_alerts">Sin alertas activas</string>
+    <string name="wear_no_active_alerts_message">Todo esta claro por ahora. Las alertas severas apareceran aqui.</string>
+    <string name="wear_alerts_title">\u26A0\uFE0F Alertas (%1$d)</string>
+    <string name="wear_alerts_subtitle">Avisos meteorologicos activos</string>
+    <string name="wear_expires">Expira: %1$s</string>
+</resources>

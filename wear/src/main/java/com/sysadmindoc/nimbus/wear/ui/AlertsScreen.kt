@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -26,6 +27,7 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Text
+import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.data.WearAlertEntry
 
 private val SeverityExtreme = Color(0xFFD76363)
@@ -51,8 +53,8 @@ fun AlertsScreen(
             verticalArrangement = Arrangement.Center,
         ) {
             WearStateCard(
-                title = "No active alerts",
-                message = "You're clear right now. Any severe weather alerts will appear here.",
+                title = stringResource(R.string.wear_no_active_alerts),
+                message = stringResource(R.string.wear_no_active_alerts_message),
                 icon = "\u2705",
                 accent = WearSuccessAccent,
             )
@@ -67,7 +69,10 @@ fun AlertsScreen(
         state = listState,
     ) {
         item {
-            WearHeader(title = "\u26A0\uFE0F Alerts (${alerts.size})", subtitle = "Active weather advisories")
+            WearHeader(
+                title = stringResource(R.string.wear_alerts_title, alerts.size),
+                subtitle = stringResource(R.string.wear_alerts_subtitle),
+            )
         }
         items(alerts) { alert ->
             AlertRow(alert)
@@ -121,7 +126,7 @@ private fun AlertRow(alert: WearAlertEntry) {
         // Expires
         if (alert.expires.isNotBlank()) {
             Text(
-                text = "Expires: ${formatExpiry(alert.expires)}",
+                text = stringResource(R.string.wear_expires, formatExpiry(alert.expires)),
                 fontSize = 10.sp,
                 color = WearTextTertiary,
                 modifier = Modifier.padding(start = 14.dp, top = 1.dp),
