@@ -29,10 +29,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.component.WeatherIcon
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -83,7 +85,7 @@ fun HourlyTab(
         item {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                "Hourly Forecast",
+                stringResource(R.string.card_type_hourly_forecast),
                 style = MaterialTheme.typography.headlineLarge,
                 color = NimbusTextPrimary,
             )
@@ -109,8 +111,8 @@ fun HourlyTab(
             }
             stickyHeader(key = "header_$date") {
                 val dayLabel = when {
-                    referenceDate != null && date == referenceDate -> "Today"
-                    referenceDate != null && date == referenceDate.plusDays(1) -> "Tomorrow"
+                    referenceDate != null && date == referenceDate -> stringResource(R.string.common_today)
+                    referenceDate != null && date == referenceDate.plusDays(1) -> stringResource(R.string.common_tomorrow)
                     else -> date.format(dayFormatter)
                 }
                 HourlyDayHeader(dayLabel = dayLabel)
@@ -202,7 +204,7 @@ private fun HourlyRow(
             )
             if (hour.precipitationProbability > 0) {
                 Text(
-                    "${hour.precipitationProbability}% rain",
+                    stringResource(R.string.forecast_hourly_rain_chance, hour.precipitationProbability),
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusBlueAccent,
                 )
@@ -233,7 +235,7 @@ private fun HourlyRow(
             val feelsLike = hour.feelsLike
             if (feelsLike != null && kotlin.math.abs(feelsLike - hour.temperature) >= 3) {
                 Text(
-                    "Feels ${WeatherFormatter.formatTemperature(feelsLike, s)}",
+                    stringResource(R.string.feels_like, WeatherFormatter.formatTemperature(feelsLike, s)),
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusTextTertiary,
                 )
