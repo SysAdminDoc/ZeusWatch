@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -52,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.ui.component.LocalUnitSettings
@@ -90,8 +92,8 @@ fun CompareScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 CompareStateCard(
-                    title = "Preparing comparison",
-                    message = "Loading your saved places and the latest forecast context.",
+                    title = stringResource(R.string.compare_preparing_title),
+                    message = stringResource(R.string.compare_preparing_message),
                     loading = true,
                 )
             }
@@ -100,9 +102,9 @@ fun CompareScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 CompareStateCard(
-                    title = "Comparison unavailable",
-                    message = state.error ?: "Something went wrong",
-                    actionLabel = "Retry",
+                    title = stringResource(R.string.compare_unavailable_title),
+                    message = state.error ?: stringResource(R.string.common_something_went_wrong),
+                    actionLabel = stringResource(R.string.retry),
                     onAction = { viewModel.retry() },
                 )
             }
@@ -114,9 +116,9 @@ fun CompareScreen(
                     .verticalScroll(rememberScrollState()),
             ) {
                 ScreenHeader(
-                    title = "Compare Weather",
-                    subtitle = "Pick two saved places and spot the differences that matter fastest.",
-                    eyebrow = "Side by side",
+                    title = stringResource(R.string.compare_title),
+                    subtitle = stringResource(R.string.compare_subtitle),
+                    eyebrow = stringResource(R.string.compare_eyebrow),
                     onBack = onBack,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 )
@@ -147,7 +149,7 @@ fun CompareScreen(
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text(
-                                text = "Choose two saved places to compare right now.",
+                                text = stringResource(R.string.compare_choose_two),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = NimbusTextSecondary,
                             )
@@ -156,7 +158,7 @@ fun CompareScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                             LocationSelector(
-                                label = "Primary",
+                                label = stringResource(R.string.compare_primary),
                                 selected = state.location1,
                                 locations = state.savedLocations.filter {
                                     it.id == state.location1?.id || it.id != state.location2?.id
@@ -165,7 +167,7 @@ fun CompareScreen(
                                 modifier = Modifier.weight(1f),
                             )
                             LocationSelector(
-                                label = "Compare Against",
+                                label = stringResource(R.string.compare_against),
                                 selected = state.location2,
                                 locations = state.savedLocations.filter {
                                     it.id == state.location2?.id || it.id != state.location1?.id
@@ -183,32 +185,35 @@ fun CompareScreen(
                 when {
                     state.savedLocations.isEmpty() -> {
                         CompareEmptyState(
-                            title = "Add a Location to Start Comparing",
-                            message = "Save at least two places to see side-by-side weather, travel differences, and rain risk in one glance.",
-                            actionLabel = "Open Locations",
+                            title = stringResource(R.string.compare_add_location_title),
+                            message = stringResource(R.string.compare_add_location_message),
+                            actionLabel = stringResource(R.string.compare_open_locations),
                             onAction = onNavigateToLocations,
                         )
                     }
                     state.savedLocations.size == 1 -> {
                         CompareEmptyState(
-                            title = "Add One More Location",
-                            message = "${state.location1?.name ?: "Your current location"} is ready. Save one more place to unlock side-by-side comparisons.",
-                            actionLabel = "Add Another Location",
+                            title = stringResource(R.string.compare_add_one_more_title),
+                            message = stringResource(
+                                R.string.compare_add_one_more_message,
+                                state.location1?.name ?: stringResource(R.string.common_current_device_location),
+                            ),
+                            actionLabel = stringResource(R.string.compare_add_another_location),
                             onAction = onNavigateToLocations,
                         )
                     }
                     state.error != null -> {
                         CompareEmptyState(
-                            title = "Couldn't Load Comparison",
-                            message = state.error ?: "Something went wrong while comparing locations.",
-                            actionLabel = "Retry",
+                            title = stringResource(R.string.compare_load_failed_title),
+                            message = state.error ?: stringResource(R.string.compare_load_failed_message),
+                            actionLabel = stringResource(R.string.retry),
                             onAction = { viewModel.retry() },
                         )
                     }
                     state.weather1 == null || state.weather2 == null -> {
                         CompareEmptyState(
-                            title = "Loading Comparison",
-                            message = "Pulling fresh forecast data for both locations now.",
+                            title = stringResource(R.string.compare_loading_title),
+                            message = stringResource(R.string.compare_loading_message),
                         )
                     }
                     else -> {
@@ -290,51 +295,51 @@ fun CompareScreen(
 
                     Spacer(Modifier.height(8.dp))
 
-                    CompareRow("Feels Like",
+                    CompareRow(stringResource(R.string.compare_feels_like_label),
                         WeatherFormatter.formatTemperature(w1.current.feelsLike, s),
                         WeatherFormatter.formatTemperature(w2.current.feelsLike, s),
                     )
-                    CompareRow("Humidity",
+                    CompareRow(stringResource(R.string.humidity),
                         "${w1.current.humidity}%",
                         "${w2.current.humidity}%",
                         highlightLower = true,
                         raw1 = w1.current.humidity.toDouble(),
                         raw2 = w2.current.humidity.toDouble(),
                     )
-                    CompareRow("Wind",
+                    CompareRow(stringResource(R.string.wind),
                         WeatherFormatter.formatWindSpeed(w1.current.windSpeed, w1.current.windDirection, s),
                         WeatherFormatter.formatWindSpeed(w2.current.windSpeed, w2.current.windDirection, s),
                     )
-                    CompareRow("UV Index",
+                    CompareRow(stringResource(R.string.compare_uv_index_label),
                         WeatherFormatter.formatUvIndex(w1.current.uvIndex),
                         WeatherFormatter.formatUvIndex(w2.current.uvIndex),
                         highlightLower = true,
                         raw1 = w1.current.uvIndex,
                         raw2 = w2.current.uvIndex,
                     )
-                    CompareRow("Pressure",
+                    CompareRow(stringResource(R.string.pressure),
                         WeatherFormatter.formatPressure(w1.current.pressure, s),
                         WeatherFormatter.formatPressure(w2.current.pressure, s),
                     )
-                    CompareRow("Visibility",
+                    CompareRow(stringResource(R.string.visibility),
                         WeatherFormatter.formatVisibility(w1.current.visibility, s),
                         WeatherFormatter.formatVisibility(w2.current.visibility, s),
                     )
-                    CompareRow("Cloud Cover",
+                    CompareRow(stringResource(R.string.cloud_cover),
                         "${w1.current.cloudCover}%",
                         "${w2.current.cloudCover}%",
                         highlightLower = true,
                         raw1 = w1.current.cloudCover.toDouble(),
                         raw2 = w2.current.cloudCover.toDouble(),
                     )
-                    CompareRow("High / Low",
+                    CompareRow(stringResource(R.string.compare_high_low_label),
                         "${WeatherFormatter.formatTemperature(w1.current.dailyHigh, s)} / ${WeatherFormatter.formatTemperature(w1.current.dailyLow, s)}",
                         "${WeatherFormatter.formatTemperature(w2.current.dailyHigh, s)} / ${WeatherFormatter.formatTemperature(w2.current.dailyLow, s)}",
                     )
 
                     val precip1 = w1.daily.firstOrNull()?.precipitationProbability ?: 0
                     val precip2 = w2.daily.firstOrNull()?.precipitationProbability ?: 0
-                    CompareRow("Rain Chance", "$precip1%", "$precip2%",
+                    CompareRow(stringResource(R.string.compare_rain_chance_label), "$precip1%", "$precip2%",
                         highlightLower = true,
                         raw1 = precip1.toDouble(),
                         raw2 = precip2.toDouble(),
@@ -396,6 +401,13 @@ private fun LocationSelector(
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val myLocationLabel = stringResource(R.string.common_my_location)
+    val chooseLocationLabel = stringResource(R.string.common_choose_location)
+    val selectedLabel = selected?.let { if (it.isCurrentLocation) myLocationLabel else it.name }
+        ?: chooseLocationLabel
+    val expandedLabel = stringResource(R.string.common_expanded)
+    val collapsedLabel = stringResource(R.string.common_collapsed)
+    val selectorDescription = stringResource(R.string.compare_selector_cd, label, selectedLabel)
 
     Box(modifier = modifier) {
         Column(
@@ -417,10 +429,8 @@ private fun LocationSelector(
                     role = Role.Button,
                 )
                 .semantics(mergeDescendants = true) {
-                    val selectedLabel = selected?.let { if (it.isCurrentLocation) "My Location" else it.name }
-                        ?: "Choose location"
-                    contentDescription = "$label, $selectedLabel"
-                    stateDescription = if (expanded) "Expanded" else "Collapsed"
+                    contentDescription = selectorDescription
+                    stateDescription = if (expanded) expandedLabel else collapsedLabel
                 }
                 .padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
@@ -436,14 +446,19 @@ private fun LocationSelector(
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = selected?.let { if (it.isCurrentLocation) "My Location" else it.name } ?: "Choose location",
+                text = selectedLabel,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                 color = if (selected != null) NimbusTextPrimary else NimbusBlueAccent,
             )
             selected?.let {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = if (it.isCurrentLocation) "Current device location" else listOfNotNull(it.region.takeIf(String::isNotBlank), it.country.takeIf(String::isNotBlank)).joinToString(", "),
+                    text = if (it.isCurrentLocation) {
+                        stringResource(R.string.common_current_device_location)
+                    } else {
+                        listOfNotNull(it.region.takeIf(String::isNotBlank), it.country.takeIf(String::isNotBlank))
+                            .joinToString(", ")
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                     maxLines = 1,
@@ -454,7 +469,7 @@ private fun LocationSelector(
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             locations.forEach { loc ->
                 DropdownMenuItem(
-                    text = { Text(if (loc.isCurrentLocation) "My Location" else loc.name) },
+                    text = { Text(if (loc.isCurrentLocation) myLocationLabel else loc.name) },
                     onClick = {
                         expanded = false
                         onSelect(loc)
@@ -584,13 +599,13 @@ private fun CompareIntroCard(
         Spacer(modifier = Modifier.width(12.dp))
         Column {
             Text(
-                text = "Comparison deck ready",
+                text = stringResource(R.string.compare_ready_title),
                 style = MaterialTheme.typography.labelLarge,
                 color = NimbusTextPrimary,
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "$readyCount saved places available for side-by-side weather decisions.",
+                text = stringResource(R.string.compare_ready_message, readyCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
             )
@@ -606,22 +621,23 @@ private fun CompareSummaryCard(
     weather2: WeatherData,
     modifier: Modifier = Modifier,
 ) {
+    val myLocationLabel = stringResource(R.string.common_my_location)
     val tempDelta = weather1.current.temperature - weather2.current.temperature
     val deltaMagnitude = kotlin.math.abs(tempDelta)
     val leadingName = if (tempDelta >= 0) {
-        location1?.let { if (it.isCurrentLocation) "My Location" else it.name } ?: weather1.location.name
+        location1?.let { if (it.isCurrentLocation) myLocationLabel else it.name } ?: weather1.location.name
     } else {
-        location2?.let { if (it.isCurrentLocation) "My Location" else it.name } ?: weather2.location.name
+        location2?.let { if (it.isCurrentLocation) myLocationLabel else it.name } ?: weather2.location.name
     }
     val trailingName = if (tempDelta >= 0) {
-        location2?.let { if (it.isCurrentLocation) "My Location" else it.name } ?: weather2.location.name
+        location2?.let { if (it.isCurrentLocation) myLocationLabel else it.name } ?: weather2.location.name
     } else {
-        location1?.let { if (it.isCurrentLocation) "My Location" else it.name } ?: weather1.location.name
+        location1?.let { if (it.isCurrentLocation) myLocationLabel else it.name } ?: weather1.location.name
     }
-    val descriptor = when {
-        deltaMagnitude < 0.75 -> "currently feels nearly identical"
-        tempDelta >= 0 -> "is warmer right now"
-        else -> "is cooler right now"
+    val descriptor = if (tempDelta >= 0) {
+        stringResource(R.string.compare_warmer)
+    } else {
+        stringResource(R.string.compare_cooler)
     }
 
     Column(
@@ -642,26 +658,40 @@ private fun CompareSummaryCard(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(
-            text = "Snapshot",
+            text = stringResource(R.string.compare_snapshot),
             style = MaterialTheme.typography.labelMedium,
             color = NimbusTextTertiary,
         )
         Text(
             text = if (deltaMagnitude < 0.75) {
-                "$leadingName and $trailingName $descriptor."
+                stringResource(R.string.compare_currently_identical, leadingName, trailingName)
             } else {
-                "$leadingName $descriptor than $trailingName by about ${kotlin.math.round(deltaMagnitude).toInt()}°."
+                stringResource(
+                    R.string.compare_temperature_delta,
+                    leadingName,
+                    descriptor,
+                    trailingName,
+                    kotlin.math.round(deltaMagnitude).toInt(),
+                )
             },
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             color = NimbusTextPrimary,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CompareSummaryPill(
-                text = "Humidity ${weather1.current.humidity}% vs ${weather2.current.humidity}%",
+                text = stringResource(
+                    R.string.compare_humidity_summary,
+                    weather1.current.humidity,
+                    weather2.current.humidity,
+                ),
                 modifier = Modifier.weight(1f),
             )
             CompareSummaryPill(
-                text = "Rain ${weather1.daily.firstOrNull()?.precipitationProbability ?: 0}% vs ${weather2.daily.firstOrNull()?.precipitationProbability ?: 0}%",
+                text = stringResource(
+                    R.string.compare_rain_summary,
+                    weather1.daily.firstOrNull()?.precipitationProbability ?: 0,
+                    weather2.daily.firstOrNull()?.precipitationProbability ?: 0,
+                ),
                 modifier = Modifier.weight(1f),
             )
         }

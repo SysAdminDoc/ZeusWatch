@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -20,6 +21,7 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Text
+import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.data.WearDailyEntry
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 
@@ -38,8 +40,8 @@ fun DailyScreen(
             contentAlignment = Alignment.Center,
         ) {
             WearStateCard(
-                title = "No daily forecast",
-                message = "Daily outlook will appear after the next phone sync.",
+                title = stringResource(R.string.wear_no_daily_forecast),
+                message = stringResource(R.string.wear_no_daily_forecast_message),
                 icon = "\uD83D\uDCC5",
                 modifier = Modifier.padding(horizontal = 18.dp),
             )
@@ -54,7 +56,10 @@ fun DailyScreen(
         state = listState,
     ) {
         item {
-            WearHeader(title = "7-Day Forecast", subtitle = "High, low, and rain risk at a glance")
+            WearHeader(
+                title = stringResource(R.string.wear_daily_forecast),
+                subtitle = stringResource(R.string.wear_daily_subtitle),
+            )
         }
         items(daily) { entry ->
             DailyRow(entry)
@@ -75,7 +80,11 @@ private fun DailyRow(entry: WearDailyEntry) {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = formatDay(entry.date),
+                text = formatDay(
+                    isoDate = entry.date,
+                    todayLabel = stringResource(R.string.wear_today),
+                    tomorrowLabel = stringResource(R.string.wear_tomorrow_short),
+                ),
                 fontSize = 12.sp,
                 color = WearTextSecondary,
                 modifier = Modifier.width(44.dp),
@@ -105,7 +114,11 @@ private fun DailyRow(entry: WearDailyEntry) {
     }
 }
 
-private fun formatDay(isoDate: String): String {
+private fun formatDay(
+    isoDate: String,
+    todayLabel: String,
+    tomorrowLabel: String,
+): String {
     // Input: "2026-04-14" → "Mon", "Tue", etc.
     return try {
         val parts = isoDate.split("-")
@@ -116,8 +129,8 @@ private fun formatDay(isoDate: String): String {
         val date = java.time.LocalDate.of(year, month, day)
         val today = java.time.LocalDate.now()
         when (date) {
-            today -> "Today"
-            today.plusDays(1) -> "Tmrw"
+            today -> todayLabel
+            today.plusDays(1) -> tomorrowLabel
             else -> date.dayOfWeek.getDisplayName(
                 java.time.format.TextStyle.SHORT,
                 java.util.Locale.getDefault(),
