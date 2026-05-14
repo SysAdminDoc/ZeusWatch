@@ -22,6 +22,7 @@ All notable changes to Nimbus Weather are documented here.
 - Localized cloud cover, visibility, pressure, temperature graph, UV, and precipitation chart labels and accessibility summaries.
 - Localized astronomy, moon phase, golden-hour, sun path, and sunshine-duration labels, countdowns, and accessibility summaries.
 - Localized rain nowcast summaries, outdoor activity score labels/factors, wind compass Beaufort/gust copy, and wind trend summaries.
+- Localized On This Day history context, severe-weather CAPE descriptions, and pet-safety alert guidance.
 
 ### Verified
 - `./gradlew.bat :app:compileStandardDebugKotlin :wear:compileDebugKotlin --console=plain`
