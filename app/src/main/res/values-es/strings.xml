@@ -120,6 +120,36 @@
     <string name="alert_weather_summary_title">Alertas meteorologicas</string>
     <string name="alert_weather_summary_text">Alertas meteorologicas activas en tu zona</string>
 
+    <!-- Card labels -->
+    <string name="card_type_weather_summary">Resumen del clima</string>
+    <string name="card_type_radar_preview">Vista previa del radar</string>
+    <string name="card_type_nowcast">Lluvia en la proxima hora</string>
+    <string name="card_type_hourly_forecast">Pronostico por hora</string>
+    <string name="card_type_temperature_graph">Tendencia de temperatura</string>
+    <string name="card_type_daily_forecast">Pronostico diario</string>
+    <string name="card_type_uv_index">Indice UV</string>
+    <string name="card_type_wind_compass">Viento</string>
+    <string name="card_type_air_quality">Calidad del aire</string>
+    <string name="card_type_pollen">Polen</string>
+    <string name="card_type_outdoor_score">Puntuacion de actividad exterior</string>
+    <string name="card_type_snowfall">Nieve</string>
+    <string name="card_type_severe_weather">Potencial de clima severo</string>
+    <string name="card_type_golden_hour">Hora dorada</string>
+    <string name="card_type_sunshine">Duracion del sol</string>
+    <string name="card_type_driving_conditions">Condiciones de conduccion</string>
+    <string name="card_type_health_alerts">Alertas de salud</string>
+    <string name="card_type_clothing">Que ponerse</string>
+    <string name="card_type_pet_safety">Seguridad de mascotas</string>
+    <string name="card_type_moon_phase">Fase lunar</string>
+    <string name="card_type_humidity">Humedad y comodidad</string>
+    <string name="card_type_precipitation_chart">Pronostico de precipitacion</string>
+    <string name="card_type_pressure_trend">Tendencia de presion</string>
+    <string name="card_type_wind_trend">Pronostico de viento</string>
+    <string name="card_type_details_grid">Detalles de hoy</string>
+    <string name="card_type_cloud_cover">Nubosidad</string>
+    <string name="card_type_visibility">Visibilidad</string>
+    <string name="card_type_on_this_day">En esta fecha</string>
+
     <!-- Navigation -->
     <string name="nav_today">Hoy</string>
     <string name="nav_hourly">Por hora</string>
