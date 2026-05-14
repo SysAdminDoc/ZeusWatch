@@ -59,7 +59,7 @@ class CustomAlertWorker @AssistedInject constructor(
         for (hit in triggered) {
             val dedupeKey = "${hit.rule.id}:$today"
             if (!store.markAndCheckNew(dedupeKey)) continue
-            val (title, body) = formatTriggeredAlert(hit, settings)
+            val (title, body) = formatTriggeredAlert(applicationContext, hit, settings)
             val delivered = AlertNotificationHelper.showCustomAlertNotification(
                 context = applicationContext,
                 ruleKey = hit.rule.id,
