@@ -10,6 +10,7 @@ All notable changes to Nimbus Weather are documented here.
 - Localized home-screen widget chrome, including widget descriptions, Glance empty states, section labels, freshness announcements, setup flow copy, and compact Today/Tomorrow day labels.
 - Localized Custom Alerts screen/editor copy, rule status semantics, notification channel labels, and custom-rule notification text.
 - Localized Home Cards setting labels for every `CardType`, including move and show/hide accessibility descriptions.
+- Localized Settings enum labels for units, radar providers, icon/theme/summary styles, alert filters, alert-source preferences, and weather-source dropdowns.
 
 ### Verified
 - `./gradlew.bat :app:compileStandardDebugKotlin :wear:compileDebugKotlin --console=plain`
@@ -18,6 +19,7 @@ All notable changes to Nimbus Weather are documented here.
 - `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.widget.WidgetRefreshWorkerLogicTest --tests com.sysadmindoc.nimbus.widget.WidgetConfigLogicTest --console=plain`
 - `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.util.AlertCheckWorkerTest --console=plain`
 - `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.data.repository.UserPreferencesTest --console=plain`
+- `./gradlew.bat :app:compileStandardDebugKotlin --console=plain`
 
 ## [1.20.3] - 2026-05-13
 

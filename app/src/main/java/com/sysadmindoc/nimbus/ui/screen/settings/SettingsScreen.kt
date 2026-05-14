@@ -91,7 +91,9 @@ import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.component.ScreenHeader
 import com.sysadmindoc.nimbus.ui.theme.*
+import com.sysadmindoc.nimbus.util.displayNameRes
 import com.sysadmindoc.nimbus.util.labelRes
+import com.sysadmindoc.nimbus.util.summaryRes
 
 @Composable
 fun SettingsScreen(
@@ -339,8 +341,8 @@ internal fun SettingsContent(
             )
             RadarProvider.entries.forEach { provider ->
                 SettingRadio(
-                    label = provider.label,
-                    sublabel = provider.summary,
+                    label = stringResource(provider.labelRes),
+                    sublabel = stringResource(provider.summaryRes),
                     selected = settings.radarProvider == provider,
                     onClick = { onRadarProvider(provider) },
                 )
@@ -361,7 +363,7 @@ internal fun SettingsContent(
             )
             IconStyle.entries.forEach { style ->
                 SettingRadio(
-                    label = style.label,
+                    label = stringResource(style.labelRes),
                     selected = settings.iconStyle == style,
                     onClick = { onIconStyle(style) },
                 )
@@ -383,7 +385,7 @@ internal fun SettingsContent(
             )
             ThemeMode.entries.forEach { mode ->
                 SettingRadio(
-                    label = mode.label,
+                    label = stringResource(mode.labelRes),
                     selected = settings.themeMode == mode,
                     onClick = { onThemeMode(mode) },
                 )
@@ -397,7 +399,7 @@ internal fun SettingsContent(
             )
             SummaryStyle.entries.forEach { style ->
                 SettingRadio(
-                    label = style.label,
+                    label = stringResource(style.labelRes),
                     selected = settings.summaryStyle == style,
                     onClick = { onSummaryStyle(style) },
                 )
@@ -512,7 +514,7 @@ internal fun SettingsContent(
         SettingSection(stringResource(R.string.settings_temperature)) {
             TempUnit.entries.forEach { unit ->
                 SettingRadio(
-                    label = unit.label,
+                    label = stringResource(unit.labelRes),
                     sublabel = unit.symbol,
                     selected = settings.tempUnit == unit,
                     onClick = { onTempUnit(unit) },
@@ -524,7 +526,7 @@ internal fun SettingsContent(
         SettingSection(stringResource(R.string.settings_wind_speed)) {
             WindUnit.entries.forEach { unit ->
                 SettingRadio(
-                    label = unit.label,
+                    label = stringResource(unit.labelRes),
                     selected = settings.windUnit == unit,
                     onClick = { onWindUnit(unit) },
                 )
@@ -535,7 +537,7 @@ internal fun SettingsContent(
         SettingSection(stringResource(R.string.settings_pressure)) {
             PressureUnit.entries.forEach { unit ->
                 SettingRadio(
-                    label = unit.label,
+                    label = stringResource(unit.labelRes),
                     selected = settings.pressureUnit == unit,
                     onClick = { onPressureUnit(unit) },
                 )
@@ -546,7 +548,7 @@ internal fun SettingsContent(
         SettingSection(stringResource(R.string.settings_precipitation)) {
             PrecipUnit.entries.forEach { unit ->
                 SettingRadio(
-                    label = unit.label,
+                    label = stringResource(unit.labelRes),
                     selected = settings.precipUnit == unit,
                     onClick = { onPrecipUnit(unit) },
                 )
@@ -557,7 +559,7 @@ internal fun SettingsContent(
         SettingSection(stringResource(R.string.settings_time_format)) {
             TimeFormat.entries.forEach { format ->
                 SettingRadio(
-                    label = format.label,
+                    label = stringResource(format.labelRes),
                     selected = settings.timeFormat == format,
                     onClick = { onTimeFormat(format) },
                 )
@@ -568,7 +570,7 @@ internal fun SettingsContent(
         SettingSection(stringResource(R.string.visibility)) {
             VisibilityUnit.entries.forEach { unit ->
                 SettingRadio(
-                    label = unit.label,
+                    label = stringResource(unit.labelRes),
                     selected = settings.visibilityUnit == unit,
                     onClick = { onVisibilityUnit(unit) },
                 )
@@ -605,7 +607,7 @@ internal fun SettingsContent(
                 )
                 AlertMinSeverity.entries.forEach { severity ->
                     SettingRadio(
-                        label = severity.label,
+                        label = stringResource(severity.labelRes),
                         selected = settings.alertMinSeverity == severity,
                         onClick = { onAlertMinSeverity(severity) },
                     )
@@ -627,7 +629,7 @@ internal fun SettingsContent(
             )
             AlertSourcePreference.entries.forEach { pref ->
                 SettingRadio(
-                    label = pref.label,
+                    label = stringResource(pref.labelRes),
                     selected = settings.alertSourcePref == pref,
                     onClick = { onAlertSourcePref(pref) },
                 )
@@ -1363,7 +1365,8 @@ private fun SourceDropdown(
     var expanded by remember { mutableStateOf(false) }
     val expandedLabel = stringResource(R.string.common_expanded)
     val collapsedLabel = stringResource(R.string.common_collapsed)
-    val sourceDescription = stringResource(R.string.settings_source_selector_cd, label, selected.displayName)
+    val selectedLabel = stringResource(selected.displayNameRes)
+    val sourceDescription = stringResource(R.string.settings_source_selector_cd, label, selectedLabel)
 
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Text(
@@ -1399,7 +1402,7 @@ private fun SourceDropdown(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = selected.displayName,
+                    text = selectedLabel,
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Icon(
@@ -1414,10 +1417,11 @@ private fun SourceDropdown(
                 onDismissRequest = { expanded = false },
             ) {
                 options.forEach { provider ->
+                    val providerLabel = stringResource(provider.displayNameRes)
                     DropdownMenuItem(
                         text = {
                             Text(
-                                text = provider.displayName,
+                                text = providerLabel,
                                 style = if (provider == selected) MaterialTheme.typography.bodyLarge
                                 else MaterialTheme.typography.bodyMedium,
                             )
@@ -1444,7 +1448,7 @@ private fun SourceDropdownNullable(
     val expandedLabel = stringResource(R.string.common_expanded)
     val collapsedLabel = stringResource(R.string.common_collapsed)
     val noneLabel = stringResource(R.string.settings_none)
-    val selectedLabel = selected?.displayName ?: noneLabel
+    val selectedLabel = selected?.let { stringResource(it.displayNameRes) } ?: noneLabel
     val sourceDescription = stringResource(R.string.settings_source_selector_cd, label, selectedLabel)
 
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
@@ -1510,10 +1514,11 @@ private fun SourceDropdownNullable(
                     },
                 )
                 options.forEach { provider ->
+                    val providerLabel = stringResource(provider.displayNameRes)
                     DropdownMenuItem(
                         text = {
                             Text(
-                                text = provider.displayName,
+                                text = providerLabel,
                                 style = if (provider == selected) MaterialTheme.typography.bodyLarge
                                 else MaterialTheme.typography.bodyMedium,
                             )
