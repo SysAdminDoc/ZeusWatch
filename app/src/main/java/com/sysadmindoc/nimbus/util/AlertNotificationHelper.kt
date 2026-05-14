@@ -24,7 +24,6 @@ import com.sysadmindoc.nimbus.data.model.WeatherAlert
 object AlertNotificationHelper {
 
     private const val GROUP_ID = "nimbus_alert_group"
-    private const val GROUP_NAME = "Weather Alerts"
     private const val SUMMARY_NOTIFICATION_ID = 0x1000
     private const val URI_MAIN = "zeuswatch://main"
     private const val URI_WEATHER_ALERTS = "zeuswatch://main?target=weather_alerts"
@@ -65,7 +64,7 @@ object AlertNotificationHelper {
 
         // Channel group
         nm.createNotificationChannelGroup(
-            NotificationChannelGroup(GROUP_ID, GROUP_NAME)
+            NotificationChannelGroup(GROUP_ID, context.getString(R.string.alert_channel_group_weather))
         )
 
         val audioAttr = AudioAttributes.Builder()
@@ -75,9 +74,13 @@ object AlertNotificationHelper {
 
         // Extreme: tornado, tsunami, etc — max priority, alarm sound
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_EXTREME, "Extreme Alerts", NotificationManager.IMPORTANCE_HIGH).apply {
+            NotificationChannel(
+                CHANNEL_EXTREME,
+                context.getString(R.string.alert_channel_extreme_name),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
                 group = GROUP_ID
-                description = "Life-threatening weather: tornado warnings, tsunami warnings, etc."
+                description = context.getString(R.string.alert_channel_extreme_desc)
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 500, 200, 500, 200, 500)
                 enableLights(true)
@@ -88,9 +91,13 @@ object AlertNotificationHelper {
 
         // Severe: thunderstorm warnings, blizzard — high priority
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_SEVERE, "Severe Alerts", NotificationManager.IMPORTANCE_HIGH).apply {
+            NotificationChannel(
+                CHANNEL_SEVERE,
+                context.getString(R.string.alert_channel_severe_name),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
                 group = GROUP_ID
-                description = "Severe thunderstorm warnings, blizzard warnings, flood warnings, etc."
+                description = context.getString(R.string.alert_channel_severe_desc)
                 enableVibration(true)
                 enableLights(true)
             }
@@ -98,42 +105,62 @@ object AlertNotificationHelper {
 
         // Moderate: watches, advisories — default
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_MODERATE, "Moderate Alerts", NotificationManager.IMPORTANCE_DEFAULT).apply {
+            NotificationChannel(
+                CHANNEL_MODERATE,
+                context.getString(R.string.alert_channel_moderate_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
                 group = GROUP_ID
-                description = "Weather watches and advisories."
+                description = context.getString(R.string.alert_channel_moderate_desc)
             }
         )
 
         // Minor: statements, special weather statements — low
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_MINOR, "Minor Alerts", NotificationManager.IMPORTANCE_LOW).apply {
+            NotificationChannel(
+                CHANNEL_MINOR,
+                context.getString(R.string.alert_channel_minor_name),
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
                 group = GROUP_ID
-                description = "Special weather statements and minor advisories."
+                description = context.getString(R.string.alert_channel_minor_desc)
             }
         )
 
         // Nowcast: short-horizon precipitation heads-up ("Rain in 15 min").
         // Default importance so it makes a sound but doesn't bypass DND.
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_NOWCAST, "Rain Nowcast", NotificationManager.IMPORTANCE_DEFAULT).apply {
+            NotificationChannel(
+                CHANNEL_NOWCAST,
+                context.getString(R.string.alert_channel_nowcast_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
                 group = GROUP_ID
-                description = "Proactive notifications when rain is about to start or stop at your current location."
+                description = context.getString(R.string.alert_channel_nowcast_desc)
             }
         )
 
         // Health alerts: migraine pressure, respiratory, arthritis triggers.
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_HEALTH, "Health Alerts", NotificationManager.IMPORTANCE_DEFAULT).apply {
+            NotificationChannel(
+                CHANNEL_HEALTH,
+                context.getString(R.string.alert_channel_health_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
                 group = GROUP_ID
-                description = "Health-related weather alerts: migraine pressure triggers, respiratory humidity, joint pain temperature swings."
+                description = context.getString(R.string.alert_channel_health_desc)
             }
         )
 
         // Custom alert rules: user-configured thresholds.
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_CUSTOM, "Custom Alerts", NotificationManager.IMPORTANCE_DEFAULT).apply {
+            NotificationChannel(
+                CHANNEL_CUSTOM,
+                context.getString(R.string.alert_channel_custom_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
                 group = GROUP_ID
-                description = "Notifications for thresholds you set yourself (temperature, wind, rain, UV)."
+                description = context.getString(R.string.alert_channel_custom_desc)
             }
         )
 
@@ -283,8 +310,8 @@ object AlertNotificationHelper {
     private fun ambientSummary(context: Context): android.app.Notification =
         NotificationCompat.Builder(context, CHANNEL_NOWCAST)
             .setSmallIcon(R.drawable.ic_alert)
-            .setContentTitle("Weather updates")
-            .setContentText("Health, nowcast, and custom-rule notifications")
+            .setContentTitle(context.getString(R.string.alert_ambient_summary_title))
+            .setContentText(context.getString(R.string.alert_ambient_summary_text))
             .setContentIntent(
                 deepLinkPendingIntent(
                     context,
@@ -359,8 +386,8 @@ object AlertNotificationHelper {
             // Group summary so multiple alerts collapse
             val summary = NotificationCompat.Builder(context, channel)
                 .setSmallIcon(R.drawable.ic_alert)
-                .setContentTitle("Weather Alerts")
-                .setContentText("Active weather alerts in your area")
+                .setContentTitle(context.getString(R.string.alert_weather_summary_title))
+                .setContentText(context.getString(R.string.alert_weather_summary_text))
                 .setContentIntent(
                     deepLinkPendingIntent(
                         context,
