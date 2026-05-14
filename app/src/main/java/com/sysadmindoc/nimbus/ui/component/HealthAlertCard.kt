@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.util.HealthAlert
@@ -36,7 +37,7 @@ fun HealthAlertCard(
     if (alerts.isEmpty()) return
 
     WeatherCard(
-        title = "Health Alerts",
+        titleRes = R.string.card_type_health_alerts,
         modifier = modifier,
     ) {
         alerts.forEachIndexed { idx, alert ->

@@ -23,6 +23,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
@@ -59,7 +60,7 @@ fun PrecipitationChartCard(
     }
 
     WeatherCard(
-        title = "Precipitation Forecast",
+        titleRes = R.string.card_type_precipitation_chart,
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = semanticSummary
         },
