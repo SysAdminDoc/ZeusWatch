@@ -11,6 +11,7 @@ All notable changes to Nimbus Weather are documented here.
 - Localized Custom Alerts screen/editor copy, rule status semantics, notification channel labels, and custom-rule notification text.
 - Localized Home Cards setting labels for every `CardType`, including move and show/hide accessibility descriptions.
 - Localized Settings enum labels for units, radar providers, icon/theme/summary styles, alert filters, alert-source preferences, and weather-source dropdowns.
+- Localized top-level Today screen loading, retry/location actions, share menu, offline banner, freshness badges, footer, location chips, and focused empty-card copy.
 
 ### Verified
 - `./gradlew.bat :app:compileStandardDebugKotlin :wear:compileDebugKotlin --console=plain`
@@ -20,6 +21,7 @@ All notable changes to Nimbus Weather are documented here.
 - `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.util.AlertCheckWorkerTest --console=plain`
 - `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.data.repository.UserPreferencesTest --console=plain`
 - `./gradlew.bat :app:compileStandardDebugKotlin --console=plain`
+- `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.ui.screen.main.MainScreenLogicTest --console=plain`
 
 ## [1.20.3] - 2026-05-13
 
