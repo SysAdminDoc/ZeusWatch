@@ -21,6 +21,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -57,13 +58,7 @@ fun CloudCoverCard(
     }
     if (next24.size < 4) return
 
-    val cloudLabel = when {
-        currentCloud <= 10 -> "Clear Sky"
-        currentCloud <= 25 -> "Mostly Clear"
-        currentCloud <= 50 -> "Partly Cloudy"
-        currentCloud <= 75 -> "Mostly Cloudy"
-        else -> "Overcast"
-    }
+    val cloudLabel = stringResource(cloudLabelRes(currentCloud))
 
     val cloudColor = when {
         currentCloud <= 25 -> NimbusBlueAccent
@@ -75,8 +70,7 @@ fun CloudCoverCard(
     val cloudsOverTime = next24.mapNotNull { it.cloudCover }
     val peak = cloudsOverTime.maxOrNull() ?: currentCloud
     val trough = cloudsOverTime.minOrNull() ?: currentCloud
-    val cloudSummary = "Cloud cover. Currently $currentCloud%, $cloudLabel. " +
-        "Next 24 hours between $trough% and $peak%."
+    val cloudSummary = stringResource(R.string.cloud_cover_semantics, currentCloud, cloudLabel, trough, peak)
 
     WeatherCard(
         modifier = modifier.semantics(mergeDescendants = true) {
@@ -113,6 +107,14 @@ fun CloudCoverCard(
                 .height(120.dp),
         )
     }
+}
+
+private fun cloudLabelRes(cloudCover: Int): Int = when {
+    cloudCover <= 10 -> R.string.cloud_cover_clear_sky
+    cloudCover <= 25 -> R.string.cloud_cover_mostly_clear
+    cloudCover <= 50 -> R.string.cloud_cover_partly_cloudy
+    cloudCover <= 75 -> R.string.cloud_cover_mostly_cloudy
+    else -> R.string.cloud_cover_overcast
 }
 
 @Composable
