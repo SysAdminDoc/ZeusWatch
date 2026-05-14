@@ -26,9 +26,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.OnThisDayData
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
@@ -57,24 +60,36 @@ fun OnThisDayCard(
     modifier: Modifier = Modifier,
 ) {
     val s = LocalUnitSettings.current
+    val semanticDescription = if (data == null || data.priorYears.isEmpty()) {
+        null
+    } else {
+        val delta = forecastHighC?.let { it - data.averageHighC }
+        val deltaText = if (delta == null) {
+            stringResource(R.string.on_this_day_compare_unavailable)
+        } else {
+            deltaLabel(delta, s)
+        }
+        stringResource(
+            R.string.on_this_day_semantics,
+            data.priorYears.size,
+            WeatherFormatter.formatTemperature(data.averageHighC, s),
+            WeatherFormatter.formatTemperature(data.recordHighC, s),
+            WeatherFormatter.formatTemperature(data.recordLowC, s),
+            deltaText,
+        )
+    }
     val cardModifier = if (data == null || data.priorYears.isEmpty()) {
         modifier
     } else {
-        val delta = forecastHighC?.let { it - data.averageHighC }
-        val deltaText = delta?.let { deltaLabel(it, s) } ?: "forecast comparison unavailable"
         modifier.semantics(mergeDescendants = true) {
-            contentDescription = "On this day. ${data.priorYears.size}-year average high " +
-                "${WeatherFormatter.formatTemperature(data.averageHighC, s)}. " +
-                "Record high ${WeatherFormatter.formatTemperature(data.recordHighC, s)}, " +
-                "record low ${WeatherFormatter.formatTemperature(data.recordLowC, s)}. " +
-                "Today's forecast is $deltaText."
+            contentDescription = semanticDescription.orEmpty()
         }
     }
 
     WeatherCard(titleRes = R.string.card_type_on_this_day, modifier = cardModifier) {
         if (data == null || data.priorYears.isEmpty()) {
             Text(
-                text = "Historical data unavailable for this location.",
+                text = stringResource(R.string.on_this_day_unavailable),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextTertiary,
             )
@@ -84,7 +99,10 @@ fun OnThisDayCard(
         // Anomaly delta: today's forecast vs. 10-year average high (both °C).
         val avgHigh = data.averageHighC
         val delta = forecastHighC?.let { it - avgHigh }
-        val deltaFmt = delta?.let { deltaLabel(it, s) }
+        val deltaFmt = if (delta == null) null else deltaLabel(delta, s)
+        val recordLowText = WeatherFormatter.formatTemperature(data.recordLowC, s)
+        val recordHighText = WeatherFormatter.formatTemperature(data.recordHighC, s)
+        val sparklineDescription = stringResource(R.string.on_this_day_sparkline_semantics, recordLowText, recordHighText)
 
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -93,7 +111,7 @@ fun OnThisDayCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "${data.priorYears.size}-year avg high",
+                        text = stringResource(R.string.on_this_day_avg_high, data.priorYears.size),
                         style = MaterialTheme.typography.labelSmall,
                         color = NimbusTextTertiary,
                     )
@@ -103,7 +121,7 @@ fun OnThisDayCard(
                         color = NimbusTextPrimary,
                     )
                 }
-                if (deltaFmt != null) {
+                if (delta != null && deltaFmt != null) {
                     DeltaBadge(deltaCelsius = delta, label = deltaFmt)
                 }
             }
@@ -116,13 +134,13 @@ fun OnThisDayCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 MiniStat(
-                    label = "Record high",
-                    value = WeatherFormatter.formatTemperature(data.recordHighC, s),
+                    labelRes = R.string.on_this_day_record_high,
+                    value = recordHighText,
                     color = NimbusWarning,
                 )
                 MiniStat(
-                    label = "Record low",
-                    value = WeatherFormatter.formatTemperature(data.recordLowC, s),
+                    labelRes = R.string.on_this_day_record_low,
+                    value = recordLowText,
                     color = NimbusBlueAccent,
                 )
             }
@@ -131,7 +149,7 @@ fun OnThisDayCard(
 
             // Prior-year highs sparkline
             Text(
-                text = "Prior years (newest first)",
+                text = stringResource(R.string.on_this_day_prior_years),
                 style = MaterialTheme.typography.labelSmall,
                 color = NimbusTextTertiary,
             )
@@ -143,9 +161,7 @@ fun OnThisDayCard(
                     .fillMaxWidth()
                     .height(52.dp)
                     .semantics {
-                        contentDescription = "Prior-year highs for this date, " +
-                            "ranging from ${WeatherFormatter.formatTemperature(data.recordLowC, s)} " +
-                            "to ${WeatherFormatter.formatTemperature(data.recordHighC, s)}."
+                        contentDescription = sparklineDescription
                     },
             )
 
@@ -196,10 +212,10 @@ private fun DeltaBadge(deltaCelsius: Double, label: String) {
 }
 
 @Composable
-private fun MiniStat(label: String, value: String, color: Color) {
+private fun MiniStat(labelRes: Int, value: String, color: Color) {
     Column {
         Text(
-            text = label,
+            text = stringResource(labelRes),
             style = MaterialTheme.typography.labelSmall,
             color = NimbusTextTertiary,
         )
@@ -279,22 +295,27 @@ private fun PriorYearsSparkline(
 }
 
 /** Build a "+5° warmer" / "3° cooler" label in the user's temperature unit. */
+@Composable
 private fun deltaLabel(
     deltaCelsius: Double,
-    s: com.sysadmindoc.nimbus.data.repository.NimbusSettings,
+    s: NimbusSettings,
 ): String {
     // |delta| in °C is equivalent to |delta| × 1.8 in °F; direction is
     // unit-agnostic.
     val magnitudeC = deltaCelsius.absoluteValue
-    val magnitudeUser = if (s.tempUnit == com.sysadmindoc.nimbus.data.repository.TempUnit.FAHRENHEIT) {
+    val magnitudeUser = if (s.tempUnit == TempUnit.FAHRENHEIT) {
         magnitudeC * 1.8
     } else {
         magnitudeC
     }
     // Round to nearest whole degree for readability.
     val rounded = kotlin.math.round(magnitudeUser).toInt()
-    if (rounded == 0) return "near normal"
-    val unitSymbol = if (s.tempUnit == com.sysadmindoc.nimbus.data.repository.TempUnit.FAHRENHEIT) "°F" else "°C"
-    val direction = if (deltaCelsius >= 0) "warmer" else "cooler"
-    return "${rounded}${unitSymbol} $direction"
+    if (rounded == 0) return stringResource(R.string.on_this_day_near_normal)
+    val unitSymbol = if (s.tempUnit == TempUnit.FAHRENHEIT) "°F" else "°C"
+    val labelRes = if (deltaCelsius >= 0) {
+        R.string.on_this_day_delta_warmer
+    } else {
+        R.string.on_this_day_delta_cooler
+    }
+    return stringResource(labelRes, rounded, unitSymbol)
 }
