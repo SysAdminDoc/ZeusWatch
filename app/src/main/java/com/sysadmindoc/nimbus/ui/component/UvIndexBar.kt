@@ -20,13 +20,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.theme.*
-import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -42,22 +42,31 @@ fun UvIndexBar(
     referenceTime: java.time.LocalDateTime? = hourly.firstOrNull()?.time,
 ) {
     val s = LocalUnitSettings.current
-    val level = WeatherFormatter.uvDescription(uvIndex)
+    val level = stringResource(uvLevelRes(uvIndex))
 
     // Find peak UV hour from hourly data
     val peakHour = hourly.take(12).maxByOrNull { it.uvIndex ?: 0.0 }
+    val peakTimeRaw = if (peakHour != null) {
+        WeatherFormatter.formatRelativeHourLabel(peakHour.time, referenceTime, s)
+    } else null
+    val peakTimeLabel = if (peakTimeRaw == "Now") stringResource(R.string.common_now) else peakTimeRaw
     val peakUvNote = if (hourly.isNotEmpty()) {
         if (peakHour != null && (peakHour.uvIndex ?: 0.0) > uvIndex) {
-            "Peaks at ${WeatherFormatter.formatRelativeHourLabel(peakHour.time, referenceTime, s)}"
+            stringResource(R.string.uv_peak_at, peakTimeLabel ?: "")
         } else null
     } else null
-    val semanticSummary = AccessibilityHelper.uvIndex(
-        uvIndex = uvIndex,
-        peakTime = peakHour?.time,
-        peakUv = peakHour?.uvIndex,
-        referenceTime = referenceTime,
-        s = s,
-    )
+    val safeMinutes = if (uvIndex >= 1) (200.0 / (uvIndex * 3.0)).toInt().coerceIn(5, 120) else null
+    val peakSemantic = if (peakHour != null && peakTimeLabel != null && (peakHour.uvIndex ?: 0.0) > uvIndex) {
+        stringResource(R.string.uv_semantics_peak, peakTimeLabel, (peakHour.uvIndex ?: 0.0).toInt())
+    } else null
+    val safeSemantic = if (safeMinutes != null) {
+        stringResource(R.string.uv_semantics_safe_exposure, safeMinutes)
+    } else null
+    val semanticSummary = listOfNotNull(
+        stringResource(R.string.uv_semantics, uvIndex.toInt(), level),
+        peakSemantic,
+        safeSemantic,
+    ).joinToString(separator = " ")
     val levelColor = when {
         uvIndex < 3 -> NimbusUvLow
         uvIndex < 6 -> NimbusUvModerate
@@ -97,10 +106,9 @@ fun UvIndexBar(
                     )
                 }
                 // Safe sun exposure estimate (average skin type, SPF-free)
-                if (uvIndex >= 1) {
-                    val safeMinutes = (200.0 / (uvIndex * 3.0)).toInt().coerceIn(5, 120)
+                if (safeMinutes != null) {
                     Text(
-                        text = "~${safeMinutes} min safe exposure without SPF",
+                        text = stringResource(R.string.uv_safe_exposure_without_spf, safeMinutes),
                         style = MaterialTheme.typography.labelSmall,
                         color = NimbusTextTertiary,
                     )
@@ -148,4 +156,12 @@ fun UvIndexBar(
             }
         }
     }
+}
+
+private fun uvLevelRes(uvIndex: Double): Int = when {
+    uvIndex < 3 -> R.string.forecast_uv_low
+    uvIndex < 6 -> R.string.forecast_uv_moderate
+    uvIndex < 8 -> R.string.forecast_uv_high
+    uvIndex < 11 -> R.string.forecast_uv_very_high
+    else -> R.string.forecast_uv_extreme
 }

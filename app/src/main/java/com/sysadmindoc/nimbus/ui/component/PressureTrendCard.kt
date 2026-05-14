@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -53,12 +54,11 @@ fun PressureTrendCard(
     }
     if (data.size < 3) return
 
-    val trend = WeatherFormatter.pressureTrend(hourly)
-    val trendColor = when {
-        trend?.contains("Rising") == true -> Color(0xFF4CAF50)
-        trend?.contains("Falling") == true -> Color(0xFFFF9800)
-        else -> NimbusTextSecondary
-    }
+    val trend = pressureTrend(hourly)
+    val trendLabel = trend?.let { stringResource(it.labelRes) }
+    val trendSemanticLabel = trend?.let { stringResource(it.semanticLabelRes) }
+        ?: stringResource(R.string.pressure_trend_steady_semantic)
+    val trendColor = trend?.color ?: NimbusTextSecondary
 
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
@@ -66,8 +66,12 @@ fun PressureTrendCard(
     val firstPressure = data.first().second
     val lastPressure = data.last().second
     val delta24h = lastPressure - firstPressure
-    val semanticSummary = "Pressure trend. Current ${WeatherFormatter.formatPressure(currentPressure, s)}. " +
-        "${trend ?: "Steady"}. 24-hour change ${"%+.1f".format(delta24h)} hectopascals."
+    val semanticSummary = stringResource(
+        R.string.pressure_trend_semantics,
+        WeatherFormatter.formatPressure(currentPressure, s),
+        trendSemanticLabel,
+        "%+.1f".format(delta24h),
+    )
 
     WeatherCard(
         titleRes = R.string.card_type_pressure_trend,
@@ -81,9 +85,9 @@ fun PressureTrendCard(
                     text = WeatherFormatter.formatPressure(currentPressure, s),
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 )
-                if (trend != null) {
+                if (trendLabel != null) {
                     Text(
-                        text = trend,
+                        text = trendLabel,
                         style = MaterialTheme.typography.bodySmall,
                         color = trendColor,
                     )
@@ -95,7 +99,7 @@ fun PressureTrendCard(
             val delta = last - first
             Column {
                 Text(
-                    text = "24h Change",
+                    text = stringResource(R.string.pressure_24h_change),
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusTextTertiary,
                 )
@@ -176,5 +180,44 @@ fun PressureTrendCard(
                 }
             }
         }
+    }
+}
+
+private data class PressureTrendLabel(
+    val labelRes: Int,
+    val semanticLabelRes: Int,
+    val color: Color,
+)
+
+private fun pressureTrend(hourly: List<HourlyConditions>): PressureTrendLabel? {
+    val pressures = hourly.take(6).mapNotNull { it.surfacePressure }
+    if (pressures.size < 3) return null
+    val delta = pressures.last() - pressures.first()
+    return when {
+        delta > 2.0 -> PressureTrendLabel(
+            labelRes = R.string.pressure_trend_rising,
+            semanticLabelRes = R.string.pressure_trend_rising_semantic,
+            color = Color(0xFF4CAF50),
+        )
+        delta > 0.5 -> PressureTrendLabel(
+            labelRes = R.string.pressure_trend_slowly_rising,
+            semanticLabelRes = R.string.pressure_trend_slowly_rising_semantic,
+            color = Color(0xFF4CAF50),
+        )
+        delta < -2.0 -> PressureTrendLabel(
+            labelRes = R.string.pressure_trend_falling,
+            semanticLabelRes = R.string.pressure_trend_falling_semantic,
+            color = Color(0xFFFF9800),
+        )
+        delta < -0.5 -> PressureTrendLabel(
+            labelRes = R.string.pressure_trend_slowly_falling,
+            semanticLabelRes = R.string.pressure_trend_slowly_falling_semantic,
+            color = Color(0xFFFF9800),
+        )
+        else -> PressureTrendLabel(
+            labelRes = R.string.pressure_trend_steady,
+            semanticLabelRes = R.string.pressure_trend_steady_semantic,
+            color = NimbusTextSecondary,
+        )
     }
 }

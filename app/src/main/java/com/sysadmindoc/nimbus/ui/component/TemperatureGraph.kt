@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -73,11 +74,19 @@ fun TemperatureGraph(
     // Summarize the series for TalkBack — exact drag interaction isn't
     // meaningful to a screen reader, but the shape of the curve is.
     val trendSummary = remember(data, s.tempUnit) { buildTemperatureTrendSummary(data, s) }
+    val trendSummaryText = stringResource(
+        R.string.temperature_graph_summary,
+        trendSummary.hours,
+        trendSummary.low,
+        trendSummary.high,
+        stringResource(trendSummary.directionRes),
+    )
+    val semanticSummary = stringResource(R.string.temperature_graph_semantics, trendSummaryText)
 
     WeatherCard(
         titleRes = R.string.card_type_temperature_graph,
         modifier = modifier.semantics(mergeDescendants = true) {
-            contentDescription = "Temperature trend graph. $trendSummary"
+            contentDescription = semanticSummary
         },
     ) {
         Box {
@@ -313,19 +322,31 @@ fun TemperatureGraph(
     }
 }
 
+private data class TemperatureTrendSummary(
+    val hours: Int,
+    val low: Int,
+    val high: Int,
+    val directionRes: Int,
+)
+
 private fun buildTemperatureTrendSummary(
     data: List<HourlyConditions>,
     settings: NimbusSettings,
-): String {
+): TemperatureTrendSummary {
     val temps = data.map { WeatherFormatter.convertedTemp(it.temperature, settings) }
     val first = temps.first()
     val last = temps.last()
     val low = temps.min()
     val high = temps.max()
-    val direction = when {
-        last > first + 1 -> "trending warmer"
-        last < first - 1 -> "trending cooler"
-        else -> "steady"
+    val directionRes = when {
+        last > first + 1 -> R.string.temperature_trend_warmer
+        last < first - 1 -> R.string.temperature_trend_cooler
+        else -> R.string.temperature_trend_steady
     }
-    return "Next ${data.size} hours: low ${low.toInt()}°, high ${high.toInt()}°, $direction."
+    return TemperatureTrendSummary(
+        hours = data.size,
+        low = low.toInt(),
+        high = high.toInt(),
+        directionRes = directionRes,
+    )
 }

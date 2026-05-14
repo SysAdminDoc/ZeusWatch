@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -38,7 +39,6 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.ui.theme.NimbusUvHigh
 import com.sysadmindoc.nimbus.ui.theme.NimbusUvModerate
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
-import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.format.DateTimeFormatter
 
@@ -59,7 +59,26 @@ fun VisibilityCard(
 
     val visKm = visibilityMeters / 1000.0
     val tier = visibilityTier(visKm)
-    val semanticSummary = AccessibilityHelper.visibility(visibilityMeters, hourly, settings)
+    val tierLabel = stringResource(tier.labelRes)
+    val visHours = remember(hourly) {
+        hourly.filter { it.visibility != null }.take(24)
+    }
+    val semanticSummary = if (visHours.size >= 4) {
+        val trendValues = visHours.mapNotNull { it.visibility }
+        stringResource(
+            R.string.visibility_semantics_range,
+            WeatherFormatter.formatVisibility(visibilityMeters, settings),
+            tierLabel,
+            WeatherFormatter.formatVisibility(trendValues.min(), settings),
+            WeatherFormatter.formatVisibility(trendValues.max(), settings),
+        )
+    } else {
+        stringResource(
+            R.string.visibility_semantics,
+            WeatherFormatter.formatVisibility(visibilityMeters, settings),
+            tierLabel,
+        )
+    }
 
     WeatherCard(
         modifier = modifier.semantics(mergeDescendants = true) {
@@ -79,7 +98,7 @@ fun VisibilityCard(
                     color = tier.color,
                 )
                 Text(
-                    text = tier.label,
+                    text = tierLabel,
                     style = MaterialTheme.typography.bodyMedium,
                     color = NimbusTextSecondary,
                 )
@@ -91,15 +110,20 @@ fun VisibilityCard(
         // Graduated scale bar
         VisibilityScaleBar(
             currentKm = visKm,
+            labels = listOf(
+                stringResource(R.string.visibility_scale_very_poor_short),
+                stringResource(R.string.visibility_tier_poor),
+                stringResource(R.string.visibility_scale_moderate_short),
+                stringResource(R.string.visibility_tier_good),
+                stringResource(R.string.visibility_tier_clear),
+                stringResource(R.string.visibility_scale_perfectly_clear_short),
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(32.dp),
         )
 
         // Hourly trend (if data available)
-        val visHours = remember(hourly) {
-            hourly.filter { it.visibility != null }.take(24)
-        }
         if (visHours.size >= 4) {
             Spacer(modifier = Modifier.height(14.dp))
             VisibilityTrendChart(
@@ -113,22 +137,23 @@ fun VisibilityCard(
 }
 
 private data class VisibilityTier(
-    val label: String,
+    val labelRes: Int,
     val color: Color,
 )
 
 private fun visibilityTier(km: Double): VisibilityTier = when {
-    km < 1.0 -> VisibilityTier("Very Poor", NimbusWarning)
-    km < 4.0 -> VisibilityTier("Poor", NimbusUvHigh)
-    km < 10.0 -> VisibilityTier("Moderate", NimbusUvModerate)
-    km < 20.0 -> VisibilityTier("Good", NimbusSuccess)
-    km < 40.0 -> VisibilityTier("Clear", NimbusBlueAccent)
-    else -> VisibilityTier("Perfectly Clear", Color(0xFF80DEEA))
+    km < 1.0 -> VisibilityTier(R.string.visibility_tier_very_poor, NimbusWarning)
+    km < 4.0 -> VisibilityTier(R.string.visibility_tier_poor, NimbusUvHigh)
+    km < 10.0 -> VisibilityTier(R.string.visibility_tier_moderate, NimbusUvModerate)
+    km < 20.0 -> VisibilityTier(R.string.visibility_tier_good, NimbusSuccess)
+    km < 40.0 -> VisibilityTier(R.string.visibility_tier_clear, NimbusBlueAccent)
+    else -> VisibilityTier(R.string.visibility_tier_perfectly_clear, Color(0xFF80DEEA))
 }
 
 @Composable
 private fun VisibilityScaleBar(
     currentKm: Double,
+    labels: List<String>,
     modifier: Modifier = Modifier,
 ) {
     val textMeasurer = rememberTextMeasurer()
@@ -144,8 +169,6 @@ private fun VisibilityScaleBar(
         NimbusBlueAccent,       // 20-40
         Color(0xFF80DEEA),      // 40+
     )
-    val labels = listOf("VP", "Poor", "Mod", "Good", "Clear", "PC")
-
     Canvas(modifier = modifier) {
         val w = size.width
         val barH = 10f

@@ -19,6 +19,7 @@ All notable changes to Nimbus Weather are documented here.
 - Localized standalone Hourly and Daily forecast tab titles, Today/Tomorrow labels, high/low summaries, rain labels, wind labels, UV chips, and feels-like copy.
 - Localized Today overview copy for current conditions, details grid labels, forecast brief chips/footer, and the skeleton loading label.
 - Localized air-quality, humidity comfort, dew-point comfort, and pollen card labels, advice, empty copy, and accessibility summaries.
+- Localized cloud cover, visibility, pressure, temperature graph, UV, and precipitation chart labels and accessibility summaries.
 
 ### Verified
 - `./gradlew.bat :app:compileStandardDebugKotlin :wear:compileDebugKotlin --console=plain`
