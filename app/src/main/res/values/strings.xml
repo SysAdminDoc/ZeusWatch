@@ -84,6 +84,8 @@
     <string name="common_save">Save</string>
     <string name="common_back">Back</string>
     <string name="common_bottom_sheet_handle">Bottom sheet handle</string>
+    <string name="common_today">Today</string>
+    <string name="common_tomorrow">Tomorrow</string>
     <string name="custom_alerts_rule_center">Rule center</string>
     <string name="custom_alerts_rule_count_singular">1 custom alert ready to watch the forecast.</string>
     <string name="custom_alerts_rule_count_plural">%1$d custom alerts ready to watch the forecast.</string>
@@ -248,6 +250,11 @@
     <string name="forecast_detail_sunshine">Sunshine</string>
     <string name="forecast_detail_uv_max">UV Max</string>
     <string name="forecast_detail_snow">Snow</string>
+    <string name="forecast_detail_rain">Rain</string>
+    <string name="forecast_high_abbrev">H: %1$s</string>
+    <string name="forecast_low_abbrev">L: %1$s</string>
+    <string name="forecast_daily_days_title">%1$d-Day Forecast</string>
+    <string name="forecast_hourly_rain_chance">%1$d%% rain</string>
     <string name="forecast_gusts_value">Gusts %1$s</string>
     <string name="forecast_gust_abbrev">G: %1$s</string>
     <string name="forecast_uv_low">Low</string>
