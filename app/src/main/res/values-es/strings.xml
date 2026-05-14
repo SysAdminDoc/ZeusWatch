@@ -2,6 +2,51 @@
 <resources>
     <string name="app_name">ZeusWatch</string>
 
+    <!-- Widgets -->
+    <string name="widget_small_desc">Temperatura y condiciones actuales</string>
+    <string name="widget_medium_desc">Condiciones actuales con pronostico de 3 dias</string>
+    <string name="widget_large_desc">Pronostico por hora con vista de 5 dias</string>
+    <string name="widget_forecast_strip_desc">Tira compacta de temperatura por hora</string>
+    <string name="widget_loading_message">Cargando...</string>
+    <string name="widget_empty_title">ZeusWatch</string>
+    <string name="widget_small_empty_message">Toca para abrir y cargar un pronostico en vivo.</string>
+    <string name="widget_medium_empty_message">Toca para cargar el pronostico mas reciente y los proximos dias.</string>
+    <string name="widget_large_empty_message">Toca para cargar condiciones actuales, cambios por hora y la vista de 5 dias.</string>
+    <string name="widget_strip_empty_message">Toca para cargar las proximas horas.</string>
+    <string name="widget_current_eyebrow">ACTUAL</string>
+    <string name="widget_overview_eyebrow">RESUMEN</string>
+    <string name="widget_detailed_outlook_eyebrow">PRONOSTICO DETALLADO</string>
+    <string name="widget_next_eyebrow">SIG.</string>
+    <string name="widget_next_3_days">PROXIMOS 3 DIAS</string>
+    <string name="widget_next_6_hours">PROXIMAS 6 HORAS</string>
+    <string name="widget_5_day_outlook">VISTA DE 5 DIAS</string>
+    <string name="widget_tap_to_open">Toca para abrir</string>
+    <string name="widget_feels_humidity">Sensacion %1$d\u00B0 \u2022 Humedad %2$d%%</string>
+    <string name="widget_high_temp">Max %1$d\u00B0</string>
+    <string name="widget_low_temp">Min %1$d\u00B0</string>
+    <string name="widget_updated_live">En vivo</string>
+    <string name="widget_updated_minutes">%1$d min</string>
+    <string name="widget_updated_hours">%1$d h</string>
+    <string name="widget_updated_live_cd">Pronostico en vivo. Toca para actualizar ahora.</string>
+    <string name="widget_updated_stale_cd">Datos actualizados hace %1$s. Toca para actualizar ahora.</string>
+    <string name="widget_weather_icon_cd">Icono del clima</string>
+    <string name="widget_tomorrow_short">Man.</string>
+    <string name="widget_config_title">Elegir ubicacion del widget</string>
+    <string name="widget_config_subtitle">Elige el pronostico que este widget debe mantener a la vista. Puedes agregar mas widgets para otros lugares despues.</string>
+    <string name="widget_config_eyebrow">Widget de pantalla de inicio</string>
+    <string name="widget_config_quick_setup">Configuracion rapida</string>
+    <string name="widget_config_quick_setup_message">Tocar una ubicacion termina la configuracion de inmediato y mantiene este widget enfocado en ese lugar.</string>
+    <string name="widget_config_recommended">Recomendado</string>
+    <string name="widget_config_follow_app_location">Seguir ubicacion de la app</string>
+    <string name="widget_config_follow_app_location_desc">Usa la ubicacion actual o ultima cargada de ZeusWatch para que el widget siga sincronizado.</string>
+    <string name="widget_config_flexible">Flexible</string>
+    <string name="widget_config_pinned">Fijado</string>
+    <string name="widget_config_no_saved_title">Aun no hay lugares guardados</string>
+    <string name="widget_config_no_saved_message">Puedes terminar con la ubicacion de la app ahora y luego guardar favoritos dentro de ZeusWatch para fijar mas widgets.</string>
+    <string name="widget_config_use_app_location">Usar ubicacion de la app</string>
+    <string name="widget_config_saved_locations">Ubicaciones guardadas</string>
+    <string name="widget_config_saved_locations_desc">Elige un lugar especifico cuando quieras un pronostico dedicado en la pantalla de inicio.</string>
+
     <!-- Navigation -->
     <string name="nav_today">Hoy</string>
     <string name="nav_hourly">Por hora</string>
