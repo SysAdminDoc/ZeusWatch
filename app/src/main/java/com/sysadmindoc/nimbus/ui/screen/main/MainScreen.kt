@@ -74,6 +74,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -83,6 +84,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.AstronomyData
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
@@ -147,13 +149,12 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
 import java.time.Duration
 import java.time.LocalDateTime
+import java.util.Locale
 import com.sysadmindoc.nimbus.ui.theme.skyGradient
 import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import com.sysadmindoc.nimbus.util.ShareWeatherHelper
 // WeatherShareHelper consolidated into ShareWeatherHelper
-
-private const val LOCATION_PERMISSION_ACTION_LABEL = "Grant location"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -272,7 +273,13 @@ fun MainScreen(
             ) {
                 val hasLocationPermissionError =
                     state.weatherData == null && isLocationPermissionError(state.error)
-                val retryLabel = if (hasLocationPermissionError) LOCATION_PERMISSION_ACTION_LABEL else "Retry"
+                val grantLocationLabel = stringResource(R.string.main_grant_location)
+                val retryLabel = stringResource(R.string.retry)
+                val chooseLocationLabel = stringResource(R.string.common_choose_location)
+                val retryGpsLabel = stringResource(R.string.common_retry_gps)
+                val useLastLocationLabel = stringResource(R.string.main_use_last_location)
+                val lastLocationName = state.lastLocationName
+                val actionLabel = if (hasLocationPermissionError) grantLocationLabel else retryLabel
                 val retryIcon = if (hasLocationPermissionError) Icons.Filled.LocationOn else Icons.Filled.Refresh
                 val retryAction = if (hasLocationPermissionError) {
                     requestLocationPermissions
@@ -282,26 +289,26 @@ fun MainScreen(
 
                 when {
                     state.isLoading && state.weatherData == null -> StartupState(
-                        title = "Finding Your Forecast",
-                        message = if (state.lastLocationName != null) {
-                            "Current location can take a few seconds. You can jump into ${state.lastLocationName} or choose another place manually."
+                        title = stringResource(R.string.main_finding_forecast_title),
+                        message = if (lastLocationName != null) {
+                            stringResource(R.string.main_finding_forecast_with_last, lastLocationName)
                         } else {
-                            "Current location can take a few seconds. Choose a city manually if you want to skip GPS."
+                            stringResource(R.string.main_finding_forecast_without_last)
                         },
-                        primaryActionLabel = if (state.lastLocationName != null) "Use Last Location" else "Choose Location",
-                        onPrimaryAction = if (state.lastLocationName != null) {
+                        primaryActionLabel = if (lastLocationName != null) useLastLocationLabel else chooseLocationLabel,
+                        onPrimaryAction = if (lastLocationName != null) {
                             { viewModel.useLastLocation() }
                         } else {
                             onNavigateToLocations
                         },
-                        secondaryActionLabel = if (state.lastLocationName != null) "Choose Location" else "Retry GPS",
-                        onSecondaryAction = if (state.lastLocationName != null) {
+                        secondaryActionLabel = if (lastLocationName != null) chooseLocationLabel else retryGpsLabel,
+                        onSecondaryAction = if (lastLocationName != null) {
                             onNavigateToLocations
                         } else {
                             { viewModel.loadWeather() }
                         },
-                        tertiaryActionLabel = if (state.lastLocationName != null) "Retry GPS" else null,
-                        onTertiaryAction = if (state.lastLocationName != null) {
+                        tertiaryActionLabel = if (lastLocationName != null) retryGpsLabel else null,
+                        onTertiaryAction = if (lastLocationName != null) {
                             { viewModel.loadWeather() }
                         } else {
                             null
@@ -319,10 +326,11 @@ fun MainScreen(
                             state.error!!.contains("internet", ignoreCase = true) -> Icons.Filled.CloudOff
                             else -> Icons.Filled.ErrorOutline
                         },
-                        actionLabel = retryLabel,
+                        actionLabel = actionLabel,
                         actionIcon = retryIcon,
-                        secondaryActionLabel = "Choose Location",
+                        secondaryActionLabel = chooseLocationLabel,
                         onSecondaryAction = onNavigateToLocations,
+                        isLocationPermissionError = hasLocationPermissionError,
                     )
                     state.weatherData != null -> {
                         val data = state.weatherData!!
@@ -414,7 +422,7 @@ fun MainScreen(
                         }
                     }
                     else -> ErrorState(
-                        message = "Loading weather data...",
+                        message = stringResource(R.string.main_loading_weather_data),
                         onRetry = { viewModel.loadWeather() },
                     )
                 }
@@ -435,20 +443,27 @@ internal fun TodayContent(
     onLocationSelected: (Int) -> Unit = {},
     onUseLastLocation: () -> Unit = {},
 ) {
+    val chooseLocationLabel = stringResource(R.string.common_choose_location)
+    val retryGpsLabel = stringResource(R.string.common_retry_gps)
+    val useLastLocationLabel = stringResource(R.string.main_use_last_location)
+    val grantLocationLabel = stringResource(R.string.main_grant_location)
+    val retryLabel = stringResource(R.string.retry)
+    val lastLocationName = state.lastLocationName
+
     when {
         state.isLoading && state.weatherData == null -> StartupState(
-            title = "Loading Weather",
-            message = if (state.lastLocationName != null) {
-                "Still checking your current position. You can open ${state.lastLocationName} instead or choose another saved place."
+            title = stringResource(R.string.main_loading_weather_title),
+            message = if (lastLocationName != null) {
+                stringResource(R.string.main_loading_weather_with_last, lastLocationName)
             } else {
-                "Still checking your current position. Choose a city manually if GPS is taking too long."
+                stringResource(R.string.main_loading_weather_without_last)
             },
-            primaryActionLabel = if (state.lastLocationName != null) "Use Last Location" else "Choose Location",
-            onPrimaryAction = if (state.lastLocationName != null) onUseLastLocation else onNavigateToLocations,
-            secondaryActionLabel = if (state.lastLocationName != null) "Choose Location" else "Retry GPS",
-            onSecondaryAction = if (state.lastLocationName != null) onNavigateToLocations else onRetry,
-            tertiaryActionLabel = if (state.lastLocationName != null) "Retry GPS" else null,
-            onTertiaryAction = if (state.lastLocationName != null) onRetry else null,
+            primaryActionLabel = if (lastLocationName != null) useLastLocationLabel else chooseLocationLabel,
+            onPrimaryAction = if (lastLocationName != null) onUseLastLocation else onNavigateToLocations,
+            secondaryActionLabel = if (lastLocationName != null) chooseLocationLabel else retryGpsLabel,
+            onSecondaryAction = if (lastLocationName != null) onNavigateToLocations else onRetry,
+            tertiaryActionLabel = if (lastLocationName != null) retryGpsLabel else null,
+            onTertiaryAction = if (lastLocationName != null) onRetry else null,
         )
         state.error != null && state.weatherData == null -> ErrorState(
             message = state.error!!,
@@ -462,10 +477,11 @@ internal fun TodayContent(
                 state.error!!.contains("internet", ignoreCase = true) -> Icons.Filled.CloudOff
                 else -> Icons.Filled.ErrorOutline
             },
-            actionLabel = if (isLocationPermissionError(state.error)) LOCATION_PERMISSION_ACTION_LABEL else "Retry",
+            actionLabel = if (isLocationPermissionError(state.error)) grantLocationLabel else retryLabel,
             actionIcon = if (isLocationPermissionError(state.error)) Icons.Filled.LocationOn else Icons.Filled.Refresh,
-            secondaryActionLabel = "Choose Location",
+            secondaryActionLabel = chooseLocationLabel,
             onSecondaryAction = onNavigateToLocations,
+            isLocationPermissionError = isLocationPermissionError(state.error),
         )
         state.weatherData != null -> WeatherContent(
             data = state.weatherData!!,
@@ -525,6 +541,13 @@ private fun WeatherContent(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showShareMenu by remember { mutableStateOf(false) }
     val settings = LocalUnitSettings.current
+    val manageLocationsDescription = stringResource(R.string.main_manage_locations_cd)
+    val shareWeatherDescription = stringResource(R.string.main_share_weather_cd)
+    val compareLocationsDescription = stringResource(R.string.main_compare_locations_cd)
+    val settingsDescription = stringResource(R.string.main_settings_cd)
+    val justNowLabel = stringResource(R.string.main_just_now)
+    val minuteAgoFormat = stringResource(R.string.main_minutes_ago)
+    val hourAgoFormat = stringResource(R.string.main_hours_ago)
 
     selectedAlert?.let { alert ->
         AlertDetailSheet(
@@ -547,13 +570,15 @@ private fun WeatherContent(
     // Precipitation chance + updated time state
     val todayPrecipChance = data.daily.firstOrNull()?.precipitationProbability ?: 0
     var updatedAgo by remember { mutableStateOf("") }
-    LaunchedEffect(data.lastUpdated) {
+    var updatedAgeMinutes by remember { mutableStateOf(0L) }
+    LaunchedEffect(data.lastUpdated, justNowLabel, minuteAgoFormat, hourAgoFormat) {
         while (true) {
             val minutes = Duration.between(data.lastUpdated, LocalDateTime.now()).toMinutes()
+            updatedAgeMinutes = minutes
             updatedAgo = when {
-                minutes < 1 -> "Just now"
-                minutes < 60 -> "${minutes}m ago"
-                else -> "${minutes / 60}h ago"
+                minutes < 1 -> justNowLabel
+                minutes < 60 -> String.format(Locale.getDefault(), minuteAgoFormat, minutes)
+                else -> String.format(Locale.getDefault(), hourAgoFormat, minutes / 60)
             }
             kotlinx.coroutines.delay(60_000L)
         }
@@ -603,14 +628,14 @@ private fun WeatherContent(
                 ) {
                     PremiumToolbarButton(
                         icon = Icons.Filled.LocationOn,
-                        contentDescription = "Manage locations",
+                        contentDescription = manageLocationsDescription,
                         onClick = onNavigateToLocations,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Box {
                             PremiumToolbarButton(
                                 icon = Icons.Filled.Share,
-                                contentDescription = "Share weather",
+                                contentDescription = shareWeatherDescription,
                                 onClick = { showShareMenu = true },
                             )
                             DropdownMenu(
@@ -618,14 +643,14 @@ private fun WeatherContent(
                                 onDismissRequest = { showShareMenu = false },
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Share as Text") },
+                                    text = { Text(stringResource(R.string.share_as_text)) },
                                     onClick = {
                                         showShareMenu = false
                                         ShareWeatherHelper.share(context, data, airQuality, settings)
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Share as Image") },
+                                    text = { Text(stringResource(R.string.share_as_image)) },
                                     onClick = {
                                         showShareMenu = false
                                         ShareWeatherHelper.shareAsImage(context, data, settings)
@@ -635,12 +660,12 @@ private fun WeatherContent(
                         }
                         PremiumToolbarButton(
                             icon = Icons.AutoMirrored.Filled.CompareArrows,
-                            contentDescription = "Compare locations",
+                            contentDescription = compareLocationsDescription,
                             onClick = onNavigateToCompare,
                         )
                         PremiumToolbarButton(
                             icon = Icons.Filled.Settings,
-                            contentDescription = "Settings",
+                            contentDescription = settingsDescription,
                             onClick = onNavigateToSettings,
                         )
                     }
@@ -651,8 +676,8 @@ private fun WeatherContent(
             if (state.isOffline) {
                 item(key = "offline_banner") {
                     InlineNoticeCard(
-                        title = "Offline mode",
-                        message = "Showing the latest cached forecast until your connection returns.",
+                        title = stringResource(R.string.main_offline_mode_title),
+                        message = stringResource(R.string.main_offline_mode_message),
                         icon = Icons.Filled.CloudOff,
                         tint = NimbusWarning,
                         modifier = Modifier.padding(horizontal = layout.contentPadding, vertical = 4.dp),
@@ -723,19 +748,22 @@ private fun WeatherContent(
                         if (todayPrecipChance > 0) {
                             StatusBadge(
                                 icon = Icons.Filled.WaterDrop,
-                                text = "Rain risk $todayPrecipChance%",
+                                text = stringResource(R.string.main_rain_risk, todayPrecipChance),
                                 tint = NimbusBlueAccent,
                             )
                         }
                         val stalenessColor = when {
                             isCached -> NimbusTextTertiary.copy(alpha = 0.78f)
-                            updatedAgo == "Just now" || updatedAgo.endsWith("m ago") -> NimbusTextTertiary
-                            updatedAgo.contains("1h") -> NimbusWarning.copy(alpha = 0.7f)
-                            updatedAgo.contains("h") -> NimbusWarning
-                            else -> NimbusTextTertiary
+                            updatedAgeMinutes < 60 -> NimbusTextTertiary
+                            updatedAgeMinutes < 120 -> NimbusWarning.copy(alpha = 0.7f)
+                            else -> NimbusWarning
                         }
                         StatusBadge(
-                            text = if (isCached) "Offline-ready • $updatedAgo" else "Refreshed $updatedAgo",
+                            text = if (isCached) {
+                                stringResource(R.string.main_offline_ready_status, updatedAgo)
+                            } else {
+                                stringResource(R.string.main_refreshed_status, updatedAgo)
+                            },
                             tint = stalenessColor,
                         )
                     }
@@ -772,7 +800,7 @@ private fun WeatherContent(
             item(key = "footer") {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "ZeusWatch v${com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME} \u2022 Forecast data from Open-Meteo",
+                    text = stringResource(R.string.main_footer, com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME),
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusTextSecondary,
                     modifier = Modifier
@@ -873,8 +901,8 @@ private fun RenderCard(
                 )
             } else if (isDeepLinkTarget) {
                 InlineNoticeCard(
-                    title = "Rain nowcast unavailable",
-                    message = "Minute-by-minute precipitation data is not available for this location right now.",
+                    title = stringResource(R.string.main_nowcast_unavailable_title),
+                    message = stringResource(R.string.main_nowcast_unavailable_message),
                     icon = Icons.Filled.WaterDrop,
                     tint = NimbusBlueAccent,
                     modifier = modifier,
@@ -975,8 +1003,8 @@ private fun RenderCard(
                 HealthAlertCard(alerts = state.healthAlerts, modifier = modifier)
             } else if (isDeepLinkTarget) {
                 InlineNoticeCard(
-                    title = "No active health trigger",
-                    message = "The latest forecast no longer meets your health alert thresholds.",
+                    title = stringResource(R.string.main_no_health_trigger_title),
+                    message = stringResource(R.string.main_no_health_trigger_message),
                     icon = Icons.Filled.ErrorOutline,
                     tint = NimbusTextSecondary,
                     modifier = modifier,
@@ -1117,7 +1145,7 @@ private fun LocationSelectorBar(
                         Spacer(modifier = Modifier.width(4.dp))
                     }
                     Text(
-                        text = if (loc.isCurrentLocation) "My Location" else loc.name,
+                        text = if (loc.isCurrentLocation) stringResource(R.string.common_my_location) else loc.name,
                         style = MaterialTheme.typography.labelMedium.copy(
                             fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium,
                         ),
@@ -1202,7 +1230,7 @@ private fun StartupState(
             message = message,
             icon = Icons.Filled.MyLocation,
             loading = true,
-            badgeText = "Current location can take a few seconds",
+            badgeText = stringResource(R.string.main_current_location_slow_badge),
             primaryActionLabel = primaryActionLabel,
             onPrimaryAction = onPrimaryAction,
             secondaryActionLabel = secondaryActionLabel,
@@ -1220,11 +1248,13 @@ private fun ErrorState(
     message: String,
     onRetry: () -> Unit,
     icon: ImageVector = Icons.Filled.ErrorOutline,
-    actionLabel: String = "Retry",
+    actionLabel: String? = null,
     actionIcon: ImageVector = Icons.Filled.Refresh,
     secondaryActionLabel: String? = null,
     onSecondaryAction: (() -> Unit)? = null,
+    isLocationPermissionError: Boolean = false,
 ) {
+    val resolvedActionLabel = actionLabel ?: stringResource(R.string.retry)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1232,21 +1262,25 @@ private fun ErrorState(
         contentAlignment = Alignment.Center,
     ) {
         PremiumMessageCard(
-            title = if (actionLabel == LOCATION_PERMISSION_ACTION_LABEL) "Location access needed" else "Forecast unavailable",
+            title = if (isLocationPermissionError) {
+                stringResource(R.string.main_location_access_needed)
+            } else {
+                stringResource(R.string.main_forecast_unavailable)
+            },
             message = message,
             icon = icon,
-            primaryActionLabel = actionLabel,
+            primaryActionLabel = resolvedActionLabel,
             onPrimaryAction = onRetry,
             secondaryActionLabel = secondaryActionLabel,
             onSecondaryAction = onSecondaryAction,
             badgeText = if (secondaryActionLabel != null && onSecondaryAction != null) {
-                "Manual locations are still available"
+                stringResource(R.string.main_manual_locations_available)
             } else {
                 null
             },
             modifier = Modifier
                 .padding(32.dp),
-            tint = if (actionLabel == LOCATION_PERMISSION_ACTION_LABEL) NimbusBlueAccent else NimbusWarning,
+            tint = if (isLocationPermissionError) NimbusBlueAccent else NimbusWarning,
         )
     }
 }
