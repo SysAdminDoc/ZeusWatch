@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
@@ -38,7 +39,9 @@ fun SevereWeatherCard(
 ) {
     if (cape < 100) return // Don't show when atmosphere is stable
 
-    val description = WeatherFormatter.capeDescription(cape)
+    val description = stringResource(capeDescriptionRes(cape))
+    val potentialDescription = stringResource(R.string.severe_weather_potential_cd)
+    val thunderstormWarning = stringResource(R.string.severe_weather_thunderstorm_warning)
     val color = when {
         cape >= 4000 -> Color(0xFFD32F2F) // Extremely Unstable
         cape >= 2500 -> Color(0xFFFF5722) // Very Unstable
@@ -61,7 +64,7 @@ fun SevereWeatherCard(
         ) {
             Icon(
                 Icons.Filled.Thunderstorm,
-                contentDescription = "Severe weather potential",
+                contentDescription = potentialDescription,
                 tint = color,
                 modifier = Modifier.size(28.dp),
             )
@@ -79,7 +82,7 @@ fun SevereWeatherCard(
                 )
                 if (cape >= 1000) {
                     Text(
-                        "Thunderstorms may produce strong winds, hail, or tornadoes.",
+                        thunderstormWarning,
                         style = MaterialTheme.typography.labelSmall,
                         color = NimbusTextPrimary,
                     )
@@ -87,4 +90,12 @@ fun SevereWeatherCard(
             }
         }
     }
+}
+
+private fun capeDescriptionRes(cape: Double): Int = when {
+    cape < 300 -> R.string.severe_cape_stable
+    cape < 1000 -> R.string.severe_cape_marginally_unstable
+    cape < 2500 -> R.string.severe_cape_moderately_unstable
+    cape < 4000 -> R.string.severe_cape_very_unstable
+    else -> R.string.severe_cape_extremely_unstable
 }

@@ -1,7 +1,9 @@
 package com.sysadmindoc.nimbus.util
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 
 /**
@@ -22,16 +24,18 @@ object PetSafetyEvaluator {
                     PetSafetyAlert(
                         type = PetAlertType.HOT_PAVEMENT,
                         severity = PetSeverity.DANGER,
-                        message = "Pavement dangerously hot (~${pavementEstimate.toInt()}\u00B0C).",
-                        detail = "Can burn paw pads in seconds. Walk on grass or wait until evening.",
+                        messageRes = R.string.pet_alert_hot_pavement_danger,
+                        detailRes = R.string.pet_alert_hot_pavement_danger_detail,
+                        messageArg = pavementEstimate.toInt(),
                     )
                 )
                 pavementEstimate > 50 -> alerts.add(
                     PetSafetyAlert(
                         type = PetAlertType.HOT_PAVEMENT,
                         severity = PetSeverity.WARNING,
-                        message = "Pavement is hot (~${pavementEstimate.toInt()}\u00B0C).",
-                        detail = "Test pavement with your hand. If too hot for you, it's too hot for paws.",
+                        messageRes = R.string.pet_alert_hot_pavement_warning,
+                        detailRes = R.string.pet_alert_hot_pavement_warning_detail,
+                        messageArg = pavementEstimate.toInt(),
                     )
                 )
             }
@@ -44,24 +48,24 @@ object PetSafetyEvaluator {
                 PetSafetyAlert(
                     type = PetAlertType.HEAT_STRESS,
                     severity = PetSeverity.DANGER,
-                    message = "Extreme heat risk for pets.",
-                    detail = "Keep pets indoors with water and AC. Do not leave in vehicles.",
+                    messageRes = R.string.pet_alert_heat_extreme,
+                    detailRes = R.string.pet_alert_heat_extreme_detail,
                 )
             )
             heatIndex > 32 -> alerts.add(
                 PetSafetyAlert(
                     type = PetAlertType.HEAT_STRESS,
                     severity = PetSeverity.WARNING,
-                    message = "High heat stress risk for pets.",
-                    detail = "Limit outdoor time. Provide shade and fresh water. Watch for panting.",
+                    messageRes = R.string.pet_alert_heat_high,
+                    detailRes = R.string.pet_alert_heat_high_detail,
                 )
             )
             heatIndex > 27 && current.humidity > 70 -> alerts.add(
                 PetSafetyAlert(
                     type = PetAlertType.HEAT_STRESS,
                     severity = PetSeverity.CAUTION,
-                    message = "Warm and humid \u2014 monitor pets outdoors.",
-                    detail = "Brachycephalic breeds (pugs, bulldogs) are especially vulnerable.",
+                    messageRes = R.string.pet_alert_heat_humid,
+                    detailRes = R.string.pet_alert_heat_humid_detail,
                 )
             )
         }
@@ -72,24 +76,24 @@ object PetSafetyEvaluator {
                 PetSafetyAlert(
                     type = PetAlertType.COLD_EXPOSURE,
                     severity = PetSeverity.DANGER,
-                    message = "Dangerously cold for pets.",
-                    detail = "Frostbite risk on ears, paws, and tail. Keep outdoor time under 5 minutes.",
+                    messageRes = R.string.pet_alert_cold_danger,
+                    detailRes = R.string.pet_alert_cold_danger_detail,
                 )
             )
             current.feelsLike < -5 -> alerts.add(
                 PetSafetyAlert(
                     type = PetAlertType.COLD_EXPOSURE,
                     severity = PetSeverity.WARNING,
-                    message = "Very cold \u2014 limit pet outdoor time.",
-                    detail = "Small dogs and short-haired breeds need a coat. Check paws for ice buildup.",
+                    messageRes = R.string.pet_alert_cold_warning,
+                    detailRes = R.string.pet_alert_cold_warning_detail,
                 )
             )
             current.feelsLike < 5 -> alerts.add(
                 PetSafetyAlert(
                     type = PetAlertType.COLD_EXPOSURE,
                     severity = PetSeverity.CAUTION,
-                    message = "Chilly for small or short-haired pets.",
-                    detail = "Consider a sweater for sensitive breeds.",
+                    messageRes = R.string.pet_alert_cold_chilly,
+                    detailRes = R.string.pet_alert_cold_chilly_detail,
                 )
             )
         }
@@ -100,8 +104,8 @@ object PetSafetyEvaluator {
                 PetSafetyAlert(
                     type = PetAlertType.STORM_ANXIETY,
                     severity = if (current.cape > 2500) PetSeverity.WARNING else PetSeverity.CAUTION,
-                    message = "Thunderstorms possible \u2014 prepare anxious pets.",
-                    detail = "Create a safe space. Consider calming aids if your pet is storm-sensitive.",
+                    messageRes = R.string.pet_alert_storm,
+                    detailRes = R.string.pet_alert_storm_detail,
                 )
             )
         }
@@ -125,8 +129,9 @@ object PetSafetyEvaluator {
 data class PetSafetyAlert(
     val type: PetAlertType,
     val severity: PetSeverity,
-    val message: String,
-    val detail: String = "",
+    @StringRes val messageRes: Int,
+    @StringRes val detailRes: Int? = null,
+    val messageArg: Int? = null,
 )
 
 enum class PetAlertType(val label: String) {

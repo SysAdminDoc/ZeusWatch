@@ -253,14 +253,6 @@ object WeatherFormatter {
 
     fun formatCape(cape: Double): String = "${cape.toInt()} J/kg"
 
-    fun capeDescription(cape: Double): String = when {
-        cape < 300 -> "Stable"
-        cape < 1000 -> "Marginally Unstable"
-        cape < 2500 -> "Moderately Unstable"
-        cape < 4000 -> "Very Unstable"
-        else -> "Extremely Unstable"
-    }
-
     // ── Beaufort Wind Scale ───────────────────────────────────────────────
 
     data class BeaufortInfo(val scale: Int, val label: String, val colorHex: Long)

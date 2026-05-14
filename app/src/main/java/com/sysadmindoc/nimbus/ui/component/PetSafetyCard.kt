@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
@@ -29,6 +30,8 @@ fun PetSafetyCard(
 ) {
     if (alerts.isEmpty()) return
 
+    val petSafetyDescription = stringResource(R.string.pet_safety_alert_cd)
+
     WeatherCard(titleRes = R.string.card_type_pet_safety, modifier = modifier) {
         Column(modifier = Modifier.fillMaxWidth()) {
             alerts.forEach { alert ->
@@ -38,20 +41,26 @@ fun PetSafetyCard(
                 ) {
                     Icon(
                         Icons.Outlined.Pets,
-                        contentDescription = "Pet safety alert",
+                        contentDescription = petSafetyDescription,
                         modifier = Modifier.size(18.dp),
                         tint = alert.severity.color,
                     )
                     Spacer(Modifier.width(8.dp))
                     Column {
+                        val message = if (alert.messageArg == null) {
+                            stringResource(alert.messageRes)
+                        } else {
+                            stringResource(alert.messageRes, alert.messageArg)
+                        }
                         Text(
-                            text = alert.message,
+                            text = message,
                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                             color = alert.severity.color,
                         )
-                        if (alert.detail.isNotBlank()) {
+                        val detailRes = alert.detailRes
+                        if (detailRes != null) {
                             Text(
-                                text = alert.detail,
+                                text = stringResource(detailRes),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = NimbusTextSecondary,
                             )
