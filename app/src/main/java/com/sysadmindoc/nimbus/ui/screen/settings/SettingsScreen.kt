@@ -91,6 +91,7 @@ import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.component.ScreenHeader
 import com.sysadmindoc.nimbus.ui.theme.*
+import com.sysadmindoc.nimbus.util.labelRes
 
 @Composable
 fun SettingsScreen(
@@ -430,6 +431,7 @@ internal fun SettingsContent(
             }
             settings.cardOrder.forEachIndexed { index, card ->
                 val enabled = card.name !in settings.disabledCards
+                val cardLabel = stringResource(card.labelRes)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -449,7 +451,7 @@ internal fun SettingsContent(
                         ) {
                             Icon(
                                 Icons.Filled.KeyboardArrowUp,
-                                contentDescription = stringResource(R.string.settings_move_card_up, card.label),
+                                contentDescription = stringResource(R.string.settings_move_card_up, cardLabel),
                                 tint = if (index > 0) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.4f),
                             )
                         }
@@ -464,22 +466,22 @@ internal fun SettingsContent(
                         ) {
                             Icon(
                                 Icons.Filled.KeyboardArrowDown,
-                                contentDescription = stringResource(R.string.settings_move_card_down, card.label),
+                                contentDescription = stringResource(R.string.settings_move_card_down, cardLabel),
                                 tint = if (index < settings.cardOrder.lastIndex) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.4f),
                             )
                         }
                     }
                     Spacer(Modifier.width(2.dp))
                     Text(
-                        text = card.label,
+                        text = cardLabel,
                         style = MaterialTheme.typography.bodyLarge,
                         color = if (enabled) NimbusTextPrimary else NimbusTextTertiary,
                         modifier = Modifier.weight(1f),
                     )
                     val cardToggleDescription = if (enabled) {
-                        stringResource(R.string.settings_hide_card, card.label)
+                        stringResource(R.string.settings_hide_card, cardLabel)
                     } else {
-                        stringResource(R.string.settings_show_card, card.label)
+                        stringResource(R.string.settings_show_card, cardLabel)
                     }
                     val cardToggleState = if (enabled) {
                         stringResource(R.string.common_on)

@@ -121,6 +121,36 @@
     <string name="alert_weather_summary_title">Weather Alerts</string>
     <string name="alert_weather_summary_text">Active weather alerts in your area</string>
 
+    <!-- Card labels -->
+    <string name="card_type_weather_summary">Weather Summary</string>
+    <string name="card_type_radar_preview">Radar Preview</string>
+    <string name="card_type_nowcast">Rain Next Hour</string>
+    <string name="card_type_hourly_forecast">Hourly Forecast</string>
+    <string name="card_type_temperature_graph">Temperature Trend</string>
+    <string name="card_type_daily_forecast">Daily Forecast</string>
+    <string name="card_type_uv_index">UV Index</string>
+    <string name="card_type_wind_compass">Wind</string>
+    <string name="card_type_air_quality">Air Quality</string>
+    <string name="card_type_pollen">Pollen</string>
+    <string name="card_type_outdoor_score">Outdoor Activity Score</string>
+    <string name="card_type_snowfall">Snowfall</string>
+    <string name="card_type_severe_weather">Severe Weather Potential</string>
+    <string name="card_type_golden_hour">Golden Hour</string>
+    <string name="card_type_sunshine">Sunshine Duration</string>
+    <string name="card_type_driving_conditions">Driving Conditions</string>
+    <string name="card_type_health_alerts">Health Alerts</string>
+    <string name="card_type_clothing">What to Wear</string>
+    <string name="card_type_pet_safety">Pet Safety</string>
+    <string name="card_type_moon_phase">Moon Phase</string>
+    <string name="card_type_humidity">Humidity &amp; Comfort</string>
+    <string name="card_type_precipitation_chart">Precipitation Forecast</string>
+    <string name="card_type_pressure_trend">Pressure Trend</string>
+    <string name="card_type_wind_trend">Wind Forecast</string>
+    <string name="card_type_details_grid">Today\'s Details</string>
+    <string name="card_type_cloud_cover">Cloud Cover</string>
+    <string name="card_type_visibility">Visibility</string>
+    <string name="card_type_on_this_day">On This Day</string>
+
     <!-- Current Conditions -->
     <string name="feels_like">Feels like %1$s</string>
     <string name="day_night_temp">Day %1$s \u2022 Night %2$s</string>
