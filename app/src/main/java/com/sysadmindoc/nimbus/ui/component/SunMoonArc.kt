@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -17,11 +18,12 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sysadmindoc.nimbus.util.AccessibilityHelper
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusMoonBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusSunYellow
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.PI
@@ -47,14 +49,6 @@ fun SunArc(
     if (sunrise == null || sunset == null) return
 
     val settings = LocalUnitSettings.current
-    val semanticSummary = AccessibilityHelper.sunArc(
-        sunrise = sunrise,
-        sunset = sunset,
-        moonrise = moonrise,
-        moonset = moonset,
-        referenceTime = referenceTime,
-        s = settings,
-    )
     val now = referenceTime ?: LocalDateTime.now()
     val fmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     val riseTime = try { LocalDateTime.parse(sunrise, fmt) } catch (_: Exception) { return }
@@ -77,12 +71,32 @@ fun SunArc(
     val duskEnd = setTime.plusMinutes(30)
     val isInDawn = now.isAfter(dawnStart) && now.isBefore(riseTime)
     val isInDusk = now.isAfter(setTime) && now.isBefore(duskEnd)
+    val twilightLabel = when {
+        isInDawn -> stringResource(R.string.sun_arc_dawn)
+        isInDusk -> stringResource(R.string.sun_arc_dusk)
+        else -> null
+    }
 
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 10.sp)
     val twilightColor = Color(0xFF1A237E).copy(alpha = 0.25f)
 
     val hasMoon = moonRiseTime != null && moonSetTime != null
+    val sunriseLabel = WeatherFormatter.formatTime(sunrise, settings)
+    val sunsetLabel = WeatherFormatter.formatTime(sunset, settings)
+    val sunStateLabel = stringResource(sunStateRes(riseTime, setTime, now))
+    val semanticSummary = if (hasMoon) {
+        stringResource(
+            R.string.sun_arc_semantics_with_moon,
+            sunriseLabel,
+            sunsetLabel,
+            sunStateLabel,
+            WeatherFormatter.formatTime(moonrise, settings),
+            WeatherFormatter.formatTime(moonset, settings),
+        )
+    } else {
+        stringResource(R.string.sun_arc_semantics, sunriseLabel, sunsetLabel, sunStateLabel)
+    }
 
     Canvas(
         modifier = modifier
@@ -236,17 +250,14 @@ fun SunArc(
         }
 
         // ── Labels ──────────────────────────────────────────────────
-        val riseLabel = com.sysadmindoc.nimbus.util.WeatherFormatter.formatTime(sunrise, settings)
-        val riseM = textMeasurer.measure(riseLabel, labelStyle)
+        val riseM = textMeasurer.measure(sunriseLabel, labelStyle)
         drawText(riseM, topLeft = Offset(w * 0.05f, horizonY + 4f))
 
-        val setLabel = com.sysadmindoc.nimbus.util.WeatherFormatter.formatTime(sunset, settings)
-        val setM = textMeasurer.measure(setLabel, labelStyle)
+        val setM = textMeasurer.measure(sunsetLabel, labelStyle)
         drawText(setM, topLeft = Offset(w * 0.95f - setM.size.width, horizonY + 4f))
 
         // Dawn/Dusk labels
-        if (isInDawn || isInDusk) {
-            val twilightLabel = if (isInDawn) "Dawn" else "Dusk"
+        if (twilightLabel != null) {
             val twilightM = textMeasurer.measure(
                 twilightLabel,
                 TextStyle(color = NimbusBlueAccent.copy(alpha = 0.6f), fontSize = 9.sp),
@@ -257,4 +268,14 @@ fun SunArc(
             )
         }
     }
+}
+
+private fun sunStateRes(
+    sunrise: LocalDateTime,
+    sunset: LocalDateTime,
+    now: LocalDateTime,
+): Int = when {
+    now.isBefore(sunrise) -> R.string.sun_arc_state_before_sunrise
+    now.isBefore(sunset) -> R.string.sun_arc_state_daylight
+    else -> R.string.sun_arc_state_after_sunset
 }

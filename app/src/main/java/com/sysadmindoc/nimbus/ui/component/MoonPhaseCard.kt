@@ -19,6 +19,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +32,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
+import com.sysadmindoc.nimbus.util.labelRes
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -48,15 +50,28 @@ fun MoonPhaseCard(
     val sunsetLabel = sunset?.let { WeatherFormatter.formatTime(it, s) }
     val moonriseLabel = astronomy.moonrise?.let { WeatherFormatter.formatTime(it, s) }
     val moonsetLabel = astronomy.moonset?.let { WeatherFormatter.formatTime(it, s) }
-    val astroSummary = buildString {
-        append("Astronomy. ")
-        if (sunriseLabel != null) append("Sunrise $sunriseLabel. ")
-        if (sunsetLabel != null) append("Sunset $sunsetLabel. ")
-        astronomy.dayLength?.let { append("Day length $it. ") }
-        append("Moon ${astronomy.moonPhase.label}, ${astronomy.moonIllumination.toInt()}% illuminated.")
-        if (moonriseLabel != null) append(" Moonrise $moonriseLabel.")
-        if (moonsetLabel != null) append(" Moonset $moonsetLabel.")
-    }
+    val moonPhaseLabel = stringResource(astronomy.moonPhase.labelRes)
+    val sunriseSummary = if (sunriseLabel != null) stringResource(R.string.astronomy_semantics_sunrise, sunriseLabel) else null
+    val sunsetSummary = if (sunsetLabel != null) stringResource(R.string.astronomy_semantics_sunset, sunsetLabel) else null
+    val dayLengthSummary = if (astronomy.dayLength != null) {
+        stringResource(R.string.astronomy_semantics_day_length, astronomy.dayLength)
+    } else null
+    val moonSummary = stringResource(
+        R.string.astronomy_semantics_moon,
+        moonPhaseLabel,
+        astronomy.moonIllumination.toInt(),
+    )
+    val moonriseSummary = if (moonriseLabel != null) stringResource(R.string.astronomy_semantics_moonrise, moonriseLabel) else null
+    val moonsetSummary = if (moonsetLabel != null) stringResource(R.string.astronomy_semantics_moonset, moonsetLabel) else null
+    val astroSummary = listOfNotNull(
+        stringResource(R.string.astronomy_semantics_intro),
+        sunriseSummary,
+        sunsetSummary,
+        dayLengthSummary,
+        moonSummary,
+        moonriseSummary,
+        moonsetSummary,
+    ).joinToString(separator = " ")
     WeatherCard(
         titleRes = R.string.card_title_astronomy,
         modifier = modifier.semantics(mergeDescendants = true) {
@@ -69,17 +84,20 @@ fun MoonPhaseCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                AstroDetail("Sunrise", WeatherFormatter.formatTime(sunrise, s))
-                AstroDetail("Sunset", WeatherFormatter.formatTime(sunset, s))
-                astronomy.dayLength?.let { AstroDetail("Day Length", it) }
+                AstroDetail(R.string.sunrise, WeatherFormatter.formatTime(sunrise, s))
+                AstroDetail(R.string.sunset, WeatherFormatter.formatTime(sunset, s))
+                astronomy.dayLength?.let { AstroDetail(R.string.astronomy_day_length, it) }
             }
 
             // Sunrise/sunset countdown
             val countdown = sunCountdown(sunrise, sunset, referenceTime)
-            if (countdown != null) {
+            val countdownText = if (countdown != null) {
+                stringResource(countdown.labelRes, countdown.hours, countdown.minutes)
+            } else null
+            if (countdownText != null) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = countdown,
+                    text = countdownText,
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusTextTertiary,
                     modifier = Modifier.fillMaxWidth(),
@@ -113,13 +131,13 @@ fun MoonPhaseCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    astronomy.moonPhase.label,
+                    moonPhaseLabel,
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = NimbusMoonBlue,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Illumination: ${astronomy.moonIllumination.toInt()}%",
+                    stringResource(R.string.moon_illumination_value, astronomy.moonIllumination.toInt()),
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                 )
@@ -133,8 +151,8 @@ fun MoonPhaseCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            AstroDetail("Moonrise", astronomy.moonrise ?: "--")
-            AstroDetail("Moonset", astronomy.moonset ?: "--")
+            AstroDetail(R.string.astronomy_moonrise, WeatherFormatter.formatTime(astronomy.moonrise, s))
+            AstroDetail(R.string.astronomy_moonset, WeatherFormatter.formatTime(astronomy.moonset, s))
         }
     }
 }
@@ -217,9 +235,9 @@ private fun MoonCanvas(
 }
 
 @Composable
-private fun AstroDetail(label: String, value: String) {
+private fun AstroDetail(labelRes: Int, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = NimbusTextTertiary)
+        Text(stringResource(labelRes), style = MaterialTheme.typography.labelSmall, color = NimbusTextTertiary)
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             value,
@@ -229,11 +247,17 @@ private fun AstroDetail(label: String, value: String) {
     }
 }
 
+private data class SunCountdown(
+    val labelRes: Int,
+    val hours: Long,
+    val minutes: Long,
+)
+
 private fun sunCountdown(
     sunrise: String?,
     sunset: String?,
     referenceTime: java.time.LocalDateTime? = null,
-): String? {
+): SunCountdown? {
     if (sunrise == null || sunset == null) return null
     return try {
         val fmt = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME
@@ -246,13 +270,21 @@ private fun sunCountdown(
                 val dur = java.time.Duration.between(now, rise)
                 val h = dur.toHours()
                 val m = dur.toMinutes() % 60
-                if (h > 0) "Sunrise in ${h}h ${m}m" else "Sunrise in ${m}m"
+                if (h > 0) {
+                    SunCountdown(R.string.sunrise_countdown_hours, h, m)
+                } else {
+                    SunCountdown(R.string.sunrise_countdown_minutes, 0, m)
+                }
             }
             now.isBefore(set) -> {
                 val dur = java.time.Duration.between(now, set)
                 val h = dur.toHours()
                 val m = dur.toMinutes() % 60
-                if (h > 0) "Sunset in ${h}h ${m}m" else "Sunset in ${m}m"
+                if (h > 0) {
+                    SunCountdown(R.string.sunset_countdown_hours, h, m)
+                } else {
+                    SunCountdown(R.string.sunset_countdown_minutes, 0, m)
+                }
             }
             else -> {
                 // After sunset — show time until tomorrow's sunrise
@@ -260,7 +292,11 @@ private fun sunCountdown(
                 val dur = java.time.Duration.between(now, tomorrowRise)
                 val h = dur.toHours()
                 val m = dur.toMinutes() % 60
-                if (h > 0) "Sunrise in ${h}h ${m}m" else "Sunrise in ${m}m"
+                if (h > 0) {
+                    SunCountdown(R.string.sunrise_countdown_hours, h, m)
+                } else {
+                    SunCountdown(R.string.sunrise_countdown_minutes, 0, m)
+                }
             }
         }
     } catch (_: Exception) { null }
