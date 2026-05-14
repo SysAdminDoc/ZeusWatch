@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
@@ -61,7 +62,7 @@ fun GoldenHourCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Morning",
+                    stringResource(R.string.golden_hour_morning),
                     style = MaterialTheme.typography.labelMedium,
                     color = NimbusTextSecondary,
                 )
@@ -82,7 +83,7 @@ fun GoldenHourCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Evening",
+                    stringResource(R.string.golden_hour_evening),
                     style = MaterialTheme.typography.labelMedium,
                     color = NimbusTextSecondary,
                 )
@@ -109,7 +110,7 @@ fun GoldenHourCard(
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                "Best natural lighting for photography",
+                stringResource(R.string.golden_hour_photo_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = NimbusTextTertiary,
             )
