@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -49,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.ReportCondition
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
@@ -60,6 +62,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusSuccess
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.labelRes
 
 /**
  * Bottom sheet for submitting a community weather report.
@@ -76,6 +79,7 @@ fun ReportSubmitSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedCondition by rememberSaveable { mutableStateOf<ReportCondition?>(null) }
     var noteText by rememberSaveable { mutableStateOf("") }
+    val bottomSheetHandleDescription = stringResource(R.string.common_bottom_sheet_handle)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -89,7 +93,7 @@ fun ReportSubmitSheet(
                     .height(4.dp)
                     .background(Color.White.copy(alpha = 0.16f))
                     .clearAndSetSemantics {
-                        contentDescription = "Bottom sheet handle"
+                        contentDescription = bottomSheetHandleDescription
                     },
             )
         },
@@ -102,7 +106,7 @@ fun ReportSubmitSheet(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Report conditions",
+                text = stringResource(R.string.report_sheet_title),
                 color = NimbusTextPrimary,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
@@ -111,7 +115,7 @@ fun ReportSubmitSheet(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Share what you see right now. Reports are anonymous and help nearby users.",
+                text = stringResource(R.string.report_sheet_body),
                 color = NimbusTextSecondary,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
@@ -143,8 +147,8 @@ fun ReportSubmitSheet(
             OutlinedTextField(
                 value = noteText,
                 onValueChange = { if (it.length <= 100) noteText = it },
-                label = { Text("Add a note (optional)", color = NimbusTextTertiary) },
-                placeholder = { Text("e.g. Light drizzle starting", color = NimbusTextTertiary) },
+                label = { Text(stringResource(R.string.report_note_label), color = NimbusTextTertiary) },
+                placeholder = { Text(stringResource(R.string.report_note_placeholder), color = NimbusTextTertiary) },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = NimbusTextPrimary,
@@ -156,7 +160,7 @@ fun ReportSubmitSheet(
                 modifier = Modifier.fillMaxWidth(),
                 supportingText = {
                     Text(
-                        text = "${noteText.length}/100",
+                        text = stringResource(R.string.report_note_count, noteText.length, 100),
                         color = NimbusTextTertiary,
                         fontSize = 12.sp,
                         modifier = Modifier.fillMaxWidth(),
@@ -193,9 +197,9 @@ fun ReportSubmitSheet(
                 } else {
                     Text(
                         text = if (selectedCondition == null) {
-                            "Choose a condition"
+                            stringResource(R.string.report_choose_condition)
                         } else {
-                            "Submit report"
+                            stringResource(R.string.report_submit)
                         },
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -211,7 +215,7 @@ fun ReportSubmitSheet(
                 val isSuccess = submitResult == "success"
                 Text(
                     text = if (isSuccess) {
-                        "Report submitted. Thanks for helping nearby users."
+                        stringResource(R.string.report_success)
                     } else {
                         submitResult ?: ""
                     },
@@ -235,6 +239,11 @@ private fun ConditionChip(
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
+    val conditionLabel = stringResource(condition.labelRes)
+    val conditionContentDescription = stringResource(R.string.report_condition_cd, conditionLabel)
+    val selectedStateDescription = stringResource(
+        if (isSelected) R.string.common_selected else R.string.common_not_selected,
+    )
     val shape = RoundedCornerShape(12.dp)
     val bgColor = if (isSelected) NimbusBlueAccent.copy(alpha = 0.3f) else NimbusCardBg
     val borderColor = if (isSelected) NimbusBlueAccent else NimbusCardBorder
@@ -250,8 +259,8 @@ private fun ConditionChip(
                 role = Role.RadioButton,
             )
             .semantics(mergeDescendants = true) {
-                contentDescription = "${condition.label} condition"
-                stateDescription = if (isSelected) "Selected" else "Not selected"
+                contentDescription = conditionContentDescription
+                stateDescription = selectedStateDescription
             }
             .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
@@ -263,7 +272,7 @@ private fun ConditionChip(
                 style = MaterialTheme.typography.headlineSmall,
             )
             Text(
-                text = condition.label,
+                text = conditionLabel,
                 color = if (isSelected) NimbusTextPrimary else NimbusTextSecondary,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
