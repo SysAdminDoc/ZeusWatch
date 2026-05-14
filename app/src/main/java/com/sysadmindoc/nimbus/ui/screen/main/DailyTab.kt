@@ -28,8 +28,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.ui.component.WeatherIcon
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -73,7 +75,7 @@ fun DailyTab(
         item {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                "${daily.size}-Day Forecast",
+                stringResource(R.string.forecast_daily_days_title, daily.size),
                 style = MaterialTheme.typography.headlineLarge,
                 color = NimbusTextPrimary,
             )
@@ -95,8 +97,8 @@ fun DailyTab(
             DailyDetailRow(
                 day = day,
                 dayLabel = when {
-                    referenceDate != null && day.date == referenceDate -> "Today"
-                    referenceDate != null && day.date == referenceDate.plusDays(1) -> "Tomorrow"
+                    referenceDate != null && day.date == referenceDate -> stringResource(R.string.common_today)
+                    referenceDate != null && day.date == referenceDate.plusDays(1) -> stringResource(R.string.common_tomorrow)
                     else -> day.date.format(dayFormatter)
                 },
                 dateLabel = day.date.format(dateFormatter),
@@ -167,12 +169,18 @@ private fun DailyDetailRow(
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    "H: ${WeatherFormatter.formatTemperature(day.temperatureHigh, s)}",
+                    stringResource(
+                        R.string.forecast_high_abbrev,
+                        WeatherFormatter.formatTemperature(day.temperatureHigh, s),
+                    ),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                     color = NimbusTextPrimary,
                 )
                 Text(
-                    "L: ${WeatherFormatter.formatTemperature(day.temperatureLow, s)}",
+                    stringResource(
+                        R.string.forecast_low_abbrev,
+                        WeatherFormatter.formatTemperature(day.temperatureLow, s),
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextTertiary,
                 )
@@ -186,13 +194,13 @@ private fun DailyDetailRow(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             if (day.precipitationProbability > 0) {
-                DetailChip("Rain", "${day.precipitationProbability}%")
+                DetailChip(stringResource(R.string.forecast_detail_rain), "${day.precipitationProbability}%")
             }
             day.windSpeedMax?.let {
-                DetailChip("Wind", WeatherFormatter.formatWindSpeed(it, s))
+                DetailChip(stringResource(R.string.forecast_detail_wind), WeatherFormatter.formatWindSpeed(it, s))
             }
             day.uvIndexMax?.let {
-                DetailChip("UV", WeatherFormatter.formatUvLevel(it))
+                DetailChip(stringResource(R.string.forecast_tab_uv), WeatherFormatter.formatUvLevel(it))
             }
         }
     }

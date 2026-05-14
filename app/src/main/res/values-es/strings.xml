@@ -83,6 +83,8 @@
     <string name="common_save">Guardar</string>
     <string name="common_back">Atras</string>
     <string name="common_bottom_sheet_handle">Asa de panel inferior</string>
+    <string name="common_today">Hoy</string>
+    <string name="common_tomorrow">Manana</string>
     <string name="custom_alerts_rule_center">Centro de reglas</string>
     <string name="custom_alerts_rule_count_singular">1 alerta personalizada lista para vigilar el pronostico.</string>
     <string name="custom_alerts_rule_count_plural">%1$d alertas personalizadas listas para vigilar el pronostico.</string>
@@ -247,6 +249,11 @@
     <string name="forecast_detail_sunshine">Sol</string>
     <string name="forecast_detail_uv_max">UV max.</string>
     <string name="forecast_detail_snow">Nieve</string>
+    <string name="forecast_detail_rain">Lluvia</string>
+    <string name="forecast_high_abbrev">Max: %1$s</string>
+    <string name="forecast_low_abbrev">Min: %1$s</string>
+    <string name="forecast_daily_days_title">Pronostico de %1$d dias</string>
+    <string name="forecast_hourly_rain_chance">%1$d%% lluvia</string>
     <string name="forecast_gusts_value">Rafagas %1$s</string>
     <string name="forecast_gust_abbrev">R: %1$s</string>
     <string name="forecast_uv_low">Bajo</string>
