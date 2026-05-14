@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.theme.*
 import com.sysadmindoc.nimbus.util.AccessibilityHelper
@@ -66,7 +67,7 @@ fun UvIndexBar(
     }
 
     WeatherCard(
-        title = "UV Index",
+        titleRes = R.string.card_type_uv_index,
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = semanticSummary
         },

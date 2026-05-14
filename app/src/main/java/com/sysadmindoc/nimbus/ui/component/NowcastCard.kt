@@ -23,6 +23,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
@@ -73,7 +74,7 @@ fun NowcastCard(
     }
 
     WeatherCard(
-        title = "Rain Next Hour",
+        titleRes = R.string.card_type_nowcast,
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = semanticSummary
         },

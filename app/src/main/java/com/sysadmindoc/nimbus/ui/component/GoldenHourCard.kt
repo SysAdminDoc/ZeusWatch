@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -43,7 +44,7 @@ fun GoldenHourCard(
     val blueColor = NimbusRainBlue
 
     WeatherCard(
-        title = "Golden Hour",
+        titleRes = R.string.card_type_golden_hour,
         modifier = modifier,
     ) {
         Row(

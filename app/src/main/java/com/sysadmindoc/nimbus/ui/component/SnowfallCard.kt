@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusSnowWhite
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -37,7 +38,7 @@ fun SnowfallCard(
     val s = LocalUnitSettings.current
 
     WeatherCard(
-        title = "Snowfall",
+        titleRes = R.string.card_type_snowfall,
         modifier = modifier,
     ) {
         Row(
