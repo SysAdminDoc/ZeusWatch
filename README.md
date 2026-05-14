@@ -168,7 +168,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Adaptive Layout** | Phone and tablet layouts via LazyColumn. Tablets get two-pane weather + radar (840dp+) |
 | **Live Weather Wallpaper** | Rain, snow, thunderstorm, sun rays, cloud wisps, fog particle effects over existing wallpaper |
 | **Accessibility** | TalkBack descriptions on all Canvas components, alert icons, and merged card semantics with liveRegion alerts |
-| **Localization Foundation** | Core navigation, Today shell states/card headers/alert dialogs/report sheet, Settings controls/enums, Home Card labels, Custom Alerts, Locations, Compare, widgets, and Wear OS state copy use Android string resources with an initial Spanish resource set |
+| **Localization Foundation** | Core navigation, Today shell states/card headers/card microcopy/alert dialogs/report sheet, Settings controls/enums, Home Card labels, Custom Alerts, Locations, Compare, widgets, and Wear OS state copy use Android string resources with an initial Spanish resource set |
 | **App Shortcuts** | Long-press launcher: Search, Radar, Settings, Compare |
 | **Deep Links** | `zeuswatch://` URI scheme for locations, radar, settings, compare |
 | **F-Droid Ready** | `freenet` build flavor with no proprietary dependencies |

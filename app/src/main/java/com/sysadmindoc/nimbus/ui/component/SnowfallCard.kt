@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
@@ -58,7 +59,11 @@ fun SnowfallCard(
                                 color = NimbusSnowWhite,
                             )
                         }
-                        Text("per hour", style = MaterialTheme.typography.labelSmall, color = NimbusTextSecondary)
+                        Text(
+                            stringResource(R.string.snowfall_per_hour),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = NimbusTextSecondary,
+                        )
                     }
                 }
             }
@@ -70,7 +75,11 @@ fun SnowfallCard(
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
                             color = NimbusSnowWhite,
                         )
-                        Text("depth", style = MaterialTheme.typography.labelSmall, color = NimbusTextSecondary)
+                        Text(
+                            stringResource(R.string.snowfall_depth),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = NimbusTextSecondary,
+                        )
                     }
                 }
             }
@@ -82,7 +91,11 @@ fun SnowfallCard(
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
                             color = NimbusSnowWhite,
                         )
-                        Text("today total", style = MaterialTheme.typography.labelSmall, color = NimbusTextSecondary)
+                        Text(
+                            stringResource(R.string.snowfall_today_total),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = NimbusTextSecondary,
+                        )
                     }
                 }
             }
