@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.ui.component
 
+import android.content.Context
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -48,6 +50,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -70,12 +74,12 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
  * Tabs: Overview (default expandable rows), Temp, Wind, UV, Precip.
  */
 
-private enum class DailyTrendTab(val label: String) {
-    OVERVIEW("Overview"),
-    TEMPERATURE("Temp"),
-    WIND("Wind"),
-    UV("UV"),
-    PRECIPITATION("Precip"),
+private enum class DailyTrendTab(@StringRes val labelRes: Int) {
+    OVERVIEW(R.string.forecast_tab_overview),
+    TEMPERATURE(R.string.forecast_tab_temp),
+    WIND(R.string.forecast_tab_wind),
+    UV(R.string.forecast_tab_uv),
+    PRECIPITATION(R.string.forecast_tab_precip),
 }
 
 @Composable
@@ -85,6 +89,7 @@ fun DailyForecastList(
     modifier: Modifier = Modifier,
 ) {
     val s = LocalUnitSettings.current
+    val context = LocalContext.current
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val tabs = DailyTrendTab.entries
     // Bounds-check restored tab index against current enum size
@@ -96,8 +101,8 @@ fun DailyForecastList(
     }
     val weeklyMin = remember(daily) { daily.minOfOrNull { it.temperatureLow } ?: 0.0 }
     val weeklyMax = remember(daily) { daily.maxOfOrNull { it.temperatureHigh } ?: 0.0 }
-    val weeklySummary = remember(daily, referenceDate, s) {
-        dailyHeaderSummary(daily.take(7), referenceDate, s)
+    val weeklySummary = remember(daily, referenceDate, s, context) {
+        dailyHeaderSummary(context, daily.take(7), referenceDate, s)
     }
 
     WeatherCard(titleRes = R.string.card_type_daily_forecast, modifier = modifier) {
@@ -111,7 +116,7 @@ fun DailyForecastList(
         ) {
             tabs.forEachIndexed { index, tab ->
                 DailyTrendTabChip(
-                    label = tab.label,
+                    label = stringResource(tab.labelRes),
                     isSelected = index == selectedTab,
                     onClick = { selectedTab = index },
                 )
@@ -266,7 +271,10 @@ private fun DailyWindRow(day: DailyConditions, referenceDate: java.time.LocalDat
             )
             day.windGustsMax?.let { gusts ->
                 Text(
-                    text = "Gusts ${WeatherFormatter.formatWindSpeed(gusts, s)}",
+                    text = stringResource(
+                        R.string.forecast_gusts_value,
+                        WeatherFormatter.formatWindSpeed(gusts, s),
+                    ),
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusTextTertiary,
                 )
@@ -299,13 +307,7 @@ private fun DailyUvRow(day: DailyConditions, referenceDate: java.time.LocalDate?
         uv < 11 -> Color(0xFFF44336)
         else -> Color(0xFF9C27B0)
     }
-    val uvLabel = when {
-        uv < 3 -> "Low"
-        uv < 6 -> "Moderate"
-        uv < 8 -> "High"
-        uv < 11 -> "Very High"
-        else -> "Extreme"
-    }
+    val uvLabel = stringResource(uvLevelLabelRes(uv))
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -459,7 +461,7 @@ private fun ExpandableDailyRow(
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                     ) {
                         Text(
-                            "Warmest",
+                            stringResource(R.string.forecast_warmest_badge),
                             style = MaterialTheme.typography.labelSmall,
                             color = NimbusWarning,
                         )
@@ -515,7 +517,11 @@ private fun ExpandableDailyRow(
             )
             Icon(
                 Icons.Filled.KeyboardArrowDown,
-                if (expanded) "Collapse" else "Expand",
+                if (expanded) {
+                    stringResource(R.string.forecast_collapse)
+                } else {
+                    stringResource(R.string.forecast_expand)
+                },
                 tint = if (expanded) NimbusBlueAccent else NimbusTextTertiary,
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
@@ -549,39 +555,44 @@ private fun DailyDetail(day: DailyConditions, s: NimbusSettings) {
             .padding(horizontal = 14.dp, vertical = 12.dp),
     ) {
         Text(
-            "${day.weatherCode.description}. High ${WeatherFormatter.formatTemperature(day.temperatureHigh, s)}, Low ${WeatherFormatter.formatTemperature(day.temperatureLow, s)}.",
+            stringResource(
+                R.string.forecast_daily_detail_summary,
+                day.weatherCode.description,
+                WeatherFormatter.formatTemperature(day.temperatureHigh, s),
+                WeatherFormatter.formatTemperature(day.temperatureLow, s),
+            ),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(bottom = 8.dp),
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(modifier = Modifier.weight(1f)) {
-                DetailMini(Icons.Filled.WaterDrop, "Precip", if (day.precipitationSum != null) WeatherFormatter.formatPrecipitation(day.precipitationSum, s) else "0.0")
+                DetailMini(Icons.Filled.WaterDrop, stringResource(R.string.forecast_detail_precip), if (day.precipitationSum != null) WeatherFormatter.formatPrecipitation(day.precipitationSum, s) else "0.0")
                 Spacer(Modifier.height(6.dp))
                 day.precipitationHours?.let {
-                    DetailMini(Icons.Filled.WaterDrop, "Rain Hours", WeatherFormatter.formatPrecipitationHours(it))
+                    DetailMini(Icons.Filled.WaterDrop, stringResource(R.string.forecast_detail_rain_hours), WeatherFormatter.formatPrecipitationHours(it))
                     Spacer(Modifier.height(6.dp))
                 }
-                DetailMini(Icons.Filled.Air, "Wind", if (day.windSpeedMax != null && day.windDirectionDominant != null) WeatherFormatter.formatWindSpeed(day.windSpeedMax, day.windDirectionDominant, s) else "--")
+                DetailMini(Icons.Filled.Air, stringResource(R.string.forecast_detail_wind), if (day.windSpeedMax != null && day.windDirectionDominant != null) WeatherFormatter.formatWindSpeed(day.windSpeedMax, day.windDirectionDominant, s) else "--")
                 day.windGustsMax?.let {
                     Spacer(Modifier.height(6.dp))
-                    DetailMini(Icons.Filled.Air, "Gusts", WeatherFormatter.formatWindSpeed(it, s))
+                    DetailMini(Icons.Filled.Air, stringResource(R.string.forecast_detail_gusts), WeatherFormatter.formatWindSpeed(it, s))
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
-                DetailMini(Icons.Outlined.WbSunny, "Sunrise", WeatherFormatter.formatTime(day.sunrise, s))
+                DetailMini(Icons.Outlined.WbSunny, stringResource(R.string.forecast_detail_sunrise), WeatherFormatter.formatTime(day.sunrise, s))
                 Spacer(Modifier.height(6.dp))
-                DetailMini(Icons.Outlined.WbTwilight, "Sunset", WeatherFormatter.formatTime(day.sunset, s))
+                DetailMini(Icons.Outlined.WbTwilight, stringResource(R.string.forecast_detail_sunset), WeatherFormatter.formatTime(day.sunset, s))
                 day.sunshineDuration?.let {
                     Spacer(Modifier.height(6.dp))
-                    DetailMini(Icons.Outlined.WbSunny, "Sunshine", WeatherFormatter.formatSunshineDuration(it))
+                    DetailMini(Icons.Outlined.WbSunny, stringResource(R.string.forecast_detail_sunshine), WeatherFormatter.formatSunshineDuration(it))
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
-                DetailMini(Icons.Outlined.WbSunny, "UV Max", day.uvIndexMax?.let { WeatherFormatter.formatUvIndex(it) } ?: "--")
+                DetailMini(Icons.Outlined.WbSunny, stringResource(R.string.forecast_detail_uv_max), day.uvIndexMax?.let { WeatherFormatter.formatUvIndex(it) } ?: "--")
                 day.snowfallSum?.let {
                     if (it > 0) {
                         Spacer(Modifier.height(6.dp))
-                        DetailMini(Icons.Outlined.AcUnit, "Snow", WeatherFormatter.formatSnowfall(it, s))
+                        DetailMini(Icons.Outlined.AcUnit, stringResource(R.string.forecast_detail_snow), WeatherFormatter.formatSnowfall(it, s))
                     }
                 }
             }
@@ -671,21 +682,32 @@ private fun windArrowChar(degrees: Int): String = when {
 }
 
 private fun dailyHeaderSummary(
+    context: Context,
     daily: List<DailyConditions>,
     referenceDate: java.time.LocalDate?,
     settings: NimbusSettings,
 ): String {
-    if (daily.isEmpty()) return "Daily forecast details will appear here when new forecast data arrives."
+    if (daily.isEmpty()) return context.getString(R.string.forecast_daily_empty)
 
     val warmest = daily.maxByOrNull { it.temperatureHigh }
     val wettest = daily.maxByOrNull { it.precipitationProbability }
-    val warmestLabel = warmest?.let { WeatherFormatter.formatRelativeDayLabel(it.date, referenceDate) } ?: "later"
+    val warmestLabel = warmest?.let { WeatherFormatter.formatRelativeDayLabel(it.date, referenceDate) }
+        ?: context.getString(R.string.forecast_later)
     val warmestTemp = warmest?.let { WeatherFormatter.formatTemperature(it.temperatureHigh, settings) } ?: "--"
 
     return if ((wettest?.precipitationProbability ?: 0) >= 40) {
         val wettestLabel = WeatherFormatter.formatRelativeDayLabel(wettest!!.date, referenceDate)
-        "Warmest around $warmestLabel at $warmestTemp. Rain risk peaks $wettestLabel."
+        context.getString(R.string.forecast_daily_warm_rain, warmestLabel, warmestTemp, wettestLabel)
     } else {
-        "Warmest around $warmestLabel at $warmestTemp. The week looks fairly steady overall."
+        context.getString(R.string.forecast_daily_warm_steady, warmestLabel, warmestTemp)
     }
+}
+
+@StringRes
+private fun uvLevelLabelRes(uv: Double): Int = when {
+    uv < 3 -> R.string.forecast_uv_low
+    uv < 6 -> R.string.forecast_uv_moderate
+    uv < 8 -> R.string.forecast_uv_high
+    uv < 11 -> R.string.forecast_uv_very_high
+    else -> R.string.forecast_uv_extreme
 }
