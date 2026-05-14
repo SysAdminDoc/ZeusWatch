@@ -16,6 +16,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -29,7 +30,6 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
-import com.sysadmindoc.nimbus.util.AccessibilityHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -55,9 +55,19 @@ fun PrecipitationChartCard(
 
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
-    val semanticSummary = remember(data, referenceTime, s) {
-        AccessibilityHelper.precipitationForecast(data, referenceTime, s)
+    val peakTimeRaw = if (peakHour != null) {
+        WeatherFormatter.formatRelativeHourLabel(peakHour.time, referenceTime, s)
+    } else null
+    val peakTimeLabel = if (peakTimeRaw == "Now") stringResource(R.string.common_now) else peakTimeRaw
+    val semanticBase = when {
+        maxProb == 0 -> stringResource(R.string.precip_semantics_no_rain)
+        peakTimeLabel != null -> stringResource(R.string.precip_semantics_chance_peak, maxProb, peakTimeLabel)
+        else -> stringResource(R.string.precip_semantics_chance, maxProb)
     }
+    val totalSemantic = if (totalPrecip > 0.0) {
+        stringResource(R.string.precip_semantics_total, WeatherFormatter.formatPrecipitation(totalPrecip, s))
+    } else null
+    val semanticSummary = listOfNotNull(semanticBase, totalSemantic).joinToString(separator = " ")
 
     WeatherCard(
         titleRes = R.string.card_type_precipitation_chart,
@@ -69,13 +79,17 @@ fun PrecipitationChartCard(
         Row(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (maxProb == 0) "No rain expected" else "Up to $maxProb% chance",
+                    text = if (maxProb == 0) {
+                        stringResource(R.string.precip_no_rain_expected)
+                    } else {
+                        stringResource(R.string.precip_up_to_chance, maxProb)
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (maxProb > 0) NimbusRainBlue else NimbusTextSecondary,
                 )
                 if (totalPrecip > 0) {
                     Text(
-                        text = "Total: ${WeatherFormatter.formatPrecipitation(totalPrecip, s)}",
+                        text = stringResource(R.string.precip_total, WeatherFormatter.formatPrecipitation(totalPrecip, s)),
                         style = MaterialTheme.typography.labelSmall,
                         color = NimbusTextTertiary,
                     )
@@ -84,7 +98,7 @@ fun PrecipitationChartCard(
             if (peakHour != null && peakHour.precipitationProbability > 0) {
                 Column {
                     Text(
-                        text = "Peak at ${WeatherFormatter.formatRelativeHourLabel(peakHour.time, referenceTime, s)}",
+                        text = stringResource(R.string.precip_peak_at, peakTimeLabel ?: ""),
                         style = MaterialTheme.typography.labelSmall,
                         color = NimbusTextSecondary,
                     )
