@@ -81,6 +81,8 @@
     <string name="custom_alerts_enabled_desc_off">Guardada, pero las notificaciones estan pausadas.</string>
     <string name="common_cancel">Cancelar</string>
     <string name="common_save">Guardar</string>
+    <string name="common_back">Atras</string>
+    <string name="common_bottom_sheet_handle">Asa de panel inferior</string>
     <string name="custom_alerts_rule_center">Centro de reglas</string>
     <string name="custom_alerts_rule_count_singular">1 alerta personalizada lista para vigilar el pronostico.</string>
     <string name="custom_alerts_rule_count_plural">%1$d alertas personalizadas listas para vigilar el pronostico.</string>
@@ -119,6 +121,53 @@
     <string name="alert_ambient_summary_text">Notificaciones de salud, lluvia inmediata y reglas personalizadas</string>
     <string name="alert_weather_summary_title">Alertas meteorologicas</string>
     <string name="alert_weather_summary_text">Alertas meteorologicas activas en tu zona</string>
+    <string name="alert_severity_extreme">Extrema</string>
+    <string name="alert_severity_severe">Severa</string>
+    <string name="alert_severity_moderate">Moderada</string>
+    <string name="alert_severity_minor">Menor</string>
+    <string name="alert_severity_unknown">Desconocida</string>
+    <string name="alert_urgency_immediate">Inmediata</string>
+    <string name="alert_urgency_expected">Esperada</string>
+    <string name="alert_urgency_future">Futura</string>
+    <string name="alert_urgency_past">Pasada</string>
+    <string name="alert_urgency_unknown">Desconocida</string>
+    <string name="alert_banner_list_cd">%1$s. Toca para ver detalles.</string>
+    <string name="alert_banner_item_cd">%1$s: %2$s</string>
+    <string name="alert_banner_icon_cd">Alerta meteorologica: %1$s</string>
+    <string name="alert_detail_alert_cd">Alerta meteorologica %1$s</string>
+    <string name="alert_detail_urgency_pill">Urgencia %1$s</string>
+    <string name="alert_detail_title">Detalles de alerta</string>
+    <string name="alert_detail_issued_by">Emitida por</string>
+    <string name="alert_detail_areas">Zonas</string>
+    <string name="alert_detail_effective">Vigente</string>
+    <string name="alert_detail_expires">Caduca</string>
+    <string name="alert_detail_meaning">Que significa</string>
+    <string name="alert_detail_recommended_action">Accion recomendada</string>
+    <string name="alert_time_expired">Caducada</string>
+    <string name="alert_time_days_hours_left">quedan %1$dd %2$dh</string>
+    <string name="alert_time_hours_minutes_left">quedan %1$dh %2$dm</string>
+    <string name="alert_time_minutes_left">quedan %1$dm</string>
+
+    <!-- Community Reports -->
+    <string name="report_sheet_title">Reportar condiciones</string>
+    <string name="report_sheet_body">Comparte lo que ves ahora. Los reportes son anonimos y ayudan a usuarios cercanos.</string>
+    <string name="report_note_label">Agregar nota (opcional)</string>
+    <string name="report_note_placeholder">p. ej. Llovizna ligera comenzando</string>
+    <string name="report_note_count">%1$d/%2$d</string>
+    <string name="report_choose_condition">Elegir una condicion</string>
+    <string name="report_submit">Enviar reporte</string>
+    <string name="report_success">Reporte enviado. Gracias por ayudar a usuarios cercanos.</string>
+    <string name="report_condition_cd">Condicion %1$s</string>
+    <string name="report_condition_sunny">Soleado</string>
+    <string name="report_condition_partly_cloudy">Parcialmente nublado</string>
+    <string name="report_condition_cloudy">Nublado</string>
+    <string name="report_condition_rain">Lluvia</string>
+    <string name="report_condition_heavy_rain">Lluvia fuerte</string>
+    <string name="report_condition_snow">Nieve</string>
+    <string name="report_condition_fog">Niebla</string>
+    <string name="report_condition_wind">Viento</string>
+    <string name="report_condition_hail">Granizo</string>
+    <string name="report_condition_tornado">Tornado</string>
 
     <!-- Card labels -->
     <string name="card_type_weather_summary">Resumen del clima</string>

@@ -82,6 +82,8 @@
     <string name="custom_alerts_enabled_desc_off">Saved, but notifications are paused.</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_save">Save</string>
+    <string name="common_back">Back</string>
+    <string name="common_bottom_sheet_handle">Bottom sheet handle</string>
     <string name="custom_alerts_rule_center">Rule center</string>
     <string name="custom_alerts_rule_count_singular">1 custom alert ready to watch the forecast.</string>
     <string name="custom_alerts_rule_count_plural">%1$d custom alerts ready to watch the forecast.</string>
@@ -120,6 +122,53 @@
     <string name="alert_ambient_summary_text">Health, nowcast, and custom-rule notifications</string>
     <string name="alert_weather_summary_title">Weather Alerts</string>
     <string name="alert_weather_summary_text">Active weather alerts in your area</string>
+    <string name="alert_severity_extreme">Extreme</string>
+    <string name="alert_severity_severe">Severe</string>
+    <string name="alert_severity_moderate">Moderate</string>
+    <string name="alert_severity_minor">Minor</string>
+    <string name="alert_severity_unknown">Unknown</string>
+    <string name="alert_urgency_immediate">Immediate</string>
+    <string name="alert_urgency_expected">Expected</string>
+    <string name="alert_urgency_future">Future</string>
+    <string name="alert_urgency_past">Past</string>
+    <string name="alert_urgency_unknown">Unknown</string>
+    <string name="alert_banner_list_cd">%1$s. Tap for details.</string>
+    <string name="alert_banner_item_cd">%1$s: %2$s</string>
+    <string name="alert_banner_icon_cd">Weather alert: %1$s</string>
+    <string name="alert_detail_alert_cd">%1$s weather alert</string>
+    <string name="alert_detail_urgency_pill">%1$s urgency</string>
+    <string name="alert_detail_title">Alert Details</string>
+    <string name="alert_detail_issued_by">Issued by</string>
+    <string name="alert_detail_areas">Areas</string>
+    <string name="alert_detail_effective">Effective</string>
+    <string name="alert_detail_expires">Expires</string>
+    <string name="alert_detail_meaning">What this means</string>
+    <string name="alert_detail_recommended_action">Recommended action</string>
+    <string name="alert_time_expired">Expired</string>
+    <string name="alert_time_days_hours_left">%1$dd %2$dh left</string>
+    <string name="alert_time_hours_minutes_left">%1$dh %2$dm left</string>
+    <string name="alert_time_minutes_left">%1$dm left</string>
+
+    <!-- Community Reports -->
+    <string name="report_sheet_title">Report conditions</string>
+    <string name="report_sheet_body">Share what you see right now. Reports are anonymous and help nearby users.</string>
+    <string name="report_note_label">Add a note (optional)</string>
+    <string name="report_note_placeholder">e.g. Light drizzle starting</string>
+    <string name="report_note_count">%1$d/%2$d</string>
+    <string name="report_choose_condition">Choose a condition</string>
+    <string name="report_submit">Submit report</string>
+    <string name="report_success">Report submitted. Thanks for helping nearby users.</string>
+    <string name="report_condition_cd">%1$s condition</string>
+    <string name="report_condition_sunny">Sunny</string>
+    <string name="report_condition_partly_cloudy">Partly Cloudy</string>
+    <string name="report_condition_cloudy">Cloudy</string>
+    <string name="report_condition_rain">Rain</string>
+    <string name="report_condition_heavy_rain">Heavy Rain</string>
+    <string name="report_condition_snow">Snow</string>
+    <string name="report_condition_fog">Fog</string>
+    <string name="report_condition_wind">Windy</string>
+    <string name="report_condition_hail">Hail</string>
+    <string name="report_condition_tornado">Tornado</string>
 
     <!-- Card labels -->
     <string name="card_type_weather_summary">Weather Summary</string>

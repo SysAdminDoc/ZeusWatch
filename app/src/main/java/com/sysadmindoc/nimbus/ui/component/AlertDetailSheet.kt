@@ -28,10 +28,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
@@ -39,7 +41,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusSurface
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
-import com.sysadmindoc.nimbus.util.WeatherFormatter
+import com.sysadmindoc.nimbus.util.labelRes
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -54,6 +56,11 @@ fun AlertDetailSheet(
     sheetState: SheetState,
     onDismiss: () -> Unit,
 ) {
+    val bottomSheetHandleDescription = stringResource(R.string.common_bottom_sheet_handle)
+    val severityLabel = stringResource(alert.severity.labelRes)
+    val urgencyLabel = stringResource(alert.urgency.labelRes)
+    val alertContentDescription = stringResource(R.string.alert_detail_alert_cd, severityLabel)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -68,7 +75,7 @@ fun AlertDetailSheet(
                     .height(4.dp)
                     .background(Color.White.copy(alpha = 0.16f))
                     .clearAndSetSemantics {
-                        contentDescription = "Bottom sheet handle"
+                        contentDescription = bottomSheetHandleDescription
                     },
             )
         },
@@ -83,7 +90,7 @@ fun AlertDetailSheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Filled.Warning,
-                    contentDescription = "${alert.severity.name} weather alert",
+                    contentDescription = alertContentDescription,
                     tint = alert.severity.color,
                     modifier = Modifier.size(28.dp),
                 )
@@ -109,13 +116,13 @@ fun AlertDetailSheet(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AlertSheetPill(
-                    text = alert.severity.label,
+                    text = severityLabel,
                     background = alert.severity.color.copy(alpha = 0.16f),
                     textColor = alert.severity.color,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 AlertSheetPill(
-                    text = "${alert.urgency.label} urgency",
+                    text = stringResource(R.string.alert_detail_urgency_pill, urgencyLabel),
                     background = Color.White.copy(alpha = 0.06f),
                     textColor = NimbusTextSecondary,
                 )
@@ -140,22 +147,22 @@ fun AlertDetailSheet(
                     .padding(horizontal = 16.dp, vertical = 14.dp),
             ) {
                 Text(
-                    text = "Alert Details",
+                    text = stringResource(R.string.alert_detail_title),
                     style = MaterialTheme.typography.labelLarge,
                     color = NimbusTextPrimary,
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                MetadataItem("Issued by", alert.senderName)
-                MetadataItem("Areas", alert.areaDescription)
-                alert.effective?.let { MetadataItem("Effective", formatAlertTime(it)) }
-                alert.expires?.let { MetadataItem("Expires", formatAlertTime(it)) }
+                MetadataItem(stringResource(R.string.alert_detail_issued_by), alert.senderName)
+                MetadataItem(stringResource(R.string.alert_detail_areas), alert.areaDescription)
+                alert.effective?.let { MetadataItem(stringResource(R.string.alert_detail_effective), formatAlertTime(it)) }
+                alert.expires?.let { MetadataItem(stringResource(R.string.alert_detail_expires), formatAlertTime(it)) }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             if (alert.description.isNotBlank()) {
                 Text(
-                    text = "What this means",
+                    text = stringResource(R.string.alert_detail_meaning),
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = NimbusTextPrimary,
                 )
@@ -170,7 +177,7 @@ fun AlertDetailSheet(
             if (!alert.instruction.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 InlineNoticeCard(
-                    title = "Recommended action",
+                    title = stringResource(R.string.alert_detail_recommended_action),
                     message = alert.instruction.trim(),
                     icon = Icons.Filled.Warning,
                     tint = alert.severity.color,
