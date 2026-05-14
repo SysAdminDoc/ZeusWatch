@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -20,6 +21,7 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Text
+import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.data.HourlyEntry
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 
@@ -38,8 +40,8 @@ fun HourlyScreen(
             contentAlignment = Alignment.Center,
         ) {
             WearStateCard(
-                title = "No hourly forecast",
-                message = "Hourly detail will appear after the next phone sync.",
+                title = stringResource(R.string.wear_no_hourly_forecast),
+                message = stringResource(R.string.wear_no_hourly_forecast_message),
                 icon = "\u23F0",
                 modifier = Modifier.padding(horizontal = 18.dp),
             )
@@ -54,7 +56,10 @@ fun HourlyScreen(
         state = listState,
     ) {
         item {
-            WearHeader(title = "Hourly Forecast", subtitle = "Temperature and rain risk for the next stretch")
+            WearHeader(
+                title = stringResource(R.string.wear_hourly_forecast),
+                subtitle = stringResource(R.string.wear_hourly_subtitle),
+            )
         }
         items(hourly) { entry ->
             HourlyRow(entry)
