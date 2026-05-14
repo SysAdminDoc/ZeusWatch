@@ -43,6 +43,7 @@
   - [x] Extracted Today alert banner/details, community report sheet, shared back action, alert severity/urgency labels, and report condition labels into resources.
   - [x] Extracted Today card micro-labels for current-condition hero metrics, rain nowcast legend, snowfall units, and radar preview/open states into resources.
   - [x] Extracted hourly/daily forecast card tabs, detail labels, UV/cloud/humidity descriptors, and short forecast summary sentences into resources.
+  - [x] Extracted standalone Hourly and Daily forecast tab titles, Today/Tomorrow labels, high/low summaries, rain labels, wind labels, UV chips, and feels-like copy into resources.
   - [ ] Continue extraction across remaining Today card internals and remaining dialogs before marking this item closed.
 
 - **[CLOSED v1.18.0] ~~Accessibility gaps on Canvas-drawn elements~~**
