@@ -165,6 +165,7 @@
     <string name="common_choose_location">Elegir ubicacion</string>
     <string name="common_current_device_location">Ubicacion actual del dispositivo</string>
     <string name="common_something_went_wrong">Algo salio mal</string>
+    <string name="common_retry_gps">Reintentar GPS</string>
     <string name="retry">Reintentar</string>
 
     <!-- Locations -->
@@ -226,6 +227,38 @@
     <string name="compare_cooler">esta mas fresco ahora</string>
     <string name="compare_humidity_summary">Humedad %1$d%% vs %2$d%%</string>
     <string name="compare_rain_summary">Lluvia %1$d%% vs %2$d%%</string>
+
+    <!-- Today screen -->
+    <string name="main_grant_location">Permitir ubicacion</string>
+    <string name="main_finding_forecast_title">Buscando tu pronostico</string>
+    <string name="main_finding_forecast_with_last">La ubicacion actual puede tardar unos segundos. Puedes abrir %1$s o elegir otro lugar manualmente.</string>
+    <string name="main_finding_forecast_without_last">La ubicacion actual puede tardar unos segundos. Elige una ciudad manualmente si quieres omitir GPS.</string>
+    <string name="main_loading_weather_title">Cargando clima</string>
+    <string name="main_loading_weather_with_last">Aun se revisa tu posicion actual. Puedes abrir %1$s o elegir otro lugar guardado.</string>
+    <string name="main_loading_weather_without_last">Aun se revisa tu posicion actual. Elige una ciudad manualmente si GPS tarda demasiado.</string>
+    <string name="main_use_last_location">Usar ultima ubicacion</string>
+    <string name="main_loading_weather_data">Cargando datos del clima...</string>
+    <string name="main_current_location_slow_badge">La ubicacion actual puede tardar unos segundos</string>
+    <string name="main_location_access_needed">Se necesita acceso a ubicacion</string>
+    <string name="main_forecast_unavailable">Pronostico no disponible</string>
+    <string name="main_manual_locations_available">Las ubicaciones manuales siguen disponibles</string>
+    <string name="main_manage_locations_cd">Administrar ubicaciones</string>
+    <string name="main_share_weather_cd">Compartir clima</string>
+    <string name="main_compare_locations_cd">Comparar ubicaciones</string>
+    <string name="main_settings_cd">Ajustes</string>
+    <string name="main_offline_mode_title">Modo sin conexion</string>
+    <string name="main_offline_mode_message">Mostrando el ultimo pronostico guardado hasta que vuelva la conexion.</string>
+    <string name="main_rain_risk">Riesgo de lluvia %1$d%%</string>
+    <string name="main_just_now">Ahora mismo</string>
+    <string name="main_minutes_ago">hace %1$d min</string>
+    <string name="main_hours_ago">hace %1$d h</string>
+    <string name="main_offline_ready_status">Disponible sin conexion \u2022 %1$s</string>
+    <string name="main_refreshed_status">Actualizado %1$s</string>
+    <string name="main_footer">ZeusWatch v%1$s \u2022 Datos de pronostico de Open-Meteo</string>
+    <string name="main_nowcast_unavailable_title">Lluvia inmediata no disponible</string>
+    <string name="main_nowcast_unavailable_message">Los datos de precipitacion minuto a minuto no estan disponibles para esta ubicacion ahora.</string>
+    <string name="main_no_health_trigger_title">Sin activador de salud activo</string>
+    <string name="main_no_health_trigger_message">El pronostico mas reciente ya no cumple tus umbrales de alerta de salud.</string>
 
     <!-- Existing shared labels used by the localized surfaces -->
     <string name="humidity">Humedad</string>

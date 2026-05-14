@@ -199,6 +199,7 @@
     <string name="common_choose_location">Choose location</string>
     <string name="common_current_device_location">Current device location</string>
     <string name="common_something_went_wrong">Something went wrong</string>
+    <string name="common_retry_gps">Retry GPS</string>
 
     <!-- Locations -->
     <string name="locations_title">Locations</string>
@@ -259,6 +260,38 @@
     <string name="compare_cooler">is cooler right now</string>
     <string name="compare_humidity_summary">Humidity %1$d%% vs %2$d%%</string>
     <string name="compare_rain_summary">Rain %1$d%% vs %2$d%%</string>
+
+    <!-- Today screen -->
+    <string name="main_grant_location">Grant location</string>
+    <string name="main_finding_forecast_title">Finding Your Forecast</string>
+    <string name="main_finding_forecast_with_last">Current location can take a few seconds. You can jump into %1$s or choose another place manually.</string>
+    <string name="main_finding_forecast_without_last">Current location can take a few seconds. Choose a city manually if you want to skip GPS.</string>
+    <string name="main_loading_weather_title">Loading Weather</string>
+    <string name="main_loading_weather_with_last">Still checking your current position. You can open %1$s instead or choose another saved place.</string>
+    <string name="main_loading_weather_without_last">Still checking your current position. Choose a city manually if GPS is taking too long.</string>
+    <string name="main_use_last_location">Use Last Location</string>
+    <string name="main_loading_weather_data">Loading weather data...</string>
+    <string name="main_current_location_slow_badge">Current location can take a few seconds</string>
+    <string name="main_location_access_needed">Location access needed</string>
+    <string name="main_forecast_unavailable">Forecast unavailable</string>
+    <string name="main_manual_locations_available">Manual locations are still available</string>
+    <string name="main_manage_locations_cd">Manage locations</string>
+    <string name="main_share_weather_cd">Share weather</string>
+    <string name="main_compare_locations_cd">Compare locations</string>
+    <string name="main_settings_cd">Settings</string>
+    <string name="main_offline_mode_title">Offline mode</string>
+    <string name="main_offline_mode_message">Showing the latest cached forecast until your connection returns.</string>
+    <string name="main_rain_risk">Rain risk %1$d%%</string>
+    <string name="main_just_now">Just now</string>
+    <string name="main_minutes_ago">%1$dm ago</string>
+    <string name="main_hours_ago">%1$dh ago</string>
+    <string name="main_offline_ready_status">Offline-ready \u2022 %1$s</string>
+    <string name="main_refreshed_status">Refreshed %1$s</string>
+    <string name="main_footer">ZeusWatch v%1$s \u2022 Forecast data from Open-Meteo</string>
+    <string name="main_nowcast_unavailable_title">Rain nowcast unavailable</string>
+    <string name="main_nowcast_unavailable_message">Minute-by-minute precipitation data is not available for this location right now.</string>
+    <string name="main_no_health_trigger_title">No active health trigger</string>
+    <string name="main_no_health_trigger_message">The latest forecast no longer meets your health alert thresholds.</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
