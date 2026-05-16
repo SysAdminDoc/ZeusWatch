@@ -160,52 +160,69 @@ data class OwmAirComponents(
  * OWM codes: https://openweathermap.org/weather-conditions
  */
 object OwmConditionMapper {
-    fun toWmoCode(owmId: Int): Int = when (owmId) {
-        // Thunderstorm group (2xx)
-        in 200..202 -> 95 // Thunderstorm with rain
-        in 210..212 -> 95 // Thunderstorm
-        221 -> 95          // Ragged thunderstorm
-        in 230..232 -> 95 // Thunderstorm with drizzle
+    /**
+     * Static lookup table from OpenWeatherMap condition ID to WMO weather code.
+     *
+     * Table-driven instead of a flat `when` so the cyclomatic complexity
+     * stays low and the OWM → WMO contract is one obvious place to audit
+     * when OpenWeatherMap revises their condition codes.
+     *
+     * Built once on first access from a list of (range, wmoCode, comment) triples
+     * via the [owmGroup] helper, which expands each [IntRange] into individual
+     * keys for O(1) lookup at runtime.
+     */
+    private val OWM_TO_WMO: Map<Int, Int> = buildMap {
+        // Thunderstorm group (2xx) → WMO 95
+        owmGroup(200..202, 95)        // Thunderstorm with rain
+        owmGroup(210..212, 95)        // Thunderstorm
+        put(221, 95)                  // Ragged thunderstorm
+        owmGroup(230..232, 95)        // Thunderstorm with drizzle
 
         // Drizzle group (3xx)
-        300, 310 -> 51     // Light drizzle
-        301, 311, 313, 321 -> 53 // Drizzle
-        302, 312, 314 -> 55 // Heavy drizzle
+        putAll(listOf(300, 310), 51)  // Light drizzle
+        putAll(listOf(301, 311, 313, 321), 53) // Drizzle
+        putAll(listOf(302, 312, 314), 55) // Heavy drizzle
 
         // Rain group (5xx)
-        500 -> 61          // Light rain
-        501 -> 63          // Moderate rain
-        502, 503, 504 -> 65 // Heavy rain
-        511 -> 66          // Freezing rain
-        520 -> 80          // Light showers
-        521 -> 81          // Showers
-        522, 531 -> 82     // Heavy showers
+        put(500, 61)                  // Light rain
+        put(501, 63)                  // Moderate rain
+        putAll(listOf(502, 503, 504), 65) // Heavy rain
+        put(511, 66)                  // Freezing rain
+        put(520, 80)                  // Light showers
+        put(521, 81)                  // Showers
+        putAll(listOf(522, 531), 82)  // Heavy showers
 
         // Snow group (6xx)
-        600 -> 71          // Light snow
-        601 -> 73          // Snow
-        602 -> 75          // Heavy snow
-        611, 612, 613 -> 77 // Sleet/snow grains
-        615, 616 -> 71     // Rain and snow (light)
-        620 -> 85          // Light snow showers
-        621, 622 -> 86     // Snow showers
+        put(600, 71)                  // Light snow
+        put(601, 73)                  // Snow
+        put(602, 75)                  // Heavy snow
+        putAll(listOf(611, 612, 613), 77) // Sleet/snow grains
+        putAll(listOf(615, 616), 71)  // Rain and snow (light)
+        put(620, 85)                  // Light snow showers
+        putAll(listOf(621, 622), 86)  // Snow showers
 
         // Atmosphere group (7xx)
-        701, 711, 721, 741 -> 45 // Fog/mist/haze/smoke
-        731, 751, 761, 762 -> 45 // Dust/sand/ash
-        771 -> 3           // Squall → overcast
-        781 -> 99          // Tornado → severe thunderstorm
+        putAll(listOf(701, 711, 721, 741), 45) // Fog/mist/haze/smoke
+        putAll(listOf(731, 751, 761, 762), 45) // Dust/sand/ash
+        put(771, 3)                   // Squall → overcast
+        put(781, 99)                  // Tornado → severe thunderstorm
 
-        // Clear (800)
-        800 -> 0           // Clear sky
-
-        // Clouds (80x)
-        801 -> 1           // Few clouds
-        802 -> 2           // Scattered clouds
-        803, 804 -> 3      // Overcast
-
-        else -> -1         // Unknown
+        // Clear / Clouds (8xx)
+        put(800, 0)                   // Clear sky
+        put(801, 1)                   // Few clouds
+        put(802, 2)                   // Scattered clouds
+        putAll(listOf(803, 804), 3)   // Overcast
     }
 
+    fun toWmoCode(owmId: Int): Int = OWM_TO_WMO[owmId] ?: -1
+
     fun isDayFromIcon(icon: String): Boolean = icon.endsWith("d")
+
+    private fun MutableMap<Int, Int>.owmGroup(range: IntRange, wmoCode: Int) {
+        for (id in range) put(id, wmoCode)
+    }
+
+    private fun MutableMap<Int, Int>.putAll(ids: List<Int>, wmoCode: Int) {
+        for (id in ids) put(id, wmoCode)
+    }
 }
