@@ -83,8 +83,11 @@ In-flight or top of the queue. Each item already has enough scope context that a
 **Done when**: ≥30 wear unit assertions; CI fails on a deleted Wear path.
 
 ### N-7. `GeminiNanoSummaryEngine` test coverage · **T-RELIABILITY**
-**Status**: zero tests today (`WeatherSummaryEngine` has 38 from v1.20.0; the AI delegate path is covered for `null`/exception fallbacks but not for live happy-path serialization).
-**Scope**: Mock the AI Core entry point; assert prompt construction includes location-local time, current condition, daily H/L, wind/UV/humidity context. Test the model-unavailable, model-timeout, and model-returns-empty branches. Falls under standard-flavor only — add `androidTest` if device emulator is needed; otherwise pure unit with mocked `GenerativeModel`.
+**Status**: **CLOSED** — `GeminiNanoSummaryEngineTest` (10 assertions) lives in `app/src/testStandard/` (new flavor-specific test source set). Covers:
+- `buildPrompt` shape: preamble, full weather context interpolation, ordering invariant (high/low → rain → wind), `precipChance == 0` omission, `precipChance > 0` inclusion, `uvIndex.toInt()` truncation, unit-symbol passthrough.
+- Lifecycle fallbacks: constructor degrades to unavailable when AI Core runtime is missing (the unit-test JVM and the unsupported-device path), `generate` returns null when unavailable, `generate` returns null after `close()`, `close()` is idempotent, `SummaryEngine` interface contract preserved.
+- Out of scope: live `generateContent` happy-path (GenerativeModel isn't openly mockable; the delegate-and-fallback path is already covered by `WeatherSummaryEngineWithStyleTest` from v1.20.0).
+Supporting refactor: extracted `buildPrompt` to a companion object `internal fun` so the prompt format is unit-testable without touching the model.
 
 ### N-8. Detekt baseline reduction · **T-RELIABILITY**
 **Status**: 22 baseline findings (LongMethod + CyclomaticComplexMethod, mostly in Compose screens). Tracked in `config/detekt/baseline.xml`.
