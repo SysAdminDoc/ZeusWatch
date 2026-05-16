@@ -1,0 +1,20 @@
+v1.20.3 - Premium UX polish
+
+- Crisper 8-12dp surface system across phone, Wear, and widgets
+- Tighter typography and spacing throughout
+- Reworked pollen empty state on the shared weather-card chrome
+- Better TalkBack semantics for icon-only actions, bottom nav, and report sheet controls
+- Real-device screenshots added for Today, Settings, and Radar
+- Stabilized the connected Today-screen UI test
+
+Recent releases bundled here:
+
+v1.20.2 - Engineering audit round 4
+- Six correctness fixes: moon-phase math, nowcast worker anchor, wear data persistence, alert dispatch, worker cancellation, ECCC province bbox
+
+v1.20.1 - Engineering audit round 3
+- Five fixes: UTC-as-local timezone bugs in 3 adapters, wear User-Agent drift, BlitzortungService double-open race, Pirate Weather path-key log leak
+
+v1.20.0 - Maintenance worker + tests
+- Weekly database WAL checkpoint background worker
+- 38 new WeatherSummaryEngine unit tests
