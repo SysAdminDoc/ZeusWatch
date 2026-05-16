@@ -1,22 +1,69 @@
-Nimbus Weather is a free, open-source Android weather app with a premium dark interface inspired by The Weather Channel. No API keys, no ads, no tracking.
+ZeusWatch is a free, open-source Android weather app with a premium dark UI, 28 customizable home cards, animated Lottie weather icons, and on-device Gemini Nano summaries. No API keys required. No ads, no tracking, no paywalls.
 
-Features:
-- Current conditions with dynamic sky gradients
-- 48-hour scrollable hourly forecast
-- 16-day expandable daily forecast
-- Interactive radar map with RainViewer global tiles
-- NWS severe weather alerts with push notifications (US)
-- Air quality index with pollutant breakdown
-- Pollen levels for 6 species
-- Moon phase and astronomy data
-- Multiple saved locations
-- Home screen widgets (3 sizes)
-- Share weather as text or image
-- Landscape and tablet adaptive layouts
-- Full TalkBack accessibility support
+Core forecast and observation:
+- Current conditions with feels-like explanation, "warmer than yesterday" comparison, and sky-gradient header
+- 72-hour scrollable hourly strip with animated icons, wind arrows, precipitation chance, and feels-like overlays
+- 16-day expandable daily forecast with temperature range bars, rain hours, sunshine, snowfall, gusts, and UV max
+- Interactive temperature graph with drag-to-inspect, precipitation bars, and historical normals band
+- 60-minute rain nowcasting from Open-Meteo minutely_15 data
 
-All weather data comes from Open-Meteo (free, no key required). Radar imagery from RainViewer. US severe weather alerts from the National Weather Service.
+Cards and visualizations (28 total, each toggleable and reorderable):
+- Today's Details grid (humidity, wind+gusts, UV, pressure trend, visibility, dew point, sunrise/sunset, cloud cover, snow)
+- Air quality with EPA + European AQI scales, dominant pollutant, and 5-day daily AQI bars
+- 6-species pollen levels (alder, birch, grass, mugwort, olive, ragweed)
+- Moon phase with Conway's algorithm illumination, golden hour, sun arc
+- Outdoor activity score with factor breakdown
+- Wind compass with Beaufort coloring
+- Severe weather (CAPE), driving hazards, health alerts, clothing suggestions, pet safety, and more
 
-The app uses a deep navy color palette with glassmorphism effects and animated weather particles. Dark theme only.
+Smart alerts and safety:
+- Severe weather alerts from NWS (US), MeteoAlarm (31 EU countries), JMA (Japan), and Environment Canada, auto-detected by country
+- Driving condition alerts: black ice, fog, hydroplaning, high wind, snow
+- Health triggers: migraine pressure drops, respiratory humidity extremes, arthritis temperature swings
+- Custom alert rules: define your own thresholds for highs, lows, gusts, 24h precipitation, and UV peaks
+- 4 notification channels (Extreme bypasses DND, Severe, Moderate, Minor)
 
-Built with Kotlin, Jetpack Compose, Hilt, Retrofit, Room, and MapLibre. Targets Android 8.0+ (API 26).
+Radar and maps:
+- Native MapLibre radar with RainViewer global tiles and play/pause animation
+- Real-time global lightning strikes via Blitzortung WebSocket
+- Map layer selector (radar, lightning, satellite, clouds)
+- Optional Windy.com embedded radar
+- Community weather report pins
+
+Multi-source forecast system:
+- 7 forecast/alert providers with primary + fallback per data type
+- Open-Meteo (default, no key), OpenWeatherMap, Pirate Weather, Bright Sky (DWD Germany), MET Norway (Nordic), Environment Canada
+- Configurable in Settings > Data Sources
+
+Wear OS companion:
+- Native Wear OS app with current conditions, 12-hour hourly, 7-day daily, and alerts screens
+- Tile and complication services
+- Phone-to-watch DataLayer sync prefers cached data over redundant API calls
+- Graceful direct-API fallback when the phone is disconnected
+
+Widgets (Jetpack Glance):
+- 4 sizes: Current (3x1), 3-Day (3x2), Forecast (4x3), Hourly Strip (4x1)
+- Per-widget location configuration
+- Tap-to-refresh freshness pill
+- Material You theming
+
+Other:
+- Compare two locations side by side
+- Drag-to-reorder saved locations with cached temperature previews
+- Share weather as formatted text or rendered dark-themed image
+- Persistent current-weather notification (toggleable)
+- Live weather wallpaper with rain/snow/storm particle effects over your existing wallpaper
+- TalkBack accessibility with merged-descendant semantics on every Canvas-heavy card
+- Tablet two-pane layout (weather + radar)
+- Multilingual: core surfaces translated to Spanish, more locales in flight
+- Custom icon pack support
+- F-Droid compatible `freenet` build flavor with zero proprietary dependencies
+
+Data attribution:
+- Forecasts: Open-Meteo (CC BY 4.0), MET Norway (CC BY 4.0), Bright Sky / DWD, Environment Canada (Open Government Licence)
+- Radar: RainViewer
+- Alerts: National Weather Service, MeteoAlarm, JMA, Environment Canada
+- Lightning: Blitzortung
+- Icons: Meteocons by Bas Milius (MIT)
+
+Built with Kotlin 2.1.0, Jetpack Compose, Hilt, Retrofit, Room, MapLibre 11, Glance, WorkManager, Lottie, and Coil. Targets Android 8.0+ (API 26). Licensed LGPL-3.0.
