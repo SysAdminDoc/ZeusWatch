@@ -90,9 +90,9 @@ In-flight or top of the queue. Each item already has enough scope context that a
 **Status**: 22 baseline findings (LongMethod + CyclomaticComplexMethod, mostly in Compose screens). Tracked in `config/detekt/baseline.xml`.
 **Scope**: Chip away during normal feature work. Target: baseline empty by v1.25.0. Extract Compose helpers, not refactors-for-the-sake-of-refactor.
 
-### N-9. Compose `runGlanceAppWidgetUnitTest` coverage · **T-RELIABILITY**
-**Status**: Glance 1.1.0+ ships `runGlanceAppWidgetUnitTest` for testing individual composable widget functions. Source: [Glance release notes](https://developer.android.com/jetpack/androidx/releases/glance).
-**Scope**: One unit test per widget (Small/Medium/Large/ForecastStrip) verifying rendering against a stub `WeatherData`. Catches widget-side regressions that today only surface visually.
+### N-9. Widget pure-function test coverage · **T-RELIABILITY**
+**Status**: **PARTIAL** — `WidgetThemeTest` (16 assertions) covers `widgetUpdatedLabel` (freshness pill, NTP rollback guard, locale-aware format overrides) and `weatherIconRes` (every WMO band → drawable, day/night clear-sky variant). Rescoped from the original "runGlanceAppWidgetUnitTest per widget" plan because that helper ships in `androidx.glance:glance-testing` 1.2.0+ and the repo is on Glance 1.1.1. Source: [Glance release notes](https://developer.android.com/jetpack/androidx/releases/glance).
+**Scope**: To use `runGlanceAppWidgetUnitTest`, upgrade Glance to 1.2.0+ — bump-and-test as a separate item once the rest of the Compose BOM is stable on 2025.04.01 (the current pin). Until then, keep adding pure-function tests for any helpers introduced into the widget package.
 
 ---
 
