@@ -90,7 +90,7 @@ In-flight or top of the queue. Each item already has enough scope context that a
 Supporting refactor: extracted `buildPrompt` to a companion object `internal fun` so the prompt format is unit-testable without touching the model.
 
 ### N-8. Detekt baseline reduction · **T-RELIABILITY**
-**Status**: 22 baseline findings (LongMethod + CyclomaticComplexMethod, mostly in Compose screens). Tracked in `config/detekt/baseline.xml`.
+**Status**: ongoing. Net delta this pass: **−2 entries** (MeteoconMapper.getLottieAsset and OwmConditionMapper.toWmoCode refactored from 28-/40-branch `when` expressions to O(1) static lookup maps; CyclomaticComplexMethod findings dropped); **+3 entries** captured during the i18n sweep (CurrentConditionsHeader, RadarPreviewCard, CustomAlertsScreen.RuleEditor crossed the LongMethod=160-line ceiling). The +3 are pre-existing Compose layouts that grew while strings moved to resources — they need their own helper-extraction pass, not part of this batch.
 **Scope**: Chip away during normal feature work. Target: baseline empty by v1.25.0. Extract Compose helpers, not refactors-for-the-sake-of-refactor.
 
 ### N-9. Widget pure-function test coverage · **T-RELIABILITY**
