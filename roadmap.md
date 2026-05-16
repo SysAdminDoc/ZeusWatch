@@ -169,12 +169,12 @@ Strategic Compass #5 says "accessibility-first"; v1.18.0 closed the Canvas-a11y 
 Source: [Mobile App Accessibility 2026 guide](https://www.accessibilitychecker.org/guides/mobile-apps-accessibility/). Effort: medium.
 
 ### NX-19. Release ops + docs consolidation · upgrade-path / docs
-Concrete maintenance items that don't fit a feature box:
-- Consolidate `PHASES.md` + `PHASE8_PLAN.md` (both pre-v1.0) into a single `docs/history.md` and drop the planning docs from the repo root — they're frozen.
-- Move `RESEARCH.md` into `docs/research-archive.md` so the repo root is README + CHANGELOG + ROADMAP only.
-- Document the per-release [pin-capture procedure](tools/capture_api_pins.sh) and the `release.yml` signing-secrets contract in a new `docs/RELEASE.md`.
-- Reconcile fastlane `full_description.txt` — currently advertises 48h hourly (we ship 72h) and 3 widget sizes (we ship 4).
-- Sync `versionCode` divergence between phone (86) and wear (62) at the next release if Play Store distribution is on the table; ignore if not.
+Concrete maintenance items that don't fit a feature box. **Status: PARTIAL** — fastlane copy reconciled.
+- [ ] Consolidate `PHASES.md` + `PHASE8_PLAN.md` (both pre-v1.0) into a single `docs/history.md` and drop the planning docs from the repo root — they're frozen.
+- [ ] Move `RESEARCH.md` into `docs/research-archive.md` so the repo root is README + CHANGELOG + ROADMAP only.
+- [ ] Document the per-release [pin-capture procedure](tools/capture_api_pins.sh) and the `release.yml` signing-secrets contract in a new `docs/RELEASE.md`.
+- [x] Reconciled fastlane `full_description.txt` (was advertising 48h hourly + 3 widgets + "Nimbus Weather"). Now matches v1.20.3 reality: 28 cards, 4 widget sizes, 72h hourly, 7 providers, native Wear OS, multi-source. `short_description.txt` and `title.txt` updated to use "ZeusWatch" branding. Added `changelogs/86.txt` covering v1.20.0 through v1.20.3.
+- [ ] Sync `versionCode` divergence between phone (86) and wear (62) at the next release if Play Store distribution is on the table; ignore if not.
 Effort: low. Done when repo root has ≤6 markdown files and fastlane copy matches reality.
 
 ---
