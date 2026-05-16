@@ -63,17 +63,16 @@ class GeminiNanoSummaryEngine @Inject constructor(
         if (closed) return null
         val generativeModel = model ?: return null
 
-        val prompt = buildString {
-            append("Write a brief, friendly 1-2 sentence weather summary for: ")
-            append("Currently $currentTemp, $condition. ")
-            append("High $high, low $low. ")
-            if (precipChance > 0) {
-                append("${precipChance}% chance of rain. ")
-            }
-            append("Wind $windSpeed. ")
-            append("UV index ${uvIndex.toInt()}. ")
-            append("Humidity $humidity%.")
-        }
+        val prompt = buildPrompt(
+            currentTemp = currentTemp,
+            condition = condition,
+            high = high,
+            low = low,
+            humidity = humidity,
+            windSpeed = windSpeed,
+            precipChance = precipChance,
+            uvIndex = uvIndex,
+        )
 
         return try {
             val response: GenerateContentResponse = generativeModel.generateContent(prompt)
@@ -100,5 +99,35 @@ class GeminiNanoSummaryEngine @Inject constructor(
         try {
             model?.close()
         } catch (_: Exception) {}
+    }
+
+    companion object {
+        /**
+         * Build the Gemini Nano prompt from weather context. Extracted as an
+         * internal helper so the prompt shape is unit-testable without
+         * mocking the GenerativeModel runtime — the prompt format is what
+         * drives summary quality, so locking it down with assertions is
+         * the highest-leverage thing to test here.
+         */
+        internal fun buildPrompt(
+            currentTemp: String,
+            condition: String,
+            high: String,
+            low: String,
+            humidity: Int,
+            windSpeed: String,
+            precipChance: Int,
+            uvIndex: Double,
+        ): String = buildString {
+            append("Write a brief, friendly 1-2 sentence weather summary for: ")
+            append("Currently $currentTemp, $condition. ")
+            append("High $high, low $low. ")
+            if (precipChance > 0) {
+                append("${precipChance}% chance of rain. ")
+            }
+            append("Wind $windSpeed. ")
+            append("UV index ${uvIndex.toInt()}. ")
+            append("Humidity $humidity%.")
+        }
     }
 }
