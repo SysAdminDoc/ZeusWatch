@@ -74,6 +74,10 @@ android {
         // hardcoding a string literal that drifts from the manifest.
         buildConfig = true
     }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -120,4 +124,10 @@ dependencies {
 
     // Desugaring
     coreLibraryDesugaring(libs.desugar)
+
+    // Unit Tests
+    testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.turbine)
 }
