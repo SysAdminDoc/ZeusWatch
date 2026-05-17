@@ -43,50 +43,35 @@ class SyncedWeatherStore @Inject constructor(
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun save(
-        temperature: Int,
-        condition: String,
-        high: Int,
-        low: Int,
-        locationName: String,
-        humidity: Int,
-        windSpeed: Int,
-        uvIndex: Int,
-        precipChance: Int,
-        isDay: Boolean,
-        weatherCode: Int,
-        timestampMs: Long,
-        hourly: List<HourlyEntry>,
-        daily: List<WearDailyEntry> = emptyList(),
-        alerts: List<WearAlertEntry> = emptyList(),
-        aqi: Int = -1,
-        aqiLabel: String = "",
-    ) {
+    fun save(payload: SyncedWeatherPayload) {
         // commit() (not apply()) so a sync that arrives moments before the
         // WearableListenerService process is killed actually lands on disk —
         // the Wear OS system kills these services aggressively after they
         // return from onDataChanged, and apply()'s async write is allowed
         // to be dropped if the process exits first.
+        val hourly = payload.hourly
+        val daily = payload.daily
+        val alerts = payload.alerts
         val previousCounts = Triple(
             prefs.getInt(KEY_HOURLY_COUNT, 0),
             prefs.getInt(KEY_DAILY_COUNT, 0),
             prefs.getInt(KEY_ALERT_COUNT, 0),
         )
         val editor = prefs.edit()
-        editor.putInt(KEY_TEMPERATURE, temperature)
-        editor.putString(KEY_CONDITION, condition)
-        editor.putInt(KEY_HIGH, high)
-        editor.putInt(KEY_LOW, low)
-        editor.putString(KEY_LOCATION_NAME, locationName)
-        editor.putInt(KEY_HUMIDITY, humidity)
-        editor.putInt(KEY_WIND_SPEED, windSpeed)
-        editor.putInt(KEY_UV_INDEX, uvIndex)
-        editor.putInt(KEY_PRECIP_CHANCE, precipChance)
-        editor.putBoolean(KEY_IS_DAY, isDay)
-        editor.putInt(KEY_WEATHER_CODE, weatherCode)
-        editor.putLong(KEY_SYNC_TIMESTAMP, timestampMs)
-        editor.putInt(KEY_AQI, aqi)
-        editor.putString(KEY_AQI_LABEL, aqiLabel)
+        editor.putInt(KEY_TEMPERATURE, payload.temperature)
+        editor.putString(KEY_CONDITION, payload.condition)
+        editor.putInt(KEY_HIGH, payload.high)
+        editor.putInt(KEY_LOW, payload.low)
+        editor.putString(KEY_LOCATION_NAME, payload.locationName)
+        editor.putInt(KEY_HUMIDITY, payload.humidity)
+        editor.putInt(KEY_WIND_SPEED, payload.windSpeed)
+        editor.putInt(KEY_UV_INDEX, payload.uvIndex)
+        editor.putInt(KEY_PRECIP_CHANCE, payload.precipChance)
+        editor.putBoolean(KEY_IS_DAY, payload.isDay)
+        editor.putInt(KEY_WEATHER_CODE, payload.weatherCode)
+        editor.putLong(KEY_SYNC_TIMESTAMP, payload.timestampMs)
+        editor.putInt(KEY_AQI, payload.aqi)
+        editor.putString(KEY_AQI_LABEL, payload.aqiLabel)
 
         editor.putInt(KEY_HOURLY_COUNT, hourly.size)
         hourly.forEachIndexed { i, entry ->
@@ -212,3 +197,23 @@ class SyncedWeatherStore @Inject constructor(
     /** Timestamp of the last successful sync, or 0 if never synced. */
     fun lastSyncTimestamp(): Long = prefs.getLong(KEY_SYNC_TIMESTAMP, 0L)
 }
+
+data class SyncedWeatherPayload(
+    val temperature: Int,
+    val condition: String,
+    val high: Int,
+    val low: Int,
+    val locationName: String,
+    val humidity: Int,
+    val windSpeed: Int,
+    val uvIndex: Int,
+    val precipChance: Int,
+    val isDay: Boolean,
+    val weatherCode: Int,
+    val timestampMs: Long,
+    val hourly: List<HourlyEntry>,
+    val daily: List<WearDailyEntry> = emptyList(),
+    val alerts: List<WearAlertEntry> = emptyList(),
+    val aqi: Int = -1,
+    val aqiLabel: String = "",
+)
