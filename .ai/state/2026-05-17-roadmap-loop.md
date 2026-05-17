@@ -221,3 +221,23 @@ N-8 remains open. Remaining entries are larger structural extractions around
 `MainScreen`, `SettingsScreen`, `RadarScreen`, `CompareScreen`,
 `WidgetRefreshWorker`, `TemperatureGraph`, and long-parameter
 constructors/functions.
+
+## Batch: N-8 Detekt Baseline Reduction - Temperature Graph
+
+Reduced the Detekt baseline by one more ID:
+
+- Extracted `TemperatureGraph` metrics, path building, precipitation bars,
+  normal band drawing, feels-like overlay, high/low markers, time labels, and
+  inspection tooltip into focused helpers.
+- Kept the public `TemperatureGraph` composable signature type-compatible while
+  replacing the fully qualified `LocalDateTime` reference with an import.
+- Regenerated `config/detekt/baseline.xml`; the
+  `LongMethod:TemperatureGraph.kt$@Composable fun TemperatureGraph(...)` entry
+  is removed.
+- Baseline count is now 17 IDs.
+
+## Remaining N-8 Boundary
+
+N-8 remains open. Remaining entries are larger structural extractions around
+`MainScreen`, `SettingsScreen`, `RadarScreen`, `CompareScreen`,
+`WidgetRefreshWorker`, and long-parameter constructors/functions.
