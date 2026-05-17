@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.wear.data
 
 import android.content.Context
 import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
+import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherPayload
 import com.sysadmindoc.nimbus.wear.testing.FakeSharedPreferences
 import io.mockk.every
 import io.mockk.mockk
@@ -100,19 +101,21 @@ class WearWeatherRepositoryTest {
         val timestamp = System.currentTimeMillis()
         val store = emptySyncedStore()
         store.save(
-            temperature = 72,
-            condition = "Clear Sky",
-            high = 80,
-            low = 62,
-            locationName = "Phone",
-            humidity = 45,
-            windSpeed = 4,
-            uvIndex = 6,
-            precipChance = 5,
-            isDay = true,
-            weatherCode = 0,
-            timestampMs = timestamp,
-            hourly = listOf(HourlyEntry("2026-05-17T10:00", 72, 0)),
+            SyncedWeatherPayload(
+                temperature = 72,
+                condition = "Clear Sky",
+                high = 80,
+                low = 62,
+                locationName = "Phone",
+                humidity = 45,
+                windSpeed = 4,
+                uvIndex = 6,
+                precipChance = 5,
+                isDay = true,
+                weatherCode = 0,
+                timestampMs = timestamp,
+                hourly = listOf(HourlyEntry("2026-05-17T10:00", 72, 0)),
+            ),
         )
         val repository = WearWeatherRepository(
             client = okHttpClient(onRequest = { error("network should not be used for fresh sync") }),
