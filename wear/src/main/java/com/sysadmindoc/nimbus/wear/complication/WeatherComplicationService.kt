@@ -1,14 +1,15 @@
 package com.sysadmindoc.nimbus.wear.complication
 
+import android.graphics.drawable.Icon
 import androidx.wear.watchface.complications.data.ComplicationData
 import androidx.wear.watchface.complications.data.ComplicationType
-import androidx.wear.watchface.complications.data.LongTextComplicationData
-import androidx.wear.watchface.complications.data.PlainComplicationText
-import androidx.wear.watchface.complications.data.RangedValueComplicationData
-import androidx.wear.watchface.complications.data.ShortTextComplicationData
+import androidx.wear.watchface.complications.data.SmallImage
+import androidx.wear.watchface.complications.data.SmallImageType
 import androidx.wear.watchface.complications.datasource.ComplicationRequest
 import androidx.wear.watchface.complications.datasource.SuspendingComplicationDataSourceService
+import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
+import com.sysadmindoc.nimbus.wear.data.WearWeatherData
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
 import dagger.hilt.android.AndroidEntryPoint
@@ -22,23 +23,7 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
     @Inject lateinit var syncedStore: SyncedWeatherStore
 
     override fun getPreviewData(type: ComplicationType): ComplicationData? {
-        return when (type) {
-            ComplicationType.SHORT_TEXT -> ShortTextComplicationData.Builder(
-                text = PlainComplicationText.Builder("72\u00B0").build(),
-                contentDescription = PlainComplicationText.Builder("Temperature").build(),
-            ).build()
-            ComplicationType.LONG_TEXT -> LongTextComplicationData.Builder(
-                text = PlainComplicationText.Builder("72\u00B0 Partly Cloudy").build(),
-                contentDescription = PlainComplicationText.Builder("Weather").build(),
-            ).build()
-            ComplicationType.RANGED_VALUE -> RangedValueComplicationData.Builder(
-                value = 5f,
-                min = 0f,
-                max = 12f,
-                contentDescription = PlainComplicationText.Builder("UV Index").build(),
-            ).setText(PlainComplicationText.Builder("UV 5").build()).build()
-            else -> null
-        }
+        return WeatherComplicationDataFactory.previewData(type, weatherSmallImage(), previewCopy())
     }
 
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData? {
@@ -48,33 +33,54 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
             repository.getCurrentWeather(loc.lat, loc.lon, loc.name).getOrNull()
         } ?: return null
 
-        return when (request.complicationType) {
-            ComplicationType.SHORT_TEXT -> ShortTextComplicationData.Builder(
-                text = PlainComplicationText.Builder("${data.temperature}\u00B0").build(),
-                contentDescription = PlainComplicationText.Builder(
-                    "${data.temperature} degrees, ${data.condition}",
-                ).build(),
-            ).build()
-
-            ComplicationType.LONG_TEXT -> LongTextComplicationData.Builder(
-                text = PlainComplicationText.Builder("${data.temperature}\u00B0 ${data.condition}").build(),
-                contentDescription = PlainComplicationText.Builder(
-                    "${data.temperature} degrees, ${data.condition}",
-                ).build(),
-            ).setTitle(
-                PlainComplicationText.Builder("H:${data.high}\u00B0 L:${data.low}\u00B0").build(),
-            ).build()
-
-            ComplicationType.RANGED_VALUE -> RangedValueComplicationData.Builder(
-                value = data.uvIndex.toFloat().coerceIn(0f, 12f),
-                min = 0f,
-                max = 12f,
-                contentDescription = PlainComplicationText.Builder("UV Index ${data.uvIndex}").build(),
-            ).setText(
-                PlainComplicationText.Builder("UV ${data.uvIndex}").build(),
-            ).build()
-
-            else -> null
-        }
+        return WeatherComplicationDataFactory.currentWeatherData(
+            type = request.complicationType,
+            data = data,
+            smallImage = weatherSmallImage(),
+            copy = currentCopy(data),
+        )
     }
+
+    private fun weatherSmallImage(): SmallImage = SmallImage.Builder(
+        Icon.createWithResource(this, R.drawable.ic_complication_weather),
+        SmallImageType.ICON,
+    ).build()
+
+    private fun previewCopy(): WeatherComplicationCopy = WeatherComplicationCopy(
+        shortText = getString(R.string.wear_complication_preview_temperature),
+        shortContentDescription = getString(R.string.wear_complication_temperature_label),
+        longText = getString(R.string.wear_complication_preview_long_text),
+        longContentDescription = getString(R.string.complication_label),
+        longTitle = getString(R.string.wear_tile_high_low_abbrev, 76, 64),
+        rangedText = getString(R.string.wear_complication_uv_short, 5),
+        rangedContentDescription = getString(R.string.wear_complication_uv_content_description, 5),
+        smallImageContentDescription = getString(R.string.wear_complication_preview_small_image_cd),
+    )
+
+    private fun currentCopy(data: WearWeatherData): WeatherComplicationCopy =
+        WeatherComplicationCopy(
+            shortText = getString(R.string.wear_complication_temperature_value, data.temperature),
+            shortContentDescription = getString(
+                R.string.wear_complication_temperature_content_description,
+                data.temperature,
+                data.condition,
+            ),
+            longText = getString(R.string.wear_complication_long_text, data.temperature, data.condition),
+            longContentDescription = getString(
+                R.string.wear_complication_temperature_content_description,
+                data.temperature,
+                data.condition,
+            ),
+            longTitle = getString(R.string.wear_tile_high_low_abbrev, data.high, data.low),
+            rangedText = getString(R.string.wear_complication_uv_short, data.uvIndex),
+            rangedContentDescription = getString(
+                R.string.wear_complication_uv_content_description,
+                data.uvIndex,
+            ),
+            smallImageContentDescription = getString(
+                R.string.wear_complication_small_image_content_description,
+                data.condition,
+                data.temperature,
+            ),
+        )
 }

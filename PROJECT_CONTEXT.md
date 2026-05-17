@@ -101,25 +101,27 @@ Evidence: `README.md`, `CLAUDE.md`, `ROADMAP-COMPLETED.md`, and source files.
 - Smart alerts: severe weather, nowcast transitions, driving hazards, health,
   custom user thresholds.
 - Widgets: Current, 3-Day, Forecast, Hourly Strip via Glance.
-- Wear OS: current, hourly, daily, alerts screens; tile; complication service;
+- Wear OS: current, hourly, daily, alerts screens; tile; complication service
+  with `SHORT_TEXT`, `LONG_TEXT`, `RANGED_VALUE`, and `SMALL_IMAGE`;
   phone-to-watch DataLayer sync plus direct Open-Meteo fallback.
 - Localization local coverage is complete for the current app string surface:
-  `values/strings.xml` has 925 strings and `values-es/strings.xml` has 925
-  strings as of the N-1 continuation pass on 2026-05-17. Wear Spanish coverage
-  is complete for the current Wear string surface.
+  `values/strings.xml` has 926 strings and `values-es/strings.xml` has 926
+  strings as of the N-3/N-4 continuation pass on 2026-05-17. Wear Spanish
+  coverage is complete for the current Wear string surface: 43 default strings
+  and 43 Spanish strings.
 
 ## Repository Metrics
 
 Captured 2026-05-17:
 
-- 353 tracked files.
-- 259 Kotlin files.
+- 372 tracked files after the N-4 batch is committed.
+- 261 Kotlin files.
 - 55 Kotlin test files.
 - 176 app main Kotlin files.
 - 6 app standard Kotlin files.
 - 6 app freenet Kotlin files.
-- 16 wear main Kotlin files.
-- 3 wear test Kotlin files.
+- 17 wear main Kotlin files.
+- 4 wear test Kotlin files.
 
 Current CI:
 
@@ -140,8 +142,10 @@ Top Now items from the 2026-05-17 refresh:
 2. Populate certificate pins for keyed endpoints. Local N-2 work captured
    OpenWeatherMap and Pirate Weather pins on 2026-05-17, added a PowerShell
    capture script, and documented the release update procedure.
-3. Expand and test Wear OS complications and WFF weather-data interoperability.
-4. Finish Wear OS service tests.
+3. Investigate WFF weather-data interoperability and document the supported
+   Android/Wear API surface.
+4. Finish remaining Wear OS service tests for tile callback behavior and
+   direct `WearWeatherRepository.getCurrentWeather` API calls.
 5. Reduce Detekt baseline during feature work.
 6. Upgrade dependencies in a staged runway, starting with low-risk patch/minor
    AndroidX moves and leaving Kotlin/AGP/Gradle major jumps for dedicated
@@ -158,7 +162,9 @@ keyed endpoints is handled by `tools/capture_api_pins.sh` and
 `tools/capture_api_pins.ps1`; current public SPKI pins live in
 `ApiCertificatePins.hostPins`. The safe Australian BOM forecast path is now a
 selectable `Open-Meteo + BOM ACCESS-G` provider backed by Open-Meteo `/v1/bom`;
-the undocumented direct BOM app API remains intentionally unused.
+the undocumented direct BOM app API remains intentionally unused. Wear
+complications now cover all locally declared watch-face slot types; WFF weather
+provider interoperability remains the next Wear investigation.
 
 ## High-Value Differentiators
 

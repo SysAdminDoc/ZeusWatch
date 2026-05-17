@@ -84,3 +84,25 @@ No direct BOM app endpoint was used. The direct `api.weather.bom.gov.au` path
 remains intentionally out of scope until BOM publishes stable open-data terms
 for that interface. Australian severe-weather warnings still rely on the
 existing alert-source fallback surface rather than a new BOM warnings adapter.
+
+## Batch: N-4 Wear Complication Suite
+
+Implemented the local N-4 work:
+
+- Added `SMALL_IMAGE` support to the Wear complication manifest.
+- Added `ic_complication_weather` for icon-capable watch-face slots.
+- Extracted `WeatherComplicationDataFactory` so complication data building is
+  testable without invoking the Hilt service directly.
+- Preserved and tested `SHORT_TEXT`, `LONG_TEXT`, and `RANGED_VALUE` output.
+- Made `LONG_TEXT` include a high/low title and localized all preview/current
+  complication copy through Wear string resources.
+- Added Robolectric-backed factory tests for preview/current data for every
+  declared type, UV clamping, high/low title text, and small-image propagation.
+- Fixed the Wear tile humidity/wind string format mismatch caught by Wear lint.
+- Added `docs/WEAR_OS.md` with complication install/use notes.
+
+## Remaining N-4 Boundary
+
+No local N-4 blocker remains. Follow-up Wear test work continues under N-6 for
+`WeatherTileService` callback behavior and `WearWeatherRepository.getCurrentWeather`
+with mocked OkHttp.

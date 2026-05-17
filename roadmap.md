@@ -82,9 +82,9 @@ In-flight or top of the queue. Each item already has enough scope context that a
 **Completion evidence**: `WeatherSourceProvider.OPEN_METEO_BOM` is exposed as a forecast source, `OpenMeteoApi.getBomForecast` calls `/v1/bom`, `WeatherRepository.getBomWeatherDirect` maps hourly-only BOM responses into current/hourly/daily `WeatherData`, and `WeatherSourceManagerTest` + `WeatherRepositoryTest` cover provider routing and hourly-only mapping.
 
 ### N-4. Watch face complication suite (extend, don't build a face) · **T-WEAR**
-**Status**: `WeatherComplicationService` declared in [wear AndroidManifest.xml](wear/src/main/AndroidManifest.xml) with `SHORT_TEXT,LONG_TEXT,RANGED_VALUE` types. Verify each type renders today's data correctly and add `SMALL_IMAGE` (weather icon) + `LONG_TEXT` (condition + H/L).
+**Status**: CLOSED locally on 2026-05-17. `WeatherComplicationService` now advertises `SHORT_TEXT,LONG_TEXT,RANGED_VALUE,SMALL_IMAGE`; `LONG_TEXT` renders condition plus high/low title and `SMALL_IMAGE` exposes a weather icon.
 **Why now, not "build a watch face"**: Wear OS 6+ requires the [declarative Watch Face Format](https://developer.android.com/training/wearables/wff) for new installs (as of Jan 2026 per [WFF release notes](https://developer.android.com/training/wearables/wff/release-notes)); building a custom runtime face is now blocked. Complications are how third-party data reaches user-chosen faces.
-**Scope**: Add the two missing complication types, write tests for each, document install. Tile preview drawable already exists.
+**Completion evidence**: [WeatherComplicationDataFactoryTest](wear/src/test/java/com/sysadmindoc/nimbus/wear/complication/WeatherComplicationDataFactoryTest.kt) covers preview and current-weather data for all declared types, UV range clamping, high/low title text, and small-image propagation. [WEAR_OS.md](docs/WEAR_OS.md) documents the install/use flow. Tile preview drawable already exists.
 
 ### N-5. WFF `[WEATHER.*]` data provider · **T-WEAR**
 **Status**: not started. WFF 2+ exposes [`[WEATHER.TEMPERATURE]`, `[WEATHER.CONDITION]`, `[WEATHER.HOURS.N.*]`, `[WEATHER.DAYS.N.*]`](https://developer.android.com/training/wearables/wff/weather) but only if the system has a weather provider registered. The system pulls from "the connected handheld device" first.
@@ -92,7 +92,7 @@ In-flight or top of the queue. Each item already has enough scope context that a
 **Risk**: API surface may be Pixel-only; document compatibility matrix.
 
 ### N-6. Test coverage: Wear OS code path · **T-RELIABILITY**
-**Status**: **PARTIAL** — wear test infra bootstrapped, 18 assertions across `WearWeatherRepository.wmoDescription/wmoEmoji` (10) and `SyncedWeatherStore` (8). Remaining: `WeatherTileService` (CallbackToFutureAdapter happy path), `WeatherComplicationService` (data → ComplicationData per type), `WearWeatherRepository.getCurrentWeather` with mocked OkHttp.
+**Status**: **PARTIAL** — wear test infra bootstrapped, 34+ assertions across `WearWeatherRepository.wmoDescription/wmoEmoji` (10), `SyncedWeatherStore` (8), and complication data factory coverage for `SHORT_TEXT`, `LONG_TEXT`, `RANGED_VALUE`, and `SMALL_IMAGE`. Remaining: `WeatherTileService` (CallbackToFutureAdapter happy path) and `WearWeatherRepository.getCurrentWeather` with mocked OkHttp.
 **Scope**: Continue with the remaining services. The infra in [wear/src/test/java/com/sysadmindoc/nimbus/wear/testing/FakeSharedPreferences.kt](wear/src/test/java/com/sysadmindoc/nimbus/wear/testing/FakeSharedPreferences.kt) is reusable for any prefs-backed service.
 **Done when**: ≥30 wear unit assertions; CI fails on a deleted Wear path.
 
