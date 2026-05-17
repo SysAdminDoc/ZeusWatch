@@ -3,6 +3,16 @@
 ZeusWatch ships a Wear OS companion app with phone sync, direct Open-Meteo
 fallback, a tile, and watch-face complications.
 
+## WFF Weather Data
+
+Watch Face Format `[WEATHER.*]` expressions are system-rendered weather data
+sources. ZeusWatch does not currently publish into that system store because no
+public third-party publisher API is documented. Use ZeusWatch complications for
+ZeusWatch data on user-selected watch faces.
+
+The compatibility decision and future API watchlist are documented in
+`docs/WFF_WEATHER_INTEROP.md`.
+
 ## Complications
 
 The complication data source is declared by

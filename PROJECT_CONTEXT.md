@@ -142,12 +142,10 @@ Top Now items from the 2026-05-17 refresh:
 2. Populate certificate pins for keyed endpoints. Local N-2 work captured
    OpenWeatherMap and Pirate Weather pins on 2026-05-17, added a PowerShell
    capture script, and documented the release update procedure.
-3. Investigate WFF weather-data interoperability and document the supported
-   Android/Wear API surface.
-4. Finish remaining Wear OS service tests for tile callback behavior and
+3. Finish remaining Wear OS service tests for tile callback behavior and
    direct `WearWeatherRepository.getCurrentWeather` API calls.
-5. Reduce Detekt baseline during feature work.
-6. Upgrade dependencies in a staged runway, starting with low-risk patch/minor
+4. Reduce Detekt baseline during feature work.
+5. Upgrade dependencies in a staged runway, starting with low-risk patch/minor
    AndroidX moves and leaving Kotlin/AGP/Gradle major jumps for dedicated
    compatibility work.
 
@@ -163,8 +161,10 @@ keyed endpoints is handled by `tools/capture_api_pins.sh` and
 `ApiCertificatePins.hostPins`. The safe Australian BOM forecast path is now a
 selectable `Open-Meteo + BOM ACCESS-G` provider backed by Open-Meteo `/v1/bom`;
 the undocumented direct BOM app API remains intentionally unused. Wear
-complications now cover all locally declared watch-face slot types; WFF weather
-provider interoperability remains the next Wear investigation.
+complications now cover all locally declared watch-face slot types. WFF weather
+provider interoperability is documented as a compatibility boundary in
+`docs/WFF_WEATHER_INTEROP.md`: no public third-party publisher API is available
+for ZeusWatch to write into the Wear OS system weather store.
 
 ## High-Value Differentiators
 
