@@ -164,9 +164,9 @@ provider interoperability is documented as a compatibility boundary in
 `docs/WFF_WEATHER_INTEROP.md`: no public third-party publisher API is available
 for ZeusWatch to write into the Wear OS system weather store. Wear service test
 coverage now includes direct API fetch mapping, phone-sync short-circuiting, API
-error handling, and tile request futures. The Detekt baseline is down to 20 IDs
-after the RadarPreviewCard and CurrentConditionsHeader helper extractions on
-2026-05-17.
+error handling, and tile request futures. The Detekt baseline is down to 19 IDs
+after the RadarPreviewCard, CurrentConditionsHeader, and CustomAlertsScreen
+RuleEditor helper extractions on 2026-05-17.
 
 ## High-Value Differentiators
 
