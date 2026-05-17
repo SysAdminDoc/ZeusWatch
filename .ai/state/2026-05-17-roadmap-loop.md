@@ -129,3 +129,22 @@ Closed N-5 as a compatibility decision:
 No local implementation is appropriate until Android or AndroidX publishes a
 normal-app weather publisher API that can write to the Wear OS system weather
 store consumed by WFF.
+
+## Batch: N-6 Wear OS Test Coverage
+
+Closed N-6 locally:
+
+- Added mocked-OkHttp `WearWeatherRepository.getCurrentWeather` coverage for a
+  successful direct Open-Meteo response, non-2xx API failure, and fresh
+  phone-sync short-circuiting.
+- Added `WeatherTileRequestRunner` so the `CallbackToFutureAdapter` tile request
+  path is testable without requiring Hilt service creation in Robolectric.
+- Added `WeatherTileService.loadTileData()` coverage to prove fresh synced data
+  avoids location/repository fallback work.
+- Added tile resource future coverage.
+- Verified full Wear unit tests, Detekt, and Wear lint.
+
+## Remaining N-6 Boundary
+
+No local N-6 blocker remains. The remaining Wear reliability work should move
+under normal regression expansion, not this roadmap item.

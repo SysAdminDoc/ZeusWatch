@@ -1,18 +1,145 @@
 package com.sysadmindoc.nimbus.wear.data
 
+import android.content.Context
+import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
+import com.sysadmindoc.nimbus.wear.testing.FakeSharedPreferences
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.test.runTest
+import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Unit tests for [WearWeatherRepository] companion helpers.
+ * Unit tests for [WearWeatherRepository].
  *
- * These are pure functions used by the tile, complication, hourly screen,
- * and the [com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore] fallback
- * path when the synced condition string is missing. Drift here silently
- * mislabels weather on the watch, so the mapping is locked down per
- * Open-Meteo's WMO weather code spec.
+ * The direct API path is locked down with an OkHttp interceptor so the watch
+ * fallback can be tested without network access. The companion helpers are
+ * used by the tile, complication, hourly screen, and synced-store fallback;
+ * drift there silently mislabels weather on the watch.
  */
 class WearWeatherRepositoryTest {
+
+    @Test
+    fun `getCurrentWeather maps direct Open-Meteo response`() = runTest {
+        val requests = mutableListOf<Request>()
+        val repository = WearWeatherRepository(
+            client = okHttpClient(
+                code = 200,
+                body = """
+                    {
+                      "current": {
+                        "temperature_2m": 68.4,
+                        "weather_code": 61,
+                        "relative_humidity_2m": 83,
+                        "wind_speed_10m": 9.8,
+                        "uv_index": 5.7,
+                        "is_day": 0
+                      },
+                      "daily": {
+                        "temperature_2m_max": [75.2],
+                        "temperature_2m_min": [52.9],
+                        "precipitation_probability_max": [60]
+                      },
+                      "hourly": {
+                        "time": ["2026-05-17T10:00", "2026-05-17T11:00"],
+                        "temperature_2m": [67.8, 69.1],
+                        "weather_code": [61, 63],
+                        "precipitation_probability": [60, 70],
+                        "wind_speed_10m": [8.0, 10.5]
+                      }
+                    }
+                """.trimIndent(),
+                onRequest = requests::add,
+            ),
+            syncedStore = emptySyncedStore(),
+        )
+
+        val result = repository.getCurrentWeather(47.61, -122.33, "Seattle")
+
+        assertTrue(result.isSuccess)
+        val data = result.getOrThrow()
+        assertEquals(68, data.temperature)
+        assertEquals("Rain", data.condition)
+        assertEquals(75, data.high)
+        assertEquals(52, data.low)
+        assertEquals("Seattle", data.locationName)
+        assertEquals(83, data.humidity)
+        assertEquals(9, data.windSpeed)
+        assertEquals(5, data.uvIndex)
+        assertEquals(60, data.precipChance)
+        assertFalse(data.isDay)
+        assertEquals(61, data.weatherCode)
+        assertEquals(DataSource.DIRECT_API, data.dataSource)
+        assertTrue(data.syncedAtMs > 0L)
+        assertEquals(2, data.hourly.size)
+        assertEquals("2026-05-17T11:00", data.hourly[1].time)
+        assertEquals(69, data.hourly[1].temperature)
+        assertEquals(63, data.hourly[1].weatherCode)
+        assertEquals(70, data.hourly[1].precipChance)
+        assertEquals(10, data.hourly[1].windSpeed)
+
+        val request = requests.single()
+        assertEquals("api.open-meteo.com", request.url.host)
+        assertEquals("47.61", request.url.queryParameter("latitude"))
+        assertEquals("-122.33", request.url.queryParameter("longitude"))
+        assertEquals("12", request.url.queryParameter("forecast_hours"))
+        assertTrue(request.header("User-Agent")!!.startsWith("ZeusWatch-Wear/"))
+    }
+
+    @Test
+    fun `getCurrentWeather prefers fresh synced data over network`() = runTest {
+        val timestamp = System.currentTimeMillis()
+        val store = emptySyncedStore()
+        store.save(
+            temperature = 72,
+            condition = "Clear Sky",
+            high = 80,
+            low = 62,
+            locationName = "Phone",
+            humidity = 45,
+            windSpeed = 4,
+            uvIndex = 6,
+            precipChance = 5,
+            isDay = true,
+            weatherCode = 0,
+            timestampMs = timestamp,
+            hourly = listOf(HourlyEntry("2026-05-17T10:00", 72, 0)),
+        )
+        val repository = WearWeatherRepository(
+            client = okHttpClient(onRequest = { error("network should not be used for fresh sync") }),
+            syncedStore = store,
+        )
+
+        val data = repository.getCurrentWeather(0.0, 0.0, "Ignored").getOrThrow()
+
+        assertEquals(72, data.temperature)
+        assertEquals("Phone", data.locationName)
+        assertEquals(DataSource.PHONE_SYNC, data.dataSource)
+        assertEquals(timestamp, data.syncedAtMs)
+        assertEquals(1, data.hourly.size)
+    }
+
+    @Test
+    fun `getCurrentWeather reports non-successful API responses`() = runTest {
+        val repository = WearWeatherRepository(
+            client = okHttpClient(code = 503, body = """{"error": true}"""),
+            syncedStore = emptySyncedStore(),
+        )
+
+        val result = repository.getCurrentWeather(47.61, -122.33, "Seattle")
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull()!!.message!!.contains("503"))
+    }
 
     @Test
     fun `wmoDescription maps clear sky and overcast bands`() {
@@ -105,4 +232,30 @@ class WearWeatherRepositoryTest {
         assertEquals(fallback, WearWeatherRepository.wmoEmoji(100))
         assertEquals(fallback, WearWeatherRepository.wmoEmoji(Int.MAX_VALUE))
     }
+
+    private fun emptySyncedStore(): SyncedWeatherStore {
+        val context = mockk<Context>()
+        every { context.getSharedPreferences(any(), any()) } returns FakeSharedPreferences()
+        return SyncedWeatherStore(context)
+    }
+
+    private fun okHttpClient(
+        code: Int = 200,
+        body: String = "{}",
+        onRequest: (Request) -> Unit = {},
+    ): OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(
+            Interceptor { chain ->
+                val request = chain.request()
+                onRequest(request)
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(code)
+                    .message(if (code in 200..299) "OK" else "Error")
+                    .body(body.toResponseBody("application/json".toMediaType()))
+                    .build()
+            },
+        )
+        .build()
 }
