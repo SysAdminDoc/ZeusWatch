@@ -140,12 +140,10 @@ Top Now items from the 2026-05-17 refresh:
 2. Populate certificate pins for keyed endpoints. Local N-2 work captured
    OpenWeatherMap and Pirate Weather pins on 2026-05-17, added a PowerShell
    capture script, and documented the release update procedure.
-3. Decide the safe Australian BOM path, preferably Open-Meteo ACCESS-G model
-   surfacing before any direct undocumented BOM API.
-4. Expand and test Wear OS complications and WFF weather-data interoperability.
-5. Finish Wear OS service tests.
-6. Reduce Detekt baseline during feature work.
-7. Upgrade dependencies in a staged runway, starting with low-risk patch/minor
+3. Expand and test Wear OS complications and WFF weather-data interoperability.
+4. Finish Wear OS service tests.
+5. Reduce Detekt baseline during feature work.
+6. Upgrade dependencies in a staged runway, starting with low-risk patch/minor
    AndroidX moves and leaving Kotlin/AGP/Gradle major jumps for dedicated
    compatibility work.
 
@@ -158,7 +156,9 @@ The local localization gate is `python tools/check_localization.py`, and the
 translator handoff is documented in `docs/TRANSLATION.md`. TLS pin capture for
 keyed endpoints is handled by `tools/capture_api_pins.sh` and
 `tools/capture_api_pins.ps1`; current public SPKI pins live in
-`ApiCertificatePins.hostPins`.
+`ApiCertificatePins.hostPins`. The safe Australian BOM forecast path is now a
+selectable `Open-Meteo + BOM ACCESS-G` provider backed by Open-Meteo `/v1/bom`;
+the undocumented direct BOM app API remains intentionally unused.
 
 ## High-Value Differentiators
 
