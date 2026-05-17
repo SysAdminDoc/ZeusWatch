@@ -23,7 +23,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -36,22 +35,11 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onTileRequest(requestParams: RequestBuilders.TileRequest) =
-        CallbackToFutureAdapter.getFuture<TileBuilders.Tile> { completer ->
-            serviceScope.launch {
-                try {
-                    // Prefer phone-synced data to avoid network calls from the watch
-                    val synced = syncedStore.getFreshData()
-                    val data = synced ?: run {
-                        val loc = locationProvider.getLocation()
-                        repository.getCurrentWeather(loc.lat, loc.lon, loc.name).getOrNull()
-                    }
-                    completer.set(buildTile(data))
-                } catch (e: Exception) {
-                    completer.set(buildTile(null))
-                }
-            }
-            "weather-tile"
-        }
+        WeatherTileRequestRunner.requestTile(
+            scope = serviceScope,
+            loadData = ::loadTileData,
+            buildTile = ::buildTile,
+        )
 
     override fun onTileResourcesRequest(requestParams: RequestBuilders.ResourcesRequest) =
         CallbackToFutureAdapter.getFuture { completer ->
@@ -66,6 +54,15 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
+    }
+
+    internal suspend fun loadTileData(): WearWeatherData? {
+        // Prefer phone-synced data to avoid network calls from the watch.
+        val synced = syncedStore.getFreshData()
+        return synced ?: run {
+            val loc = locationProvider.getLocation()
+            repository.getCurrentWeather(loc.lat, loc.lon, loc.name).getOrNull()
+        }
     }
 
     private fun buildTile(data: WearWeatherData?): TileBuilders.Tile {

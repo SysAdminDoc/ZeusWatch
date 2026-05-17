@@ -114,14 +114,14 @@ Evidence: `README.md`, `CLAUDE.md`, `ROADMAP-COMPLETED.md`, and source files.
 
 Captured 2026-05-17:
 
-- 372 tracked files after the N-4 batch is committed.
-- 261 Kotlin files.
-- 55 Kotlin test files.
+- 375 tracked files after the N-6 batch is committed.
+- 263 Kotlin files.
+- 56 Kotlin test files.
 - 176 app main Kotlin files.
 - 6 app standard Kotlin files.
 - 6 app freenet Kotlin files.
-- 17 wear main Kotlin files.
-- 4 wear test Kotlin files.
+- 18 wear main Kotlin files.
+- 5 wear test Kotlin files.
 
 Current CI:
 
@@ -142,10 +142,8 @@ Top Now items from the 2026-05-17 refresh:
 2. Populate certificate pins for keyed endpoints. Local N-2 work captured
    OpenWeatherMap and Pirate Weather pins on 2026-05-17, added a PowerShell
    capture script, and documented the release update procedure.
-3. Finish remaining Wear OS service tests for tile callback behavior and
-   direct `WearWeatherRepository.getCurrentWeather` API calls.
-4. Reduce Detekt baseline during feature work.
-5. Upgrade dependencies in a staged runway, starting with low-risk patch/minor
+3. Reduce Detekt baseline during feature work.
+4. Upgrade dependencies in a staged runway, starting with low-risk patch/minor
    AndroidX moves and leaving Kotlin/AGP/Gradle major jumps for dedicated
    compatibility work.
 
@@ -164,7 +162,9 @@ the undocumented direct BOM app API remains intentionally unused. Wear
 complications now cover all locally declared watch-face slot types. WFF weather
 provider interoperability is documented as a compatibility boundary in
 `docs/WFF_WEATHER_INTEROP.md`: no public third-party publisher API is available
-for ZeusWatch to write into the Wear OS system weather store.
+for ZeusWatch to write into the Wear OS system weather store. Wear service test
+coverage now includes direct API fetch mapping, phone-sync short-circuiting, API
+error handling, and tile request futures.
 
 ## High-Value Differentiators
 

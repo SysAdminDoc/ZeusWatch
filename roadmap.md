@@ -91,9 +91,8 @@ In-flight or top of the queue. Each item already has enough scope context that a
 **Completion evidence**: [WFF_WEATHER_INTEROP.md](docs/WFF_WEATHER_INTEROP.md) documents the source-backed decision, compatibility matrix, local DataLayer boundary, and future API watchlist. No settings toggle was added because there is no public sink for it to control. ZeusWatch data reaches arbitrary user-selected faces through the complication suite closed in N-4.
 
 ### N-6. Test coverage: Wear OS code path · **T-RELIABILITY**
-**Status**: **PARTIAL** — wear test infra bootstrapped, 34+ assertions across `WearWeatherRepository.wmoDescription/wmoEmoji` (10), `SyncedWeatherStore` (8), and complication data factory coverage for `SHORT_TEXT`, `LONG_TEXT`, `RANGED_VALUE`, and `SMALL_IMAGE`. Remaining: `WeatherTileService` (CallbackToFutureAdapter happy path) and `WearWeatherRepository.getCurrentWeather` with mocked OkHttp.
-**Scope**: Continue with the remaining services. The infra in [wear/src/test/java/com/sysadmindoc/nimbus/wear/testing/FakeSharedPreferences.kt](wear/src/test/java/com/sysadmindoc/nimbus/wear/testing/FakeSharedPreferences.kt) is reusable for any prefs-backed service.
-**Done when**: ≥30 wear unit assertions; CI fails on a deleted Wear path.
+**Status**: CLOSED locally on 2026-05-17 — wear test coverage now spans repository helpers, `SyncedWeatherStore`, complication data, direct API fetch mapping, phone-sync short-circuit behavior, API error handling, and tile request futures.
+**Completion evidence**: [WearWeatherRepositoryTest](wear/src/test/java/com/sysadmindoc/nimbus/wear/data/WearWeatherRepositoryTest.kt) covers mocked OkHttp success/failure and fresh sync bypass. [WeatherTileServiceTest](wear/src/test/java/com/sysadmindoc/nimbus/wear/tile/WeatherTileServiceTest.kt) covers tile data loading, the `CallbackToFutureAdapter` happy path through `WeatherTileRequestRunner`, and tile resource futures. Full `:wear:testDebugUnitTest`, `detekt`, and `:wear:lintDebug` passed.
 
 ### N-7. `GeminiNanoSummaryEngine` test coverage · **T-RELIABILITY**
 **Status**: **CLOSED** — `GeminiNanoSummaryEngineTest` (10 assertions) lives in `app/src/testStandard/` (new flavor-specific test source set). Covers:
