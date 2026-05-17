@@ -299,3 +299,21 @@ Reduced the Detekt baseline by one more ID:
 N-8 remains open. Remaining entries are larger structural extractions around
 `MainScreen`, `SettingsScreen`, `RadarScreen`, and the `MainViewModel`
 constructor seam.
+
+## Batch: N-8 Detekt Baseline Reduction - Radar Screen
+
+Reduced the Detekt baseline by four IDs:
+
+- Split `RadarScreen` and `RadarTab` route composables into shared coordinate,
+  render-state, action, effect, native/web/offline map, playback/status, FAB,
+  and report-sheet helpers.
+- Preserved full-screen and embedded-tab behavior while removing duplicate
+  native radar and report-sheet orchestration.
+- Regenerated `config/detekt/baseline.xml`; the `CyclomaticComplexMethod` and
+  `LongMethod` entries for both `RadarScreen` and `RadarTab` are removed.
+- Baseline count is now 10 IDs.
+
+## Remaining N-8 Boundary
+
+N-8 remains open. Remaining entries are larger structural extractions around
+`MainScreen`, `SettingsScreen`, and the `MainViewModel` constructor seam.
