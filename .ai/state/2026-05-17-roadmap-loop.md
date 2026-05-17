@@ -184,3 +184,22 @@ N-8 remains open. The remaining low-risk i18n-era long-method target is
 `CustomAlertsScreen.RuleEditor`; broader entries such as `MainScreen`,
 `SettingsScreen`, `RadarScreen`, and `WidgetRefreshWorker` need larger
 feature-preserving extraction passes.
+
+## Batch: N-8 Detekt Baseline Reduction - Custom Alerts
+
+Reduced the Detekt baseline by one more ID:
+
+- Extracted `CustomAlertsScreen.RuleEditor` into private composables for the
+  header, metric picker, operator picker, threshold input/feedback, enabled
+  toggle, and action row.
+- Regenerated `config/detekt/baseline.xml`; the
+  `LongMethod:CustomAlertsScreen.kt$@Composable private fun RuleEditor(...)`
+  entry is removed.
+- Baseline count is now 19 IDs.
+
+## Remaining N-8 Boundary
+
+N-8 remains open. The i18n-era long-method cleanup is complete; remaining
+entries are larger structural extractions around `MainScreen`, `SettingsScreen`,
+`RadarScreen`, `CompareScreen`, `WidgetRefreshWorker`, `SunArc`,
+`TemperatureGraph`, and long-parameter constructors/functions.

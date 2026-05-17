@@ -364,24 +364,6 @@ private fun RuleEditor(
     var enabled by remember { mutableStateOf(initial.enabled) }
     var previousMetric by remember { mutableStateOf(initial.metric) }
     val parsedThreshold = thresholdText.toDoubleOrNull()
-    val metricLabel = stringResource(metric.labelRes)
-    val metricSummary = stringResource(metric.summaryRes)
-    val operatorLabel = stringResource(operator.labelRes)
-    val displayUnit = displayUnitLabel(metric, settings)
-    val thresholdUnitLabel = displayUnit.trim().ifBlank { stringResource(R.string.custom_alerts_threshold_uv) }
-    val enabledStateDescription = if (enabled) {
-        stringResource(R.string.common_on)
-    } else {
-        stringResource(R.string.common_off)
-    }
-    val enabledContentDescription = stringResource(
-        R.string.custom_alerts_enabled_cd,
-        if (enabled) {
-            stringResource(R.string.custom_alerts_enabled_notifications_on)
-        } else {
-            stringResource(R.string.custom_alerts_enabled_notifications_paused)
-        },
-    )
 
     androidx.compose.runtime.LaunchedEffect(metric) {
         if (metric != previousMetric) {
@@ -399,187 +381,275 @@ private fun RuleEditor(
             .navigationBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(
-            text = if (isNew) {
-                stringResource(R.string.custom_alerts_new_title)
-            } else {
-                stringResource(R.string.custom_alerts_edit_title)
-            },
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            color = NimbusTextPrimary,
+        RuleEditorHeader(isNew = isNew)
+        RuleMetricPicker(metric = metric, onMetricChange = { metric = it })
+        RuleOperatorPicker(operator = operator, onOperatorChange = { operator = it })
+        RuleThresholdInput(
+            metric = metric,
+            operator = operator,
+            settings = settings,
+            thresholdText = thresholdText,
+            parsedThreshold = parsedThreshold,
+            onThresholdTextChange = { thresholdText = it },
         )
+        RuleEnabledToggle(enabled = enabled, onEnabledChange = { enabled = it })
+        RuleEditorActions(
+            parsedThreshold = parsedThreshold,
+            metric = metric,
+            operator = operator,
+            enabled = enabled,
+            onSave = onSave,
+            onCancel = onCancel,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun RuleEditorHeader(isNew: Boolean) {
+    Text(
+        text = if (isNew) {
+            stringResource(R.string.custom_alerts_new_title)
+        } else {
+            stringResource(R.string.custom_alerts_edit_title)
+        },
+        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+        color = NimbusTextPrimary,
+    )
+    Text(
+        text = stringResource(R.string.custom_alerts_editor_help),
+        style = MaterialTheme.typography.bodySmall,
+        color = NimbusTextSecondary,
+    )
+}
+
+@Composable
+private fun RuleMetricPicker(
+    metric: CustomAlertMetric,
+    onMetricChange: (CustomAlertMetric) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = stringResource(R.string.custom_alerts_editor_help),
-            style = MaterialTheme.typography.bodySmall,
+            stringResource(R.string.custom_alerts_metric),
+            style = MaterialTheme.typography.labelMedium,
             color = NimbusTextSecondary,
         )
+        ChipSelector(
+            options = CustomAlertMetric.entries,
+            selected = metric,
+            label = { stringResource(it.labelRes) },
+            onSelect = onMetricChange,
+        )
+    }
+}
 
-        // Metric picker
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                stringResource(R.string.custom_alerts_metric),
-                style = MaterialTheme.typography.labelMedium,
-                color = NimbusTextSecondary,
-            )
-            ChipSelector(
-                options = CustomAlertMetric.entries,
-                selected = metric,
-                label = { stringResource(it.labelRes) },
-                onSelect = { metric = it },
-            )
-        }
-
-        // Operator picker
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                stringResource(R.string.custom_alerts_direction),
-                style = MaterialTheme.typography.labelMedium,
-                color = NimbusTextSecondary,
-            )
-            ChipSelector(
-                options = CustomAlertOperator.entries,
-                selected = operator,
-                label = { option ->
-                    stringResource(
-                        R.string.custom_alerts_operator_chip,
-                        option.symbol,
-                        stringResource(option.labelRes),
-                    )
-                },
-                onSelect = { operator = it },
-            )
-        }
-
-        // Threshold input
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                stringResource(R.string.custom_alerts_threshold_label, thresholdUnitLabel),
-                style = MaterialTheme.typography.labelMedium,
-                color = NimbusTextSecondary,
-            )
-            Text(
-                text = metricSummary,
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextTertiary,
-            )
-            BasicTextField(
-                value = thresholdText,
-                onValueChange = { thresholdText = it.filter { ch -> ch.isDigit() || ch == '.' || ch == '-' } },
-                textStyle = TextStyle(color = NimbusTextPrimary, fontSize = 20.sp),
-                cursorBrush = SolidColor(NimbusBlueAccent),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                NimbusGlassTop.copy(alpha = 0.44f),
-                                NimbusNavyDark,
-                            ),
-                        ),
-                    )
-                    .border(
-                        1.dp,
-                        if (parsedThreshold != null) NimbusCardBorder else Color.Red.copy(alpha = 0.3f),
-                        RoundedCornerShape(8.dp),
-                    )
-                    .padding(horizontal = 12.dp, vertical = 12.dp),
-            )
-            if (parsedThreshold == null) {
-                Text(
-                    text = stringResource(R.string.custom_alerts_invalid_threshold),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFFFB4AB),
+@Composable
+private fun RuleOperatorPicker(
+    operator: CustomAlertOperator,
+    onOperatorChange: (CustomAlertOperator) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            stringResource(R.string.custom_alerts_direction),
+            style = MaterialTheme.typography.labelMedium,
+            color = NimbusTextSecondary,
+        )
+        ChipSelector(
+            options = CustomAlertOperator.entries,
+            selected = operator,
+            label = { option ->
+                stringResource(
+                    R.string.custom_alerts_operator_chip,
+                    option.symbol,
+                    stringResource(option.labelRes),
                 )
-            } else {
-                AlertHintPill(
-                    text = stringResource(
-                        R.string.custom_alerts_trigger_preview,
-                        metricLabel.lowercase(Locale.getDefault()),
-                        operatorLabel,
-                        thresholdText,
-                        displayUnit,
-                    ),
-                )
-            }
-        }
+            },
+            onSelect = onOperatorChange,
+        )
+    }
+}
 
-        // Enabled toggle
-        Row(
+@Composable
+private fun RuleThresholdInput(
+    metric: CustomAlertMetric,
+    operator: CustomAlertOperator,
+    settings: NimbusSettings,
+    thresholdText: String,
+    parsedThreshold: Double?,
+    onThresholdTextChange: (String) -> Unit,
+) {
+    val displayUnit = displayUnitLabel(metric, settings)
+    val thresholdUnitLabel = displayUnit.trim().ifBlank { stringResource(R.string.custom_alerts_threshold_uv) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            stringResource(R.string.custom_alerts_threshold_label, thresholdUnitLabel),
+            style = MaterialTheme.typography.labelMedium,
+            color = NimbusTextSecondary,
+        )
+        Text(
+            text = stringResource(metric.summaryRes),
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextTertiary,
+        )
+        BasicTextField(
+            value = thresholdText,
+            onValueChange = { onThresholdTextChange(it.filter { ch -> ch.isDigit() || ch == '.' || ch == '-' }) },
+            textStyle = TextStyle(color = NimbusTextPrimary, fontSize = 20.sp),
+            cursorBrush = SolidColor(NimbusBlueAccent),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(8.dp))
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            if (enabled) NimbusBlueAccent.copy(alpha = 0.12f) else NimbusGlassTop.copy(alpha = 0.46f),
-                            NimbusCardBg,
+                            NimbusGlassTop.copy(alpha = 0.44f),
+                            NimbusNavyDark,
                         ),
                     ),
                 )
                 .border(
                     1.dp,
-                    if (enabled) NimbusBlueAccent.copy(alpha = 0.26f) else NimbusCardBorder,
-                    RoundedCornerShape(10.dp),
+                    if (parsedThreshold != null) NimbusCardBorder else Color.Red.copy(alpha = 0.3f),
+                    RoundedCornerShape(8.dp),
                 )
-                .toggleable(
-                    value = enabled,
-                    onValueChange = { enabled = it },
-                    role = Role.Switch,
-                )
-                .semantics(mergeDescendants = true) {
-                    contentDescription = enabledContentDescription
-                    stateDescription = enabledStateDescription
-                }
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.custom_alerts_enabled),
-                    color = NimbusTextPrimary,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = if (enabled) {
-                        stringResource(R.string.custom_alerts_enabled_desc_on)
-                    } else {
-                        stringResource(R.string.custom_alerts_enabled_desc_off)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NimbusTextSecondary,
-                )
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+        )
+        RuleThresholdFeedback(
+            metric = metric,
+            operator = operator,
+            thresholdText = thresholdText,
+            displayUnit = displayUnit,
+            parsedThreshold = parsedThreshold,
+        )
+    }
+}
+
+@Composable
+private fun RuleThresholdFeedback(
+    metric: CustomAlertMetric,
+    operator: CustomAlertOperator,
+    thresholdText: String,
+    displayUnit: String,
+    parsedThreshold: Double?,
+) {
+    if (parsedThreshold == null) {
+        Text(
+            text = stringResource(R.string.custom_alerts_invalid_threshold),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color(0xFFFFB4AB),
+        )
+    } else {
+        AlertHintPill(
+            text = stringResource(
+                R.string.custom_alerts_trigger_preview,
+                stringResource(metric.labelRes).lowercase(Locale.getDefault()),
+                stringResource(operator.labelRes),
+                thresholdText,
+                displayUnit,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun RuleEnabledToggle(
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+) {
+    val enabledStateDescription = if (enabled) {
+        stringResource(R.string.common_on)
+    } else {
+        stringResource(R.string.common_off)
+    }
+    val enabledContentDescription = stringResource(
+        R.string.custom_alerts_enabled_cd,
+        if (enabled) {
+            stringResource(R.string.custom_alerts_enabled_notifications_on)
+        } else {
+            stringResource(R.string.custom_alerts_enabled_notifications_paused)
+        },
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        if (enabled) NimbusBlueAccent.copy(alpha = 0.12f) else NimbusGlassTop.copy(alpha = 0.46f),
+                        NimbusCardBg,
+                    ),
+                ),
+            )
+            .border(
+                1.dp,
+                if (enabled) NimbusBlueAccent.copy(alpha = 0.26f) else NimbusCardBorder,
+                RoundedCornerShape(10.dp),
+            )
+            .toggleable(
+                value = enabled,
+                onValueChange = onEnabledChange,
+                role = Role.Switch,
+            )
+            .semantics(mergeDescendants = true) {
+                contentDescription = enabledContentDescription
+                stateDescription = enabledStateDescription
             }
-            Switch(
-                checked = enabled,
-                onCheckedChange = null,
-                modifier = Modifier.clearAndSetSemantics {},
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                stringResource(R.string.custom_alerts_enabled),
+                color = NimbusTextPrimary,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = if (enabled) {
+                    stringResource(R.string.custom_alerts_enabled_desc_on)
+                } else {
+                    stringResource(R.string.custom_alerts_enabled_desc_off)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
             )
         }
+        Switch(
+            checked = enabled,
+            onCheckedChange = null,
+            modifier = Modifier.clearAndSetSemantics {},
+        )
+    }
+}
 
-        // Buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            TextButton(onClick = onCancel) {
-                Text(stringResource(R.string.common_cancel), color = NimbusTextSecondary)
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            TextButton(
-                enabled = parsedThreshold != null,
-                onClick = {
-                    val parsed = parsedThreshold ?: return@TextButton
-                    onSave(metric, operator, parsed, enabled)
-                },
-            ) {
-                Text(stringResource(R.string.common_save), color = NimbusBlueAccent, fontWeight = FontWeight.Bold)
-            }
+@Composable
+private fun RuleEditorActions(
+    parsedThreshold: Double?,
+    metric: CustomAlertMetric,
+    operator: CustomAlertOperator,
+    enabled: Boolean,
+    onSave: (CustomAlertMetric, CustomAlertOperator, Double, Boolean) -> Unit,
+    onCancel: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End,
+    ) {
+        TextButton(onClick = onCancel) {
+            Text(stringResource(R.string.common_cancel), color = NimbusTextSecondary)
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        TextButton(
+            enabled = parsedThreshold != null,
+            onClick = {
+                val parsed = parsedThreshold ?: return@TextButton
+                onSave(metric, operator, parsed, enabled)
+            },
+        ) {
+            Text(stringResource(R.string.common_save), color = NimbusBlueAccent, fontWeight = FontWeight.Bold)
+        }
     }
 }
 
