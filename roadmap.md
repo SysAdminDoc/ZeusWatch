@@ -4,7 +4,7 @@
 **Architecture**: Kotlin 2.1.0 / Jetpack Compose / Hilt / MVVM / multi-module (phone + wear)
 **Flavors**: `standard` (Google Play services, Gemini Nano, Firestore, Wear DataLayer) / `freenet` (F-Droid clean)
 **License**: LGPL-3.0
-**Last refreshed**: 2026-05-16 — full repo + ecosystem audit pass.
+**Last refreshed**: 2026-05-17 — source saturation check, memory consolidation, and dependency runway refresh.
 
 > This document is the working plan. It is dense by design. Every claim in the prose maps to a source in the Appendix. Items are organized by horizon (Now / Next / Later) and by theme. Closed items move to [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
@@ -12,7 +12,7 @@
 
 ## Completed Milestones
 
-Moved to [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md). High-water marks for context: 7 forecast/alert providers wired, 28 reorderable cards, native MapLibre radar with Blitzortung lightning, Wear OS DataLayer sync with on-device fallback, ACRA crash reporting, multi-source resilience, full Glance widget set, accessibility semantics on every Canvas-heavy card, Detekt baseline + CI emulator a11y, 180+ unit tests.
+Moved to [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md). High-water marks for context: 7 forecast/alert providers wired, 28 reorderable cards, native MapLibre radar with Blitzortung lightning, Wear OS DataLayer sync with on-device fallback, ACRA crash reporting, multi-source resilience, full Glance widget set, accessibility semantics on every Canvas-heavy card, Detekt baseline + CI emulator a11y, and 55 Kotlin test files as of the 2026-05-17 repository inventory.
 
 ---
 
@@ -47,6 +47,19 @@ Every item below maps to at least one theme. Themes are the lens for prioritizat
 
 ---
 
+## 2026-05-17 Research Delta
+
+Today's autonomous audit created a canonical context file and a durable research bundle under [.ai/research/2026-05-17/](.ai/research/2026-05-17/). The repository inventory in [STATE_OF_REPO.md](.ai/research/2026-05-17/STATE_OF_REPO.md) confirms the live project is v1.20.3, had 353 tracked files and 259 Kotlin files, and was six commits ahead of `origin/main` before this research commit.
+
+Key changes to planning:
+
+- Localization is still the highest-compounding Now item: the current baseline is 846 default strings, 783 Spanish strings, and 63 missing Spanish entries. See [STATE_OF_REPO.md](.ai/research/2026-05-17/STATE_OF_REPO.md) and N-1.
+- Security/dependency work deserves its own explicit Now item. The sampled OSV query for current Maven coordinates returned no known advisories, but the dependency runway is wide enough to require staged compatibility work rather than incidental bumps. See [SECURITY_AND_DEPENDENCY_REVIEW.md](.ai/research/2026-05-17/SECURITY_AND_DEPENDENCY_REVIEW.md) and N-10.
+- External source saturation did not change the strategic order: Wear OS remains the moat, provider depth remains the biggest parity gap against Breezy, and health/safety cards remain the most differentiated feature family. See [COMPETITOR_MATRIX.md](.ai/research/2026-05-17/COMPETITOR_MATRIX.md) and [PRIORITIZATION_MATRIX.md](.ai/research/2026-05-17/PRIORITIZATION_MATRIX.md).
+- Dataset/API research added concrete candidates for Météo-France, GeoSphere Austria, NOAA SWPC aurora/Kp, Open-Meteo Marine/Flood/Ensemble, and BOM via Open-Meteo's ACCESS-G model path. See [DATASET_MODEL_INTEGRATION_REVIEW.md](.ai/research/2026-05-17/DATASET_MODEL_INTEGRATION_REVIEW.md).
+
+---
+
 ## NOW — Current cycle (target v1.21.x – v1.22.x)
 
 In-flight or top of the queue. Each item already has enough scope context that an engineer can pick it up cold.
@@ -55,11 +68,12 @@ In-flight or top of the queue. Each item already has enough scope context that a
 **Status**: PARTIAL (CHANGELOG `[Unreleased]` lists 24+ localized surfaces; `values-es` seeded).
 **Why it stays Now**: Hardcoded strings compound with every new feature. Closing extraction once is cheaper than retrofitting after every release.
 **Scope**: Sweep remaining Today card internals + dialogs. Add a `values/strings.xml` lint gate in CI. Wire **Weblate** (FOSS-friendly, used by Breezy) for community translation; budget 4–6 weeks for initial pulls. Configure Crowdin Android SDK only if OTA translation delivery is desired (adds JitPack dep). Sources: [Translation_and_Localization on F-Droid](https://f-droid.org/docs/Translation_and_Localization/), [Crowdin mobile SDK](https://github.com/crowdin/mobile-sdk-android).
+**Current evidence**: 846 default strings, 783 Spanish strings, 63 missing Spanish strings in the 2026-05-17 inventory.
 **Done when**: zero `getString`-with-string-literal violations in main module; ≥3 community locales merged; CI lint blocks hardcoded user-facing text.
 
 ### N-2. Populate `ApiCertificatePins.hostPins` · **T-RELIABILITY**
 **Status**: PARTIAL (scaffolding shipped v1.17.0, `hostPins` empty, `tools/capture_api_pins.sh` exists).
-**Scope**: Run `tools/capture_api_pins.sh` against `api.openweathermap.org`, `api.pirateweather.net`, `air-quality-api.open-meteo.com` (keyed endpoints only) once a release. Two pins per host (leaf + intermediate); the [two-pin invariant test](app/src/test/java/com/sysadmindoc/nimbus/data/api/ApiCertificatePinsTest.kt) already exists. Add a PowerShell variant for Windows CI agents. Out of scope: pinning Open-Meteo/NWS/Bright Sky/ECCC/MeteoAlarm/JMA/MET Norway (keyless, low value).
+**Scope**: Run `tools/capture_api_pins.sh` against `api.openweathermap.org`, `api.pirateweather.net`, `air-quality-api.open-meteo.com` (keyed endpoints only) once a release. Two pins per host (leaf + intermediate); the [two-pin invariant test](app/src/test/java/com/sysadmindoc/nimbus/data/api/ApiCertificatePinsTest.kt) already exists. Add a PowerShell variant for Windows CI agents. Keep Open-Meteo/NWS/Bright Sky/ECCC/MeteoAlarm/JMA/MET Norway unpinned unless a keyed or high-risk path is added.
 **Done when**: pins exist for every keyed endpoint; pin-update procedure documented in `docs/RELEASE.md`.
 
 ### N-3. Bureau of Meteorology (Australia) forecast adapter · **T-SOURCES**
@@ -86,7 +100,7 @@ In-flight or top of the queue. Each item already has enough scope context that a
 **Status**: **CLOSED** — `GeminiNanoSummaryEngineTest` (10 assertions) lives in `app/src/testStandard/` (new flavor-specific test source set). Covers:
 - `buildPrompt` shape: preamble, full weather context interpolation, ordering invariant (high/low → rain → wind), `precipChance == 0` omission, `precipChance > 0` inclusion, `uvIndex.toInt()` truncation, unit-symbol passthrough.
 - Lifecycle fallbacks: constructor degrades to unavailable when AI Core runtime is missing (the unit-test JVM and the unsupported-device path), `generate` returns null when unavailable, `generate` returns null after `close()`, `close()` is idempotent, `SummaryEngine` interface contract preserved.
-- Out of scope: live `generateContent` happy-path (GenerativeModel isn't openly mockable; the delegate-and-fallback path is already covered by `WeatherSummaryEngineWithStyleTest` from v1.20.0).
+- Not planned for this item: live `generateContent` happy-path (GenerativeModel isn't openly mockable; the delegate-and-fallback path is already covered by `WeatherSummaryEngineWithStyleTest` from v1.20.0).
 Supporting refactor: extracted `buildPrompt` to a companion object `internal fun` so the prompt format is unit-testable without touching the model.
 
 ### N-8. Detekt baseline reduction · **T-RELIABILITY**
@@ -96,6 +110,11 @@ Supporting refactor: extracted `buildPrompt` to a companion object `internal fun
 ### N-9. Widget pure-function test coverage · **T-RELIABILITY**
 **Status**: **PARTIAL** — `WidgetThemeTest` (16 assertions) covers `widgetUpdatedLabel` (freshness pill, NTP rollback guard, locale-aware format overrides) and `weatherIconRes` (every WMO band → drawable, day/night clear-sky variant). Rescoped from the original "runGlanceAppWidgetUnitTest per widget" plan because that helper ships in `androidx.glance:glance-testing` 1.2.0+ and the repo is on Glance 1.1.1. Source: [Glance release notes](https://developer.android.com/jetpack/androidx/releases/glance).
 **Scope**: To use `runGlanceAppWidgetUnitTest`, upgrade Glance to 1.2.0+ — bump-and-test as a separate item once the rest of the Compose BOM is stable on 2025.04.01 (the current pin). Until then, keep adding pure-function tests for any helpers introduced into the widget package.
+
+### N-10. Dependency runway and platform compatibility pass · **T-RELIABILITY** / **T-PERF**
+**Status**: not started. The 2026-05-17 dependency review found no sampled OSV advisories for current Maven coordinates, but it did find major upgrade lanes that affect widgets, Room, Wear, maps, Retrofit/OkHttp, and build tooling.
+**Scope**: Split into three lanes. Lane A: low-risk patch upgrades with unchanged APIs, one PR, normal unit/lint/build verification. Lane B: feature-enabling AndroidX upgrades (Glance 1.2.0-rc01 for widget tests, Room 2.8.4, WorkManager 2.11.2, Wear Tiles 1.6.0, ProtoLayout 1.4.0, Play Services Wearable 20.0.1) with focused regression tests. Lane C: architecture-affecting upgrades (Retrofit 3.0.0, OkHttp 5.3.2, MapLibre 13.1.0, Kotlin stable 2.3.x/2.4 preview, Gradle 9.x, AGP 9.x alpha) only after an issue/branch names the migration risk and rollback path.
+**Done when**: [SECURITY_AND_DEPENDENCY_REVIEW.md](.ai/research/2026-05-17/SECURITY_AND_DEPENDENCY_REVIEW.md) is converted into actionable dependency issues or PRs; CI still covers Detekt, lint, unit tests, debug builds, connected a11y tests, and release build verification.
 
 ---
 
@@ -209,8 +228,8 @@ Reference: [KieronQuinn/Smartspacer](https://github.com/KieronQuinn/Smartspacer)
 ### L-7. Home Assistant integration · **T-ECOSYSTEM**
 Publish weather entities via the ContentProvider from NX-13 + REST endpoint, or via MQTT if user has a broker. Multiple [HA community blueprints](https://www.home-assistant.io/integrations/weather/) consume `weather.*` entities. Effort: medium; doable as a separate module so HA users opt in.
 
-### L-8. WebGPU radar via newer MapLibre · **T-PERF**
-[MapLibre 12.3.0 ships a WebGPU backend](https://github.com/maplibre/maplibre-native/blob/main/platform/android/CHANGELOG.md). Speculative until landed broadly; today the GL ES 3 path is fine. Watch for upgrade pressure once 12.x stabilizes.
+### L-8. MapLibre 13.x radar compatibility and performance audit · **T-PERF**
+Maven metadata in the 2026-05-17 dependency review reports MapLibre Android 13.1.0 as current while ZeusWatch is pinned to 11.5.2. Keep this Later until the current GL ES radar path shows measurable pain or N-10 opens a compatibility branch. The first branch should measure radar tab open time, tile load behavior, and native crash rate before adopting 13.x.
 
 ### L-9. Marine / Aviation power-user mode · **T-SOURCES**
 Layered atop NX-4 + Météo-France. Storm Glass / Open-Meteo marine + METAR/TAF/NOTAM (Windy-style). Off-philosophy unless we maintain a strict "no paywall, no clutter" stance — gate behind an explicit "power-user mode" preference. Effort: high.
@@ -273,7 +292,7 @@ Each is closed with a one-line rationale so we don't relitigate.
 - **Custom Wear OS runtime watch face (not WFF).** [As of Jan 2026 WFF is required for Wear OS install](https://developer.android.com/training/wearables/wff). Runtime faces are deprecated for new installs.
 - **Built-in ad slots / interstitials.** Antithetical to the brand; [#2 user complaint vector in 2026](https://unstar.app/blog/weather-apps-ranked-by-user-complaints-2026).
 - **Subscription tier / Premium Club.** Antithetical to the brand; [drives the most complaints at Carrot/AccuWeather](https://unstar.app/blog/weather-apps-ranked-by-user-complaints-2026).
-- **Audio severe-weather TTS played out of system mixer.** Out of scope; let TalkBack and the system-level alarm DND-bypass channels (already implemented) handle that for users who want it.
+- **Audio severe-weather TTS played out of system mixer.** Leave this to TalkBack and the system-level alarm DND-bypass channels already implemented for users who want it.
 - **Replace MapLibre with proprietary map SDK (Mapbox/Maps SDK for Android).** Locks `freenet`.
 - **Migrating to Firebase as primary state store.** Conflicts with `freenet` parity; today Firestore is used only for opt-in community reports (`standard` flavor only) and that's the right boundary.
 - **Android 16 "Local" weather wallpaper integration.** [Pixel-only and no public third-party API](https://gadgets.beebom.com/guides/how-to-use-lock-screen-live-effects-on-pixel-phones); not actionable.
@@ -289,7 +308,7 @@ What a hostile reviewer would ask, with answers.
 
 - **"You shipped 28 cards and 7 providers — why isn't the ROADMAP shorter?"** Because the per-card density is exactly what makes the app stand out from Breezy-style minimalism. The roadmap reflects breadth obligations: i18n compound cost, Wear OS moat extension, regional source coverage, and audit cycles. Each Now item has a closure criterion.
 - **"Why no Android 16 M3 Expressive sweep in NOW?"** It's UC-6; Wear Compose M3 is still in beta01. Premature work invites churn. Phone-side: when 1.5.0 stable lands, schedule.
-- **"Where's the security story?"** N-2 (cert pinning hostmap), NX-14 (reproducible builds), L-13 (no-Geocoder fallback). Plus the [v1.16.0 RateLimitInterceptor + API-key debug-log redaction](ROADMAP-COMPLETED.md) already shipped. CVE watch is implicit in Dependabot config from v1.16.0.
+- **"Where's the security story?"** N-2 (cert pinning hostmap), N-10 (dependency runway), NX-14 (reproducible builds), L-13 (no-Geocoder fallback). Plus the [v1.16.0 RateLimitInterceptor + API-key debug-log redaction](ROADMAP-COMPLETED.md) already shipped. The 2026-05-17 sampled OSV query found no known advisories in the checked Maven coordinates.
 - **"You're handwaving on observability."** UC-1 + UC-2 + NX-7 form the observability arc and are explicitly held under "decide first." Anonymous telemetry is a F-Droid-sensitive call.
 - **"Distribution is thin."** NX-14 (reproducible builds) + per-ABI signed APKs (Breezy pattern) are the immediate steps. Play Store is not pursued; F-Droid + IzzyOnDroid + GitHub Releases is the explicit channel.
 - **"Multi-user/collab story?"** Already present via opt-in Firestore community reports (`standard` flavor). Not a primary axis — weather is a single-user product.
@@ -399,15 +418,17 @@ Versions tracked in `gradle/libs.versions.toml`. Notable upgrade horizons:
 
 | Lib | Current | Next | Why care |
 |---|---|---|---|
-| Compose BOM | 2025.04.01 | next quarterly | M3 Expressive landings. |
-| Kotlin | 2.1.0 | 2.2.x | [Data-flow exhaustiveness](https://kotlinlang.org/docs/whatsnew22.html), Multiplatform Swift export. |
-| Hilt | 2.53.1 | 2.56.x | [KSP2 + Kotlin 2.1+ compat caveats](https://github.com/google/dagger/issues/4907) — bump cautiously, run full test suite. |
-| Room | 2.6.1 | 2.7.x → 3.0 | [KMP-ready](https://developer.android.com/jetpack/androidx/releases/room), SQLiteDriver. Gated on L-2 decision. |
-| MapLibre | 11.5.2 | 12.x | [WebGPU backend in 12.3.0](https://github.com/maplibre/maplibre-native/blob/main/platform/android/CHANGELOG.md); breaking init API. |
-| OkHttp | 4.12.0 | 4.13.x / 5.x | [`redactQueryParameters(vararg)` added in 5.x](https://github.com/square/okhttp); reduces our custom redactor. Watch CVE feeds. |
-| Glance | 1.1.1 | 1.2.x | [Unit-test helper `runGlanceAppWidgetUnitTest`](https://developer.android.com/jetpack/androidx/releases/glance) — enables N-9. |
-| Wear Compose M3 | (alpha27) | 1.5.0 stable | [Wear OS 6 M3 Expressive](https://developer.android.com/jetpack/androidx/releases/wear-compose-m3); gates UC-6. |
-| ProtoLayout | 1.2.1 | 1.3.x | [Lottie support](https://developer.android.com/jetpack/androidx/releases/wear-protolayout) — gates L-11. |
+| Compose BOM | 2025.04.01 | 2026.05.00 watch | M3 Expressive landings; keep this in N-10 because it can pull broad AndroidX churn. |
+| Kotlin | 2.1.0 | stable 2.3.x / 2.4.0-RC watch | [Data-flow exhaustiveness](https://kotlinlang.org/docs/whatsnew22.html), Multiplatform Swift export, KSP/Hilt compatibility risk. |
+| Hilt | 2.53.1 | 2.59.2 watch | [KSP2 + Kotlin 2.1+ compat caveats](https://github.com/google/dagger/issues/4907) — bump cautiously, run full test suite. |
+| Room | 2.6.1 | 2.8.4 | [KMP-ready](https://developer.android.com/jetpack/androidx/releases/room), SQLiteDriver. Gated on L-2 decision but safe to test for Android-only benefits. |
+| MapLibre | 11.5.2 | 13.1.0 watch | Native renderer upgrade risk; measure radar tab performance before adopting. |
+| OkHttp | 4.12.0 | 5.3.2 watch | [`redactQueryParameters(vararg)` added in 5.x](https://square.github.io/okhttp/changelogs/changelog_5x/); reduces our custom redactor. Watch CVE feeds. |
+| Retrofit | 2.11.0 | 3.0.0 watch | Coordinate with OkHttp 5 and serialization adapter compatibility. |
+| Glance | 1.1.1 | 1.2.0-rc01 | [Unit-test helper `runGlanceAppWidgetUnitTest`](https://developer.android.com/jetpack/androidx/releases/glance) — enables N-9. |
+| Wear Compose M3 | (alpha27) | 1.7.0-alpha02 watch | [Wear OS 6 M3 Expressive](https://developer.android.com/jetpack/androidx/releases/wear-compose-m3); gates UC-6 until stable. |
+| Tiles | 1.4.1 | 1.6.0 | Watch tile compatibility lane; pairs with ProtoLayout. |
+| ProtoLayout | 1.2.1 | 1.4.0 | [Lottie support](https://developer.android.com/jetpack/androidx/releases/wear-protolayout) — gates L-11. |
 | Detekt | 1.23.8 | 1.23.x | Baseline reduction (N-8) is the live work, not version. |
 | ACRA | 5.13.1 | 5.13.x | Stable. |
 | Vico | not added | 3.0.x | [Compose-native multiplatform](https://github.com/patrykandpatrick/vico); NX-11 dep. |
@@ -438,6 +459,9 @@ All direct citations used in this roadmap. (URLs only — no marketing prose, no
 - [wear-protolayout releases](https://developer.android.com/jetpack/androidx/releases/wear-protolayout)
 - [wear-compose-m3 releases](https://developer.android.com/jetpack/androidx/releases/wear-compose-m3)
 - [Jetpack Glance releases](https://developer.android.com/jetpack/androidx/releases/glance)
+- [Room releases](https://developer.android.com/jetpack/androidx/releases/room)
+- [WorkManager releases](https://developer.android.com/jetpack/androidx/releases/work)
+- [Wear Tiles releases](https://developer.android.com/jetpack/androidx/releases/wear-tiles)
 - [Glance theme docs](https://developer.android.com/develop/ui/compose/glance/theme)
 - [Compose Baseline Profiles](https://developer.android.com/develop/ui/compose/performance/baseline-profiles)
 - [Macrobenchmark capture metrics](https://developer.android.com/topic/performance/benchmarking/macrobenchmark-metrics)
@@ -456,6 +480,7 @@ All direct citations used in this roadmap. (URLs only — no marketing prose, no
 - [patrykandpatrick/vico](https://github.com/patrykandpatrick/vico)
 - [MapLibre native CHANGELOG.md (Android)](https://github.com/maplibre/maplibre-native/blob/main/platform/android/CHANGELOG.md)
 - [OkHttp 4.x changelog](https://square.github.io/okhttp/changelogs/changelog_4x/)
+- [OkHttp 5.x changelog](https://square.github.io/okhttp/changelogs/changelog_5x/)
 - [open-meteo/sdk (Kotlin/Flatbuffer)](https://github.com/open-meteo/sdk)
 
 **Data sources**
