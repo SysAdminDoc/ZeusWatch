@@ -241,3 +241,23 @@ Reduced the Detekt baseline by one more ID:
 N-8 remains open. Remaining entries are larger structural extractions around
 `MainScreen`, `SettingsScreen`, `RadarScreen`, `CompareScreen`,
 `WidgetRefreshWorker`, and long-parameter constructors/functions.
+
+## Batch: N-8 Detekt Baseline Reduction - Widget Refresh Worker
+
+Reduced the Detekt baseline by one more ID:
+
+- Extracted `WidgetRefreshWorker.doWork` battery gating, empty-state clearing,
+  primary location refresh, mapped-widget refresh, orphan cleanup, widget
+  updates, persistent notification updates, and saved-location cache warming
+  into focused helpers.
+- Preserved the existing success/retry behavior through a small
+  `WidgetRefreshState` accumulator.
+- Regenerated `config/detekt/baseline.xml`; the
+  `CyclomaticComplexMethod:WidgetRefreshWorker.doWork` entry is removed.
+- Baseline count is now 16 IDs.
+
+## Remaining N-8 Boundary
+
+N-8 remains open. Remaining entries are larger structural extractions around
+`MainScreen`, `SettingsScreen`, `RadarScreen`, `CompareScreen`, and
+long-parameter constructors/functions.
