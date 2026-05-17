@@ -106,3 +106,26 @@ Implemented the local N-4 work:
 No local N-4 blocker remains. Follow-up Wear test work continues under N-6 for
 `WeatherTileService` callback behavior and `WearWeatherRepository.getCurrentWeather`
 with mocked OkHttp.
+
+## Batch: N-5 WFF Weather Interoperability
+
+Closed N-5 as a compatibility decision:
+
+- Reviewed the current Android WFF weather guide, WFF SourceType reference, WFF
+  overview/release notes, and AndroidX Wear Watchface release notes.
+- Confirmed WFF weather data is consumed by system-rendered `[WEATHER.*]`
+  expressions and guarded by `[WEATHER.IS_AVAILABLE]` / `[WEATHER.IS_ERROR]`.
+- Confirmed AndroidX removed the briefly exposed default weather data-source
+  path in `wear-watchface` 1.2.0 beta02.
+- Checked local ZeusWatch DataLayer sync and local Gradle cache for a public
+  weather publisher/provider API; none was present.
+- Added `docs/WFF_WEATHER_INTEROP.md` with evidence, a compatibility matrix, and
+  a future API watchlist.
+- Updated `docs/WEAR_OS.md` to point users at complications for ZeusWatch data
+  on user-selected watch faces.
+
+## Remaining N-5 Boundary
+
+No local implementation is appropriate until Android or AndroidX publishes a
+normal-app weather publisher API that can write to the Wear OS system weather
+store consumed by WFF.
