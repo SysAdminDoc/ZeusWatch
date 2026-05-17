@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -71,152 +72,202 @@ fun RadarPreviewCard(
                 ),
             )
             .border(1.dp, NimbusCardBorder, shape)
-            .clickable(onClick = onOpenRadar)
+            .clickable(onClick = onOpenRadar),
+    ) {
+        RadarPreviewMap(
+            radarTileUrl = radarTileUrl,
+            baseMapTileUrl = baseMapTileUrl,
+        )
+        RadarPreviewFooter()
+    }
+}
+
+@Composable
+private fun RadarPreviewMap(
+    radarTileUrl: String?,
+    baseMapTileUrl: String?,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(164.dp)
+            .clip(RoundedCornerShape(topStart = 11.dp, topEnd = 11.dp))
+            .background(NimbusSurfaceVariant),
+    ) {
+        RadarPreviewImages(
+            radarTileUrl = radarTileUrl,
+            baseMapTileUrl = baseMapTileUrl,
+        )
+        RadarPreviewGradient()
+        if (baseMapTileUrl == null && radarTileUrl == null) {
+            RadarPreviewEmptyState(modifier = Modifier.align(Alignment.Center))
+        }
+        RadarPreviewStatusPill(
+            hasRadarTile = radarTileUrl != null,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(14.dp),
+        )
+        RadarPreviewCaption(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+        )
+    }
+}
+
+@Composable
+private fun RadarPreviewImages(
+    radarTileUrl: String?,
+    baseMapTileUrl: String?,
+) {
+    val context = LocalContext.current
+    if (baseMapTileUrl != null) {
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(baseMapTileUrl)
+                .crossfade(true)
+                .build(),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+    }
+    if (radarTileUrl != null) {
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(radarTileUrl)
+                .crossfade(true)
+                .build(),
+            contentDescription = stringResource(R.string.radar_preview_overlay_cd),
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+            alpha = 0.75f,
+        )
+    }
+}
+
+@Composable
+private fun RadarPreviewGradient() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        Color.Black.copy(alpha = 0.32f),
+                    ),
+                ),
+            ),
+    )
+}
+
+@Composable
+private fun RadarPreviewEmptyState(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            Icons.Filled.Map,
+            contentDescription = null,
+            modifier = Modifier.size(44.dp),
+            tint = NimbusTextSecondary.copy(alpha = 0.45f),
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = stringResource(R.string.radar_preview_empty_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = NimbusTextPrimary,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.radar_preview_empty_message),
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+        )
+    }
+}
+
+@Composable
+private fun RadarPreviewStatusPill(
+    hasRadarTile: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(164.dp)
-                .clip(RoundedCornerShape(topStart = 11.dp, topEnd = 11.dp))
-                .background(NimbusSurfaceVariant),
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.Black.copy(alpha = 0.34f))
+                .padding(horizontal = 10.dp, vertical = 6.dp),
         ) {
-            if (baseMapTileUrl != null) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(baseMapTileUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                )
-            }
-            if (radarTileUrl != null) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(radarTileUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = stringResource(R.string.radar_preview_overlay_cd),
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    alpha = 0.75f,
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                androidx.compose.ui.graphics.Color.Transparent,
-                                androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.32f),
-                            ),
-                        ),
-                    ),
-            )
-            if (baseMapTileUrl == null && radarTileUrl == null) {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                )
-                {
-                    Icon(
-                        Icons.Filled.Map,
-                        contentDescription = null,
-                        modifier = Modifier.size(44.dp),
-                        tint = NimbusTextSecondary.copy(alpha = 0.45f),
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = stringResource(R.string.radar_preview_empty_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = NimbusTextPrimary,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.radar_preview_empty_message),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NimbusTextSecondary,
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.34f))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                ) {
-                    Text(
-                        text = if (radarTileUrl != null) {
-                            stringResource(R.string.radar_preview_live)
-                        } else {
-                            stringResource(R.string.radar_preview_map_preview)
-                        },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = NimbusTextPrimary,
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.radar_preview_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = NimbusTextPrimary,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = stringResource(R.string.radar_preview_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NimbusTextSecondary,
-                )
-            }
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                Icons.Filled.Radar,
-                contentDescription = null,
-                tint = NimbusBlueAccent,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.radar_preview_open_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = NimbusTextPrimary,
-                )
-                Text(
-                    text = stringResource(R.string.radar_preview_open_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NimbusTextSecondary,
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = stringResource(R.string.radar_preview_open_cd),
-                tint = NimbusBlueAccent,
-                modifier = Modifier.size(18.dp),
+            Text(
+                text = if (hasRadarTile) {
+                    stringResource(R.string.radar_preview_live)
+                } else {
+                    stringResource(R.string.radar_preview_map_preview)
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextPrimary,
             )
         }
+    }
+}
+
+@Composable
+private fun RadarPreviewCaption(modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.radar_preview_title),
+            style = MaterialTheme.typography.headlineSmall,
+            color = NimbusTextPrimary,
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = stringResource(R.string.radar_preview_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+        )
+    }
+}
+
+@Composable
+private fun RadarPreviewFooter() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.Radar,
+            contentDescription = null,
+            tint = NimbusBlueAccent,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.radar_preview_open_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = NimbusTextPrimary,
+            )
+            Text(
+                text = stringResource(R.string.radar_preview_open_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Icon(
+            Icons.AutoMirrored.Filled.ArrowForward,
+            contentDescription = stringResource(R.string.radar_preview_open_cd),
+            tint = NimbusBlueAccent,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
