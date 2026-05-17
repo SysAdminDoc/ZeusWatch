@@ -18,19 +18,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -44,6 +48,8 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
+import java.time.LocalDateTime
+import kotlin.math.abs
 
 /**
  * 24-hour temperature trend line graph with:
@@ -54,7 +60,7 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 @Composable
 fun TemperatureGraph(
     hourly: List<HourlyConditions>,
-    referenceTime: java.time.LocalDateTime? = hourly.firstOrNull()?.time,
+    referenceTime: LocalDateTime? = hourly.firstOrNull()?.time,
     modifier: Modifier = Modifier,
     normalHigh: Double? = null,
     normalLow: Double? = null,
@@ -119,207 +125,354 @@ fun TemperatureGraph(
                         )
                     },
             ) {
-                val w = size.width
-                val h = size.height
-                val paddingTop = 24f
-                val paddingBottom = 28f
-                val graphHeight = h - paddingTop - paddingBottom
+                val metrics = temperatureGraphMetrics(size.width, size.height, data)
+                val points = temperaturePoints(data, metrics)
+                val paths = buildTemperaturePaths(points, metrics.baselineY)
 
-                val temps = data.map { it.temperature }
-                val feelsTemps = data.mapNotNull { it.feelsLike }
-                val allTemps = temps + feelsTemps
-                val rawMin = allTemps.min()
-                val rawMax = allTemps.max()
-                val minTemp = (rawMin - 2).toFloat()
-                val maxTemp = if (rawMax == rawMin) (rawMin + 2).toFloat() else (rawMax + 2).toFloat()
-                val tempRange = maxTemp - minTemp
-
-                val stepX = w / (data.size - 1).coerceAtLeast(1)
-                val points = data.mapIndexed { i, hour ->
-                    val x = i * stepX
-                    val y = paddingTop + graphHeight * (1f - (hour.temperature.toFloat() - minTemp) / tempRange)
-                    Offset(x, y)
-                }
-
-                // ── Precipitation bars (background) ──────────────────
-                val maxPrecipProb = data.maxOfOrNull { it.precipitationProbability } ?: 0
-                if (maxPrecipProb > 0) {
-                    val barWidth = stepX * 0.6f
-                    data.forEachIndexed { i, hour ->
-                        if (hour.precipitationProbability > 5) {
-                            val barHeight = (hour.precipitationProbability / 100f) * graphHeight * 0.4f
-                            val x = i * stepX - barWidth / 2
-                            val y = h - paddingBottom - barHeight
-                            drawRect(
-                                color = NimbusRainBlue.copy(alpha = 0.15f),
-                                topLeft = Offset(x, y),
-                                size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
-                            )
-                        }
-                    }
-                }
-
-                // ── Historical normals band ─────────────────────────
-                if (normalHigh != null && normalLow != null && !normalHigh.isNaN() && !normalLow.isNaN() && normalHigh > normalLow) {
-                    val normHighY = paddingTop + graphHeight * (1f - (normalHigh.toFloat() - minTemp) / tempRange)
-                    val normLowY = paddingTop + graphHeight * (1f - (normalLow.toFloat() - minTemp) / tempRange)
-                    drawRect(
-                        color = Color(0x15FFFFFF),
-                        topLeft = Offset(0f, normHighY.coerceAtLeast(paddingTop)),
-                        size = androidx.compose.ui.geometry.Size(w, (normLowY - normHighY).coerceAtLeast(2f)),
-                    )
-                    // Dashed lines at normal high and low
-                    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f))
-                    drawLine(
-                        color = NimbusTextTertiary.copy(alpha = 0.3f),
-                        start = Offset(0f, normHighY),
-                        end = Offset(w, normHighY),
-                        strokeWidth = 1f,
-                        pathEffect = dashEffect,
-                    )
-                    drawLine(
-                        color = NimbusTextTertiary.copy(alpha = 0.3f),
-                        start = Offset(0f, normLowY),
-                        end = Offset(w, normLowY),
-                        strokeWidth = 1f,
-                        pathEffect = dashEffect,
-                    )
-                }
-
-                // ── Build curve paths ────────────────────────────────
-                val linePath = Path()
-                val fillPath = Path()
-                points.forEachIndexed { i, point ->
-                    if (i == 0) {
-                        linePath.moveTo(point.x, point.y)
-                        fillPath.moveTo(point.x, point.y)
-                    } else {
-                        val prev = points[i - 1]
-                        val cx = (prev.x + point.x) / 2f
-                        linePath.cubicTo(cx, prev.y, cx, point.y, point.x, point.y)
-                        fillPath.cubicTo(cx, prev.y, cx, point.y, point.x, point.y)
-                    }
-                }
-                fillPath.lineTo(points.last().x, h - paddingBottom)
-                fillPath.lineTo(points.first().x, h - paddingBottom)
-                fillPath.close()
-
-                // Gradient fill
-                drawPath(
-                    path = fillPath,
-                    brush = Brush.verticalGradient(
-                        listOf(NimbusBlueAccent.copy(alpha = 0.25f), Color.Transparent),
-                        startY = paddingTop, endY = h - paddingBottom,
-                    ),
+                drawPrecipitationBars(data, metrics)
+                drawNormalBand(metrics, normalHigh, normalLow)
+                drawTemperatureCurve(paths, metrics)
+                drawFeelsLikeOverlay(data, metrics)
+                drawHighLowMarkers(data, points, textMeasurer, labelStyle, s)
+                drawTimeLabels(data, points, referenceTime, s, textMeasurer, labelStyle, metrics)
+                drawInspectionOverlay(
+                    data = data,
+                    points = points,
+                    inspectX = inspectX,
+                    isInspecting = isInspecting,
+                    metrics = metrics,
+                    textMeasurer = textMeasurer,
+                    tooltipStyle = tooltipStyle,
+                    settings = s,
+                    referenceTime = referenceTime,
                 )
-
-                // Line
-                drawPath(
-                    path = linePath,
-                    color = NimbusBlueAccent,
-                    style = Stroke(width = 2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round),
-                )
-
-                // ── Feels-like overlay (dashed, only if significantly different) ──
-                val feelsLikeTemps = data.mapNotNull { it.feelsLike }
-                if (feelsLikeTemps.size == data.size) {
-                    val maxDiff = data.indices.maxOfOrNull {
-                        kotlin.math.abs((data[it].feelsLike ?: data[it].temperature) - data[it].temperature)
-                    } ?: 0.0
-                    if (maxDiff >= 3.0) {
-                        val feelsPath = Path()
-                        data.forEachIndexed { i, hour ->
-                            val fl = hour.feelsLike ?: hour.temperature
-                            val x = i * stepX
-                            val y = paddingTop + graphHeight * (1f - (fl.toFloat() - minTemp) / tempRange)
-                            if (i == 0) feelsPath.moveTo(x, y)
-                            else {
-                                val prevFl = data[i - 1].feelsLike ?: data[i - 1].temperature
-                                val prevY = paddingTop + graphHeight * (1f - (prevFl.toFloat() - minTemp) / tempRange)
-                                val prevX = (i - 1) * stepX
-                                val cx = (prevX + x) / 2f
-                                feelsPath.cubicTo(cx, prevY, cx, y, x, y)
-                            }
-                        }
-                        drawPath(
-                            path = feelsPath,
-                            color = Color(0xFFFF9800).copy(alpha = 0.6f),
-                            style = Stroke(
-                                width = 1.5f,
-                                cap = StrokeCap.Round,
-                                join = StrokeJoin.Round,
-                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)),
-                            ),
-                        )
-                    }
-                }
-
-                // ── High/Low dot markers ─────────────────────────────
-                val maxIdx = temps.indices.maxByOrNull { temps[it] } ?: 0
-                val minIdx = temps.indices.minByOrNull { temps[it] } ?: 0
-                listOf(maxIdx, minIdx).forEach { idx ->
-                    if (idx < points.size) {
-                        val pt = points[idx]
-                        drawCircle(NimbusBlueAccent, radius = 4f, center = pt)
-                        drawCircle(Color(0xFF0A0E1A), radius = 2f, center = pt)
-
-                        val label = WeatherFormatter.formatTemperature(temps[idx], s)
-                        val measured = textMeasurer.measure(label, labelStyle)
-                        val labelY = if (idx == maxIdx) pt.y - 16f else pt.y + 6f
-                        drawText(measured, topLeft = Offset(pt.x - measured.size.width / 2f, labelY))
-                    }
-                }
-
-                // ── Time labels (every 6 hours) ─────────────────────
-                for (i in data.indices step 6) {
-                    if (i < points.size) {
-                        val label = WeatherFormatter.formatRelativeHourLabel(data[i].time, referenceTime, s)
-                        val measured = textMeasurer.measure(label, labelStyle)
-                        drawText(measured, topLeft = Offset(points[i].x - measured.size.width / 2f, h - paddingBottom + 6f))
-                    }
-                }
-
-                // ── Interactive inspection line + tooltip ────────────
-                if (isInspecting && inspectX >= 0f) {
-                    // Find nearest data point
-                    val nearestIdx = ((inspectX / stepX).toInt()).coerceIn(0, data.lastIndex)
-                    val nearPt = points[nearestIdx]
-                    val nearHour = data[nearestIdx]
-
-                    // Vertical guide line
-                    drawLine(
-                        color = NimbusTextTertiary.copy(alpha = 0.5f),
-                        start = Offset(nearPt.x, paddingTop),
-                        end = Offset(nearPt.x, h - paddingBottom),
-                        strokeWidth = 1f,
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f)),
-                    )
-
-                    // Highlighted dot
-                    drawCircle(NimbusBlueAccent, radius = 6f, center = nearPt)
-                    drawCircle(Color.White, radius = 3f, center = nearPt)
-
-                    // Tooltip
-                    val tempText = WeatherFormatter.formatTemperature(nearHour.temperature, s)
-                    val timeText = WeatherFormatter.formatRelativeHourLabel(nearHour.time, referenceTime, s)
-                    val precipText = if (nearHour.precipitationProbability > 0) " ${nearHour.precipitationProbability}%" else ""
-                    val tooltipText = "$tempText \u2022 $timeText$precipText"
-                    val measured = textMeasurer.measure(tooltipText, tooltipStyle)
-
-                    // Background rect for tooltip
-                    val tooltipX = (nearPt.x - measured.size.width / 2f).coerceIn(0f, w - measured.size.width)
-                    val tooltipY = 2f
-                    drawRoundRect(
-                        color = Color(0xFF1A2340),
-                        topLeft = Offset(tooltipX - 4f, tooltipY),
-                        size = androidx.compose.ui.geometry.Size(measured.size.width + 8f, measured.size.height + 4f),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f),
-                    )
-                    drawText(measured, topLeft = Offset(tooltipX, tooltipY + 2f))
-                }
             }
         }
     }
+}
+
+private data class TemperatureGraphMetrics(
+    val width: Float,
+    val height: Float,
+    val paddingTop: Float,
+    val paddingBottom: Float,
+    val graphHeight: Float,
+    val minTemp: Float,
+    val maxTemp: Float,
+    val tempRange: Float,
+    val stepX: Float,
+) {
+    val baselineY: Float = height - paddingBottom
+}
+
+private data class TemperatureGraphPaths(
+    val line: Path,
+    val fill: Path,
+)
+
+private fun temperatureGraphMetrics(
+    width: Float,
+    height: Float,
+    data: List<HourlyConditions>,
+): TemperatureGraphMetrics {
+    val paddingTop = 24f
+    val paddingBottom = 28f
+    val graphHeight = height - paddingTop - paddingBottom
+    val temps = data.map { it.temperature }
+    val allTemps = temps + data.mapNotNull { it.feelsLike }
+    val rawMin = allTemps.min()
+    val rawMax = allTemps.max()
+    val minTemp = (rawMin - 2).toFloat()
+    val maxTemp = if (rawMax == rawMin) (rawMin + 2).toFloat() else (rawMax + 2).toFloat()
+
+    return TemperatureGraphMetrics(
+        width = width,
+        height = height,
+        paddingTop = paddingTop,
+        paddingBottom = paddingBottom,
+        graphHeight = graphHeight,
+        minTemp = minTemp,
+        maxTemp = maxTemp,
+        tempRange = maxTemp - minTemp,
+        stepX = width / (data.size - 1).coerceAtLeast(1),
+    )
+}
+
+private fun temperaturePoints(
+    data: List<HourlyConditions>,
+    metrics: TemperatureGraphMetrics,
+): List<Offset> = data.mapIndexed { index, hour ->
+    Offset(
+        x = index * metrics.stepX,
+        y = temperatureY(hour.temperature, metrics),
+    )
+}
+
+private fun temperatureY(
+    temperature: Double,
+    metrics: TemperatureGraphMetrics,
+): Float = metrics.paddingTop +
+    metrics.graphHeight * (1f - (temperature.toFloat() - metrics.minTemp) / metrics.tempRange)
+
+private fun buildTemperaturePaths(
+    points: List<Offset>,
+    baselineY: Float,
+): TemperatureGraphPaths {
+    val linePath = Path()
+    val fillPath = Path()
+    points.forEachIndexed { index, point ->
+        if (index == 0) {
+            linePath.moveTo(point.x, point.y)
+            fillPath.moveTo(point.x, point.y)
+        } else {
+            val previous = points[index - 1]
+            val controlX = (previous.x + point.x) / 2f
+            linePath.cubicTo(controlX, previous.y, controlX, point.y, point.x, point.y)
+            fillPath.cubicTo(controlX, previous.y, controlX, point.y, point.x, point.y)
+        }
+    }
+    fillPath.lineTo(points.last().x, baselineY)
+    fillPath.lineTo(points.first().x, baselineY)
+    fillPath.close()
+    return TemperatureGraphPaths(line = linePath, fill = fillPath)
+}
+
+private fun DrawScope.drawPrecipitationBars(
+    data: List<HourlyConditions>,
+    metrics: TemperatureGraphMetrics,
+) {
+    if ((data.maxOfOrNull { it.precipitationProbability } ?: 0) <= 0) return
+
+    val barWidth = metrics.stepX * 0.6f
+    data.forEachIndexed { index, hour ->
+        if (hour.precipitationProbability > 5) {
+            val barHeight = (hour.precipitationProbability / 100f) * metrics.graphHeight * 0.4f
+            drawRect(
+                color = NimbusRainBlue.copy(alpha = 0.15f),
+                topLeft = Offset(index * metrics.stepX - barWidth / 2, metrics.baselineY - barHeight),
+                size = Size(barWidth, barHeight),
+            )
+        }
+    }
+}
+
+private fun DrawScope.drawNormalBand(
+    metrics: TemperatureGraphMetrics,
+    normalHigh: Double?,
+    normalLow: Double?,
+) {
+    val high = normalHigh ?: return
+    val low = normalLow ?: return
+    if (high.isNaN() || low.isNaN() || high <= low) return
+
+    val highY = temperatureY(high, metrics)
+    val lowY = temperatureY(low, metrics)
+    drawRect(
+        color = Color(0x15FFFFFF),
+        topLeft = Offset(0f, highY.coerceAtLeast(metrics.paddingTop)),
+        size = Size(metrics.width, (lowY - highY).coerceAtLeast(2f)),
+    )
+    drawNormalLine(highY, metrics)
+    drawNormalLine(lowY, metrics)
+}
+
+private fun DrawScope.drawNormalLine(
+    y: Float,
+    metrics: TemperatureGraphMetrics,
+) {
+    drawLine(
+        color = NimbusTextTertiary.copy(alpha = 0.3f),
+        start = Offset(0f, y),
+        end = Offset(metrics.width, y),
+        strokeWidth = 1f,
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)),
+    )
+}
+
+private fun DrawScope.drawTemperatureCurve(
+    paths: TemperatureGraphPaths,
+    metrics: TemperatureGraphMetrics,
+) {
+    drawPath(
+        path = paths.fill,
+        brush = Brush.verticalGradient(
+            listOf(NimbusBlueAccent.copy(alpha = 0.25f), Color.Transparent),
+            startY = metrics.paddingTop,
+            endY = metrics.baselineY,
+        ),
+    )
+    drawPath(
+        path = paths.line,
+        color = NimbusBlueAccent,
+        style = Stroke(width = 2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+    )
+}
+
+private fun DrawScope.drawFeelsLikeOverlay(
+    data: List<HourlyConditions>,
+    metrics: TemperatureGraphMetrics,
+) {
+    if (!shouldDrawFeelsLikeOverlay(data)) return
+    drawPath(
+        path = buildFeelsLikePath(data, metrics),
+        color = Color(0xFFFF9800).copy(alpha = 0.6f),
+        style = Stroke(
+            width = 1.5f,
+            cap = StrokeCap.Round,
+            join = StrokeJoin.Round,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)),
+        ),
+    )
+}
+
+private fun shouldDrawFeelsLikeOverlay(data: List<HourlyConditions>): Boolean {
+    if (data.any { it.feelsLike == null }) return false
+    val maxDiff = data.maxOfOrNull { abs((it.feelsLike ?: it.temperature) - it.temperature) } ?: 0.0
+    return maxDiff >= 3.0
+}
+
+private fun buildFeelsLikePath(
+    data: List<HourlyConditions>,
+    metrics: TemperatureGraphMetrics,
+): Path {
+    val path = Path()
+    data.forEachIndexed { index, hour ->
+        val x = index * metrics.stepX
+        val y = temperatureY(hour.feelsLike ?: hour.temperature, metrics)
+        if (index == 0) {
+            path.moveTo(x, y)
+        } else {
+            val previous = data[index - 1]
+            val previousX = (index - 1) * metrics.stepX
+            val previousY = temperatureY(previous.feelsLike ?: previous.temperature, metrics)
+            val controlX = (previousX + x) / 2f
+            path.cubicTo(controlX, previousY, controlX, y, x, y)
+        }
+    }
+    return path
+}
+
+private fun DrawScope.drawHighLowMarkers(
+    data: List<HourlyConditions>,
+    points: List<Offset>,
+    textMeasurer: TextMeasurer,
+    labelStyle: TextStyle,
+    settings: NimbusSettings,
+) {
+    val temps = data.map { it.temperature }
+    val maxIdx = temps.indices.maxByOrNull { temps[it] } ?: 0
+    val minIdx = temps.indices.minByOrNull { temps[it] } ?: 0
+    listOf(maxIdx, minIdx).forEach { index ->
+        if (index < points.size) {
+            drawTemperatureMarker(points[index], temps[index], index == maxIdx, textMeasurer, labelStyle, settings)
+        }
+    }
+}
+
+private fun DrawScope.drawTemperatureMarker(
+    point: Offset,
+    temperature: Double,
+    isHigh: Boolean,
+    textMeasurer: TextMeasurer,
+    labelStyle: TextStyle,
+    settings: NimbusSettings,
+) {
+    drawCircle(NimbusBlueAccent, radius = 4f, center = point)
+    drawCircle(Color(0xFF0A0E1A), radius = 2f, center = point)
+
+    val label = WeatherFormatter.formatTemperature(temperature, settings)
+    val measured = textMeasurer.measure(label, labelStyle)
+    val labelY = if (isHigh) point.y - 16f else point.y + 6f
+    drawText(measured, topLeft = Offset(point.x - measured.size.width / 2f, labelY))
+}
+
+private fun DrawScope.drawTimeLabels(
+    data: List<HourlyConditions>,
+    points: List<Offset>,
+    referenceTime: LocalDateTime?,
+    settings: NimbusSettings,
+    textMeasurer: TextMeasurer,
+    labelStyle: TextStyle,
+    metrics: TemperatureGraphMetrics,
+) {
+    for (index in data.indices step 6) {
+        if (index < points.size) {
+            val label = WeatherFormatter.formatRelativeHourLabel(data[index].time, referenceTime, settings)
+            val measured = textMeasurer.measure(label, labelStyle)
+            drawText(
+                measured,
+                topLeft = Offset(points[index].x - measured.size.width / 2f, metrics.baselineY + 6f),
+            )
+        }
+    }
+}
+
+private fun DrawScope.drawInspectionOverlay(
+    data: List<HourlyConditions>,
+    points: List<Offset>,
+    inspectX: Float,
+    isInspecting: Boolean,
+    metrics: TemperatureGraphMetrics,
+    textMeasurer: TextMeasurer,
+    tooltipStyle: TextStyle,
+    settings: NimbusSettings,
+    referenceTime: LocalDateTime?,
+) {
+    if (!isInspecting || inspectX < 0f || metrics.stepX <= 0f) return
+
+    val nearestIndex = ((inspectX / metrics.stepX).toInt()).coerceIn(0, data.lastIndex)
+    val nearPoint = points[nearestIndex]
+    val nearHour = data[nearestIndex]
+    drawInspectionGuide(nearPoint, metrics)
+    drawCircle(NimbusBlueAccent, radius = 6f, center = nearPoint)
+    drawCircle(Color.White, radius = 3f, center = nearPoint)
+    drawInspectionTooltip(nearHour, nearPoint, metrics, textMeasurer, tooltipStyle, settings, referenceTime)
+}
+
+private fun DrawScope.drawInspectionGuide(
+    point: Offset,
+    metrics: TemperatureGraphMetrics,
+) {
+    drawLine(
+        color = NimbusTextTertiary.copy(alpha = 0.5f),
+        start = Offset(point.x, metrics.paddingTop),
+        end = Offset(point.x, metrics.baselineY),
+        strokeWidth = 1f,
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f)),
+    )
+}
+
+private fun DrawScope.drawInspectionTooltip(
+    hour: HourlyConditions,
+    point: Offset,
+    metrics: TemperatureGraphMetrics,
+    textMeasurer: TextMeasurer,
+    tooltipStyle: TextStyle,
+    settings: NimbusSettings,
+    referenceTime: LocalDateTime?,
+) {
+    val tooltipText = inspectionTooltipText(hour, settings, referenceTime)
+    val measured = textMeasurer.measure(tooltipText, tooltipStyle)
+    val tooltipX = (point.x - measured.size.width / 2f).coerceIn(0f, metrics.width - measured.size.width)
+    val tooltipY = 2f
+    drawRoundRect(
+        color = Color(0xFF1A2340),
+        topLeft = Offset(tooltipX - 4f, tooltipY),
+        size = Size(measured.size.width + 8f, measured.size.height + 4f),
+        cornerRadius = CornerRadius(6f),
+    )
+    drawText(measured, topLeft = Offset(tooltipX, tooltipY + 2f))
+}
+
+private fun inspectionTooltipText(
+    hour: HourlyConditions,
+    settings: NimbusSettings,
+    referenceTime: LocalDateTime?,
+): String {
+    val tempText = WeatherFormatter.formatTemperature(hour.temperature, settings)
+    val timeText = WeatherFormatter.formatRelativeHourLabel(hour.time, referenceTime, settings)
+    val precipText = if (hour.precipitationProbability > 0) " ${hour.precipitationProbability}%" else ""
+    return "$tempText \u2022 $timeText$precipText"
 }
 
 private data class TemperatureTrendSummary(
