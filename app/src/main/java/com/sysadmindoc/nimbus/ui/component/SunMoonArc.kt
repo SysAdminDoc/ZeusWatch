@@ -6,14 +6,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -24,6 +27,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusMoonBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusSunYellow
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
+import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.PI
@@ -50,42 +54,143 @@ fun SunArc(
 
     val settings = LocalUnitSettings.current
     val now = referenceTime ?: LocalDateTime.now()
-    val fmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME
-    val riseTime = try { LocalDateTime.parse(sunrise, fmt) } catch (_: Exception) { return }
-    val setTime = try { LocalDateTime.parse(sunset, fmt) } catch (_: Exception) { return }
-
-    // Moon times (optional)
-    val moonRiseTime = moonrise?.let { try { LocalDateTime.parse(it, fmt) } catch (_: Exception) { null } }
-    val moonSetTime = moonset?.let { try { LocalDateTime.parse(it, fmt) } catch (_: Exception) { null } }
-
-    // Sun position (0 = sunrise, 1 = sunset)
-    val totalMinutes = java.time.Duration.between(riseTime, setTime).toMinutes().toFloat()
+    val times = parseSunArcTimes(sunrise, sunset, moonrise, moonset) ?: return
+    val totalMinutes = Duration.between(times.sunrise, times.sunset).toMinutes().toFloat()
     if (totalMinutes <= 0f) return // Guard: bad data (sunrise >= sunset)
-    val elapsedMinutes = java.time.Duration.between(riseTime, now).toMinutes().toFloat()
+    val elapsedMinutes = Duration.between(times.sunrise, now).toMinutes().toFloat()
     val sunProgress = (elapsedMinutes / totalMinutes).coerceIn(0f, 1f)
-    val isDaylight = now.isAfter(riseTime) && now.isBefore(setTime)
-
-    // Twilight: civil twilight is ~30 min before sunrise and after sunset
-    val twilightMinutes = 30f
-    val dawnStart = riseTime.minusMinutes(30)
-    val duskEnd = setTime.plusMinutes(30)
-    val isInDawn = now.isAfter(dawnStart) && now.isBefore(riseTime)
-    val isInDusk = now.isAfter(setTime) && now.isBefore(duskEnd)
-    val twilightLabel = when {
-        isInDawn -> stringResource(R.string.sun_arc_dawn)
-        isInDusk -> stringResource(R.string.sun_arc_dusk)
-        else -> null
-    }
+    val isDaylight = now.isAfter(times.sunrise) && now.isBefore(times.sunset)
+    val twilightLabel = twilightLabel(times.sunrise, times.sunset, now)?.let { stringResource(it) }
+    val moonState = moonArcState(times.moonrise, times.moonset, now)
 
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 10.sp)
     val twilightColor = Color(0xFF1A237E).copy(alpha = 0.25f)
 
-    val hasMoon = moonRiseTime != null && moonSetTime != null
     val sunriseLabel = WeatherFormatter.formatTime(sunrise, settings)
     val sunsetLabel = WeatherFormatter.formatTime(sunset, settings)
-    val sunStateLabel = stringResource(sunStateRes(riseTime, setTime, now))
-    val semanticSummary = if (hasMoon) {
+    val semanticSummary = sunArcSemanticSummary(
+        sunriseLabel = sunriseLabel,
+        sunsetLabel = sunsetLabel,
+        sunStateLabel = stringResource(sunStateRes(times.sunrise, times.sunset, now)),
+        moonrise = moonrise,
+        moonset = moonset,
+        hasMoon = moonState != null,
+    )
+
+    Canvas(
+        modifier = modifier
+            .semantics(mergeDescendants = true) {
+                contentDescription = semanticSummary
+            }
+            .fillMaxWidth()
+            .height(if (moonState != null) 100.dp else 70.dp),
+    ) {
+        val w = size.width
+        val h = size.height
+        val layout = SunArcLayout(
+            width = w,
+            horizonY = h * 0.80f,
+            arcRadius = w * 0.42f,
+            centerX = w / 2f,
+        )
+        drawTwilightZones(layout, totalMinutes, twilightColor)
+        drawHorizonLine(layout)
+        drawSunTrack(layout, sunProgress, isDaylight)
+        drawSunPosition(layout, sunProgress, isDaylight)
+        drawMoonTrack(layout, moonState)
+        drawSunArcLabels(
+            layout = layout,
+            textMeasurer = textMeasurer,
+            labelStyle = labelStyle,
+            sunriseLabel = sunriseLabel,
+            sunsetLabel = sunsetLabel,
+            twilightLabel = twilightLabel,
+        )
+    }
+}
+
+private data class SunArcTimes(
+    val sunrise: LocalDateTime,
+    val sunset: LocalDateTime,
+    val moonrise: LocalDateTime?,
+    val moonset: LocalDateTime?,
+)
+
+private data class MoonArcState(
+    val progress: Float,
+    val isUp: Boolean,
+)
+
+private data class SunArcLayout(
+    val width: Float,
+    val horizonY: Float,
+    val arcRadius: Float,
+    val centerX: Float,
+)
+
+private fun parseSunArcTimes(
+    sunrise: String,
+    sunset: String,
+    moonrise: String?,
+    moonset: String?,
+): SunArcTimes? {
+    val fmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+    return SunArcTimes(
+        sunrise = parseLocalDateTime(sunrise, fmt) ?: return null,
+        sunset = parseLocalDateTime(sunset, fmt) ?: return null,
+        moonrise = moonrise?.let { parseLocalDateTime(it, fmt) },
+        moonset = moonset?.let { parseLocalDateTime(it, fmt) },
+    )
+}
+
+private fun parseLocalDateTime(value: String, formatter: DateTimeFormatter): LocalDateTime? =
+    try {
+        LocalDateTime.parse(value, formatter)
+    } catch (_: Exception) {
+        null
+    }
+
+private fun twilightLabel(
+    sunrise: LocalDateTime,
+    sunset: LocalDateTime,
+    now: LocalDateTime,
+): Int? {
+    val dawnStart = sunrise.minusMinutes(30)
+    val duskEnd = sunset.plusMinutes(30)
+    return when {
+        now.isAfter(dawnStart) && now.isBefore(sunrise) -> R.string.sun_arc_dawn
+        now.isAfter(sunset) && now.isBefore(duskEnd) -> R.string.sun_arc_dusk
+        else -> null
+    }
+}
+
+private fun moonArcState(
+    moonrise: LocalDateTime?,
+    moonset: LocalDateTime?,
+    now: LocalDateTime,
+): MoonArcState? {
+    if (moonrise == null || moonset == null) return null
+    val moonTotal = Duration.between(moonrise, moonset).toMinutes().toFloat()
+    if (moonTotal <= 0f) return null
+    val moonElapsed = Duration.between(moonrise, now).toMinutes().toFloat()
+    return MoonArcState(
+        progress = (moonElapsed / moonTotal).coerceIn(0f, 1f),
+        isUp = now.isAfter(moonrise) && now.isBefore(moonset),
+    )
+}
+
+@Composable
+private fun sunArcSemanticSummary(
+    sunriseLabel: String,
+    sunsetLabel: String,
+    sunStateLabel: String,
+    moonrise: String?,
+    moonset: String?,
+    hasMoon: Boolean,
+): String {
+    val settings = LocalUnitSettings.current
+    return if (hasMoon) {
         stringResource(
             R.string.sun_arc_semantics_with_moon,
             sunriseLabel,
@@ -97,176 +202,133 @@ fun SunArc(
     } else {
         stringResource(R.string.sun_arc_semantics, sunriseLabel, sunsetLabel, sunStateLabel)
     }
+}
 
-    Canvas(
-        modifier = modifier
-            .semantics(mergeDescendants = true) {
-                contentDescription = semanticSummary
-            }
-            .fillMaxWidth()
-            .height(if (hasMoon) 100.dp else 70.dp),
-    ) {
-        val w = size.width
-        val h = size.height
-        val horizonY = h * 0.80f
-        val arcRadius = w * 0.42f
-        val centerX = w / 2f
+private fun DrawScope.drawTwilightZones(
+    layout: SunArcLayout,
+    totalMinutes: Float,
+    twilightColor: Color,
+) {
+    val dawnSweep = ((30f / totalMinutes).coerceIn(0f, 0.15f)) * 180f
+    val twilightStroke = Stroke(width = 14f, cap = StrokeCap.Round)
+    val arcSize = Size(layout.arcRadius * 2, layout.arcRadius * 2)
+    val topLeft = Offset(layout.centerX - layout.arcRadius, layout.horizonY - layout.arcRadius)
+    drawArc(twilightColor, 180f, dawnSweep, false, topLeft, arcSize, style = twilightStroke)
+    drawArc(twilightColor, -dawnSweep, dawnSweep, false, topLeft, arcSize, style = twilightStroke)
+}
 
-        // ── Twilight zones (wide stroke arcs at sunrise/sunset edges) ──
-        val dawnFrac = (twilightMinutes / totalMinutes).coerceIn(0f, 0.15f)
-        val dawnSweep = dawnFrac * 180f
-        val twilightStroke = Stroke(width = 14f, cap = StrokeCap.Round)
+private fun DrawScope.drawHorizonLine(layout: SunArcLayout) {
+    drawLine(
+        color = NimbusTextTertiary.copy(alpha = 0.3f),
+        start = Offset(layout.width * 0.05f, layout.horizonY),
+        end = Offset(layout.width * 0.95f, layout.horizonY),
+        strokeWidth = 1f,
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)),
+    )
+}
 
-        // Dawn zone (left arc edge, before sunrise)
-        drawArc(
-            color = twilightColor,
-            startAngle = 180f,
-            sweepAngle = dawnSweep,
-            useCenter = false,
-            topLeft = Offset(centerX - arcRadius, horizonY - arcRadius),
-            size = androidx.compose.ui.geometry.Size(arcRadius * 2, arcRadius * 2),
-            style = twilightStroke,
-        )
-
-        // Dusk zone (right arc edge, after sunset)
-        drawArc(
-            color = twilightColor,
-            startAngle = 0f - dawnSweep,
-            sweepAngle = dawnSweep,
-            useCenter = false,
-            topLeft = Offset(centerX - arcRadius, horizonY - arcRadius),
-            size = androidx.compose.ui.geometry.Size(arcRadius * 2, arcRadius * 2),
-            style = twilightStroke,
-        )
-
-        // ── Horizon line ────────────────────────────────────────────
-        drawLine(
-            color = NimbusTextTertiary.copy(alpha = 0.3f),
-            start = Offset(w * 0.05f, horizonY),
-            end = Offset(w * 0.95f, horizonY),
-            strokeWidth = 1f,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)),
-        )
-
-        // ── Sun arc (dashed background, solid for traversed portion) ──
-        val arcStrokeBg = Stroke(
+private fun DrawScope.drawSunTrack(
+    layout: SunArcLayout,
+    sunProgress: Float,
+    isDaylight: Boolean,
+) {
+    val arcSize = Size(layout.arcRadius * 2, layout.arcRadius * 2)
+    val topLeft = Offset(layout.centerX - layout.arcRadius, layout.horizonY - layout.arcRadius)
+    drawArc(
+        color = NimbusSunYellow.copy(alpha = 0.2f),
+        startAngle = 180f,
+        sweepAngle = 180f,
+        useCenter = false,
+        topLeft = topLeft,
+        size = arcSize,
+        style = Stroke(
             width = 2f,
             cap = StrokeCap.Round,
             pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f)),
-        )
+        ),
+    )
+    if (isDaylight) {
         drawArc(
-            color = NimbusSunYellow.copy(alpha = 0.2f),
+            color = NimbusSunYellow.copy(alpha = 0.6f),
             startAngle = 180f,
-            sweepAngle = 180f,
+            sweepAngle = sunProgress * 180f,
             useCenter = false,
-            topLeft = Offset(centerX - arcRadius, horizonY - arcRadius),
-            size = androidx.compose.ui.geometry.Size(arcRadius * 2, arcRadius * 2),
-            style = arcStrokeBg,
+            topLeft = topLeft,
+            size = arcSize,
+            style = Stroke(width = 3f, cap = StrokeCap.Round),
         )
+    }
+}
 
-        // Solid traversed arc
-        if (isDaylight) {
-            val traversedSweep = sunProgress * 180f
-            drawArc(
-                color = NimbusSunYellow.copy(alpha = 0.6f),
-                startAngle = 180f,
-                sweepAngle = traversedSweep,
-                useCenter = false,
-                topLeft = Offset(centerX - arcRadius, horizonY - arcRadius),
-                size = androidx.compose.ui.geometry.Size(arcRadius * 2, arcRadius * 2),
-                style = Stroke(width = 3f, cap = StrokeCap.Round),
-            )
-        }
+private fun DrawScope.drawSunPosition(
+    layout: SunArcLayout,
+    sunProgress: Float,
+    isDaylight: Boolean,
+) {
+    if (!isDaylight) return
+    val angle = PI.toFloat() * (1f - sunProgress)
+    val center = Offset(
+        x = layout.centerX + layout.arcRadius * cos(angle),
+        y = layout.horizonY - layout.arcRadius * sin(angle),
+    )
+    drawCircle(NimbusSunYellow.copy(alpha = 0.15f), radius = 16f, center = center)
+    drawCircle(NimbusSunYellow.copy(alpha = 0.25f), radius = 10f, center = center)
+    drawCircle(NimbusSunYellow, radius = 6f, center = center)
+}
 
-        // ── Sun position dot ────────────────────────────────────────
-        if (isDaylight) {
-            val angle = PI.toFloat() * (1f - sunProgress)
-            val sunX = centerX + arcRadius * cos(angle)
-            val sunY = horizonY - arcRadius * sin(angle)
+private fun DrawScope.drawMoonTrack(
+    layout: SunArcLayout,
+    moonState: MoonArcState?,
+) {
+    if (moonState == null) return
+    val moonArcRadius = layout.arcRadius * 0.75f
+    drawArc(
+        color = NimbusMoonBlue.copy(alpha = 0.15f),
+        startAngle = 180f,
+        sweepAngle = 180f,
+        useCenter = false,
+        topLeft = Offset(layout.centerX - moonArcRadius, layout.horizonY - moonArcRadius),
+        size = Size(moonArcRadius * 2, moonArcRadius * 2),
+        style = Stroke(
+            width = 1.5f,
+            cap = StrokeCap.Round,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 4f)),
+        ),
+    )
+    if (moonState.isUp) {
+        val moonAngle = PI.toFloat() * (1f - moonState.progress)
+        val center = Offset(
+            x = layout.centerX + moonArcRadius * cos(moonAngle),
+            y = layout.horizonY - moonArcRadius * sin(moonAngle),
+        )
+        drawCircle(NimbusMoonBlue.copy(alpha = 0.2f), radius = 10f, center = center)
+        drawCircle(NimbusMoonBlue, radius = 5f, center = center)
+    }
+}
 
-            // Outer glow
-            drawCircle(
-                color = NimbusSunYellow.copy(alpha = 0.15f),
-                radius = 16f,
-                center = Offset(sunX, sunY),
-            )
-            // Mid glow
-            drawCircle(
-                color = NimbusSunYellow.copy(alpha = 0.25f),
-                radius = 10f,
-                center = Offset(sunX, sunY),
-            )
-            // Sun dot
-            drawCircle(
-                color = NimbusSunYellow,
-                radius = 6f,
-                center = Offset(sunX, sunY),
-            )
-        }
+private fun DrawScope.drawSunArcLabels(
+    layout: SunArcLayout,
+    textMeasurer: TextMeasurer,
+    labelStyle: TextStyle,
+    sunriseLabel: String,
+    sunsetLabel: String,
+    twilightLabel: String?,
+) {
+    val riseM = textMeasurer.measure(sunriseLabel, labelStyle)
+    drawText(riseM, topLeft = Offset(layout.width * 0.05f, layout.horizonY + 4f))
 
-        // ── Moon arc (if data available) ────────────────────────────
-        if (moonRiseTime != null && moonSetTime != null) {
-            val moonTotal = java.time.Duration.between(moonRiseTime, moonSetTime).toMinutes().toFloat()
-            if (moonTotal > 0) {
-                val moonElapsed = java.time.Duration.between(moonRiseTime, now).toMinutes().toFloat()
-                val moonProgress = (moonElapsed / moonTotal).coerceIn(0f, 1f)
-                val isMoonUp = now.isAfter(moonRiseTime) && now.isBefore(moonSetTime)
+    val setM = textMeasurer.measure(sunsetLabel, labelStyle)
+    drawText(setM, topLeft = Offset(layout.width * 0.95f - setM.size.width, layout.horizonY + 4f))
 
-                val moonArcRadius = arcRadius * 0.75f
-
-                // Moon arc background
-                drawArc(
-                    color = NimbusMoonBlue.copy(alpha = 0.15f),
-                    startAngle = 180f,
-                    sweepAngle = 180f,
-                    useCenter = false,
-                    topLeft = Offset(centerX - moonArcRadius, horizonY - moonArcRadius),
-                    size = androidx.compose.ui.geometry.Size(moonArcRadius * 2, moonArcRadius * 2),
-                    style = Stroke(
-                        width = 1.5f,
-                        cap = StrokeCap.Round,
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 4f)),
-                    ),
-                )
-
-                // Moon position dot
-                if (isMoonUp) {
-                    val moonAngle = PI.toFloat() * (1f - moonProgress)
-                    val moonX = centerX + moonArcRadius * cos(moonAngle)
-                    val moonY = horizonY - moonArcRadius * sin(moonAngle)
-
-                    drawCircle(
-                        color = NimbusMoonBlue.copy(alpha = 0.2f),
-                        radius = 10f,
-                        center = Offset(moonX, moonY),
-                    )
-                    drawCircle(
-                        color = NimbusMoonBlue,
-                        radius = 5f,
-                        center = Offset(moonX, moonY),
-                    )
-                }
-            }
-        }
-
-        // ── Labels ──────────────────────────────────────────────────
-        val riseM = textMeasurer.measure(sunriseLabel, labelStyle)
-        drawText(riseM, topLeft = Offset(w * 0.05f, horizonY + 4f))
-
-        val setM = textMeasurer.measure(sunsetLabel, labelStyle)
-        drawText(setM, topLeft = Offset(w * 0.95f - setM.size.width, horizonY + 4f))
-
-        // Dawn/Dusk labels
-        if (twilightLabel != null) {
-            val twilightM = textMeasurer.measure(
-                twilightLabel,
-                TextStyle(color = NimbusBlueAccent.copy(alpha = 0.6f), fontSize = 9.sp),
-            )
-            drawText(
-                twilightM,
-                topLeft = Offset(centerX - twilightM.size.width / 2, horizonY - arcRadius - 14f),
-            )
-        }
+    if (twilightLabel != null) {
+        val label = textMeasurer.measure(
+            text = twilightLabel,
+            style = TextStyle(color = NimbusBlueAccent.copy(alpha = 0.6f), fontSize = 9.sp),
+        )
+        drawText(
+            label,
+            topLeft = Offset(layout.centerX - label.size.width / 2, layout.horizonY - layout.arcRadius - 14f),
+        )
     }
 }
 

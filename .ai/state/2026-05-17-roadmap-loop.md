@@ -203,3 +203,21 @@ N-8 remains open. The i18n-era long-method cleanup is complete; remaining
 entries are larger structural extractions around `MainScreen`, `SettingsScreen`,
 `RadarScreen`, `CompareScreen`, `WidgetRefreshWorker`, `SunArc`,
 `TemperatureGraph`, and long-parameter constructors/functions.
+
+## Batch: N-8 Detekt Baseline Reduction - Sun Arc
+
+Reduced the Detekt baseline by one more ID:
+
+- Extracted `SunArc` time parsing, semantic summary, twilight/moon state, and
+  drawing operations into focused helpers.
+- Kept the public `SunArc` composable signature unchanged.
+- Regenerated `config/detekt/baseline.xml`; the
+  `LongMethod:SunMoonArc.kt$@Composable fun SunArc(...)` entry is removed.
+- Baseline count is now 18 IDs.
+
+## Remaining N-8 Boundary
+
+N-8 remains open. Remaining entries are larger structural extractions around
+`MainScreen`, `SettingsScreen`, `RadarScreen`, `CompareScreen`,
+`WidgetRefreshWorker`, `TemperatureGraph`, and long-parameter
+constructors/functions.
