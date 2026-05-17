@@ -190,8 +190,8 @@ class HealthAlertEvaluatorTest {
         }
         val result = HealthAlertEvaluator.evaluate(data)
         result.forEach { alert ->
-            assertTrue("Alert message should not be blank", alert.message.isNotBlank())
-            assertTrue("Alert type label should not be blank", alert.type.label.isNotBlank())
+            assertTrue("Alert message resource should be set", alert.messageRes != 0)
+            assertTrue("Alert type label resource should be set", alert.type.labelRes != 0)
         }
     }
 }

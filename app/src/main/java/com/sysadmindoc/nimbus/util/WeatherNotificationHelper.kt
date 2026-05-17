@@ -24,16 +24,15 @@ import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 object WeatherNotificationHelper {
 
     private const val CHANNEL_ID = "nimbus_current_weather"
-    private const val CHANNEL_NAME = "Current Weather"
     private const val NOTIFICATION_ID = 9000
 
     fun createChannel(context: Context) {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            CHANNEL_NAME,
+            context.getString(R.string.current_weather_channel_name),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "Persistent notification showing current weather conditions"
+            description = context.getString(R.string.current_weather_channel_desc)
             setShowBadge(false)
         }
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -59,8 +58,17 @@ object WeatherNotificationHelper {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(weatherNotificationIcon(data.current.weatherCode, data.current.isDay))
-            .setContentTitle("$temp $condition \u2022 ${data.location.name}")
-            .setContentText("Feels like $feelsLike \u2022 H:$high L:$low")
+            .setContentTitle(
+                context.getString(
+                    R.string.current_weather_notification_title,
+                    temp,
+                    condition,
+                    data.location.name,
+                ),
+            )
+            .setContentText(
+                context.getString(R.string.current_weather_notification_body, feelsLike, high, low),
+            )
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setSilent(true)

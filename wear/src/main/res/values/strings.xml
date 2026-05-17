@@ -14,6 +14,9 @@
     <string name="wear_data_source_phone">Phone</string>
     <string name="wear_data_source_watch">Watch</string>
     <string name="wear_tap_to_refresh">%1$s \u2022 %2$s \u2022 tap to refresh</string>
+    <string name="wear_tile_no_data">No data</string>
+    <string name="wear_tile_high_low_abbrev">H:%1$d\u00B0 L:%2$d\u00B0</string>
+    <string name="wear_tile_humidity_wind">&#128167;%1$d%%  &#128168;%2$s</string>
     <string name="wear_alert_count">%1$d alerts</string>
     <string name="wear_no_hourly_forecast">No hourly forecast</string>
     <string name="wear_no_hourly_forecast_message">Hourly detail will appear after the next phone sync.</string>

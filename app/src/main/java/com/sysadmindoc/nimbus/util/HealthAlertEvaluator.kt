@@ -1,7 +1,9 @@
 package com.sysadmindoc.nimbus.util
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import java.util.Locale
 import kotlin.math.abs
@@ -93,14 +95,12 @@ object HealthAlertEvaluator {
 
         // Find the maximum pressure change across all 3-hour windows
         var maxDelta = 0.0
-        var maxDeltaDirection = "" // "dropping" or "rising"
         val windowSize = minOf(3, pressures.size - 1)
 
         for (i in 0 until pressures.size - windowSize) {
             val delta = pressures[i + windowSize] - pressures[i]
             if (abs(delta) > abs(maxDelta)) {
                 maxDelta = delta
-                maxDeltaDirection = if (delta < 0) "dropping" else "rising"
             }
         }
 
@@ -110,9 +110,9 @@ object HealthAlertEvaluator {
             return HealthAlert(
                 type = HealthAlertType.MIGRAINE_TRIGGER,
                 severity = HealthSeverity.WARNING,
-                message = "Rapid pressure change detected — migraine trigger likely.",
-                detail = "Barometric pressure $maxDeltaDirection by ${formatHpa(absDelta)} hPa within a 3-hour window in the next 12 hours. " +
-                    "Consider taking preventive medication.",
+                messageRes = R.string.health_alert_pressure_warning,
+                detailRes = R.string.health_alert_pressure_warning_detail,
+                detailArgs = listOf(formatHpa(absDelta)),
             )
         }
 
@@ -120,8 +120,9 @@ object HealthAlertEvaluator {
             return HealthAlert(
                 type = HealthAlertType.MIGRAINE_TRIGGER,
                 severity = HealthSeverity.ADVISORY,
-                message = "Moderate pressure change ahead — possible migraine trigger.",
-                detail = "Barometric pressure $maxDeltaDirection by ${formatHpa(absDelta)} hPa over the next few hours.",
+                messageRes = R.string.health_alert_pressure_advisory,
+                detailRes = R.string.health_alert_pressure_advisory_detail,
+                detailArgs = listOf(formatHpa(absDelta)),
             )
         }
 
@@ -145,9 +146,9 @@ object HealthAlertEvaluator {
             return HealthAlert(
                 type = HealthAlertType.MIGRAINE_TRIGGER,
                 severity = HealthSeverity.WARNING,
-                message = "Rapid weather changes ahead — migraine trigger likely.",
-                detail = "Temperature swing of ${tempChange.toInt()}\u00B0C and humidity change of $humidityChange% " +
-                    "in the next 6 hours suggests a weather front approaching.",
+                messageRes = R.string.health_alert_front_warning,
+                detailRes = R.string.health_alert_front_warning_detail,
+                detailArgs = listOf(tempChange.toInt(), humidityChange),
             )
         }
 
@@ -155,8 +156,8 @@ object HealthAlertEvaluator {
             return HealthAlert(
                 type = HealthAlertType.MIGRAINE_TRIGGER,
                 severity = HealthSeverity.ADVISORY,
-                message = "Moderate weather changes ahead — possible migraine trigger.",
-                detail = "Temperature and humidity shifts detected in the next 6 hours.",
+                messageRes = R.string.health_alert_front_advisory,
+                detailRes = R.string.health_alert_front_advisory_detail,
             )
         }
 
@@ -176,15 +177,16 @@ object HealthAlertEvaluator {
             humidity > 85 -> HealthAlert(
                 type = HealthAlertType.RESPIRATORY,
                 severity = HealthSeverity.ADVISORY,
-                message = "Very high humidity ($humidity%).",
-                detail = "May aggravate respiratory conditions such as asthma or COPD. " +
-                    "Stay hydrated and limit strenuous outdoor activity.",
+                messageRes = R.string.health_alert_humidity_high,
+                messageArgs = listOf(humidity),
+                detailRes = R.string.health_alert_humidity_high_detail,
             )
             humidity < 20 -> HealthAlert(
                 type = HealthAlertType.RESPIRATORY,
                 severity = HealthSeverity.ADVISORY,
-                message = "Very low humidity ($humidity%).",
-                detail = "Dry air may irritate airways and sinuses. Consider using a humidifier indoors.",
+                messageRes = R.string.health_alert_humidity_low,
+                messageArgs = listOf(humidity),
+                detailRes = R.string.health_alert_humidity_low_detail,
             )
             else -> null
         }
@@ -207,9 +209,9 @@ object HealthAlertEvaluator {
             return HealthAlert(
                 type = HealthAlertType.ARTHRITIS_TRIGGER,
                 severity = HealthSeverity.WARNING,
-                message = "Large temperature swing of ${swing.toInt()}\u00B0C expected.",
-                detail = "Rapid temperature changes may worsen joint pain and arthritis symptoms. " +
-                    "Dress in layers and stay warm during colder periods.",
+                messageRes = R.string.health_alert_temp_swing_warning,
+                messageArgs = listOf(swing.toInt()),
+                detailRes = R.string.health_alert_temp_swing_warning_detail,
             )
         }
 
@@ -217,8 +219,9 @@ object HealthAlertEvaluator {
             return HealthAlert(
                 type = HealthAlertType.ARTHRITIS_TRIGGER,
                 severity = HealthSeverity.ADVISORY,
-                message = "Notable temperature swing of ${swing.toInt()}\u00B0C expected.",
-                detail = "May affect sensitive individuals with joint conditions.",
+                messageRes = R.string.health_alert_temp_swing_advisory,
+                messageArgs = listOf(swing.toInt()),
+                detailRes = R.string.health_alert_temp_swing_advisory_detail,
             )
         }
 
@@ -230,18 +233,20 @@ object HealthAlertEvaluator {
 data class HealthAlert(
     val type: HealthAlertType,
     val severity: HealthSeverity,
-    val message: String,
-    val detail: String = "",
+    @StringRes val messageRes: Int,
+    val messageArgs: List<Any> = emptyList(),
+    @StringRes val detailRes: Int? = null,
+    val detailArgs: List<Any> = emptyList(),
 )
 
-enum class HealthAlertType(val label: String) {
-    MIGRAINE_TRIGGER("Migraine Trigger"),
-    RESPIRATORY("Respiratory"),
-    ARTHRITIS_TRIGGER("Joint Pain"),
+enum class HealthAlertType(@StringRes val labelRes: Int) {
+    MIGRAINE_TRIGGER(R.string.health_alert_type_migraine),
+    RESPIRATORY(R.string.health_alert_type_respiratory),
+    ARTHRITIS_TRIGGER(R.string.health_alert_type_arthritis),
 }
 
-enum class HealthSeverity(val label: String, val color: Color) {
-    WARNING("Warning", Color(0xFFFF5722)),
-    ADVISORY("Advisory", Color(0xFFFF9800)),
-    INFO("Info", Color(0xFF2196F3)),
+enum class HealthSeverity(@StringRes val labelRes: Int, val color: Color) {
+    WARNING(R.string.health_severity_warning, Color(0xFFFF5722)),
+    ADVISORY(R.string.health_severity_advisory, Color(0xFFFF9800)),
+    INFO(R.string.health_severity_info, Color(0xFF2196F3)),
 }

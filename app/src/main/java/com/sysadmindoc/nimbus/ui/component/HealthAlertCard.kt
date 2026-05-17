@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
@@ -41,6 +42,8 @@ fun HealthAlertCard(
         modifier = modifier,
     ) {
         alerts.forEachIndexed { idx, alert ->
+            val typeLabel = stringResource(alert.type.labelRes)
+            val severityLabel = stringResource(alert.severity.labelRes)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -51,26 +54,30 @@ fun HealthAlertCard(
             ) {
                 Icon(
                     Icons.Filled.HealthAndSafety,
-                    contentDescription = "${alert.type.label} health alert",
+                    contentDescription = stringResource(
+                        R.string.health_alert_content_description,
+                        typeLabel,
+                    ),
                     tint = alert.severity.color,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "${alert.type.label} \u2022 ${alert.severity.label}",
+                        text = "$typeLabel \u2022 $severityLabel",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         color = alert.severity.color,
                     )
                     Text(
-                        text = alert.message,
+                        text = alert.messageText(),
                         style = MaterialTheme.typography.bodySmall,
                         color = NimbusTextPrimary,
                     )
-                    if (alert.detail.isNotBlank()) {
+                    val detail = alert.detailText()
+                    if (detail.isNotBlank()) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = alert.detail,
+                            text = detail,
                             style = MaterialTheme.typography.labelSmall,
                             color = NimbusTextSecondary,
                         )
@@ -81,5 +88,22 @@ fun HealthAlertCard(
                 Spacer(modifier = Modifier.height(6.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun HealthAlert.messageText(): String = if (messageArgs.isEmpty()) {
+    stringResource(messageRes)
+} else {
+    stringResource(messageRes, *messageArgs.toTypedArray())
+}
+
+@Composable
+private fun HealthAlert.detailText(): String {
+    val res = detailRes ?: return ""
+    return if (detailArgs.isEmpty()) {
+        stringResource(res)
+    } else {
+        stringResource(res, *detailArgs.toTypedArray())
     }
 }

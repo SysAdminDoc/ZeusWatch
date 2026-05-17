@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -57,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.RadarProvider
 import com.sysadmindoc.nimbus.ui.component.GlassActionButton
@@ -139,6 +141,11 @@ fun RadarScreen(
     }
 
     PredictiveBackScaffold(onBack = onBack) {
+        val reportWeatherConditionsDescription = stringResource(R.string.report_weather_conditions_cd)
+        val radarLoadingTitle = stringResource(R.string.radar_loading_title)
+        val radarLoadingMessage = stringResource(R.string.radar_loading_message)
+        val radarUnavailableTitle = stringResource(R.string.radar_unavailable_title)
+        val radarUnavailableMessage = stringResource(R.string.radar_unavailable_message)
         val fullScreenPlaybackVisible =
             settings.radarProvider.supportsNativePlayback &&
                 !isOffline &&
@@ -214,14 +221,14 @@ fun RadarScreen(
 
                     when {
                         showLoadingOverlay -> RadarStatusCard(
-                            title = "Loading Radar",
-                            message = "Fetching the latest radar frames for this area.",
+                            title = radarLoadingTitle,
+                            message = radarLoadingMessage,
                             isLoading = true,
                             modifier = Modifier.align(Alignment.Center),
                         )
                         showErrorOverlay -> RadarStatusCard(
-                            title = "Radar Unavailable",
-                            message = radarState.error ?: "We couldn't load radar frames right now.",
+                            title = radarUnavailableTitle,
+                            message = radarState.error ?: radarUnavailableMessage,
                             onRetry = { viewModel.loadFrames(force = true) },
                             modifier = Modifier.align(Alignment.Center),
                         )
@@ -255,7 +262,7 @@ fun RadarScreen(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .windowInsetsPadding(WindowInsets.safeDrawing)
-                        .semantics { contentDescription = "Report weather conditions" }
+                        .semantics { contentDescription = reportWeatherConditionsDescription }
                         .padding(end = 16.dp, bottom = fullScreenFabBottomPadding),
                 ) {
                     Icon(
@@ -302,6 +309,11 @@ fun RadarTab(
 
     var showReportSheet by remember { mutableStateOf(false) }
     val canSubmitReport = canOpenCommunityReport(isOffline, latitude, longitude)
+    val reportWeatherConditionsDescription = stringResource(R.string.report_weather_conditions_cd)
+    val radarLoadingTitle = stringResource(R.string.radar_loading_title)
+    val radarLoadingMessage = stringResource(R.string.radar_loading_message)
+    val radarUnavailableTitle = stringResource(R.string.radar_unavailable_title)
+    val radarUnavailableMessage = stringResource(R.string.radar_unavailable_message)
 
     // Load community reports for this location
     LaunchedEffect(latitude, longitude) {
@@ -408,8 +420,8 @@ fun RadarTab(
                     radarState = radarState,
                     isOffline = isOffline,
                 ) -> RadarStatusCard(
-                    title = "Loading Radar",
-                    message = "Fetching the latest radar frames for this area.",
+                    title = radarLoadingTitle,
+                    message = radarLoadingMessage,
                     isLoading = true,
                     modifier = Modifier.align(Alignment.Center),
                 )
@@ -419,8 +431,8 @@ fun RadarTab(
                     radarState = radarState,
                     isOffline = isOffline,
                 ) -> RadarStatusCard(
-                    title = "Radar Unavailable",
-                    message = radarState.error ?: "We couldn't load radar frames right now.",
+                    title = radarUnavailableTitle,
+                    message = radarState.error ?: radarUnavailableMessage,
                     onRetry = { viewModel.loadFrames(force = true) },
                     modifier = Modifier.align(Alignment.Center),
                 )
@@ -453,7 +465,7 @@ fun RadarTab(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .semantics { contentDescription = "Report weather conditions" }
+                    .semantics { contentDescription = reportWeatherConditionsDescription }
                     .padding(end = 16.dp, bottom = tabFabBottomPadding),
             ) {
                 Icon(
@@ -489,6 +501,12 @@ private fun RadarTopControls(
     onBack: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
+    val radarTitle = stringResource(R.string.nav_radar)
+    val interactiveMapLabel = stringResource(R.string.radar_interactive_map)
+    val layerProviderLabel = selectedLayer?.let {
+        stringResource(R.string.radar_layer_with_provider, it.label, providerLabel)
+    } ?: providerLabel
+
     Column(
         modifier = modifier
             .windowInsetsPadding(WindowInsets.safeDrawing)
@@ -505,12 +523,12 @@ private fun RadarTopControls(
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Radar",
+                    text = radarTitle,
                     style = MaterialTheme.typography.labelLarge,
                     color = NimbusTextPrimary,
                 )
                 Text(
-                    text = if (selectedLayer != null) "${selectedLayer.label} layer • $providerLabel" else providerLabel,
+                    text = layerProviderLabel,
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                     maxLines = 1,
@@ -518,7 +536,7 @@ private fun RadarTopControls(
                 )
             }
             RadarInfoPill(
-                text = if (selectedLayer == null) "Interactive map" else selectedLayer.label,
+                text = if (selectedLayer == null) interactiveMapLabel else selectedLayer.label,
                 modifier = Modifier.widthIn(max = 220.dp),
             )
         }
@@ -540,7 +558,7 @@ private fun RadarBackButton(
 ) {
     GlassActionButton(
         icon = Icons.AutoMirrored.Filled.ArrowBack,
-        contentDescription = "Back",
+        contentDescription = stringResource(R.string.common_back),
         onClick = onBack,
         modifier = modifier,
     )
@@ -713,7 +731,7 @@ private fun RadarStatusCard(
         message = message,
         icon = Icons.Filled.CloudOff,
         loading = isLoading,
-        primaryActionLabel = if (isLoading) null else "Retry",
+        primaryActionLabel = if (isLoading) null else stringResource(R.string.retry),
         onPrimaryAction = if (isLoading) null else onRetry,
         modifier = modifier
             .padding(horizontal = 24.dp)
@@ -728,12 +746,12 @@ private fun RadarOfflineCard() {
         contentAlignment = Alignment.Center,
     ) {
         PremiumMessageCard(
-            title = "Radar needs a connection",
-            message = "Reconnect to resume live radar, lightning, and community weather reports.",
+            title = stringResource(R.string.radar_offline_title),
+            message = stringResource(R.string.radar_offline_message),
             icon = Icons.Filled.CloudOff,
             modifier = Modifier
                 .padding(24.dp),
-            badgeText = "Forecast cards still work with cached data",
+            badgeText = stringResource(R.string.radar_offline_badge),
         )
     }
 }

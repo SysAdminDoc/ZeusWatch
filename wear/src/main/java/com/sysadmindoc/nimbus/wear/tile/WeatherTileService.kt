@@ -13,6 +13,7 @@ import androidx.wear.protolayout.ResourceBuilders
 import androidx.wear.protolayout.TimelineBuilders
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.TileBuilders
+import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
 import com.sysadmindoc.nimbus.wear.data.WearWeatherData
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
@@ -84,7 +85,7 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
             .addContent(Spacer.Builder().setHeight(dp(4f)).build())
             .addContent(
                 Text.Builder()
-                    .setText(data?.condition ?: "No data")
+                    .setText(data?.condition ?: getString(R.string.wear_tile_no_data))
                     .setFontStyle(
                         LayoutElementBuilders.FontStyle.Builder()
                             .setSize(sp(14f))
@@ -97,7 +98,11 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
             .addContent(
                 Text.Builder()
                     .setText(
-                        if (data != null) "H:${data.high}\u00B0 L:${data.low}\u00B0" else "",
+                        if (data != null) {
+                            getString(R.string.wear_tile_high_low_abbrev, data.high, data.low)
+                        } else {
+                            ""
+                        },
                     )
                     .setFontStyle(
                         LayoutElementBuilders.FontStyle.Builder()
@@ -115,7 +120,7 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
                 Row.Builder()
                     .addContent(
                         Text.Builder()
-                            .setText("\uD83D\uDCA7${data.humidity}%  \uD83D\uDCA8${data.windSpeed}")
+                            .setText(getString(R.string.wear_tile_humidity_wind, data.humidity, data.windSpeed))
                             .setFontStyle(
                                 LayoutElementBuilders.FontStyle.Builder()
                                     .setSize(sp(11f))

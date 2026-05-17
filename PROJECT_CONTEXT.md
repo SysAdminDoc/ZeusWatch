@@ -103,8 +103,10 @@ Evidence: `README.md`, `CLAUDE.md`, `ROADMAP-COMPLETED.md`, and source files.
 - Widgets: Current, 3-Day, Forecast, Hourly Strip via Glance.
 - Wear OS: current, hourly, daily, alerts screens; tile; complication service;
   phone-to-watch DataLayer sync plus direct Open-Meteo fallback.
-- Localization is underway: `values/strings.xml` has 846 strings and
-  `values-es/strings.xml` has 783 strings as of 2026-05-17.
+- Localization local coverage is complete for the current app string surface:
+  `values/strings.xml` has 925 strings and `values-es/strings.xml` has 925
+  strings as of the N-1 continuation pass on 2026-05-17. Wear Spanish coverage
+  is complete for the current Wear string surface.
 
 ## Repository Metrics
 
@@ -132,7 +134,9 @@ Current CI:
 
 Top Now items from the 2026-05-17 refresh:
 
-1. Finish localization extraction and translation pipeline.
+1. Finish localization extraction and translation pipeline. Local extraction
+   gates and Spanish coverage are complete; external Weblate setup and
+   additional community locales remain.
 2. Populate certificate pins for keyed endpoints or keep the no-op pinning
    state explicit if pins cannot be safely captured.
 3. Decide the safe Australian BOM path, preferably Open-Meteo ACCESS-G model
@@ -148,6 +152,9 @@ The 2026-05-17 dependency check found no OSV advisories for sampled current
 Maven coordinates, but several upgrades are important: Room 2.8.x, WorkManager
 2.11.x, Wear Tiles 1.6.x, Play Services Wearable 20.x, Retrofit 3.x, OkHttp
 5.x, MapLibre 13.x, Compose BOM 2026.05.00, and Kotlin 2.3.x stable.
+
+The local localization gate is `python tools/check_localization.py`, and the
+translator handoff is documented in `docs/TRANSLATION.md`.
 
 ## High-Value Differentiators
 
@@ -190,4 +197,3 @@ The 2026-05-17 research bundle contains:
 - `SECURITY_AND_DEPENDENCY_REVIEW.md` - dependency freshness and hardening.
 - `DATASET_MODEL_INTEGRATION_REVIEW.md` - datasets, APIs, models, integrations.
 - `CHANGESET_SUMMARY.md` - files changed by the research pass.
-
