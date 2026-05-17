@@ -784,14 +784,16 @@ private fun WeatherContent(
                 RenderCard(
                     cardType = cardType,
                     modifier = cardPad,
-                    state = state,
-                    data = data,
-                    airQuality = airQuality,
-                    astronomy = astronomy,
-                    settings = settings,
-                    radarPreviewTileUrl = radarPreviewTileUrl,
-                    radarBaseMapUrl = radarBaseMapUrl,
-                    onNavigateToRadar = onNavigateToRadar,
+                    context = CardRenderContext(
+                        state = state,
+                        data = data,
+                        airQuality = airQuality,
+                        astronomy = astronomy,
+                        settings = settings,
+                        radarPreviewTileUrl = radarPreviewTileUrl,
+                        radarBaseMapUrl = radarBaseMapUrl,
+                        onNavigateToRadar = onNavigateToRadar,
+                    ),
                 )
                 Spacer(modifier = Modifier.height(layout.cardSpacing))
             }
@@ -863,39 +865,86 @@ private fun StatusBadge(
 
 // ── Shared Card Renderer ─────────────────────────────────────────────────
 
+private data class CardRenderContext(
+    val state: MainUiState,
+    val data: WeatherData,
+    val airQuality: AirQualityData?,
+    val astronomy: AstronomyData?,
+    val settings: NimbusSettings,
+    val radarPreviewTileUrl: String?,
+    val radarBaseMapUrl: String?,
+    val onNavigateToRadar: (Double, Double) -> Unit,
+)
+
+private val FORECAST_CARD_TYPES = setOf(
+    CardType.WEATHER_SUMMARY,
+    CardType.RADAR_PREVIEW,
+    CardType.NOWCAST,
+    CardType.HOURLY_FORECAST,
+    CardType.TEMPERATURE_GRAPH,
+    CardType.DAILY_FORECAST,
+)
+
+private val ATMOSPHERE_CARD_TYPES = setOf(
+    CardType.UV_INDEX,
+    CardType.WIND_COMPASS,
+    CardType.AIR_QUALITY,
+    CardType.POLLEN,
+    CardType.OUTDOOR_SCORE,
+    CardType.SNOWFALL,
+    CardType.SEVERE_WEATHER,
+    CardType.GOLDEN_HOUR,
+    CardType.SUNSHINE,
+)
+
+private val LIFESTYLE_CARD_TYPES = setOf(
+    CardType.DRIVING_CONDITIONS,
+    CardType.HEALTH_ALERTS,
+    CardType.CLOTHING,
+    CardType.PET_SAFETY,
+    CardType.MOON_PHASE,
+)
+
 @Composable
 private fun RenderCard(
     cardType: CardType,
     modifier: Modifier,
-    state: MainUiState,
-    data: WeatherData,
-    airQuality: AirQualityData?,
-    astronomy: AstronomyData?,
-    settings: NimbusSettings,
-    radarPreviewTileUrl: String?,
-    radarBaseMapUrl: String?,
-    onNavigateToRadar: (Double, Double) -> Unit,
+    context: CardRenderContext,
 ) {
+    when (cardType) {
+        in FORECAST_CARD_TYPES -> RenderForecastCard(cardType, modifier, context)
+        in ATMOSPHERE_CARD_TYPES -> RenderAtmosphereCard(cardType, modifier, context)
+        in LIFESTYLE_CARD_TYPES -> RenderLifestyleCard(cardType, modifier, context)
+        else -> RenderDetailCard(cardType, modifier, context)
+    }
+}
+
+@Composable
+private fun RenderForecastCard(
+    cardType: CardType,
+    modifier: Modifier,
+    context: CardRenderContext,
+) {
+    val data = context.data
     val referenceTime = data.current.observationTime
     val referenceDate = referenceTime?.toLocalDate() ?: data.daily.firstOrNull()?.date
     val isDeepLinkTarget = cardType == mainDeepLinkCardTarget(LocalMainDeepLinkTarget.current)
-
     when (cardType) {
         CardType.WEATHER_SUMMARY -> {
-            if (state.weatherSummary.isNotBlank()) {
-                WeatherSummaryCard(summary = state.weatherSummary, modifier = modifier)
+            if (context.state.weatherSummary.isNotBlank()) {
+                WeatherSummaryCard(summary = context.state.weatherSummary, modifier = modifier)
             }
         }
         CardType.RADAR_PREVIEW -> RadarPreviewCard(
-            onOpenRadar = { onNavigateToRadar(data.location.latitude, data.location.longitude) },
+            onOpenRadar = { context.onNavigateToRadar(data.location.latitude, data.location.longitude) },
             modifier = modifier,
-            radarTileUrl = radarPreviewTileUrl,
-            baseMapTileUrl = radarBaseMapUrl,
+            radarTileUrl = context.radarPreviewTileUrl,
+            baseMapTileUrl = context.radarBaseMapUrl,
         )
         CardType.NOWCAST -> {
-            if (state.nowcastData.isNotEmpty()) {
+            if (context.state.nowcastData.isNotEmpty()) {
                 NowcastCard(
-                    data = state.nowcastData,
+                    data = context.state.nowcastData,
                     referenceTime = referenceTime,
                     modifier = modifier,
                 )
@@ -932,6 +981,19 @@ private fun RenderCard(
             referenceDate = referenceDate,
             modifier = modifier,
         )
+        else -> Unit
+    }
+}
+
+@Composable
+private fun RenderAtmosphereCard(
+    cardType: CardType,
+    modifier: Modifier,
+    context: CardRenderContext,
+) {
+    val data = context.data
+    val referenceTime = data.current.observationTime
+    when (cardType) {
         CardType.UV_INDEX -> UvIndexBar(
             uvIndex = data.current.uvIndex,
             modifier = modifier,
@@ -944,16 +1006,16 @@ private fun RenderCard(
             windGusts = data.current.windGusts,
             modifier = modifier,
         )
-        CardType.AIR_QUALITY -> airQuality?.let { aq ->
+        CardType.AIR_QUALITY -> context.airQuality?.let { aq ->
             AqiCard(data = aq, modifier = modifier)
         }
-        CardType.POLLEN -> airQuality?.let { aq ->
+        CardType.POLLEN -> context.airQuality?.let { aq ->
             PollenCard(pollen = aq.pollen, modifier = modifier)
         }
         CardType.OUTDOOR_SCORE -> {
-            if (state.outdoorScore > 0) {
+            if (context.state.outdoorScore > 0) {
                 OutdoorScoreCard(
-                    score = state.outdoorScore,
+                    score = context.state.outdoorScore,
                     modifier = modifier,
                     tempCelsius = data.current.temperature,
                     humidity = data.current.humidity,
@@ -975,12 +1037,12 @@ private fun RenderCard(
             }
         }
         CardType.GOLDEN_HOUR -> {
-            state.goldenHourTimes?.let { (morning, evening) ->
+            context.state.goldenHourTimes?.let { (morning, evening) ->
                 GoldenHourCard(
                     morningGoldenEnd = morning,
                     eveningGoldenStart = evening,
-                    sunrise = WeatherFormatter.formatTime(data.current.sunrise, settings),
-                    sunset = WeatherFormatter.formatTime(data.current.sunset, settings),
+                    sunrise = WeatherFormatter.formatTime(data.current.sunrise, context.settings),
+                    sunset = WeatherFormatter.formatTime(data.current.sunset, context.settings),
                     modifier = modifier,
                 )
             }
@@ -993,14 +1055,28 @@ private fun RenderCard(
                 )
             }
         }
+        else -> Unit
+    }
+}
+
+@Composable
+private fun RenderLifestyleCard(
+    cardType: CardType,
+    modifier: Modifier,
+    context: CardRenderContext,
+) {
+    val data = context.data
+    val referenceTime = data.current.observationTime
+    val isDeepLinkTarget = cardType == mainDeepLinkCardTarget(LocalMainDeepLinkTarget.current)
+    when (cardType) {
         CardType.DRIVING_CONDITIONS -> {
-            if (state.drivingAlerts.isNotEmpty()) {
-                DrivingAlertCard(alerts = state.drivingAlerts, modifier = modifier)
+            if (context.state.drivingAlerts.isNotEmpty()) {
+                DrivingAlertCard(alerts = context.state.drivingAlerts, modifier = modifier)
             }
         }
         CardType.HEALTH_ALERTS -> {
-            if (state.healthAlerts.isNotEmpty()) {
-                HealthAlertCard(alerts = state.healthAlerts, modifier = modifier)
+            if (context.state.healthAlerts.isNotEmpty()) {
+                HealthAlertCard(alerts = context.state.healthAlerts, modifier = modifier)
             } else if (isDeepLinkTarget) {
                 InlineNoticeCard(
                     title = stringResource(R.string.main_no_health_trigger_title),
@@ -1012,16 +1088,16 @@ private fun RenderCard(
             }
         }
         CardType.CLOTHING -> {
-            if (state.clothingSuggestions.isNotEmpty()) {
-                ClothingSuggestionCard(suggestions = state.clothingSuggestions, modifier = modifier)
+            if (context.state.clothingSuggestions.isNotEmpty()) {
+                ClothingSuggestionCard(suggestions = context.state.clothingSuggestions, modifier = modifier)
             }
         }
         CardType.PET_SAFETY -> {
-            if (state.petSafetyAlerts.isNotEmpty()) {
-                PetSafetyCard(alerts = state.petSafetyAlerts, modifier = modifier)
+            if (context.state.petSafetyAlerts.isNotEmpty()) {
+                PetSafetyCard(alerts = context.state.petSafetyAlerts, modifier = modifier)
             }
         }
-        CardType.MOON_PHASE -> astronomy?.let { astro ->
+        CardType.MOON_PHASE -> context.astronomy?.let { astro ->
             MoonPhaseCard(
                 astronomy = astro,
                 sunrise = data.current.sunrise,
@@ -1030,6 +1106,19 @@ private fun RenderCard(
                 modifier = modifier,
             )
         }
+        else -> Unit
+    }
+}
+
+@Composable
+private fun RenderDetailCard(
+    cardType: CardType,
+    modifier: Modifier,
+    context: CardRenderContext,
+) {
+    val data = context.data
+    val referenceTime = data.current.observationTime
+    when (cardType) {
         CardType.HUMIDITY -> HumidityCard(
             humidity = data.current.humidity,
             dewPoint = data.current.dewPoint,
@@ -1067,10 +1156,11 @@ private fun RenderCard(
             modifier = modifier,
         )
         CardType.ON_THIS_DAY -> OnThisDayCard(
-            data = state.onThisDay,
+            data = context.state.onThisDay,
             forecastHighC = data.daily.firstOrNull()?.temperatureHigh,
             modifier = modifier,
         )
+        else -> Unit
     }
 }
 
