@@ -117,7 +117,7 @@ dependencies {
 
     // Lifecycle
     implementation(libs.lifecycle.runtime)
-    implementation("androidx.concurrent:concurrent-futures:1.2.0")
+    implementation("androidx.concurrent:concurrent-futures:1.3.0")
 
     // Coroutines
     implementation(libs.coroutines.android)
