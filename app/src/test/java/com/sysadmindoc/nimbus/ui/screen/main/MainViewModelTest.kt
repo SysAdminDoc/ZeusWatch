@@ -168,20 +168,22 @@ class MainViewModelTest {
 
     private fun createViewModel(savedState: SavedStateHandle = SavedStateHandle()): MainViewModel {
         return MainViewModel(
-            appContext = mockk(relaxed = true),
-            repository = weatherRepository,
-            alertRepository = alertRepository,
-            airQualityRepository = airQualityRepository,
-            weatherSourceManager = weatherSourceManager,
-            radarRepository = radarRepository,
-            locationRepository = locationRepository,
-            locationProvider = locationProvider,
-            prefs = prefs,
-            summaryEngine = summaryEngine,
-            connectivityObserver = connectivityObserver,
-            onThisDayRepository = onThisDayRepository,
-            wearSyncManager = wearSyncManager,
-            defaultDispatcher = testDispatcher,
+            dependencies = MainViewModelDependencies(
+                appContext = mockk(relaxed = true),
+                repository = weatherRepository,
+                alertRepository = alertRepository,
+                airQualityRepository = airQualityRepository,
+                weatherSourceManager = weatherSourceManager,
+                radarRepository = radarRepository,
+                locationRepository = locationRepository,
+                locationProvider = locationProvider,
+                prefs = prefs,
+                summaryEngine = summaryEngine,
+                connectivityObserver = connectivityObserver,
+                onThisDayRepository = onThisDayRepository,
+                wearSyncManager = wearSyncManager,
+                defaultDispatcher = testDispatcher,
+            ),
             savedStateHandle = savedState,
         )
     }
