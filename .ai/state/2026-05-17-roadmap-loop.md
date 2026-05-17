@@ -336,3 +336,22 @@ Reduced the Detekt baseline by one more ID:
 
 N-8 remains open. Remaining entries are structural Compose extractions around
 `MainScreen` and `SettingsScreen`.
+
+## Batch: N-8 Detekt Baseline Reduction - Settings Screen
+
+Reduced the Detekt baseline by two IDs:
+
+- Introduced `SettingsActions` to replace the long callback parameter list on
+  `SettingsContent`.
+- Split the monolithic settings content body into category-level helpers for
+  appearance, forecast, alerts, and advanced settings plus focused section
+  helpers for cards, units, notifications, data display, health, data sources,
+  API keys, advanced cache settings, and about rows.
+- Regenerated `config/detekt/baseline.xml`; the `CyclomaticComplexMethod` and
+  `LongMethod` entries for `SettingsContent` are removed.
+- Baseline count is now 7 IDs.
+
+## Remaining N-8 Boundary
+
+N-8 remains open. The remaining Detekt baseline entries are all in
+`MainScreen`.
