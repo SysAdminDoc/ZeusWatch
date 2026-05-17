@@ -36,3 +36,28 @@ External service/human work remains:
 
 This requires Weblate service access and translators; it is the current blocker
 before N-1 can be marked fully closed.
+
+## Batch: N-2 Certificate Pins
+
+Implemented the local N-2 work:
+
+- Fixed `tools/capture_api_pins.sh` so it no longer trips `set -u` before
+  processing captured certificates.
+- Added `tools/capture_api_pins.ps1` for Windows release runs. It locates
+  OpenSSL on PATH or in standard Git for Windows install locations.
+- Captured live SPKI pins on 2026-05-17 for:
+  - `api.openweathermap.org` (OpenWeatherMap forecast and OWM AQI).
+  - `api.pirateweather.net` (Pirate Weather path-key API).
+- Populated `ApiCertificatePins.hostPins` with the live leaf and
+  intermediate/root backup pins.
+- Updated `ApiCertificatePinsTest` to assert current keyed-host coverage,
+  active pinner construction, `sha256/` formatting, non-placeholder values,
+  and duplicate-free pin sets.
+- Updated `docs/RELEASE.md` to document Bash and PowerShell pin capture and to
+  clarify that SPKI pins are public hashes committed to source control.
+
+## Remaining N-2 Boundary
+
+No local N-2 blocker remains. Future release work still needs to re-run the
+capture scripts and update `ApiCertificatePins.hostPins` if either keyed host
+rotates its leaf or intermediate certificate chain.

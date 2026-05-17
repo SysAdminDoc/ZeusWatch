@@ -4,28 +4,30 @@ import okhttp3.CertificatePinner
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Tests the pin-registry scaffolding. The hostPins map is intentionally
- * empty in shipped code (pins are captured per-release via the bash
- * script rather than hardcoded), so these tests assert structural
- * invariants, not specific pin values.
+ * Tests the pin-registry contract. The concrete SPKI values come from
+ * live capture scripts, while these tests enforce the host coverage and
+ * rotation-safety invariants around them.
  */
 class ApiCertificatePinsTest {
 
     @Test
-    fun `build returns DEFAULT pinner when no pins configured`() {
+    fun `configured hosts cover current keyed API endpoints`() {
+        assertEquals(
+            setOf("api.openweathermap.org", "api.pirateweather.net"),
+            ApiCertificatePins.hostPins.keys,
+        )
+    }
+
+    @Test
+    fun `build returns active pinner when pins configured`() {
         val pinner = ApiCertificatePins.build()
-        // DEFAULT is OkHttp's no-op pinner. When the map is empty the
-        // registry must return it so requests aren't blocked on missing
-        // pins — this is the intended behavior until pins are captured.
-        assertSame(
-            "empty hostPins must resolve to the no-op pinner",
-            CertificatePinner.DEFAULT,
-            pinner,
+        assertFalse(
+            "configured hostPins must not resolve to the no-op pinner",
+            CertificatePinner.DEFAULT == pinner,
         )
     }
 
@@ -57,7 +59,16 @@ class ApiCertificatePinsTest {
                     44,
                     pin.removePrefix("sha256/").length,
                 )
+                assertFalse(
+                    "host=$host pin must not contain a placeholder",
+                    pin.contains("<"),
+                )
             }
+            assertEquals(
+                "host=$host pins must not contain duplicates",
+                pins.size,
+                pins.distinct().size,
+            )
         }
     }
 

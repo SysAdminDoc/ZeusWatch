@@ -17,7 +17,6 @@ set -euo pipefail
 DEFAULT_HOSTS=(
     "api.openweathermap.org:443"
     "api.pirateweather.net:443"
-    "pro.openweathermap.org:443"
 )
 
 HOSTS=("${@:-${DEFAULT_HOSTS[@]}}")
@@ -43,13 +42,6 @@ pin_host() {
     fi
 
     echo "    \"$host\" to listOf("
-    echo "$chain" | awk '
-        /-----BEGIN CERTIFICATE-----/ { in_cert=1; cert=$0 "\n"; next }
-        /-----END CERTIFICATE-----/   { cert=cert $0 "\n"; print cert; in_cert=0; next }
-        in_cert                        { cert=cert $0 "\n" }
-    ' | while read -r _ || [[ -n "$cert" ]]; do
-        : # awk emits full certs above; we consume per-cert below.
-    done
 
     # Per-certificate SPKI SHA-256
     local cert_index=0
