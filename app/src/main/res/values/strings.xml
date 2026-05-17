@@ -125,6 +125,16 @@
     <string name="alert_ambient_summary_text">Health, nowcast, and custom-rule notifications</string>
     <string name="alert_weather_summary_title">Weather Alerts</string>
     <string name="alert_weather_summary_text">Active weather alerts in your area</string>
+    <string name="current_weather_channel_name">Current Weather</string>
+    <string name="current_weather_channel_desc">Persistent notification showing current weather conditions</string>
+    <string name="current_weather_notification_title">%1$s %2$s • %3$s</string>
+    <string name="current_weather_notification_body">Feels like %1$s • H:%2$s L:%3$s</string>
+    <string name="crash_dialog_title">ZeusWatch crashed</string>
+    <string name="crash_dialog_text">Send a sanitized crash log by email? No API keys or coordinates are included.</string>
+    <string name="crash_dialog_send">Send</string>
+    <string name="crash_dialog_no_thanks">No thanks</string>
+    <string name="crash_report_file_name">zeuswatch-crash.txt</string>
+    <string name="crash_report_subject">ZeusWatch crash report</string>
     <string name="alert_severity_extreme">Extreme</string>
     <string name="alert_severity_severe">Severe</string>
     <string name="alert_severity_moderate">Moderate</string>
@@ -172,6 +182,7 @@
     <string name="report_condition_wind">Windy</string>
     <string name="report_condition_hail">Hail</string>
     <string name="report_condition_tornado">Tornado</string>
+    <string name="report_weather_conditions_cd">Report weather conditions</string>
 
     <!-- Card labels -->
     <string name="card_type_weather_summary">Weather Summary</string>
@@ -235,6 +246,15 @@
     <string name="radar_preview_open_title">Open full radar</string>
     <string name="radar_preview_open_desc">Better for storm timing, rain coverage, and checking nearby cells.</string>
     <string name="radar_preview_open_cd">Open radar</string>
+    <string name="radar_layer_with_provider">%1$s layer • %2$s</string>
+    <string name="radar_interactive_map">Interactive map</string>
+    <string name="radar_loading_title">Loading radar</string>
+    <string name="radar_loading_message">Fetching the latest radar frames for this area.</string>
+    <string name="radar_unavailable_title">Radar unavailable</string>
+    <string name="radar_unavailable_message">We couldn\'t load radar frames right now.</string>
+    <string name="radar_offline_title">Radar needs a connection</string>
+    <string name="radar_offline_message">Reconnect to resume live radar, lightning, and community weather reports.</string>
+    <string name="radar_offline_badge">Forecast cards still work with cached data</string>
     <string name="forecast_tab_overview">Overview</string>
     <string name="forecast_tab_temp">Temp</string>
     <string name="forecast_tab_wind">Wind</string>
@@ -282,7 +302,7 @@
     <string name="forecast_humidity_humid">Humid</string>
     <string name="forecast_humidity_muggy">Muggy</string>
     <string name="forecast_precip_rain_ending_soon">Rain ending soon</string>
-    <string name="forecast_precip_rain_next_hours">Rain for the next %1$dh</string>
+    <string name="forecast_precip_rain_next_hours">Rain for the next %1$s</string>
     <string name="forecast_precip_continue">Rain expected to continue</string>
     <string name="forecast_precip_within_hours">Rain likely within %1$dh</string>
     <string name="forecast_precip_around">Rain expected around %1$s</string>
@@ -886,6 +906,69 @@
     <string name="severe_weather">Severe Weather Potential</string>
     <string name="sunshine">Sunshine Duration</string>
     <string name="compare_weather">Compare Weather</string>
+
+    <!-- Alert Card Accessibility -->
+    <string name="driving_alert_content_description">%1$s driving alert</string>
+    <string name="health_alert_content_description">%1$s health alert</string>
+    <string name="driving_alert_type_black_ice">Black Ice</string>
+    <string name="driving_alert_type_fog">Fog</string>
+    <string name="driving_alert_type_low_visibility">Low Visibility</string>
+    <string name="driving_alert_type_hydroplaning">Hydroplaning</string>
+    <string name="driving_alert_type_high_wind">High Wind</string>
+    <string name="driving_alert_type_snow_ice">Snow/Ice</string>
+    <string name="driving_severity_danger">Danger</string>
+    <string name="driving_severity_caution">Caution</string>
+    <string name="driving_severity_advisory">Advisory</string>
+    <string name="driving_alert_black_ice_danger">Black ice likely. Roads may be slippery.</string>
+    <string name="driving_alert_black_ice_caution">Near-freezing with high humidity. Watch for icy patches.</string>
+    <string name="driving_alert_fog_caution">Foggy conditions. Reduced visibility.</string>
+    <string name="driving_alert_fog_advisory">Fog possible with high humidity and narrow dewpoint spread.</string>
+    <string name="driving_alert_low_visibility_danger">Very low visibility (&lt;1 km). Use fog lights.</string>
+    <string name="driving_alert_low_visibility_caution">Reduced visibility. Drive carefully.</string>
+    <string name="driving_alert_hydroplaning_caution">Heavy rain. Risk of hydroplaning at highway speeds.</string>
+    <string name="driving_alert_high_wind_danger">Dangerous winds. Avoid driving if possible.</string>
+    <string name="driving_alert_high_wind_caution">Strong winds may affect vehicle handling.</string>
+    <string name="driving_alert_snow_ice_danger">Snow or freezing rain. Roads will be hazardous.</string>
+    <string name="health_alert_type_migraine">Migraine Trigger</string>
+    <string name="health_alert_type_respiratory">Respiratory</string>
+    <string name="health_alert_type_arthritis">Joint Pain</string>
+    <string name="health_severity_warning">Warning</string>
+    <string name="health_severity_advisory">Advisory</string>
+    <string name="health_severity_info">Info</string>
+    <string name="health_alert_pressure_warning">Rapid pressure change detected — migraine trigger likely.</string>
+    <string name="health_alert_pressure_warning_detail">Barometric pressure changed by %1$s hPa within a 3-hour window in the next 12 hours. Consider taking preventive medication.</string>
+    <string name="health_alert_pressure_advisory">Moderate pressure change ahead — possible migraine trigger.</string>
+    <string name="health_alert_pressure_advisory_detail">Barometric pressure changed by %1$s hPa over the next few hours.</string>
+    <string name="health_alert_front_warning">Rapid weather changes ahead — migraine trigger likely.</string>
+    <string name="health_alert_front_warning_detail">Temperature swing of %1$d\u00B0C and humidity change of %2$d%% in the next 6 hours suggests a weather front approaching.</string>
+    <string name="health_alert_front_advisory">Moderate weather changes ahead — possible migraine trigger.</string>
+    <string name="health_alert_front_advisory_detail">Temperature and humidity shifts detected in the next 6 hours.</string>
+    <string name="health_alert_humidity_high">Very high humidity (%1$d%%).</string>
+    <string name="health_alert_humidity_high_detail">May aggravate respiratory conditions such as asthma or COPD. Stay hydrated and limit strenuous outdoor activity.</string>
+    <string name="health_alert_humidity_low">Very low humidity (%1$d%%).</string>
+    <string name="health_alert_humidity_low_detail">Dry air may irritate airways and sinuses. Consider using a humidifier indoors.</string>
+    <string name="health_alert_temp_swing_warning">Large temperature swing of %1$d\u00B0C expected.</string>
+    <string name="health_alert_temp_swing_warning_detail">Rapid temperature changes may worsen joint pain and arthritis symptoms. Dress in layers and stay warm during colder periods.</string>
+    <string name="health_alert_temp_swing_advisory">Notable temperature swing of %1$d\u00B0C expected.</string>
+    <string name="health_alert_temp_swing_advisory_detail">May affect sensitive individuals with joint conditions.</string>
+
+    <!-- Share Image -->
+    <string name="share_image_feels_like">Feels like %1$s</string>
+    <string name="share_image_high_low">H: %1$s  L: %2$s</string>
+    <string name="share_image_temperature_pair">%1$s / %2$s</string>
+    <string name="share_image_uv_value">%1$d %2$s</string>
+    <string name="share_text_header">--- %1$s ---</string>
+    <string name="share_text_now">Now: %1$s %2$s</string>
+    <string name="share_text_high_low">High %1$s / Low %2$s</string>
+    <string name="share_text_metric">%1$s: %2$s</string>
+    <string name="share_text_uv">UV Index: %1$d (%2$s)</string>
+    <string name="share_text_air_quality">Air Quality: %1$d %2$s</string>
+    <string name="share_text_forecast_header">--- Forecast ---</string>
+    <string name="share_text_forecast_day">%1$s: %2$s %3$s/%4$s</string>
+    <string name="share_text_forecast_precip"> (%1$d%% precip)</string>
+    <string name="share_text_shared_via">Shared via %1$s</string>
+    <string name="share_weather_subject">Weather for %1$s</string>
+    <string name="share_weather_chooser">Share weather</string>
 
     <!-- Live Wallpaper -->
     <string name="wallpaper_label">ZeusWatch Weather</string>

@@ -53,7 +53,7 @@ Today's autonomous audit created a canonical context file and a durable research
 
 Key changes to planning:
 
-- Localization is still the highest-compounding Now item: the current baseline is 846 default strings, 783 Spanish strings, and 63 missing Spanish entries. See [STATE_OF_REPO.md](.ai/research/2026-05-17/STATE_OF_REPO.md) and N-1.
+- Localization is still the highest-compounding Now item: the local sweep now has 925 default app strings, 925 Spanish app strings, and a CI hardcoded-string gate. See [docs/TRANSLATION.md](docs/TRANSLATION.md) and N-1.
 - Security/dependency work deserves its own explicit Now item. The sampled OSV query for current Maven coordinates returned no known advisories, but the dependency runway is wide enough to require staged compatibility work rather than incidental bumps. See [SECURITY_AND_DEPENDENCY_REVIEW.md](.ai/research/2026-05-17/SECURITY_AND_DEPENDENCY_REVIEW.md) and N-10.
 - External source saturation did not change the strategic order: Wear OS remains the moat, provider depth remains the biggest parity gap against Breezy, and health/safety cards remain the most differentiated feature family. See [COMPETITOR_MATRIX.md](.ai/research/2026-05-17/COMPETITOR_MATRIX.md) and [PRIORITIZATION_MATRIX.md](.ai/research/2026-05-17/PRIORITIZATION_MATRIX.md).
 - Dataset/API research added concrete candidates for Météo-France, GeoSphere Austria, NOAA SWPC aurora/Kp, Open-Meteo Marine/Flood/Ensemble, and BOM via Open-Meteo's ACCESS-G model path. See [DATASET_MODEL_INTEGRATION_REVIEW.md](.ai/research/2026-05-17/DATASET_MODEL_INTEGRATION_REVIEW.md).
@@ -65,11 +65,11 @@ Key changes to planning:
 In-flight or top of the queue. Each item already has enough scope context that an engineer can pick it up cold.
 
 ### N-1. Finish the localization extraction and add a translation pipeline · **T-I18N**
-**Status**: PARTIAL (CHANGELOG `[Unreleased]` lists 24+ localized surfaces; `values-es` seeded).
+**Status**: PARTIAL / EXTERNAL-SERVICE BLOCKER (local extraction gate landed; app `values-es` now matches default coverage; Weblate project setup + community locales still require external service access and translators).
 **Why it stays Now**: Hardcoded strings compound with every new feature. Closing extraction once is cheaper than retrofitting after every release.
 **Scope**: Sweep remaining Today card internals + dialogs. Add a `values/strings.xml` lint gate in CI. Wire **Weblate** (FOSS-friendly, used by Breezy) for community translation; budget 4–6 weeks for initial pulls. Configure Crowdin Android SDK only if OTA translation delivery is desired (adds JitPack dep). Sources: [Translation_and_Localization on F-Droid](https://f-droid.org/docs/Translation_and_Localization/), [Crowdin mobile SDK](https://github.com/crowdin/mobile-sdk-android).
-**Current evidence**: 846 default strings, 783 Spanish strings, 63 missing Spanish strings in the 2026-05-17 inventory.
-**Done when**: zero `getString`-with-string-literal violations in main module; ≥3 community locales merged; CI lint blocks hardcoded user-facing text.
+**Local progress**: `tools/check_localization.py` now gates high-signal hardcoded Kotlin UI strings in CI; app Spanish coverage is 925/925 strings with 0 missing entries; Wear Spanish coverage is complete for the current Wear string surface; [docs/TRANSLATION.md](docs/TRANSLATION.md) documents local checks and Weblate component setup.
+**Done when**: external Weblate project is connected; ≥3 community locales are merged; the existing CI localization gate and Android lint stay green.
 
 ### N-2. Populate `ApiCertificatePins.hostPins` · **T-RELIABILITY**
 **Status**: PARTIAL (scaffolding shipped v1.17.0, `hostPins` empty, `tools/capture_api_pins.sh` exists).

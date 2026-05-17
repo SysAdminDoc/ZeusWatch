@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.util
 
 import android.app.Application
 import com.sysadmindoc.nimbus.BuildConfig
+import com.sysadmindoc.nimbus.R
 import org.acra.ACRA
 import org.acra.config.dialog
 import org.acra.config.mailSender
@@ -42,19 +43,18 @@ object CrashReporting {
             )
 
             dialog {
-                title = "ZeusWatch crashed"
-                text = "Send a sanitized crash log by email? No API keys or " +
-                    "coordinates are included."
-                positiveButtonText = "Send"
-                negativeButtonText = "No thanks"
+                title = application.getString(R.string.crash_dialog_title)
+                text = application.getString(R.string.crash_dialog_text)
+                positiveButtonText = application.getString(R.string.crash_dialog_send)
+                negativeButtonText = application.getString(R.string.crash_dialog_no_thanks)
                 resIcon = android.R.drawable.ic_dialog_alert
             }
 
             mailSender {
                 mailTo = REPORT_EMAIL
                 reportAsFile = true
-                reportFileName = "zeuswatch-crash.txt"
-                subject = "ZeusWatch crash report"
+                reportFileName = application.getString(R.string.crash_report_file_name)
+                subject = application.getString(R.string.crash_report_subject)
             }
         }
     }
