@@ -317,3 +317,22 @@ Reduced the Detekt baseline by four IDs:
 
 N-8 remains open. Remaining entries are larger structural extractions around
 `MainScreen`, `SettingsScreen`, and the `MainViewModel` constructor seam.
+
+## Batch: N-8 Detekt Baseline Reduction - Main ViewModel Dependencies
+
+Reduced the Detekt baseline by one more ID:
+
+- Introduced `MainViewModelDependencies`, a Hilt-injectable data object that
+  carries the ViewModel's repository, settings, sync, location, summary, and
+  dispatcher dependencies.
+- Kept the existing private property names inside `MainViewModel` to avoid a
+  broad behavioral rewrite.
+- Updated `MainViewModelTest` to construct the dependency bundle explicitly.
+- Regenerated `config/detekt/baseline.xml`; the
+  `LongParameterList:MainViewModel` constructor entry is removed.
+- Baseline count is now 9 IDs.
+
+## Remaining N-8 Boundary
+
+N-8 remains open. Remaining entries are structural Compose extractions around
+`MainScreen` and `SettingsScreen`.

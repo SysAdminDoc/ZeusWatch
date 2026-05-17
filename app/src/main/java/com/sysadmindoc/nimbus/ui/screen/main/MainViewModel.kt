@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.ui.screen.main
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -29,6 +30,7 @@ import com.sysadmindoc.nimbus.data.repository.AirQualityRepository
 import com.sysadmindoc.nimbus.data.repository.AlertRepository
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.OnThisDayRepository
 import com.sysadmindoc.nimbus.data.repository.SummaryStyle
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
@@ -37,6 +39,7 @@ import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
 import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -61,25 +64,42 @@ import kotlin.math.cos
 
 private const val TAG = "MainViewModel"
 
+data class MainViewModelDependencies @Inject constructor(
+    @ApplicationContext val appContext: Context,
+    val repository: WeatherRepository,
+    val alertRepository: AlertRepository,
+    val airQualityRepository: AirQualityRepository,
+    val weatherSourceManager: WeatherSourceManager,
+    val radarRepository: RadarRepository,
+    val locationRepository: LocationRepository,
+    val locationProvider: LocationProvider,
+    val prefs: UserPreferences,
+    val summaryEngine: SummaryEngine,
+    val connectivityObserver: ConnectivityObserver,
+    val onThisDayRepository: OnThisDayRepository,
+    val wearSyncManager: WearSyncManager,
+    @DefaultDispatcher val defaultDispatcher: CoroutineDispatcher,
+)
+
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
-    private val repository: WeatherRepository,
-    private val alertRepository: AlertRepository,
-    private val airQualityRepository: AirQualityRepository,
-    private val weatherSourceManager: WeatherSourceManager,
-    private val radarRepository: RadarRepository,
-    private val locationRepository: LocationRepository,
-    private val locationProvider: LocationProvider,
-    private val prefs: UserPreferences,
-    private val summaryEngine: SummaryEngine,
-    private val connectivityObserver: ConnectivityObserver,
-    private val onThisDayRepository: com.sysadmindoc.nimbus.data.repository.OnThisDayRepository,
-    private val wearSyncManager: WearSyncManager,
-    @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
+    dependencies: MainViewModelDependencies,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-
+    private val appContext = dependencies.appContext
+    private val repository = dependencies.repository
+    private val alertRepository = dependencies.alertRepository
+    private val airQualityRepository = dependencies.airQualityRepository
+    private val weatherSourceManager = dependencies.weatherSourceManager
+    private val radarRepository = dependencies.radarRepository
+    private val locationRepository = dependencies.locationRepository
+    private val locationProvider = dependencies.locationProvider
+    private val prefs = dependencies.prefs
+    private val summaryEngine = dependencies.summaryEngine
+    private val connectivityObserver = dependencies.connectivityObserver
+    private val onThisDayRepository = dependencies.onThisDayRepository
+    private val wearSyncManager = dependencies.wearSyncManager
+    private val defaultDispatcher = dependencies.defaultDispatcher
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
