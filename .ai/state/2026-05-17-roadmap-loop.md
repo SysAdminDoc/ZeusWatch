@@ -166,3 +166,21 @@ N-8 remains open. The next low-risk i18n-era targets are
 `CurrentConditionsHeader` and `CustomAlertsScreen.RuleEditor`; broader entries
 such as `MainScreen`, `SettingsScreen`, and `RadarScreen` need larger
 feature-preserving extraction passes.
+
+## Batch: N-8 Detekt Baseline Reduction - Current Conditions
+
+Reduced the Detekt baseline by one more ID:
+
+- Extracted `CurrentConditionsHeader` copy calculation, location/daylight row,
+  main conditions row, weather-icon frame, and metric row into focused helpers.
+- Regenerated `config/detekt/baseline.xml`; the
+  `LongMethod:CurrentConditionsHeader.kt$@Composable fun CurrentConditionsHeader(...)`
+  entry is removed.
+- Baseline count is now 20 IDs.
+
+## Remaining N-8 Boundary
+
+N-8 remains open. The remaining low-risk i18n-era long-method target is
+`CustomAlertsScreen.RuleEditor`; broader entries such as `MainScreen`,
+`SettingsScreen`, `RadarScreen`, and `WidgetRefreshWorker` need larger
+feature-preserving extraction passes.

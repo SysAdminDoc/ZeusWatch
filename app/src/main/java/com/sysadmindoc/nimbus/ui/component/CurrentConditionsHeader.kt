@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
@@ -51,43 +52,7 @@ fun CurrentConditionsHeader(
 ) {
     val s = LocalUnitSettings.current
     val shape = RoundedCornerShape(12.dp)
-    val feelsLikeReason = WeatherFormatter.feelsLikeReason(
-        current.temperature, current.feelsLike, current.windSpeed, current.humidity,
-    )
-    val formattedFeelsLike = WeatherFormatter.formatTemperature(current.feelsLike, s)
-    val feelsLikeText = if (feelsLikeReason != null) {
-        stringResource(R.string.current_feels_like_with_reason, formattedFeelsLike, feelsLikeReason)
-    } else {
-        stringResource(R.string.feels_like, formattedFeelsLike)
-    }
-    val secondaryMeta = buildList {
-        add(stringResource(R.string.current_wind_meta, WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s)))
-        add(stringResource(R.string.current_humidity_meta, current.humidity))
-        if (current.uvIndex > 0) {
-            add(stringResource(R.string.current_uv_meta, WeatherFormatter.formatUvIndex(current.uvIndex)))
-        }
-    }.joinToString(" • ")
-    val comparisonLabel = if (yesterdayHigh != null) {
-        val todayConverted = WeatherFormatter.convertedTemp(current.dailyHigh, s)
-        val yesterdayConverted = WeatherFormatter.convertedTemp(yesterdayHigh, s)
-        val diff = (todayConverted - yesterdayConverted).roundToInt()
-        if (abs(diff) >= 2) {
-            if (diff > 0) {
-                stringResource(R.string.current_trend_warmer, diff)
-            } else {
-                stringResource(R.string.current_trend_cooler, abs(diff))
-            }
-        } else {
-            null
-        }
-    } else {
-        null
-    }
-    val comparisonColor = yesterdayHigh?.let {
-        val todayConverted = WeatherFormatter.convertedTemp(current.dailyHigh, s)
-        val yesterdayConverted = WeatherFormatter.convertedTemp(it, s)
-        if (todayConverted - yesterdayConverted >= 0) NimbusWarning else NimbusRainBlue
-    } ?: NimbusTextSecondary
+    val copy = currentHeaderCopy(current, yesterdayHigh, s)
 
     Column(
         modifier = modifier
@@ -106,129 +71,255 @@ fun CurrentConditionsHeader(
             .border(1.dp, NimbusCardBorder, shape)
             .padding(horizontal = 22.dp, vertical = 22.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            HeroPill(
-                text = locationName,
-                modifier = Modifier.weight(1f),
-                icon = {
-                    Icon(
-                        imageVector = Icons.Filled.LocationOn,
-                        contentDescription = null,
-                        tint = NimbusBlueAccent,
-                        modifier = Modifier.size(14.dp),
-                    )
-                },
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            HeroPill(
-                text = if (current.isDay) {
-                    stringResource(R.string.current_daylight)
-                } else {
-                    stringResource(R.string.current_overnight)
-                },
-            )
-        }
-
+        CurrentHeaderTopRow(
+            locationName = locationName,
+            daylightLabel = copy.daylightLabel,
+        )
         Spacer(modifier = Modifier.height(18.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+        CurrentHeaderConditionsRow(
+            current = current,
+            settings = s,
+            copy = copy,
         )
-        {
-            Column(
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(
-                    text = stringResource(R.string.current_conditions_label),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = NimbusBlueAccent,
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                AnimatedTemperature(
-                    temperatureCelsius = current.temperature,
-                    settings = s,
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = current.weatherCode.description,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.typography.titleLarge.color.copy(alpha = 0.92f),
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = feelsLikeText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NimbusTextSecondary,
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = secondaryMeta,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NimbusTextSecondary.copy(alpha = 0.88f),
-                )
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(88.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                NimbusHeroGlow,
-                                Color.White.copy(alpha = 0.04f),
-                                Color.Transparent,
-                            ),
-                        ),
-                    )
-                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                AnimatedWeatherIcon(
-                    weatherCode = current.weatherCode,
-                    isDay = current.isDay,
-                    iconStyle = s.iconStyle,
-                    modifier = Modifier.size(54.dp),
-                )
-            }
-        }
-
         Spacer(modifier = Modifier.height(20.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        CurrentHeaderMetricsRow(
+            current = current,
+            settings = s,
+            comparisonLabel = copy.comparisonLabel,
+            comparisonColor = copy.comparisonColor,
         )
-        {
-            HeroMetricChip(
-                modifier = Modifier.weight(1f),
-                label = stringResource(R.string.current_metric_high),
-                value = WeatherFormatter.formatTemperature(current.dailyHigh, s),
-            )
-            HeroMetricChip(
-                modifier = Modifier.weight(1f),
-                label = stringResource(R.string.current_metric_low),
-                value = WeatherFormatter.formatTemperature(current.dailyLow, s),
-            )
-            comparisonLabel?.let {
-                HeroMetricChip(
-                    modifier = Modifier.weight(1f),
-                    label = stringResource(R.string.current_metric_trend),
-                    value = it,
-                    accentColor = comparisonColor,
+    }
+}
+
+private data class CurrentHeaderCopy(
+    val feelsLikeText: String,
+    val secondaryMeta: String,
+    val daylightLabel: String,
+    val comparisonLabel: String?,
+    val comparisonColor: Color,
+)
+
+@Composable
+private fun currentHeaderCopy(
+    current: CurrentConditions,
+    yesterdayHigh: Double?,
+    settings: NimbusSettings,
+): CurrentHeaderCopy {
+    val feelsLikeReason = WeatherFormatter.feelsLikeReason(
+        current.temperature,
+        current.feelsLike,
+        current.windSpeed,
+        current.humidity,
+    )
+    val formattedFeelsLike = WeatherFormatter.formatTemperature(current.feelsLike, settings)
+    val feelsLikeText = if (feelsLikeReason != null) {
+        stringResource(R.string.current_feels_like_with_reason, formattedFeelsLike, feelsLikeReason)
+    } else {
+        stringResource(R.string.feels_like, formattedFeelsLike)
+    }
+    return CurrentHeaderCopy(
+        feelsLikeText = feelsLikeText,
+        secondaryMeta = currentSecondaryMeta(current, settings),
+        daylightLabel = if (current.isDay) {
+            stringResource(R.string.current_daylight)
+        } else {
+            stringResource(R.string.current_overnight)
+        },
+        comparisonLabel = currentComparisonLabel(current, yesterdayHigh, settings),
+        comparisonColor = currentComparisonColor(current, yesterdayHigh, settings),
+    )
+}
+
+@Composable
+private fun currentSecondaryMeta(
+    current: CurrentConditions,
+    settings: NimbusSettings,
+): String = buildList {
+    add(
+        stringResource(
+            R.string.current_wind_meta,
+            WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, settings),
+        ),
+    )
+    add(stringResource(R.string.current_humidity_meta, current.humidity))
+    if (current.uvIndex > 0) {
+        add(stringResource(R.string.current_uv_meta, WeatherFormatter.formatUvIndex(current.uvIndex)))
+    }
+}.joinToString(" • ")
+
+@Composable
+private fun currentComparisonLabel(
+    current: CurrentConditions,
+    yesterdayHigh: Double?,
+    settings: NimbusSettings,
+): String? {
+    if (yesterdayHigh == null) return null
+    val todayConverted = WeatherFormatter.convertedTemp(current.dailyHigh, settings)
+    val yesterdayConverted = WeatherFormatter.convertedTemp(yesterdayHigh, settings)
+    val diff = (todayConverted - yesterdayConverted).roundToInt()
+    if (abs(diff) < 2) return null
+    return if (diff > 0) {
+        stringResource(R.string.current_trend_warmer, diff)
+    } else {
+        stringResource(R.string.current_trend_cooler, abs(diff))
+    }
+}
+
+private fun currentComparisonColor(
+    current: CurrentConditions,
+    yesterdayHigh: Double?,
+    settings: NimbusSettings,
+): Color = yesterdayHigh?.let {
+    val todayConverted = WeatherFormatter.convertedTemp(current.dailyHigh, settings)
+    val yesterdayConverted = WeatherFormatter.convertedTemp(it, settings)
+    if (todayConverted - yesterdayConverted >= 0) NimbusWarning else NimbusRainBlue
+} ?: NimbusTextSecondary
+
+@Composable
+private fun CurrentHeaderTopRow(
+    locationName: String,
+    daylightLabel: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        HeroPill(
+            text = locationName,
+            modifier = Modifier.weight(1f),
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.LocationOn,
+                    contentDescription = null,
+                    tint = NimbusBlueAccent,
+                    modifier = Modifier.size(14.dp),
                 )
-            }
+            },
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        HeroPill(text = daylightLabel)
+    }
+}
+
+@Composable
+private fun CurrentHeaderConditionsRow(
+    current: CurrentConditions,
+    settings: NimbusSettings,
+    copy: CurrentHeaderCopy,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CurrentHeaderTextBlock(
+            current = current,
+            settings = settings,
+            copy = copy,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        CurrentWeatherIconFrame(current = current, settings = settings)
+    }
+}
+
+@Composable
+private fun CurrentHeaderTextBlock(
+    current: CurrentConditions,
+    settings: NimbusSettings,
+    copy: CurrentHeaderCopy,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.current_conditions_label),
+            style = MaterialTheme.typography.labelMedium,
+            color = NimbusBlueAccent,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        AnimatedTemperature(
+            temperatureCelsius = current.temperature,
+            settings = settings,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = current.weatherCode.description,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.typography.titleLarge.color.copy(alpha = 0.92f),
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = copy.feelsLikeText,
+            style = MaterialTheme.typography.bodyMedium,
+            color = NimbusTextSecondary,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = copy.secondaryMeta,
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary.copy(alpha = 0.88f),
+        )
+    }
+}
+
+@Composable
+private fun CurrentWeatherIconFrame(
+    current: CurrentConditions,
+    settings: NimbusSettings,
+) {
+    Box(
+        modifier = Modifier
+            .size(88.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(
+                        NimbusHeroGlow,
+                        Color.White.copy(alpha = 0.04f),
+                        Color.Transparent,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        AnimatedWeatherIcon(
+            weatherCode = current.weatherCode,
+            isDay = current.isDay,
+            iconStyle = settings.iconStyle,
+            modifier = Modifier.size(54.dp),
+        )
+    }
+}
+
+@Composable
+private fun CurrentHeaderMetricsRow(
+    current: CurrentConditions,
+    settings: NimbusSettings,
+    comparisonLabel: String?,
+    comparisonColor: Color,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        HeroMetricChip(
+            modifier = Modifier.weight(1f),
+            label = stringResource(R.string.current_metric_high),
+            value = WeatherFormatter.formatTemperature(current.dailyHigh, settings),
+        )
+        HeroMetricChip(
+            modifier = Modifier.weight(1f),
+            label = stringResource(R.string.current_metric_low),
+            value = WeatherFormatter.formatTemperature(current.dailyLow, settings),
+        )
+        comparisonLabel?.let {
+            HeroMetricChip(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.current_metric_trend),
+                value = it,
+                accentColor = comparisonColor,
+            )
         }
     }
 }
