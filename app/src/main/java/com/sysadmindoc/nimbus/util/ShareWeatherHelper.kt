@@ -10,6 +10,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import androidx.core.content.FileProvider
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
@@ -25,6 +26,7 @@ object ShareWeatherHelper {
     // ── Text Sharing ──────────────────────────────────────────────────
 
     fun buildShareText(
+        context: Context,
         data: WeatherData,
         airQuality: AirQualityData? = null,
         s: NimbusSettings = NimbusSettings(),
@@ -33,53 +35,106 @@ object ShareWeatherHelper {
         val current = data.current
         val referenceDate = current.observationTime?.toLocalDate() ?: data.daily.firstOrNull()?.date
 
-        appendLine("--- ZeusWatch ---")
+        appendLine(
+            context.getString(R.string.share_text_header, context.getString(R.string.app_name)),
+        )
         appendLine("${location.name}${if (location.region.isNotBlank()) ", ${location.region}" else ""}")
         appendLine()
 
-        appendLine("Now: ${WeatherFormatter.formatTemperatureUnit(current.temperature, s)} ${current.weatherCode.description}")
-        appendLine("Feels like ${WeatherFormatter.formatTemperature(current.feelsLike, s)}")
-        appendLine("High ${WeatherFormatter.formatTemperature(current.dailyHigh, s)} / Low ${WeatherFormatter.formatTemperature(current.dailyLow, s)}")
+        appendLine(
+            context.getString(
+                R.string.share_text_now,
+                WeatherFormatter.formatTemperatureUnit(current.temperature, s),
+                current.weatherCode.description,
+            ),
+        )
+        appendLine(
+            context.getString(R.string.feels_like, WeatherFormatter.formatTemperature(current.feelsLike, s)),
+        )
+        appendLine(
+            context.getString(
+                R.string.share_text_high_low,
+                WeatherFormatter.formatTemperature(current.dailyHigh, s),
+                WeatherFormatter.formatTemperature(current.dailyLow, s),
+            ),
+        )
         appendLine()
 
-        appendLine("Wind: ${WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s)}")
-        appendLine("Humidity: ${current.humidity}%")
-        appendLine("UV Index: ${current.uvIndex.toInt()} (${WeatherFormatter.uvDescription(current.uvIndex)})")
-        appendLine("Pressure: ${WeatherFormatter.formatPressure(current.pressure, s)}")
-        current.visibility?.let { appendLine("Visibility: ${WeatherFormatter.formatVisibility(it, s)}") }
+        appendLine(
+            context.getString(
+                R.string.share_text_metric,
+                context.getString(R.string.wind),
+                WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s),
+            ),
+        )
+        appendLine(
+            context.getString(
+                R.string.share_text_metric,
+                context.getString(R.string.humidity),
+                context.getString(R.string.percent, current.humidity),
+            ),
+        )
+        appendLine(
+            context.getString(
+                R.string.share_text_uv,
+                current.uvIndex.toInt(),
+                WeatherFormatter.uvDescription(current.uvIndex),
+            ),
+        )
+        appendLine(
+            context.getString(
+                R.string.share_text_metric,
+                context.getString(R.string.pressure),
+                WeatherFormatter.formatPressure(current.pressure, s),
+            ),
+        )
+        current.visibility?.let {
+            appendLine(
+                context.getString(
+                    R.string.share_text_metric,
+                    context.getString(R.string.visibility),
+                    WeatherFormatter.formatVisibility(it, s),
+                ),
+            )
+        }
         appendLine()
 
         airQuality?.let { aq ->
-            appendLine("Air Quality: ${aq.usAqi} ${aq.aqiLevel.label}")
+            appendLine(context.getString(R.string.share_text_air_quality, aq.usAqi, aq.aqiLevel.label))
         }
 
         if (data.daily.isNotEmpty()) {
-            appendLine("--- Forecast ---")
+            appendLine(context.getString(R.string.share_text_forecast_header))
             data.daily.take(3).forEach { day ->
                 val label = WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate)
                 val desc = day.weatherCode.description
                 val hi = WeatherFormatter.formatTemperature(day.temperatureHigh, s)
                 val lo = WeatherFormatter.formatTemperature(day.temperatureLow, s)
                 val precip = day.precipitationProbability
-                append("$label: $desc $hi/$lo")
-                if (precip > 0) append(" ($precip% precip)")
+                append(context.getString(R.string.share_text_forecast_day, label, desc, hi, lo))
+                if (precip > 0) append(context.getString(R.string.share_text_forecast_precip, precip))
                 appendLine()
             }
         }
 
         appendLine()
-        append("Shared via ZeusWatch")
+        append(context.getString(R.string.share_text_shared_via, context.getString(R.string.app_name)))
     }.trimEnd()
 
-    fun share(context: Context, data: WeatherData, airQuality: AirQualityData? = null, s: NimbusSettings = NimbusSettings()) {
-        val text = buildShareText(data, airQuality, s)
+    fun share(
+        context: Context,
+        data: WeatherData,
+        airQuality: AirQualityData? = null,
+        s: NimbusSettings = NimbusSettings(),
+    ) {
+        val text = buildShareText(context, data, airQuality, s)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, text)
-            putExtra(Intent.EXTRA_SUBJECT, "Weather for ${data.location.name}")
+            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.share_weather_subject, data.location.name))
         }
         context.startActivity(
-            Intent.createChooser(intent, "Share weather").apply {
+            Intent.createChooser(intent, context.getString(R.string.share_weather_chooser)).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         )
@@ -99,7 +154,7 @@ object ShareWeatherHelper {
     private const val TEXT_TERTIARY = 0xFF7A839E.toInt()
     private const val BLUE_ACCENT = 0xFF3D6CB9.toInt()
 
-    fun renderWeatherCard(data: WeatherData, s: NimbusSettings = NimbusSettings()): Bitmap {
+    fun renderWeatherCard(context: Context, data: WeatherData, s: NimbusSettings = NimbusSettings()): Bitmap {
         val bitmap = Bitmap.createBitmap(CARD_WIDTH, CARD_HEIGHT, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
@@ -129,9 +184,21 @@ object ShareWeatherHelper {
 
         canvas.drawText(WeatherFormatter.formatTemperature(current.temperature, s), 80f, 300f, textPaint(TEXT_PRIMARY, 120f, bold = true))
         canvas.drawText(current.weatherCode.description, 80f, 350f, textPaint(TEXT_SECONDARY, 36f))
-        canvas.drawText("Feels like ${WeatherFormatter.formatTemperature(current.feelsLike, s)}", 80f, 394f, textPaint(TEXT_TERTIARY, 28f))
         canvas.drawText(
-            "H: ${WeatherFormatter.formatTemperature(current.dailyHigh, s)}  L: ${WeatherFormatter.formatTemperature(current.dailyLow, s)}",
+            context.getString(
+                R.string.share_image_feels_like,
+                WeatherFormatter.formatTemperature(current.feelsLike, s),
+            ),
+            80f,
+            394f,
+            textPaint(TEXT_TERTIARY, 28f),
+        )
+        canvas.drawText(
+            context.getString(
+                R.string.share_image_high_low,
+                WeatherFormatter.formatTemperature(current.dailyHigh, s),
+                WeatherFormatter.formatTemperature(current.dailyLow, s),
+            ),
             80f, 434f, textPaint(TEXT_SECONDARY, 28f),
         )
 
@@ -139,11 +206,15 @@ object ShareWeatherHelper {
         val detailX = 580f
         var detailY = 130f
         val details = listOf(
-            "Wind" to WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s),
-            "Humidity" to "${current.humidity}%",
-            "UV Index" to "${current.uvIndex.toInt()} ${WeatherFormatter.uvDescription(current.uvIndex)}",
-            "Pressure" to WeatherFormatter.formatPressure(current.pressure, s),
-            "Cloud Cover" to "${current.cloudCover}%",
+            context.getString(R.string.wind) to WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s),
+            context.getString(R.string.humidity) to context.getString(R.string.percent, current.humidity),
+            context.getString(R.string.uv_index) to context.getString(
+                R.string.share_image_uv_value,
+                current.uvIndex.toInt(),
+                WeatherFormatter.uvDescription(current.uvIndex),
+            ),
+            context.getString(R.string.pressure) to WeatherFormatter.formatPressure(current.pressure, s),
+            context.getString(R.string.cloud_cover) to context.getString(R.string.percent, current.cloudCover),
         )
         details.forEach { (label, value) ->
             canvas.drawText(label, detailX, detailY, textPaint(TEXT_TERTIARY, 24f))
@@ -166,14 +237,18 @@ object ShareWeatherHelper {
             )
             canvas.drawText(day.weatherCode.description, x, forecastY + 30f, textPaint(TEXT_TERTIARY, 20f))
             canvas.drawText(
-                "${WeatherFormatter.formatTemperature(day.temperatureHigh, s)} / ${WeatherFormatter.formatTemperature(day.temperatureLow, s)}",
+                context.getString(
+                    R.string.share_image_temperature_pair,
+                    WeatherFormatter.formatTemperature(day.temperatureHigh, s),
+                    WeatherFormatter.formatTemperature(day.temperatureLow, s),
+                ),
                 x, forecastY + 62f, textPaint(TEXT_PRIMARY, 26f),
             )
         }
 
         val divPaint = Paint().apply { color = 0x33FFFFFF; strokeWidth = 1f }
         canvas.drawLine(80f, forecastY - 30f, CARD_WIDTH - 80f, forecastY - 30f, divPaint)
-        canvas.drawText("ZeusWatch", 80f, CARD_HEIGHT - 70f, textPaint(TEXT_TERTIARY, 20f))
+        canvas.drawText(context.getString(R.string.app_name), 80f, CARD_HEIGHT - 70f, textPaint(TEXT_TERTIARY, 20f))
 
         val accentPaint = Paint().apply { color = BLUE_ACCENT; strokeWidth = 4f; isAntiAlias = true }
         canvas.drawRoundRect(RectF(40f, 40f, CARD_WIDTH - 40f, 44f), 2f, 2f, accentPaint)
@@ -191,7 +266,7 @@ object ShareWeatherHelper {
     }
 
     fun shareAsImage(context: Context, data: WeatherData, s: NimbusSettings = NimbusSettings()) {
-        val bitmap = renderWeatherCard(data, s)
+        val bitmap = renderWeatherCard(context, data, s)
         try {
             val cacheDir = File(context.cacheDir, "shared_images")
             if (!cacheDir.exists() && !cacheDir.mkdirs() && !cacheDir.isDirectory) {

@@ -85,9 +85,9 @@ class HealthAlertWorker @AssistedInject constructor(
 
             val delivered = AlertNotificationHelper.showHealthNotification(
                 context = applicationContext,
-                title = alert.type.label,
-                body = alert.message,
-                detail = alert.detail,
+                title = applicationContext.getString(alert.type.labelRes),
+                body = applicationContext.healthAlertText(alert.messageRes, alert.messageArgs),
+                detail = alert.detailRes?.let { applicationContext.healthAlertText(it, alert.detailArgs) } ?: "",
                 severity = alert.severity,
             )
             if (delivered) {
@@ -127,6 +127,14 @@ class HealthAlertWorker @AssistedInject constructor(
         fun cancel(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
         }
+    }
+}
+
+private fun Context.healthAlertText(resId: Int, args: List<Any>): String {
+    return if (args.isEmpty()) {
+        getString(resId)
+    } else {
+        getString(resId, *args.toTypedArray())
     }
 }
 

@@ -19,11 +19,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
-import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.util.DrivingAlert
 
 /**
@@ -41,6 +41,8 @@ fun DrivingAlertCard(
         modifier = modifier,
     ) {
         alerts.forEachIndexed { idx, alert ->
+            val typeLabel = stringResource(alert.type.labelRes)
+            val severityLabel = stringResource(alert.severity.labelRes)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -51,19 +53,22 @@ fun DrivingAlertCard(
             ) {
                 Icon(
                     Icons.Filled.DirectionsCar,
-                    contentDescription = "${alert.type.label} driving alert",
+                    contentDescription = stringResource(
+                        R.string.driving_alert_content_description,
+                        typeLabel,
+                    ),
                     tint = alert.severity.color,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "${alert.type.label} \u2022 ${alert.severity.label}",
+                        text = "$typeLabel \u2022 $severityLabel",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         color = alert.severity.color,
                     )
                     Text(
-                        text = alert.message,
+                        text = stringResource(alert.messageRes),
                         style = MaterialTheme.typography.bodySmall,
                         color = NimbusTextPrimary,
                     )
