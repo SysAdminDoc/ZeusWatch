@@ -1,8 +1,8 @@
 # Release Procedure
 
 Operational notes for cutting a ZeusWatch release. The signing keystore
-and any captured TLS pins must NEVER be committed to the repo; this file
-documents how the workflow knows where to look for them.
+must NEVER be committed to the repo. Captured TLS pins are public SPKI
+hashes and are committed through `ApiCertificatePins.hostPins`.
 
 ## Per-release checklist
 
@@ -16,19 +16,25 @@ documents how the workflow knows where to look for them.
 3. **Update `ROADMAP-COMPLETED.md`** with the milestone row.
 4. **Update `fastlane/metadata/android/en-US/changelogs/{versionCode}.txt`**
    with the user-facing summary. Phone versionCode is the file name.
-5. **Capture or rotate TLS pins** (only when the cert chain rotated):
+5. **Capture or rotate TLS pins** for keyed endpoints:
    ```bash
    bash tools/capture_api_pins.sh
    # Pastes the output into `ApiCertificatePins.hostPins` in
    # app/src/main/java/com/sysadmindoc/nimbus/data/api/ApiCertificatePins.kt
    # The two-pin invariant (leaf + intermediate per host) is unit-tested
-   # in ApiCertificatePinsTest; the build fails if a host has !=2 pins.
+   # in ApiCertificatePinsTest; the build fails if a host has <2 pins.
+   ```
+   On Windows without OpenSSL on PowerShell's PATH:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File tools\capture_api_pins.ps1
    ```
    Pinned hosts cover only API-key-bearing endpoints
-   (OpenWeatherMap, Pirate Weather, OWM AQI). Keyless public APIs
+   (OpenWeatherMap forecast + OWM AQI on `api.openweathermap.org`, and
+   Pirate Weather on `api.pirateweather.net`). Keyless public APIs
    (Open-Meteo, NWS, MET Norway, ECCC, Bright Sky, MeteoAlarm, JMA)
-   are intentionally unpinned to avoid breakage from routine cert
-   rotation.
+   are intentionally unpinned to avoid breakage from routine certificate
+   rotation. Re-run both scripts when possible; they should produce the
+   same `sha256/...` values for the same live chain.
 6. **Tag and push** the release commit. Tag format: `vX.Y.Z`.
 7. **GitHub Actions `release.yml` triggers automatically** on tag push.
 

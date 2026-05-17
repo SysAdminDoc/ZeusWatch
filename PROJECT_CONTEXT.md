@@ -137,8 +137,9 @@ Top Now items from the 2026-05-17 refresh:
 1. Finish localization extraction and translation pipeline. Local extraction
    gates and Spanish coverage are complete; external Weblate setup and
    additional community locales remain.
-2. Populate certificate pins for keyed endpoints or keep the no-op pinning
-   state explicit if pins cannot be safely captured.
+2. Populate certificate pins for keyed endpoints. Local N-2 work captured
+   OpenWeatherMap and Pirate Weather pins on 2026-05-17, added a PowerShell
+   capture script, and documented the release update procedure.
 3. Decide the safe Australian BOM path, preferably Open-Meteo ACCESS-G model
    surfacing before any direct undocumented BOM API.
 4. Expand and test Wear OS complications and WFF weather-data interoperability.
@@ -154,7 +155,10 @@ Maven coordinates, but several upgrades are important: Room 2.8.x, WorkManager
 5.x, MapLibre 13.x, Compose BOM 2026.05.00, and Kotlin 2.3.x stable.
 
 The local localization gate is `python tools/check_localization.py`, and the
-translator handoff is documented in `docs/TRANSLATION.md`.
+translator handoff is documented in `docs/TRANSLATION.md`. TLS pin capture for
+keyed endpoints is handled by `tools/capture_api_pins.sh` and
+`tools/capture_api_pins.ps1`; current public SPKI pins live in
+`ApiCertificatePins.hostPins`.
 
 ## High-Value Differentiators
 

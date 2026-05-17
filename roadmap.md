@@ -72,9 +72,9 @@ In-flight or top of the queue. Each item already has enough scope context that a
 **Done when**: external Weblate project is connected; ≥3 community locales are merged; the existing CI localization gate and Android lint stay green.
 
 ### N-2. Populate `ApiCertificatePins.hostPins` · **T-RELIABILITY**
-**Status**: PARTIAL (scaffolding shipped v1.17.0, `hostPins` empty, `tools/capture_api_pins.sh` exists).
-**Scope**: Run `tools/capture_api_pins.sh` against `api.openweathermap.org`, `api.pirateweather.net`, `air-quality-api.open-meteo.com` (keyed endpoints only) once a release. Two pins per host (leaf + intermediate); the [two-pin invariant test](app/src/test/java/com/sysadmindoc/nimbus/data/api/ApiCertificatePinsTest.kt) already exists. Add a PowerShell variant for Windows CI agents. Keep Open-Meteo/NWS/Bright Sky/ECCC/MeteoAlarm/JMA/MET Norway unpinned unless a keyed or high-risk path is added.
-**Done when**: pins exist for every keyed endpoint; pin-update procedure documented in `docs/RELEASE.md`.
+**Status**: CLOSED locally on 2026-05-17 (`hostPins` populated for the current keyed hosts; Bash and PowerShell capture paths verified).
+**Scope**: Run `tools/capture_api_pins.sh` or `tools/capture_api_pins.ps1` against `api.openweathermap.org` and `api.pirateweather.net` once a release. `OpenWeatherMapApi.AIR_POLLUTION_BASE_URL` is also `api.openweathermap.org`, so the same host entry covers OWM forecast and OWM AQI. The [two-pin invariant test](app/src/test/java/com/sysadmindoc/nimbus/data/api/ApiCertificatePinsTest.kt) now also checks current host coverage and non-placeholder pins. Keep Open-Meteo/NWS/Bright Sky/ECCC/MeteoAlarm/JMA/MET Norway unpinned unless a keyed or high-risk path is added.
+**Completion evidence**: `ApiCertificatePins.hostPins` has live captured leaf + intermediate/root SPKI pins for OpenWeatherMap and Pirate Weather; `tools/capture_api_pins.sh` no longer fails under strict mode; `tools/capture_api_pins.ps1` resolves Git-for-Windows OpenSSL when PowerShell PATH lacks `openssl`; `docs/RELEASE.md` documents both capture paths and the committed-public-pin model.
 
 ### N-3. Bureau of Meteorology (Australia) forecast adapter · **T-SOURCES**
 **Status**: not started. Existing roadmap flags **legal risk** with the undocumented `api.weather.bom.gov.au`.
