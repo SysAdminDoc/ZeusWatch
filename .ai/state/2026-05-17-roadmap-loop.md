@@ -355,3 +355,19 @@ Reduced the Detekt baseline by two IDs:
 
 N-8 remains open. The remaining Detekt baseline entries are all in
 `MainScreen`.
+
+## Batch: N-8 Detekt Baseline Reduction - Main Screen Card Renderer
+
+Reduced the Detekt baseline by three IDs:
+
+- Replaced the long `RenderCard` parameter list with `CardRenderContext`.
+- Split the monolithic card `when` into forecast, atmosphere, lifestyle, and
+  detail card-family renderers.
+- Regenerated `config/detekt/baseline.xml`; the `CyclomaticComplexMethod`,
+  `LongMethod`, and `LongParameterList` entries for `RenderCard` are removed.
+- Baseline count is now 4 IDs.
+
+## Remaining N-8 Boundary
+
+N-8 remains open. Remaining entries are `MainScreen` route orchestration and
+`WeatherContent` list orchestration.
