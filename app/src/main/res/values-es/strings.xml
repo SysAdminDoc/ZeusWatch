@@ -821,6 +821,7 @@
     <string name="settings_summary_standard">Estandar</string>
     <string name="settings_summary_ai_generated">Generado por IA (Gemini)</string>
     <string name="weather_source_open_meteo">Open-Meteo</string>
+    <string name="weather_source_open_meteo_bom">Open-Meteo + BOM ACCESS-G</string>
     <string name="weather_source_nws">National Weather Service</string>
     <string name="weather_source_open_weather_map">OpenWeatherMap</string>
     <string name="weather_source_pirate_weather">Pirate Weather</string>

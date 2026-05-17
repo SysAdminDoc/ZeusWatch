@@ -24,6 +24,7 @@ private const val TAG = "WeatherSourceManager"
 class WeatherSourceManager @Inject constructor(
     private val prefs: UserPreferences,
     private val openMeteoAdapter: OpenMeteoForecastAdapter,
+    private val openMeteoBomAdapter: OpenMeteoBomForecastAdapter,
     private val openMeteoMinutelyAdapter: OpenMeteoMinutelyAdapter,
     private val nwsAlertAdapter: AlertSourceManagerAdapter,
     private val openMeteoAqiAdapter: OpenMeteoAqiAdapter,
@@ -69,6 +70,7 @@ class WeatherSourceManager @Inject constructor(
         locationName: String?,
     ): Result<WeatherData> = when (provider) {
         WeatherSourceProvider.OPEN_METEO -> openMeteoAdapter.getWeather(latitude, longitude, locationName)
+        WeatherSourceProvider.OPEN_METEO_BOM -> openMeteoBomAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.OPEN_WEATHER_MAP -> owmForecastAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.PIRATE_WEATHER -> pirateWeatherAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.BRIGHT_SKY -> brightSkyForecastAdapter.getWeather(latitude, longitude, locationName)
@@ -190,6 +192,20 @@ class OpenMeteoForecastAdapter @Inject constructor(
         longitude: Double,
         locationName: String? = null,
     ): Result<WeatherData> = weatherRepository.get().getWeatherDirect(latitude, longitude, locationName)
+}
+
+/**
+ * Adapter for Open-Meteo's documented BOM ACCESS-G model proxy.
+ */
+@Singleton
+class OpenMeteoBomForecastAdapter @Inject constructor(
+    private val weatherRepository: dagger.Lazy<WeatherRepository>,
+) {
+    suspend fun getWeather(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = weatherRepository.get().getBomWeatherDirect(latitude, longitude, locationName)
 }
 
 /**

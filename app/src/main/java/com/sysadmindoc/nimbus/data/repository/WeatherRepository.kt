@@ -9,9 +9,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.abs
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -51,12 +55,45 @@ class WeatherRepository @Inject constructor(
         latitude: Double,
         longitude: Double,
         locationName: String? = null,
+    ): Result<WeatherData> = getOpenMeteoWeather(
+        latitude = latitude,
+        longitude = longitude,
+        locationName = locationName,
+        fetch = { forecastHours ->
+            weatherApi.getForecast(latitude, longitude, forecastHours = forecastHours)
+        },
+    )
+
+    /**
+     * Direct Open-Meteo BOM ACCESS-G forecast fetch.
+     *
+     * This is the roadmap's safe Australian path: it uses Open-Meteo's
+     * documented `/v1/bom` proxy rather than the undocumented BOM app API.
+     */
+    suspend fun getBomWeatherDirect(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = getOpenMeteoWeather(
+        latitude = latitude,
+        longitude = longitude,
+        locationName = locationName,
+        fetch = { forecastHours ->
+            weatherApi.getBomForecast(latitude, longitude, forecastHours = forecastHours)
+        },
+    )
+
+    private suspend fun getOpenMeteoWeather(
+        latitude: Double,
+        longitude: Double,
+        locationName: String?,
+        fetch: suspend (forecastHours: Int) -> OpenMeteoResponse,
     ): Result<WeatherData> = withContext(Dispatchers.IO) {
         try {
             val settings = userPreferences.settings.first()
             val forecastHours = settings.hourlyForecastHours
             val cacheMaxAgeMs = settings.cacheTtlMs.takeIf { it > 0L } ?: DEFAULT_CACHE_MAX_AGE_MS
-            val response = weatherApi.getForecast(latitude, longitude, forecastHours = forecastHours)
+            val response = fetch(forecastHours)
             val location = resolveLocationName(latitude, longitude, locationName)
             val weatherData = mapToWeatherData(response, location)
 
@@ -169,50 +206,144 @@ class WeatherRepository @Inject constructor(
         response: OpenMeteoResponse,
         location: LocationInfo,
     ): WeatherData {
-        val current = response.current ?: error("No current weather data")
         val hourly = response.hourly
         val daily = response.daily
+        val currentHourlyIndex = nearestHourlyIndex(response)
+        val snapshot = resolveCurrentSnapshot(response, currentHourlyIndex)
 
         val todayIndex = 0
-        val dailyHigh = daily?.temperatureMax?.getOrNull(todayIndex) ?: current.temperature ?: 0.0
-        val dailyLow = daily?.temperatureMin?.getOrNull(todayIndex) ?: current.temperature ?: 0.0
-
-        // Anchor "now" off the response's current.time (location-local), not the device clock.
-        // Using LocalDateTime.now() would compare device-local time against location-local
-        // timestamps, silently filtering out all hourly entries for distant locations
-        // (same class of bug fixed in AirQualityRepository in v1.6.4).
-        val locationLocalNow = parseDateTime(current.time) ?: LocalDateTime.now()
+        val dailyHigh = daily?.temperatureMax?.getOrNull(todayIndex) ?: snapshot.temperature
+        val dailyLow = daily?.temperatureMin?.getOrNull(todayIndex) ?: snapshot.temperature
 
         return WeatherData(
             location = location,
-            current = CurrentConditions(
-                temperature = current.temperature ?: 0.0,
-                feelsLike = current.apparentTemperature ?: current.temperature ?: 0.0,
-                humidity = current.humidity ?: 0,
-                weatherCode = WeatherCode.fromCode(current.weatherCode),
-                observationTime = locationLocalNow,
-                isDay = (current.isDay ?: 1) == 1,
-                windSpeed = current.windSpeed ?: 0.0,
-                windDirection = current.windDirection ?: 0,
-                windGusts = current.windGusts,
-                pressure = current.pressureMsl ?: 0.0,
-                uvIndex = current.uvIndex ?: 0.0,
-                visibility = current.visibility,
-                dewPoint = current.dewPoint,
-                cloudCover = current.cloudCover ?: 0,
-                precipitation = current.precipitation ?: 0.0,
-                snowfall = current.snowfall,
-                snowDepth = current.snowDepth,
-                cape = current.cape,
+            current = snapshot.toCurrentConditions(
                 dailyHigh = dailyHigh,
                 dailyLow = dailyLow,
                 sunrise = daily?.sunrise?.getOrNull(todayIndex),
                 sunset = daily?.sunset?.getOrNull(todayIndex),
             ),
-            hourly = mapHourlyData(hourly, locationLocalNow),
+            hourly = mapHourlyData(hourly, snapshot.observationTime),
             daily = mapDailyData(daily),
         )
     }
+
+    private fun resolveCurrentSnapshot(
+        response: OpenMeteoResponse,
+        hourlyIndex: Int?,
+    ): OpenMeteoCurrentSnapshot {
+        val current = response.current
+        val hourly = response.hourly
+        val temperature = current?.temperature ?: hourly?.temperature.valueAt(hourlyIndex) ?: 0.0
+
+        return OpenMeteoCurrentSnapshot(
+            temperature = temperature,
+            feelsLike = current?.apparentTemperature ?: hourly?.apparentTemperature.valueAt(hourlyIndex) ?: temperature,
+            humidity = current?.humidity ?: hourly?.humidity.valueAt(hourlyIndex) ?: 0,
+            weatherCode = current?.weatherCode ?: hourly?.weatherCode.valueAt(hourlyIndex),
+            observationTime = resolveObservationTime(response, hourlyIndex),
+            isDay = (current?.isDay ?: hourly?.isDay.valueAt(hourlyIndex) ?: 1) == 1,
+            windSpeed = current?.windSpeed ?: hourly?.windSpeed.valueAt(hourlyIndex) ?: 0.0,
+            windDirection = current?.windDirection ?: hourly?.windDirection.valueAt(hourlyIndex) ?: 0,
+            windGusts = current?.windGusts ?: hourly?.windGusts.valueAt(hourlyIndex),
+            pressure = resolveCurrentPressure(current, hourly, hourlyIndex),
+            uvIndex = current?.uvIndex ?: hourly?.uvIndex.valueAt(hourlyIndex) ?: 0.0,
+            visibility = current?.visibility ?: hourly?.visibility.valueAt(hourlyIndex),
+            dewPoint = current?.dewPoint,
+            cloudCover = current?.cloudCover ?: hourly?.cloudCover.valueAt(hourlyIndex) ?: 0,
+            precipitation = current?.precipitation ?: hourly?.precipitation.valueAt(hourlyIndex) ?: 0.0,
+            snowfall = current?.snowfall ?: hourly?.snowfall.valueAt(hourlyIndex),
+            snowDepth = current?.snowDepth ?: hourly?.snowDepth.valueAt(hourlyIndex),
+            cape = current?.cape ?: hourly?.cape.valueAt(hourlyIndex),
+        )
+    }
+
+    private fun resolveObservationTime(
+        response: OpenMeteoResponse,
+        hourlyIndex: Int?,
+    ): LocalDateTime = response.current?.time?.let(::parseDateTime)
+        ?: hourlyIndex?.let { response.hourly?.time?.getOrNull(it)?.let(::parseDateTime) }
+        ?: response.locationLocalNow()
+
+    private fun resolveCurrentPressure(
+        current: CurrentWeather?,
+        hourly: HourlyWeather?,
+        hourlyIndex: Int?,
+    ): Double = current?.pressureMsl
+        ?: current?.surfacePressure
+        ?: hourly?.surfacePressure.valueAt(hourlyIndex)
+        ?: 0.0
+
+    private data class OpenMeteoCurrentSnapshot(
+        val temperature: Double,
+        val feelsLike: Double,
+        val humidity: Int,
+        val weatherCode: Int?,
+        val observationTime: LocalDateTime,
+        val isDay: Boolean,
+        val windSpeed: Double,
+        val windDirection: Int,
+        val windGusts: Double?,
+        val pressure: Double,
+        val uvIndex: Double,
+        val visibility: Double?,
+        val dewPoint: Double?,
+        val cloudCover: Int,
+        val precipitation: Double,
+        val snowfall: Double?,
+        val snowDepth: Double?,
+        val cape: Double?,
+    ) {
+        fun toCurrentConditions(
+            dailyHigh: Double,
+            dailyLow: Double,
+            sunrise: String?,
+            sunset: String?,
+        ): CurrentConditions = CurrentConditions(
+            temperature = temperature,
+            feelsLike = feelsLike,
+            humidity = humidity,
+            weatherCode = WeatherCode.fromCode(weatherCode),
+            observationTime = observationTime,
+            isDay = isDay,
+            windSpeed = windSpeed,
+            windDirection = windDirection,
+            windGusts = windGusts,
+            pressure = pressure,
+            uvIndex = uvIndex,
+            visibility = visibility,
+            dewPoint = dewPoint,
+            cloudCover = cloudCover,
+            precipitation = precipitation,
+            snowfall = snowfall,
+            snowDepth = snowDepth,
+            cape = cape,
+            dailyHigh = dailyHigh,
+            dailyLow = dailyLow,
+            sunrise = sunrise,
+            sunset = sunset,
+        )
+    }
+
+    private fun nearestHourlyIndex(response: OpenMeteoResponse): Int? {
+        val hourly = response.hourly ?: return null
+        if (hourly.time.isEmpty()) return null
+        val localNow = response.locationLocalNow()
+        return hourly.time
+            .mapIndexedNotNull { index, time -> parseDateTime(time)?.let { index to it } }
+            .minByOrNull { (_, time) -> abs(Duration.between(time, localNow).toMinutes()) }
+            ?.first
+    }
+
+    private fun OpenMeteoResponse.locationLocalNow(): LocalDateTime {
+        val zone = timezone
+            ?.takeIf { it.isNotBlank() }
+            ?.let { runCatching { ZoneId.of(it) }.getOrNull() }
+        return zone?.let { LocalDateTime.ofInstant(Instant.now(), it) } ?: LocalDateTime.now()
+    }
+
+    private fun <T> List<T?>?.valueAt(index: Int?): T? =
+        index?.let { this?.getOrNull(it) }
 
     private fun mapHourlyData(hourly: HourlyWeather?, now: LocalDateTime): List<HourlyConditions> {
         if (hourly == null) return emptyList()

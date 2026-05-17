@@ -61,3 +61,26 @@ Implemented the local N-2 work:
 No local N-2 blocker remains. Future release work still needs to re-run the
 capture scripts and update `ApiCertificatePins.hostPins` if either keyed host
 rotates its leaf or intermediate certificate chain.
+
+## Batch: N-3 Australian BOM Forecast Path
+
+Implemented the safe indirect N-3 path:
+
+- Added `WeatherSourceProvider.OPEN_METEO_BOM` with the user-facing label
+  `Open-Meteo + BOM ACCESS-G`.
+- Added `OpenMeteoApi.getBomForecast()` for Open-Meteo's documented `/v1/bom`
+  endpoint, using a BOM-specific variable set that avoids unsupported regular
+  Forecast API fields.
+- Added `WeatherRepository.getBomWeatherDirect()` and shared Open-Meteo fetch
+  plumbing.
+- Updated the Open-Meteo mapper so hourly-only responses can still populate
+  current conditions from the nearest hourly bucket.
+- Routed the new provider through `WeatherSourceManager`.
+- Added tests for provider routing and hourly-only BOM mapping.
+
+## Remaining N-3 Boundary
+
+No direct BOM app endpoint was used. The direct `api.weather.bom.gov.au` path
+remains intentionally out of scope until BOM publishes stable open-data terms
+for that interface. Australian severe-weather warnings still rely on the
+existing alert-source fallback surface rather than a new BOM warnings adapter.

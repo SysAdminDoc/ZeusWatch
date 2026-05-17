@@ -125,6 +125,7 @@ internal val SummaryStyle.labelRes: Int
 internal val WeatherSourceProvider.displayNameRes: Int
     get() = when (this) {
         WeatherSourceProvider.OPEN_METEO -> R.string.weather_source_open_meteo
+        WeatherSourceProvider.OPEN_METEO_BOM -> R.string.weather_source_open_meteo_bom
         WeatherSourceProvider.NWS -> R.string.weather_source_nws
         WeatherSourceProvider.OPEN_WEATHER_MAP -> R.string.weather_source_open_weather_map
         WeatherSourceProvider.PIRATE_WEATHER -> R.string.weather_source_pirate_weather

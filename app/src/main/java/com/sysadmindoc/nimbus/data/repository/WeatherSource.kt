@@ -24,6 +24,10 @@ enum class WeatherSourceProvider(
         displayName = "Open-Meteo",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.AIR_QUALITY, WeatherDataType.MINUTELY),
     ),
+    OPEN_METEO_BOM(
+        displayName = "Open-Meteo + BOM ACCESS-G",
+        supportedTypes = setOf(WeatherDataType.FORECAST),
+    ),
     NWS(
         displayName = "National Weather Service",
         supportedTypes = setOf(WeatherDataType.ALERTS),

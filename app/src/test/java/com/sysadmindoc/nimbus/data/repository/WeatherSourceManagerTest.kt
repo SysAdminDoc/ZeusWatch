@@ -15,6 +15,7 @@ class WeatherSourceManagerTest {
 
     private lateinit var prefs: UserPreferences
     private lateinit var openMeteoAdapter: OpenMeteoForecastAdapter
+    private lateinit var openMeteoBomAdapter: OpenMeteoBomForecastAdapter
     private lateinit var openMeteoMinutelyAdapter: OpenMeteoMinutelyAdapter
     private lateinit var alertAdapter: AlertSourceManagerAdapter
     private lateinit var aqiAdapter: OpenMeteoAqiAdapter
@@ -57,6 +58,7 @@ class WeatherSourceManagerTest {
     fun setup() {
         prefs = mockk()
         openMeteoAdapter = mockk()
+        openMeteoBomAdapter = mockk()
         openMeteoMinutelyAdapter = mockk()
         alertAdapter = mockk()
         aqiAdapter = mockk()
@@ -72,6 +74,7 @@ class WeatherSourceManagerTest {
         manager = WeatherSourceManager(
             prefs = prefs,
             openMeteoAdapter = openMeteoAdapter,
+            openMeteoBomAdapter = openMeteoBomAdapter,
             openMeteoMinutelyAdapter = openMeteoMinutelyAdapter,
             nwsAlertAdapter = alertAdapter,
             openMeteoAqiAdapter = aqiAdapter,
@@ -120,6 +123,24 @@ class WeatherSourceManagerTest {
         val result = manager.getWeather(40.0, -74.0)
         assertTrue(result.isFailure)
         assertEquals("Network error", result.exceptionOrNull()?.message)
+    }
+
+    @Test
+    fun getWeatherDelegatesBomProviderToOpenMeteoBomAdapter() = runTest {
+        val settingsWithBom = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                forecast = WeatherSourceProvider.OPEN_METEO_BOM,
+            )
+        )
+        every { prefs.settings } returns flowOf(settingsWithBom)
+        coEvery { openMeteoBomAdapter.getWeather(any(), any(), any()) } returns Result.success(testWeatherData)
+
+        val result = manager.getWeather(-33.86, 151.21, "Sydney")
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            openMeteoBomAdapter.getWeather(-33.86, 151.21, "Sydney")
+        }
     }
 
     // ── Alert Tests ──
@@ -222,6 +243,10 @@ class WeatherSourceManagerTest {
         assertTrue("Pirate Weather should be present", forecastProviders.contains(WeatherSourceProvider.PIRATE_WEATHER))
         assertTrue("Bright Sky should be present", forecastProviders.contains(WeatherSourceProvider.BRIGHT_SKY))
         assertTrue("Open-Meteo should be present", forecastProviders.contains(WeatherSourceProvider.OPEN_METEO))
+        assertTrue(
+            "Open-Meteo BOM ACCESS-G should be present",
+            forecastProviders.contains(WeatherSourceProvider.OPEN_METEO_BOM),
+        )
         assertTrue(
             "MET Norway should be present once implemented",
             forecastProviders.contains(WeatherSourceProvider.MET_NORWAY),

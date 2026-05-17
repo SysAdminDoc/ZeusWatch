@@ -73,6 +73,33 @@ class WeatherRepositoryTest {
         ),
     )
 
+    private fun makeHourlyOnlyBomResponse() = OpenMeteoResponse(
+        latitude = -33.86,
+        longitude = 151.21,
+        timezone = "Australia/Sydney",
+        current = null,
+        hourly = HourlyWeather(
+            time = listOf("2025-06-15T12:00"),
+            temperature = listOf(18.5),
+            apparentTemperature = listOf(17.0),
+            humidity = listOf(72),
+            weatherCode = listOf(61),
+            isDay = listOf(1),
+            windSpeed = listOf(22.0),
+            windDirection = listOf(210),
+            precipitation = listOf(0.8),
+            cloudCover = listOf(84),
+            surfacePressure = listOf(1009.0),
+            visibility = listOf(12000.0),
+        ),
+        daily = DailyWeather(
+            time = listOf("2025-06-15"),
+            temperatureMax = listOf(21.0),
+            temperatureMin = listOf(12.0),
+            precipitationSum = listOf(4.5),
+        ),
+    )
+
     private fun makeCacheEntity(
         responseJson: String = json.encodeToString(OpenMeteoResponse.serializer(), makeResponse()),
         cachedAt: Long = System.currentTimeMillis(),
@@ -244,6 +271,26 @@ class WeatherRepositoryTest {
         assertTrue(result.isSuccess)
         assertEquals("Aurora", result.getOrThrow().location.name)
         assertEquals("Colorado", result.getOrThrow().location.region)
+    }
+
+    @Test
+    fun getBomWeatherDirectMapsHourlyOnlyResponseToCurrentConditions() = runTest {
+        coEvery {
+            weatherApi.getBomForecast(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } returns makeHourlyOnlyBomResponse()
+
+        val result = repository.getBomWeatherDirect(-33.86, 151.21, "Sydney")
+
+        assertTrue(result.isSuccess)
+        val data = result.getOrThrow()
+        assertEquals("Sydney", data.location.name)
+        assertEquals(18.5, data.current.temperature, 0.01)
+        assertEquals(17.0, data.current.feelsLike, 0.01)
+        assertEquals(72, data.current.humidity)
+        assertEquals(61, data.current.weatherCode.code)
+        assertEquals(22.0, data.current.windSpeed, 0.01)
+        assertEquals(21.0, data.current.dailyHigh, 0.01)
+        assertEquals(12.0, data.current.dailyLow, 0.01)
     }
 
     // --- getCachedWeather ---

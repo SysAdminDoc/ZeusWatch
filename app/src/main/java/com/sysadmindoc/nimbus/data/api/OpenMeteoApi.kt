@@ -26,6 +26,30 @@ interface OpenMeteoApi {
         @Query("forecast_hours") forecastHours: Int = 48,
     ): OpenMeteoResponse
 
+    /**
+     * Open-Meteo BOM ACCESS-G model proxy.
+     *
+     * Docs: https://open-meteo.com/en/docs/bom-api
+     *
+     * This endpoint intentionally avoids the undocumented direct BOM app API.
+     * It returns the same hourly/daily JSON shape as the regular Forecast API,
+     * but does not expose the `current` block, so repository mapping derives
+     * current conditions from the nearest hourly bucket.
+     */
+    @GET("bom")
+    suspend fun getBomForecast(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("hourly") hourly: String = BOM_HOURLY_PARAMS,
+        @Query("daily") daily: String = BOM_DAILY_PARAMS,
+        @Query("temperature_unit") temperatureUnit: String = "celsius",
+        @Query("wind_speed_unit") windSpeedUnit: String = "kmh",
+        @Query("precipitation_unit") precipitationUnit: String = "mm",
+        @Query("timezone") timezone: String = "auto",
+        @Query("forecast_days") forecastDays: Int = 10,
+        @Query("forecast_hours") forecastHours: Int = 48,
+    ): OpenMeteoResponse
+
     @GET("forecast")
     suspend fun getMinutely15Forecast(
         @Query("latitude") latitude: Double,
@@ -63,5 +87,14 @@ interface OpenMeteoApi {
             "precipitation_sum,precipitation_probability_max,wind_speed_10m_max," +
             "wind_direction_10m_dominant,precipitation_hours" +
             ",snowfall_sum,sunshine_duration,wind_gusts_10m_max"
+
+        const val BOM_HOURLY_PARAMS = "temperature_2m,relative_humidity_2m,apparent_temperature," +
+            "precipitation,weather_code,cloud_cover,visibility,wind_speed_10m,wind_direction_10m," +
+            "is_day,snowfall,snow_depth,wind_gusts_10m,sunshine_duration,surface_pressure"
+
+        const val BOM_DAILY_PARAMS = "weather_code,temperature_2m_max,temperature_2m_min," +
+            "apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max," +
+            "precipitation_sum,wind_speed_10m_max,wind_direction_10m_dominant,precipitation_hours," +
+            "snowfall_sum,sunshine_duration,wind_gusts_10m_max"
     }
 }
