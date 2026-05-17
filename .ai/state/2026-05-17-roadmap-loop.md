@@ -261,3 +261,21 @@ Reduced the Detekt baseline by one more ID:
 N-8 remains open. Remaining entries are larger structural extractions around
 `MainScreen`, `SettingsScreen`, `RadarScreen`, `CompareScreen`, and
 long-parameter constructors/functions.
+
+## Batch: N-8 Detekt Baseline Reduction - Synced Weather Payload
+
+Reduced the Detekt baseline by one more ID:
+
+- Replaced the 17-parameter `SyncedWeatherStore.save(...)` API with a typed
+  `SyncedWeatherPayload` data object.
+- Updated `WeatherDataListenerService`, `SyncedWeatherStoreTest`, and
+  `WearWeatherRepositoryTest` call sites to construct the payload explicitly.
+- Regenerated `config/detekt/baseline.xml`; the
+  `LongParameterList:SyncedWeatherStore.save` entry is removed.
+- Baseline count is now 15 IDs.
+
+## Remaining N-8 Boundary
+
+N-8 remains open. Remaining entries are larger structural extractions around
+`MainScreen`, `SettingsScreen`, `RadarScreen`, `CompareScreen`, and the
+`MainViewModel` constructor seam.

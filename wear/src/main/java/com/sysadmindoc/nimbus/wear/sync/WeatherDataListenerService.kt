@@ -68,23 +68,25 @@ class WeatherDataListenerService : WearableListenerService() {
                 }
 
                 store.save(
-                    temperature = map.getInt("temperature", 0),
-                    condition = map.getString("condition", "Unknown"),
-                    high = map.getInt("high", 0),
-                    low = map.getInt("low", 0),
-                    locationName = map.getString("locationName", "Unknown"),
-                    humidity = map.getInt("humidity", 0),
-                    windSpeed = map.getInt("windSpeed", 0),
-                    uvIndex = map.getInt("uvIndex", 0),
-                    precipChance = map.getInt("precipChance", 0),
-                    isDay = map.getBoolean("isDay", true),
-                    weatherCode = map.getInt("weatherCode", 0),
-                    timestampMs = map.getLong("syncTimestampMs", System.currentTimeMillis()),
-                    hourly = hourly,
-                    daily = daily,
-                    alerts = alerts,
-                    aqi = map.getInt("aqi", -1),
-                    aqiLabel = map.getString("aqiLabel", ""),
+                    SyncedWeatherPayload(
+                        temperature = map.getInt("temperature", 0),
+                        condition = map.getString("condition", "Unknown"),
+                        high = map.getInt("high", 0),
+                        low = map.getInt("low", 0),
+                        locationName = map.getString("locationName", "Unknown"),
+                        humidity = map.getInt("humidity", 0),
+                        windSpeed = map.getInt("windSpeed", 0),
+                        uvIndex = map.getInt("uvIndex", 0),
+                        precipChance = map.getInt("precipChance", 0),
+                        isDay = map.getBoolean("isDay", true),
+                        weatherCode = map.getInt("weatherCode", 0),
+                        timestampMs = map.getLong("syncTimestampMs", System.currentTimeMillis()),
+                        hourly = hourly,
+                        daily = daily,
+                        alerts = alerts,
+                        aqi = map.getInt("aqi", -1),
+                        aqiLabel = map.getString("aqiLabel", ""),
+                    ),
                 )
 
                 Log.d(TAG, "Received weather sync: ${map.getString("locationName")} ${map.getInt("temperature")}° (${alerts.size} alerts, ${daily.size} daily)")

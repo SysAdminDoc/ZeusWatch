@@ -49,31 +49,38 @@ class SyncedWeatherStoreTest {
     fun `getFreshData round-trips a full payload`() {
         val now = System.currentTimeMillis()
         store.save(
-            temperature = 72,
-            condition = "Clear Sky",
-            high = 80,
-            low = 65,
-            locationName = "Seattle",
-            humidity = 55,
-            windSpeed = 8,
-            uvIndex = 6,
-            precipChance = 10,
-            isDay = true,
-            weatherCode = 0,
-            timestampMs = now,
-            hourly = listOf(
-                HourlyEntry(time = "10:00", temperature = 70, weatherCode = 0, precipChance = 0, windSpeed = 5),
-                HourlyEntry(time = "11:00", temperature = 72, weatherCode = 1, precipChance = 5, windSpeed = 7),
+            SyncedWeatherPayload(
+                temperature = 72,
+                condition = "Clear Sky",
+                high = 80,
+                low = 65,
+                locationName = "Seattle",
+                humidity = 55,
+                windSpeed = 8,
+                uvIndex = 6,
+                precipChance = 10,
+                isDay = true,
+                weatherCode = 0,
+                timestampMs = now,
+                hourly = listOf(
+                    HourlyEntry(time = "10:00", temperature = 70, weatherCode = 0, precipChance = 0, windSpeed = 5),
+                    HourlyEntry(time = "11:00", temperature = 72, weatherCode = 1, precipChance = 5, windSpeed = 7),
+                ),
+                daily = listOf(
+                    WearDailyEntry(date = "Mon", weatherCode = 0, high = 80, low = 65, precipChance = 10),
+                    WearDailyEntry(date = "Tue", weatherCode = 61, high = 75, low = 60, precipChance = 80),
+                ),
+                alerts = listOf(
+                    WearAlertEntry(
+                        event = "Heat Advisory",
+                        severity = "Moderate",
+                        headline = "Highs near 100",
+                        expires = "20:00",
+                    ),
+                ),
+                aqi = 42,
+                aqiLabel = "Good",
             ),
-            daily = listOf(
-                WearDailyEntry(date = "Mon", weatherCode = 0, high = 80, low = 65, precipChance = 10),
-                WearDailyEntry(date = "Tue", weatherCode = 61, high = 75, low = 60, precipChance = 80),
-            ),
-            alerts = listOf(
-                WearAlertEntry(event = "Heat Advisory", severity = "Moderate", headline = "Highs near 100", expires = "20:00"),
-            ),
-            aqi = 42,
-            aqiLabel = "Good",
         )
 
         val data = store.getFreshData()
@@ -131,21 +138,25 @@ class SyncedWeatherStoreTest {
         val now = System.currentTimeMillis()
         // First save: 3 hourly entries.
         store.save(
-            temperature = 70, condition = "Clear Sky", high = 80, low = 60,
-            locationName = "Seattle", humidity = 50, windSpeed = 5, uvIndex = 4,
-            precipChance = 0, isDay = true, weatherCode = 0, timestampMs = now,
-            hourly = listOf(
-                HourlyEntry(time = "10:00", temperature = 70, weatherCode = 0),
-                HourlyEntry(time = "11:00", temperature = 72, weatherCode = 0),
-                HourlyEntry(time = "12:00", temperature = 74, weatherCode = 0),
+            SyncedWeatherPayload(
+                temperature = 70, condition = "Clear Sky", high = 80, low = 60,
+                locationName = "Seattle", humidity = 50, windSpeed = 5, uvIndex = 4,
+                precipChance = 0, isDay = true, weatherCode = 0, timestampMs = now,
+                hourly = listOf(
+                    HourlyEntry(time = "10:00", temperature = 70, weatherCode = 0),
+                    HourlyEntry(time = "11:00", temperature = 72, weatherCode = 0),
+                    HourlyEntry(time = "12:00", temperature = 74, weatherCode = 0),
+                ),
             ),
         )
         // Second save: 1 hourly entry. Indexes 1 and 2 must be wiped.
         store.save(
-            temperature = 75, condition = "Clear Sky", high = 80, low = 60,
-            locationName = "Seattle", humidity = 50, windSpeed = 5, uvIndex = 4,
-            precipChance = 0, isDay = true, weatherCode = 0, timestampMs = now + 1,
-            hourly = listOf(HourlyEntry(time = "13:00", temperature = 75, weatherCode = 0)),
+            SyncedWeatherPayload(
+                temperature = 75, condition = "Clear Sky", high = 80, low = 60,
+                locationName = "Seattle", humidity = 50, windSpeed = 5, uvIndex = 4,
+                precipChance = 0, isDay = true, weatherCode = 0, timestampMs = now + 1,
+                hourly = listOf(HourlyEntry(time = "13:00", temperature = 75, weatherCode = 0)),
+            ),
         )
 
         val data = store.getFreshData()
@@ -162,26 +173,30 @@ class SyncedWeatherStoreTest {
     fun `save shrinking daily and alert arrays cleans up old indexed keys`() {
         val now = System.currentTimeMillis()
         store.save(
-            temperature = 70, condition = "Clear Sky", high = 80, low = 60,
-            locationName = "Seattle", humidity = 50, windSpeed = 5, uvIndex = 4,
-            precipChance = 0, isDay = true, weatherCode = 0, timestampMs = now,
-            hourly = emptyList(),
-            daily = listOf(
-                WearDailyEntry("Mon", 0, 80, 60),
-                WearDailyEntry("Tue", 0, 80, 60),
-            ),
-            alerts = listOf(
-                WearAlertEntry("A", "Minor", "h", "e"),
-                WearAlertEntry("B", "Moderate", "h", "e"),
+            SyncedWeatherPayload(
+                temperature = 70, condition = "Clear Sky", high = 80, low = 60,
+                locationName = "Seattle", humidity = 50, windSpeed = 5, uvIndex = 4,
+                precipChance = 0, isDay = true, weatherCode = 0, timestampMs = now,
+                hourly = emptyList(),
+                daily = listOf(
+                    WearDailyEntry("Mon", 0, 80, 60),
+                    WearDailyEntry("Tue", 0, 80, 60),
+                ),
+                alerts = listOf(
+                    WearAlertEntry("A", "Minor", "h", "e"),
+                    WearAlertEntry("B", "Moderate", "h", "e"),
+                ),
             ),
         )
         store.save(
-            temperature = 70, condition = "Clear Sky", high = 80, low = 60,
-            locationName = "Seattle", humidity = 50, windSpeed = 5, uvIndex = 4,
-            precipChance = 0, isDay = true, weatherCode = 0, timestampMs = now + 1,
-            hourly = emptyList(),
-            daily = emptyList(),
-            alerts = emptyList(),
+            SyncedWeatherPayload(
+                temperature = 70, condition = "Clear Sky", high = 80, low = 60,
+                locationName = "Seattle", humidity = 50, windSpeed = 5, uvIndex = 4,
+                precipChance = 0, isDay = true, weatherCode = 0, timestampMs = now + 1,
+                hourly = emptyList(),
+                daily = emptyList(),
+                alerts = emptyList(),
+            ),
         )
 
         val data = store.getFreshData()
@@ -211,19 +226,21 @@ class SyncedWeatherStoreTest {
         weatherCode: Int = 0,
     ) {
         store.save(
-            temperature = 70,
-            condition = condition,
-            high = 80,
-            low = 60,
-            locationName = "Seattle",
-            humidity = 50,
-            windSpeed = 5,
-            uvIndex = 4,
-            precipChance = 0,
-            isDay = true,
-            weatherCode = weatherCode,
-            timestampMs = timestamp,
-            hourly = emptyList(),
+            SyncedWeatherPayload(
+                temperature = 70,
+                condition = condition,
+                high = 80,
+                low = 60,
+                locationName = "Seattle",
+                humidity = 50,
+                windSpeed = 5,
+                uvIndex = 4,
+                precipChance = 0,
+                isDay = true,
+                weatherCode = weatherCode,
+                timestampMs = timestamp,
+                hourly = emptyList(),
+            ),
         )
     }
 }
