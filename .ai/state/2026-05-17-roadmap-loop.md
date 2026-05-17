@@ -148,3 +148,21 @@ Closed N-6 locally:
 
 No local N-6 blocker remains. The remaining Wear reliability work should move
 under normal regression expansion, not this roadmap item.
+
+## Batch: N-8 Detekt Baseline Reduction - Radar Preview
+
+Reduced the Detekt baseline by one ID:
+
+- Extracted `RadarPreviewCard` into focused private composables for the map
+  image stack, gradient, empty state, status pill, caption, and footer.
+- Regenerated `config/detekt/baseline.xml`; the
+  `LongMethod:RadarPreviewCard.kt$@Composable fun RadarPreviewCard(...)` entry
+  is removed.
+- Baseline count is now 21 IDs.
+
+## Remaining N-8 Boundary
+
+N-8 remains open. The next low-risk i18n-era targets are
+`CurrentConditionsHeader` and `CustomAlertsScreen.RuleEditor`; broader entries
+such as `MainScreen`, `SettingsScreen`, and `RadarScreen` need larger
+feature-preserving extraction passes.
