@@ -1,7 +1,9 @@
 package com.sysadmindoc.nimbus.util
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 
@@ -19,13 +21,13 @@ object DrivingConditionEvaluator {
             alerts.add(DrivingAlert(
                 type = DrivingAlertType.BLACK_ICE,
                 severity = DrivingSeverity.DANGER,
-                message = "Black ice likely. Roads may be slippery.",
+                messageRes = R.string.driving_alert_black_ice_danger,
             ))
         } else if (current.temperature <= 4.0 && current.humidity > 90) {
             alerts.add(DrivingAlert(
                 type = DrivingAlertType.BLACK_ICE,
                 severity = DrivingSeverity.CAUTION,
-                message = "Near-freezing with high humidity. Watch for icy patches.",
+                messageRes = R.string.driving_alert_black_ice_caution,
             ))
         }
 
@@ -35,13 +37,13 @@ object DrivingConditionEvaluator {
             alerts.add(DrivingAlert(
                 type = DrivingAlertType.FOG,
                 severity = DrivingSeverity.CAUTION,
-                message = "Foggy conditions. Reduced visibility.",
+                messageRes = R.string.driving_alert_fog_caution,
             ))
         } else if (dewpointSpread != null && dewpointSpread < 3.0 && current.humidity > 90) {
             alerts.add(DrivingAlert(
                 type = DrivingAlertType.FOG,
                 severity = DrivingSeverity.ADVISORY,
-                message = "Fog possible with high humidity and narrow dewpoint spread.",
+                messageRes = R.string.driving_alert_fog_advisory,
             ))
         }
 
@@ -51,13 +53,13 @@ object DrivingConditionEvaluator {
                 alerts.add(DrivingAlert(
                     type = DrivingAlertType.LOW_VISIBILITY,
                     severity = DrivingSeverity.DANGER,
-                    message = "Very low visibility (<1 km). Use fog lights.",
+                    messageRes = R.string.driving_alert_low_visibility_danger,
                 ))
             } else if (vis < 5000) {
                 alerts.add(DrivingAlert(
                     type = DrivingAlertType.LOW_VISIBILITY,
                     severity = DrivingSeverity.CAUTION,
-                    message = "Reduced visibility. Drive carefully.",
+                    messageRes = R.string.driving_alert_low_visibility_caution,
                 ))
             }
         }
@@ -69,7 +71,7 @@ object DrivingConditionEvaluator {
             alerts.add(DrivingAlert(
                 type = DrivingAlertType.HYDROPLANING,
                 severity = DrivingSeverity.CAUTION,
-                message = "Heavy rain. Risk of hydroplaning at highway speeds.",
+                messageRes = R.string.driving_alert_hydroplaning_caution,
             ))
         }
 
@@ -79,13 +81,13 @@ object DrivingConditionEvaluator {
             alerts.add(DrivingAlert(
                 type = DrivingAlertType.HIGH_WIND,
                 severity = DrivingSeverity.DANGER,
-                message = "Dangerous winds. Avoid driving if possible.",
+                messageRes = R.string.driving_alert_high_wind_danger,
             ))
         } else if (gusts > 50) {
             alerts.add(DrivingAlert(
                 type = DrivingAlertType.HIGH_WIND,
                 severity = DrivingSeverity.CAUTION,
-                message = "Strong winds may affect vehicle handling.",
+                messageRes = R.string.driving_alert_high_wind_caution,
             ))
         }
 
@@ -99,7 +101,7 @@ object DrivingConditionEvaluator {
             alerts.add(DrivingAlert(
                 type = DrivingAlertType.SNOW_ICE,
                 severity = DrivingSeverity.DANGER,
-                message = "Snow or freezing rain. Roads will be hazardous.",
+                messageRes = R.string.driving_alert_snow_ice_danger,
             ))
         }
 
@@ -111,20 +113,20 @@ object DrivingConditionEvaluator {
 data class DrivingAlert(
     val type: DrivingAlertType,
     val severity: DrivingSeverity,
-    val message: String,
+    @StringRes val messageRes: Int,
 )
 
-enum class DrivingAlertType(val label: String, val icon: String) {
-    BLACK_ICE("Black Ice", "ac_unit"),
-    FOG("Fog", "foggy"),
-    LOW_VISIBILITY("Low Visibility", "visibility_off"),
-    HYDROPLANING("Hydroplaning", "water"),
-    HIGH_WIND("High Wind", "air"),
-    SNOW_ICE("Snow/Ice", "severe_cold"),
+enum class DrivingAlertType(@StringRes val labelRes: Int, val icon: String) {
+    BLACK_ICE(R.string.driving_alert_type_black_ice, "ac_unit"),
+    FOG(R.string.driving_alert_type_fog, "foggy"),
+    LOW_VISIBILITY(R.string.driving_alert_type_low_visibility, "visibility_off"),
+    HYDROPLANING(R.string.driving_alert_type_hydroplaning, "water"),
+    HIGH_WIND(R.string.driving_alert_type_high_wind, "air"),
+    SNOW_ICE(R.string.driving_alert_type_snow_ice, "severe_cold"),
 }
 
-enum class DrivingSeverity(val label: String, val color: Color) {
-    DANGER("Danger", Color(0xFFD32F2F)),
-    CAUTION("Caution", Color(0xFFFF9800)),
-    ADVISORY("Advisory", Color(0xFFFFEB3B)),
+enum class DrivingSeverity(@StringRes val labelRes: Int, val color: Color) {
+    DANGER(R.string.driving_severity_danger, Color(0xFFD32F2F)),
+    CAUTION(R.string.driving_severity_caution, Color(0xFFFF9800)),
+    ADVISORY(R.string.driving_severity_advisory, Color(0xFFFFEB3B)),
 }
