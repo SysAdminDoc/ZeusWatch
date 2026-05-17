@@ -149,74 +149,69 @@ fun SettingsScreen(
         onNavigateToCustomAlerts = onNavigateToCustomAlerts,
         notificationsPermissionGranted = notificationsPermissionGranted,
         availableIconPacks = availableIconPacks,
-        onTempUnit = { viewModel.setTempUnit(it) },
-        onWindUnit = { viewModel.setWindUnit(it) },
-        onPressureUnit = { viewModel.setPressureUnit(it) },
-        onPrecipUnit = { viewModel.setPrecipUnit(it) },
-        onTimeFormat = { viewModel.setTimeFormat(it) },
-        onVisibilityUnit = { viewModel.setVisibilityUnit(it) },
-        onParticlesEnabled = { viewModel.setParticlesEnabled(it) },
-        onAlertNotificationsEnabled = { enabled ->
-            if (enabled) {
-                enableNotificationsIfPermitted { viewModel.setAlertNotificationsEnabled(true) }
-            } else {
-                viewModel.setAlertNotificationsEnabled(false)
-            }
-        },
-        onAlertMinSeverity = { viewModel.setAlertMinSeverity(it) },
-        onAlertCheckAllLocations = { viewModel.setAlertCheckAllLocations(it) },
-        onAlertSourcePref = { viewModel.setAlertSourcePref(it) },
-        // Display
-        onRadarProvider = { viewModel.setRadarProvider(it) },
-        onIconStyle = { viewModel.setIconStyle(it) },
-        onCustomIconPackId = { viewModel.setCustomIconPackId(it) },
-        onThemeMode = { viewModel.setThemeMode(it) },
-        onSummaryStyle = { viewModel.setSummaryStyle(it) },
-        // Card config
-        onCardEnabled = { card, enabled -> viewModel.setCardEnabled(card, enabled) },
-        onCardOrder = { viewModel.setCardOrder(it) },
-        onResetCardPreferences = { viewModel.resetCardPreferences() },
-        // Notifications
-        onPersistentWeatherNotif = { enabled ->
-            if (enabled) {
-                enableNotificationsIfPermitted { viewModel.setPersistentWeatherNotif(true) }
-            } else {
-                viewModel.setPersistentWeatherNotif(false)
-            }
-        },
-        onNowcastingAlerts = { enabled ->
-            if (enabled) {
-                enableNotificationsIfPermitted { viewModel.setNowcastingAlerts(true) }
-            } else {
-                viewModel.setNowcastingAlerts(false)
-            }
-        },
-        onDrivingAlerts = { viewModel.setDrivingAlerts(it) },
-        onHealthAlertsEnabled = { viewModel.setHealthAlertsEnabled(it) },
-        // Data display
-        onShowSnowfall = { viewModel.setShowSnowfall(it) },
-        onShowCape = { viewModel.setShowCape(it) },
-        onShowSunshineDuration = { viewModel.setShowSunshineDuration(it) },
-        onShowGoldenHour = { viewModel.setShowGoldenHour(it) },
-        onShowBeaufortColors = { viewModel.setShowBeaufortColors(it) },
-        onShowOutdoorScore = { viewModel.setShowOutdoorScore(it) },
-        onShowYesterdayComparison = { viewModel.setShowYesterdayComparison(it) },
-        onHourlyForecastHours = { viewModel.setHourlyForecastHours(it) },
-        // Health
-        onMigraineAlerts = { viewModel.setMigraineAlerts(it) },
-        onMigrainePressureThreshold = { viewModel.setMigrainePressureThreshold(it) },
-        // Haptics
-        onHapticFeedbackForAlerts = { viewModel.setHapticFeedbackForAlerts(it) },
-        onCacheTtlMinutes = { viewModel.setCacheTtlMinutes(it) },
-        // Data sources
-        onSourceForecast = { viewModel.setSourceForecast(it) },
-        onSourceForecastFallback = { viewModel.setSourceForecastFallback(it) },
-        onSourceAlerts = { viewModel.setSourceAlerts(it) },
-        onSourceAlertsFallback = { viewModel.setSourceAlertsFallback(it) },
-        onSourceAirQuality = { viewModel.setSourceAirQuality(it) },
-        onSourceMinutely = { viewModel.setSourceMinutely(it) },
-        onOwmApiKey = { viewModel.setOwmApiKey(it) },
-        onPirateWeatherApiKey = { viewModel.setPirateWeatherApiKey(it) },
+        actions = SettingsActions(
+            onTempUnit = viewModel::setTempUnit,
+            onWindUnit = viewModel::setWindUnit,
+            onPressureUnit = viewModel::setPressureUnit,
+            onPrecipUnit = viewModel::setPrecipUnit,
+            onTimeFormat = viewModel::setTimeFormat,
+            onVisibilityUnit = viewModel::setVisibilityUnit,
+            onParticlesEnabled = viewModel::setParticlesEnabled,
+            onAlertNotificationsEnabled = { enabled ->
+                if (enabled) {
+                    enableNotificationsIfPermitted { viewModel.setAlertNotificationsEnabled(true) }
+                } else {
+                    viewModel.setAlertNotificationsEnabled(false)
+                }
+            },
+            onAlertMinSeverity = viewModel::setAlertMinSeverity,
+            onAlertCheckAllLocations = viewModel::setAlertCheckAllLocations,
+            onAlertSourcePref = viewModel::setAlertSourcePref,
+            onRadarProvider = viewModel::setRadarProvider,
+            onIconStyle = viewModel::setIconStyle,
+            onCustomIconPackId = viewModel::setCustomIconPackId,
+            onThemeMode = viewModel::setThemeMode,
+            onSummaryStyle = viewModel::setSummaryStyle,
+            onCardEnabled = viewModel::setCardEnabled,
+            onCardOrder = viewModel::setCardOrder,
+            onResetCardPreferences = viewModel::resetCardPreferences,
+            onPersistentWeatherNotif = { enabled ->
+                if (enabled) {
+                    enableNotificationsIfPermitted { viewModel.setPersistentWeatherNotif(true) }
+                } else {
+                    viewModel.setPersistentWeatherNotif(false)
+                }
+            },
+            onNowcastingAlerts = { enabled ->
+                if (enabled) {
+                    enableNotificationsIfPermitted { viewModel.setNowcastingAlerts(true) }
+                } else {
+                    viewModel.setNowcastingAlerts(false)
+                }
+            },
+            onDrivingAlerts = viewModel::setDrivingAlerts,
+            onHealthAlertsEnabled = viewModel::setHealthAlertsEnabled,
+            onShowSnowfall = viewModel::setShowSnowfall,
+            onShowCape = viewModel::setShowCape,
+            onShowSunshineDuration = viewModel::setShowSunshineDuration,
+            onShowGoldenHour = viewModel::setShowGoldenHour,
+            onShowBeaufortColors = viewModel::setShowBeaufortColors,
+            onShowOutdoorScore = viewModel::setShowOutdoorScore,
+            onShowYesterdayComparison = viewModel::setShowYesterdayComparison,
+            onHourlyForecastHours = viewModel::setHourlyForecastHours,
+            onMigraineAlerts = viewModel::setMigraineAlerts,
+            onMigrainePressureThreshold = viewModel::setMigrainePressureThreshold,
+            onHapticFeedbackForAlerts = viewModel::setHapticFeedbackForAlerts,
+            onCacheTtlMinutes = viewModel::setCacheTtlMinutes,
+            onSourceForecast = viewModel::setSourceForecast,
+            onSourceForecastFallback = viewModel::setSourceForecastFallback,
+            onSourceAlerts = viewModel::setSourceAlerts,
+            onSourceAlertsFallback = viewModel::setSourceAlertsFallback,
+            onSourceAirQuality = viewModel::setSourceAirQuality,
+            onSourceMinutely = viewModel::setSourceMinutely,
+            onOwmApiKey = viewModel::setOwmApiKey,
+            onPirateWeatherApiKey = viewModel::setPirateWeatherApiKey,
+        ),
     )
 }
 
@@ -236,57 +231,8 @@ internal fun SettingsContent(
     onBack: () -> Unit,
     onNavigateToCustomAlerts: () -> Unit = {},
     notificationsPermissionGranted: Boolean = true,
-    onTempUnit: (TempUnit) -> Unit = {},
-    onWindUnit: (WindUnit) -> Unit = {},
-    onPressureUnit: (PressureUnit) -> Unit = {},
-    onPrecipUnit: (PrecipUnit) -> Unit = {},
-    onTimeFormat: (TimeFormat) -> Unit = {},
-    onVisibilityUnit: (VisibilityUnit) -> Unit = {},
-    onParticlesEnabled: (Boolean) -> Unit = {},
-    onAlertNotificationsEnabled: (Boolean) -> Unit = {},
-    onAlertMinSeverity: (AlertMinSeverity) -> Unit = {},
-    onAlertCheckAllLocations: (Boolean) -> Unit = {},
-    onAlertSourcePref: (AlertSourcePreference) -> Unit = {},
-    // Display
-    onRadarProvider: (RadarProvider) -> Unit = {},
-    onIconStyle: (IconStyle) -> Unit = {},
-    onCustomIconPackId: (String) -> Unit = {},
     availableIconPacks: List<IconPack> = emptyList(),
-    onThemeMode: (ThemeMode) -> Unit = {},
-    onSummaryStyle: (SummaryStyle) -> Unit = {},
-    // Card config
-    onCardEnabled: (CardType, Boolean) -> Unit = { _, _ -> },
-    onCardOrder: (List<CardType>) -> Unit = {},
-    onResetCardPreferences: () -> Unit = {},
-    // Notifications
-    onPersistentWeatherNotif: (Boolean) -> Unit = {},
-    onNowcastingAlerts: (Boolean) -> Unit = {},
-    onDrivingAlerts: (Boolean) -> Unit = {},
-    onHealthAlertsEnabled: (Boolean) -> Unit = {},
-    // Data display
-    onShowSnowfall: (Boolean) -> Unit = {},
-    onShowCape: (Boolean) -> Unit = {},
-    onShowSunshineDuration: (Boolean) -> Unit = {},
-    onShowGoldenHour: (Boolean) -> Unit = {},
-    onShowBeaufortColors: (Boolean) -> Unit = {},
-    onShowOutdoorScore: (Boolean) -> Unit = {},
-    onShowYesterdayComparison: (Boolean) -> Unit = {},
-    onHourlyForecastHours: (Int) -> Unit = {},
-    // Health
-    onMigraineAlerts: (Boolean) -> Unit = {},
-    onMigrainePressureThreshold: (Double) -> Unit = {},
-    // Haptics
-    onHapticFeedbackForAlerts: (Boolean) -> Unit = {},
-    onCacheTtlMinutes: (Int) -> Unit = {},
-    // Data sources
-    onSourceForecast: (WeatherSourceProvider) -> Unit = {},
-    onSourceForecastFallback: (WeatherSourceProvider?) -> Unit = {},
-    onSourceAlerts: (WeatherSourceProvider) -> Unit = {},
-    onSourceAlertsFallback: (WeatherSourceProvider?) -> Unit = {},
-    onSourceAirQuality: (WeatherSourceProvider) -> Unit = {},
-    onSourceMinutely: (WeatherSourceProvider) -> Unit = {},
-    onOwmApiKey: (String) -> Unit = {},
-    onPirateWeatherApiKey: (String) -> Unit = {},
+    actions: SettingsActions = SettingsActions(),
 ) {
     PredictiveBackScaffold(onBack = onBack) {
         val scrollState = rememberScrollState()
@@ -327,655 +273,604 @@ internal fun SettingsContent(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-        // ── Display ──────────────────────────────────────────
-        if (selectedCategory == SettingsCategory.APPEARANCE) {
-        SettingSection(
-            title = stringResource(R.string.settings_display_title),
-            description = stringResource(R.string.settings_display_desc),
-        ) {
-            Text(
-                text = stringResource(R.string.settings_radar_provider),
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+            SettingsCategoryContent(
+                selectedCategory = selectedCategory,
+                settings = settings,
+                notificationsPermissionGranted = notificationsPermissionGranted,
+                availableIconPacks = availableIconPacks,
+                onNavigateToCustomAlerts = onNavigateToCustomAlerts,
+                actions = actions,
             )
-            RadarProvider.entries.forEach { provider ->
-                SettingRadio(
-                    label = stringResource(provider.labelRes),
-                    sublabel = stringResource(provider.summaryRes),
-                    selected = settings.radarProvider == provider,
-                    onClick = { onRadarProvider(provider) },
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.settings_radar_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = NimbusTextTertiary,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.settings_icon_style),
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
-            )
-            IconStyle.entries.forEach { style ->
-                SettingRadio(
-                    label = stringResource(style.labelRes),
-                    selected = settings.iconStyle == style,
-                    onClick = { onIconStyle(style) },
-                )
-            }
-            // Show icon pack picker when CUSTOM is selected
-            if (settings.iconStyle == IconStyle.CUSTOM) {
-                IconPackSelector(
-                    packs = availableIconPacks,
-                    selectedPackId = settings.customIconPackId,
-                    onPackSelected = onCustomIconPackId,
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.settings_theme_mode),
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
-            )
-            ThemeMode.entries.forEach { mode ->
-                SettingRadio(
-                    label = stringResource(mode.labelRes),
-                    selected = settings.themeMode == mode,
-                    onClick = { onThemeMode(mode) },
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.settings_summary_style),
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
-            )
-            SummaryStyle.entries.forEach { style ->
-                SettingRadio(
-                    label = stringResource(style.labelRes),
-                    selected = settings.summaryStyle == style,
-                    onClick = { onSummaryStyle(style) },
-                )
-            }
-        }
-        }
-
-        // ── Cards (ordered, with move up/down) ─────────────
-        if (selectedCategory == SettingsCategory.FORECAST) {
-        SettingSection(
-            title = stringResource(R.string.settings_home_cards_title),
-            description = stringResource(R.string.settings_home_cards_desc),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(R.string.settings_home_cards_hint),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = NimbusTextTertiary,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    stringResource(R.string.settings_reset),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = NimbusBlueAccent,
-                    modifier = Modifier.clickable(onClick = onResetCardPreferences),
-                )
-            }
-            settings.cardOrder.forEachIndexed { index, card ->
-                val enabled = card.name !in settings.disabledCards
-                val cardLabel = stringResource(card.labelRes)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onCardEnabled(card, !enabled) }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Row {
-                        IconButton(
-                            onClick = {
-                                val newOrder = settings.cardOrder.toMutableList()
-                                val item = newOrder.removeAt(index)
-                                newOrder.add(index - 1, item)
-                                onCardOrder(newOrder)
-                            },
-                            enabled = index > 0,
-                        ) {
-                            Icon(
-                                Icons.Filled.KeyboardArrowUp,
-                                contentDescription = stringResource(R.string.settings_move_card_up, cardLabel),
-                                tint = if (index > 0) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.4f),
-                            )
-                        }
-                        IconButton(
-                            onClick = {
-                                val newOrder = settings.cardOrder.toMutableList()
-                                val item = newOrder.removeAt(index)
-                                newOrder.add(index + 1, item)
-                                onCardOrder(newOrder)
-                            },
-                            enabled = index < settings.cardOrder.lastIndex,
-                        ) {
-                            Icon(
-                                Icons.Filled.KeyboardArrowDown,
-                                contentDescription = stringResource(R.string.settings_move_card_down, cardLabel),
-                                tint = if (index < settings.cardOrder.lastIndex) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.4f),
-                            )
-                        }
-                    }
-                    Spacer(Modifier.width(2.dp))
-                    Text(
-                        text = cardLabel,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (enabled) NimbusTextPrimary else NimbusTextTertiary,
-                        modifier = Modifier.weight(1f),
-                    )
-                    val cardToggleDescription = if (enabled) {
-                        stringResource(R.string.settings_hide_card, cardLabel)
-                    } else {
-                        stringResource(R.string.settings_show_card, cardLabel)
-                    }
-                    val cardToggleState = if (enabled) {
-                        stringResource(R.string.common_on)
-                    } else {
-                        stringResource(R.string.common_off)
-                    }
-                    Switch(
-                        checked = enabled,
-                        onCheckedChange = { onCardEnabled(card, it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = NimbusBlueAccent,
-                            checkedTrackColor = NimbusBlueAccent.copy(alpha = 0.3f),
-                            uncheckedThumbColor = NimbusTextTertiary,
-                            uncheckedTrackColor = NimbusCardBg,
-                        ),
-                        modifier = Modifier.semantics {
-                            contentDescription = cardToggleDescription
-                            stateDescription = cardToggleState
-                        },
-                    )
-                }
-            }
-        }
-
-        // ── Units ────────────────────────────────────────────
-
-        // Temperature
-        SettingSection(stringResource(R.string.settings_temperature)) {
-            TempUnit.entries.forEach { unit ->
-                SettingRadio(
-                    label = stringResource(unit.labelRes),
-                    sublabel = unit.symbol,
-                    selected = settings.tempUnit == unit,
-                    onClick = { onTempUnit(unit) },
-                )
-            }
-        }
-
-        // Wind Speed
-        SettingSection(stringResource(R.string.settings_wind_speed)) {
-            WindUnit.entries.forEach { unit ->
-                SettingRadio(
-                    label = stringResource(unit.labelRes),
-                    selected = settings.windUnit == unit,
-                    onClick = { onWindUnit(unit) },
-                )
-            }
-        }
-
-        // Pressure
-        SettingSection(stringResource(R.string.settings_pressure)) {
-            PressureUnit.entries.forEach { unit ->
-                SettingRadio(
-                    label = stringResource(unit.labelRes),
-                    selected = settings.pressureUnit == unit,
-                    onClick = { onPressureUnit(unit) },
-                )
-            }
-        }
-
-        // Precipitation
-        SettingSection(stringResource(R.string.settings_precipitation)) {
-            PrecipUnit.entries.forEach { unit ->
-                SettingRadio(
-                    label = stringResource(unit.labelRes),
-                    selected = settings.precipUnit == unit,
-                    onClick = { onPrecipUnit(unit) },
-                )
-            }
-        }
-
-        // Time Format
-        SettingSection(stringResource(R.string.settings_time_format)) {
-            TimeFormat.entries.forEach { format ->
-                SettingRadio(
-                    label = stringResource(format.labelRes),
-                    selected = settings.timeFormat == format,
-                    onClick = { onTimeFormat(format) },
-                )
-            }
-        }
-
-        // Visibility
-        SettingSection(stringResource(R.string.visibility)) {
-            VisibilityUnit.entries.forEach { unit ->
-                SettingRadio(
-                    label = stringResource(unit.labelRes),
-                    selected = settings.visibilityUnit == unit,
-                    onClick = { onVisibilityUnit(unit) },
-                )
-            }
-        }
-
-        // ── Notifications ────────────────────────────────────
-        }
-        if (selectedCategory == SettingsCategory.ALERTS) {
-        SettingSection(
-            title = stringResource(R.string.settings_notifications_title),
-            description = stringResource(R.string.settings_notifications_desc),
-        ) {
-            if (!notificationsPermissionGranted) {
-                PermissionNoticeCard(
-                    title = stringResource(R.string.settings_notification_permission_off),
-                    message = stringResource(R.string.settings_notification_permission_message),
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-            }
-            SettingToggle(
-                label = stringResource(R.string.settings_alert_notifications),
-                sublabel = stringResource(R.string.settings_alert_notifications_desc),
-                checked = settings.alertNotificationsEnabled,
-                onCheckedChange = { onAlertNotificationsEnabled(it) },
-            )
-            if (settings.alertNotificationsEnabled) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.settings_minimum_severity),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NimbusTextSecondary,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
-                )
-                AlertMinSeverity.entries.forEach { severity ->
-                    SettingRadio(
-                        label = stringResource(severity.labelRes),
-                        selected = settings.alertMinSeverity == severity,
-                        onClick = { onAlertMinSeverity(severity) },
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                SettingToggle(
-                    label = stringResource(R.string.settings_monitor_all_locations),
-                    sublabel = stringResource(R.string.settings_monitor_all_locations_desc),
-                    checked = settings.alertCheckAllLocations,
-                    onCheckedChange = { onAlertCheckAllLocations(it) },
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.settings_alert_source),
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
-            )
-            AlertSourcePreference.entries.forEach { pref ->
-                SettingRadio(
-                    label = stringResource(pref.labelRes),
-                    selected = settings.alertSourcePref == pref,
-                    onClick = { onAlertSourcePref(pref) },
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            SettingToggle(
-                label = stringResource(R.string.settings_persistent_notification),
-                sublabel = stringResource(R.string.settings_persistent_notification_desc),
-                checked = settings.persistentWeatherNotif,
-                onCheckedChange = { onPersistentWeatherNotif(it) },
-            )
-            SettingToggle(
-                label = stringResource(R.string.settings_nowcasting_alerts),
-                sublabel = stringResource(R.string.settings_nowcasting_alerts_desc),
-                checked = settings.nowcastingAlerts,
-                onCheckedChange = { onNowcastingAlerts(it) },
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            val customAlertRulesDescription = stringResource(R.string.settings_custom_alert_rules_cd)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(NimbusCardBg)
-                    .clickable(
-                        onClick = onNavigateToCustomAlerts,
-                        role = Role.Button,
-                    )
-                    .semantics(mergeDescendants = true) {
-                        contentDescription = customAlertRulesDescription
-                    }
-                    .padding(horizontal = 14.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.settings_custom_alert_rules),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = NimbusTextPrimary,
-                    )
-                    Text(
-                        stringResource(R.string.settings_custom_alert_rules_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NimbusTextSecondary,
-                    )
-                }
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = NimbusTextTertiary,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            SettingToggle(
-                label = stringResource(R.string.settings_driving_alerts),
-                sublabel = stringResource(R.string.settings_driving_alerts_desc),
-                checked = settings.drivingAlerts,
-                onCheckedChange = { onDrivingAlerts(it) },
-            )
-            SettingToggle(
-                label = stringResource(R.string.settings_health_alerts),
-                sublabel = stringResource(R.string.settings_health_alerts_desc),
-                checked = settings.healthAlertsEnabled,
-                onCheckedChange = { onHealthAlertsEnabled(it) },
-            )
-        }
-
-        // ── Data Display ─────────────────────────────────────
-        }
-        if (selectedCategory == SettingsCategory.FORECAST) {
-        SettingSection(
-            title = stringResource(R.string.settings_data_display_title),
-            description = stringResource(R.string.settings_data_display_desc),
-        ) {
-            SettingToggle(
-                label = stringResource(R.string.settings_yesterday_comparison),
-                sublabel = stringResource(R.string.settings_yesterday_comparison_desc),
-                checked = settings.showYesterdayComparison,
-                onCheckedChange = { onShowYesterdayComparison(it) },
-            )
-            SettingToggle(
-                label = stringResource(R.string.settings_outdoor_score),
-                sublabel = stringResource(R.string.settings_outdoor_score_desc),
-                checked = settings.showOutdoorScore,
-                onCheckedChange = { onShowOutdoorScore(it) },
-            )
-            SettingToggle(
-                label = stringResource(R.string.settings_snowfall_insights),
-                sublabel = stringResource(R.string.settings_snowfall_insights_desc),
-                checked = settings.showSnowfall,
-                onCheckedChange = { onShowSnowfall(it) },
-            )
-            SettingToggle(
-                label = stringResource(R.string.settings_storm_potential),
-                sublabel = stringResource(R.string.settings_storm_potential_desc),
-                checked = settings.showCape,
-                onCheckedChange = { onShowCape(it) },
-            )
-            SettingToggle(
-                label = stringResource(R.string.settings_golden_hour_times),
-                sublabel = stringResource(R.string.settings_golden_hour_times_desc),
-                checked = settings.showGoldenHour,
-                onCheckedChange = { onShowGoldenHour(it) },
-            )
-            SettingToggle(
-                label = stringResource(R.string.settings_sunshine_duration),
-                sublabel = stringResource(R.string.settings_sunshine_duration_desc),
-                checked = settings.showSunshineDuration,
-                onCheckedChange = { onShowSunshineDuration(it) },
-            )
-            SettingToggle(
-                label = stringResource(R.string.settings_beaufort_colors),
-                checked = settings.showBeaufortColors,
-                onCheckedChange = { onShowBeaufortColors(it) },
-            )
-
-            // Hourly forecast range
-            Text(
-                text = stringResource(R.string.settings_hourly_range),
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-                modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp),
-            )
-            listOf(48, 72).forEach { hours ->
-                SettingRadio(
-                    label = "${hours}h",
-                    sublabel = if (hours == 72) stringResource(R.string.settings_more_data_response) else null,
-                    selected = settings.hourlyForecastHours == hours,
-                    onClick = { onHourlyForecastHours(hours) },
-                )
-            }
-        }
-        }
-
-        // ── Health ───────────────────────────────────────────
-        if (selectedCategory == SettingsCategory.ALERTS && settings.healthAlertsEnabled) {
-        SettingSection(
-            title = stringResource(R.string.settings_health_title),
-            description = stringResource(R.string.settings_health_desc),
-        ) {
-                SettingToggle(
-                    label = stringResource(R.string.settings_migraine_alerts),
-                    sublabel = stringResource(R.string.settings_migraine_alerts_desc),
-                    checked = settings.migraineAlerts,
-                    onCheckedChange = { onMigraineAlerts(it) },
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.settings_pressure_threshold),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NimbusTextSecondary,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
-                )
-                listOf(3.0, 5.0, 7.0, 10.0).forEach { threshold ->
-                    SettingRadio(
-                        label = "$threshold hPa/3h",
-                        sublabel = when (threshold) {
-                            3.0 -> stringResource(R.string.settings_very_sensitive)
-                            5.0 -> stringResource(R.string.settings_moderate_default)
-                            7.0 -> stringResource(R.string.settings_less_sensitive)
-                            10.0 -> stringResource(R.string.settings_only_major_changes)
-                            else -> null
-                        },
-                        selected = settings.migrainePressureThreshold == threshold,
-                        onClick = { onMigrainePressureThreshold(threshold) },
-                    )
-                }
-            }
-        }
-
-        // ── Accessibility ────────────────────────────────────
-        if (selectedCategory == SettingsCategory.ALERTS) {
-        SettingSection(
-            title = stringResource(R.string.settings_accessibility_title),
-            description = stringResource(R.string.settings_accessibility_desc),
-        ) {
-            SettingToggle(
-                label = stringResource(R.string.settings_haptic_alerts),
-                sublabel = stringResource(R.string.settings_haptic_alerts_desc),
-                checked = settings.hapticFeedbackForAlerts,
-                onCheckedChange = { onHapticFeedbackForAlerts(it) },
-            )
-        }
-        }
-
-        // ── Visual Effects ───────────────────────────────────
-        if (selectedCategory == SettingsCategory.APPEARANCE) {
-        SettingSection(
-            title = stringResource(R.string.settings_visual_effects_title),
-            description = stringResource(R.string.settings_visual_effects_desc),
-        ) {
-            SettingToggle(
-                label = stringResource(R.string.settings_weather_particles),
-                sublabel = stringResource(R.string.settings_weather_particles_desc),
-                checked = settings.particlesEnabled,
-                onCheckedChange = { onParticlesEnabled(it) },
-            )
-        }
-        }
-
-        // ── Data Sources ─────────────────────────────────────────
-        if (selectedCategory == SettingsCategory.ADVANCED) {
-        SettingSection(
-            title = stringResource(R.string.settings_data_sources_title),
-            description = stringResource(R.string.settings_data_sources_desc),
-            initiallyExpanded = false,
-        ) {
-            val sourceConfig = settings.sourceConfig
-
-            // Forecast source
-            SourceDropdown(
-                label = stringResource(R.string.settings_forecast_source),
-                selected = sourceConfig.forecast,
-                options = WeatherSourceProvider.forType(WeatherDataType.FORECAST),
-                onSelected = onSourceForecast,
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Forecast fallback
-            SourceDropdownNullable(
-                label = stringResource(R.string.settings_forecast_fallback),
-                selected = sourceConfig.forecastFallback,
-                options = WeatherSourceProvider.forType(WeatherDataType.FORECAST)
-                    .filter { it != sourceConfig.forecast },
-                onSelected = onSourceForecastFallback,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Alert source
-            SourceDropdown(
-                label = stringResource(R.string.settings_alert_source),
-                selected = sourceConfig.alerts,
-                options = WeatherSourceProvider.forType(WeatherDataType.ALERTS),
-                onSelected = onSourceAlerts,
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Alert fallback
-            SourceDropdownNullable(
-                label = stringResource(R.string.settings_alert_fallback),
-                selected = sourceConfig.alertsFallback,
-                options = WeatherSourceProvider.forType(WeatherDataType.ALERTS)
-                    .filter { it != sourceConfig.alerts },
-                onSelected = onSourceAlertsFallback,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Air quality source
-            SourceDropdown(
-                label = stringResource(R.string.settings_air_quality_source),
-                selected = sourceConfig.airQuality,
-                options = WeatherSourceProvider.forType(WeatherDataType.AIR_QUALITY),
-                onSelected = onSourceAirQuality,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Minutely source
-            SourceDropdown(
-                label = stringResource(R.string.settings_minutely_source),
-                selected = sourceConfig.minutely,
-                options = WeatherSourceProvider.forType(WeatherDataType.MINUTELY),
-                onSelected = onSourceMinutely,
-            )
-
-            // API key fields — shown conditionally
-            val needsOwmKey = sourceConfig.forecast == WeatherSourceProvider.OPEN_WEATHER_MAP ||
-                sourceConfig.forecastFallback == WeatherSourceProvider.OPEN_WEATHER_MAP ||
-                sourceConfig.alerts == WeatherSourceProvider.OPEN_WEATHER_MAP ||
-                sourceConfig.alertsFallback == WeatherSourceProvider.OPEN_WEATHER_MAP ||
-                sourceConfig.airQuality == WeatherSourceProvider.OPEN_WEATHER_MAP
-
-            val needsPirateKey = sourceConfig.forecast == WeatherSourceProvider.PIRATE_WEATHER ||
-                sourceConfig.forecastFallback == WeatherSourceProvider.PIRATE_WEATHER
-
-            if (needsOwmKey || needsPirateKey) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = stringResource(R.string.settings_api_keys),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NimbusTextSecondary,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
-                )
-            }
-
-            if (needsOwmKey) {
-                ApiKeyField(
-                    label = stringResource(R.string.settings_owm_key),
-                    value = settings.owmApiKey,
-                    onValueChange = onOwmApiKey,
-                )
-            }
-
-            if (needsPirateKey) {
-                ApiKeyField(
-                    label = stringResource(R.string.settings_pirate_key),
-                    value = settings.pirateWeatherApiKey,
-                    onValueChange = onPirateWeatherApiKey,
-                )
-            }
-        }
-
-        // ── Advanced ───────────────────────────────────────────
-        SettingSection(
-            title = stringResource(R.string.settings_advanced_title),
-            description = stringResource(R.string.settings_advanced_desc),
-            initiallyExpanded = false,
-        ) {
-            Text(
-                stringResource(R.string.settings_cache_duration),
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
-            )
-            listOf(15, 30, 60, 120).forEach { minutes ->
-                val label = when {
-                    minutes < 60 -> stringResource(R.string.settings_minutes, minutes)
-                    minutes == 60 -> stringResource(R.string.settings_hour, 1)
-                    else -> stringResource(R.string.settings_hours, minutes / 60)
-                }
-                SettingRadio(
-                    label = label,
-                    selected = settings.cacheTtlMinutes == minutes,
-                    onClick = { onCacheTtlMinutes(minutes) },
-                )
-            }
-        }
-
-        // ── About ────────────────────────────────────────────
-        SettingSection(
-            title = stringResource(R.string.settings_about_title),
-            description = stringResource(R.string.settings_about_desc),
-        ) {
-            SettingInfo(stringResource(R.string.settings_version), com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME)
-            SettingInfo(stringResource(R.string.settings_data_sources_title), stringResource(R.string.settings_data_sources_value))
-            SettingInfo(stringResource(R.string.settings_license), "LGPL-3.0")
-        }
-        }
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+}
+
+internal data class SettingsActions(
+    val onTempUnit: (TempUnit) -> Unit = {},
+    val onWindUnit: (WindUnit) -> Unit = {},
+    val onPressureUnit: (PressureUnit) -> Unit = {},
+    val onPrecipUnit: (PrecipUnit) -> Unit = {},
+    val onTimeFormat: (TimeFormat) -> Unit = {},
+    val onVisibilityUnit: (VisibilityUnit) -> Unit = {},
+    val onParticlesEnabled: (Boolean) -> Unit = {},
+    val onAlertNotificationsEnabled: (Boolean) -> Unit = {},
+    val onAlertMinSeverity: (AlertMinSeverity) -> Unit = {},
+    val onAlertCheckAllLocations: (Boolean) -> Unit = {},
+    val onAlertSourcePref: (AlertSourcePreference) -> Unit = {},
+    val onRadarProvider: (RadarProvider) -> Unit = {},
+    val onIconStyle: (IconStyle) -> Unit = {},
+    val onCustomIconPackId: (String) -> Unit = {},
+    val onThemeMode: (ThemeMode) -> Unit = {},
+    val onSummaryStyle: (SummaryStyle) -> Unit = {},
+    val onCardEnabled: (CardType, Boolean) -> Unit = { _, _ -> },
+    val onCardOrder: (List<CardType>) -> Unit = {},
+    val onResetCardPreferences: () -> Unit = {},
+    val onPersistentWeatherNotif: (Boolean) -> Unit = {},
+    val onNowcastingAlerts: (Boolean) -> Unit = {},
+    val onDrivingAlerts: (Boolean) -> Unit = {},
+    val onHealthAlertsEnabled: (Boolean) -> Unit = {},
+    val onShowSnowfall: (Boolean) -> Unit = {},
+    val onShowCape: (Boolean) -> Unit = {},
+    val onShowSunshineDuration: (Boolean) -> Unit = {},
+    val onShowGoldenHour: (Boolean) -> Unit = {},
+    val onShowBeaufortColors: (Boolean) -> Unit = {},
+    val onShowOutdoorScore: (Boolean) -> Unit = {},
+    val onShowYesterdayComparison: (Boolean) -> Unit = {},
+    val onHourlyForecastHours: (Int) -> Unit = {},
+    val onMigraineAlerts: (Boolean) -> Unit = {},
+    val onMigrainePressureThreshold: (Double) -> Unit = {},
+    val onHapticFeedbackForAlerts: (Boolean) -> Unit = {},
+    val onCacheTtlMinutes: (Int) -> Unit = {},
+    val onSourceForecast: (WeatherSourceProvider) -> Unit = {},
+    val onSourceForecastFallback: (WeatherSourceProvider?) -> Unit = {},
+    val onSourceAlerts: (WeatherSourceProvider) -> Unit = {},
+    val onSourceAlertsFallback: (WeatherSourceProvider?) -> Unit = {},
+    val onSourceAirQuality: (WeatherSourceProvider) -> Unit = {},
+    val onSourceMinutely: (WeatherSourceProvider) -> Unit = {},
+    val onOwmApiKey: (String) -> Unit = {},
+    val onPirateWeatherApiKey: (String) -> Unit = {},
+)
+
+@Composable
+private fun SettingsCategoryContent(
+    selectedCategory: SettingsCategory,
+    settings: NimbusSettings,
+    notificationsPermissionGranted: Boolean,
+    availableIconPacks: List<IconPack>,
+    onNavigateToCustomAlerts: () -> Unit,
+    actions: SettingsActions,
+) {
+    when (selectedCategory) {
+        SettingsCategory.APPEARANCE -> {
+            SettingsDisplaySection(settings, availableIconPacks, actions)
+            SettingsVisualEffectsSection(settings, actions)
+        }
+        SettingsCategory.FORECAST -> {
+            SettingsHomeCardsSection(settings, actions)
+            SettingsUnitsSections(settings, actions)
+            SettingsDataDisplaySection(settings, actions)
+        }
+        SettingsCategory.ALERTS -> {
+            SettingsNotificationsSection(settings, notificationsPermissionGranted, onNavigateToCustomAlerts, actions)
+            if (settings.healthAlertsEnabled) {
+                SettingsHealthSection(settings, actions)
+            }
+            SettingsAccessibilitySection(settings, actions)
+        }
+        SettingsCategory.ADVANCED -> {
+            SettingsDataSourcesSection(settings, actions)
+            SettingsAdvancedSection(settings, actions)
+            SettingsAboutSection()
+        }
+    }
+}
+
+@Composable
+private fun SettingsDisplaySection(
+    settings: NimbusSettings,
+    availableIconPacks: List<IconPack>,
+    actions: SettingsActions,
+) {
+    SettingSection(
+        title = stringResource(R.string.settings_display_title),
+        description = stringResource(R.string.settings_display_desc),
+    ) {
+        Text(stringResource(R.string.settings_radar_provider), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+        RadarProvider.entries.forEach { provider ->
+            SettingRadio(
+                label = stringResource(provider.labelRes),
+                sublabel = stringResource(provider.summaryRes),
+                selected = settings.radarProvider == provider,
+                onClick = { actions.onRadarProvider(provider) },
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(stringResource(R.string.settings_radar_hint), style = MaterialTheme.typography.labelSmall, color = NimbusTextTertiary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+        SettingsIconStyleControls(settings, availableIconPacks, actions)
+        SettingsThemeAndSummaryControls(settings, actions)
+    }
+}
+
+@Composable
+private fun SettingsIconStyleControls(
+    settings: NimbusSettings,
+    availableIconPacks: List<IconPack>,
+    actions: SettingsActions,
+) {
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(stringResource(R.string.settings_icon_style), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+    IconStyle.entries.forEach { style ->
+        SettingRadio(
+            label = stringResource(style.labelRes),
+            selected = settings.iconStyle == style,
+            onClick = { actions.onIconStyle(style) },
+        )
+    }
+    if (settings.iconStyle == IconStyle.CUSTOM) {
+        IconPackSelector(
+            packs = availableIconPacks,
+            selectedPackId = settings.customIconPackId,
+            onPackSelected = actions.onCustomIconPackId,
+        )
+    }
+}
+
+@Composable
+private fun SettingsThemeAndSummaryControls(
+    settings: NimbusSettings,
+    actions: SettingsActions,
+) {
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(stringResource(R.string.settings_theme_mode), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+    ThemeMode.entries.forEach { mode ->
+        SettingRadio(
+            label = stringResource(mode.labelRes),
+            selected = settings.themeMode == mode,
+            onClick = { actions.onThemeMode(mode) },
+        )
+    }
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(stringResource(R.string.settings_summary_style), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+    SummaryStyle.entries.forEach { style ->
+        SettingRadio(
+            label = stringResource(style.labelRes),
+            selected = settings.summaryStyle == style,
+            onClick = { actions.onSummaryStyle(style) },
+        )
+    }
+}
+
+@Composable
+private fun SettingsHomeCardsSection(
+    settings: NimbusSettings,
+    actions: SettingsActions,
+) {
+    SettingSection(
+        title = stringResource(R.string.settings_home_cards_title),
+        description = stringResource(R.string.settings_home_cards_desc),
+    ) {
+        SettingsHomeCardsHeader(actions.onResetCardPreferences)
+        settings.cardOrder.forEachIndexed { index, card ->
+            SettingsHomeCardRow(settings, card, index, actions)
+        }
+    }
+}
+
+@Composable
+private fun SettingsHomeCardsHeader(onResetCardPreferences: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            stringResource(R.string.settings_home_cards_hint),
+            style = MaterialTheme.typography.labelSmall,
+            color = NimbusTextTertiary,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            stringResource(R.string.settings_reset),
+            style = MaterialTheme.typography.labelLarge,
+            color = NimbusBlueAccent,
+            modifier = Modifier.clickable(onClick = onResetCardPreferences),
+        )
+    }
+}
+
+@Composable
+private fun SettingsHomeCardRow(
+    settings: NimbusSettings,
+    card: CardType,
+    index: Int,
+    actions: SettingsActions,
+) {
+    val enabled = card.name !in settings.disabledCards
+    val cardLabel = stringResource(card.labelRes)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { actions.onCardEnabled(card, !enabled) }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingsCardMoveButtons(settings.cardOrder, index, cardLabel, actions.onCardOrder)
+        Spacer(Modifier.width(2.dp))
+        Text(
+            text = cardLabel,
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (enabled) NimbusTextPrimary else NimbusTextTertiary,
+            modifier = Modifier.weight(1f),
+        )
+        SettingsCardEnabledSwitch(card, cardLabel, enabled, actions.onCardEnabled)
+    }
+}
+
+@Composable
+private fun SettingsCardMoveButtons(
+    cardOrder: List<CardType>,
+    index: Int,
+    cardLabel: String,
+    onCardOrder: (List<CardType>) -> Unit,
+) {
+    Row {
+        IconButton(
+            onClick = { onCardOrder(cardOrder.moveItem(index, index - 1)) },
+            enabled = index > 0,
+        ) {
+            Icon(
+                Icons.Filled.KeyboardArrowUp,
+                contentDescription = stringResource(R.string.settings_move_card_up, cardLabel),
+                tint = if (index > 0) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.4f),
+            )
+        }
+        IconButton(
+            onClick = { onCardOrder(cardOrder.moveItem(index, index + 1)) },
+            enabled = index < cardOrder.lastIndex,
+        ) {
+            Icon(
+                Icons.Filled.KeyboardArrowDown,
+                contentDescription = stringResource(R.string.settings_move_card_down, cardLabel),
+                tint = if (index < cardOrder.lastIndex) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.4f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsCardEnabledSwitch(
+    card: CardType,
+    cardLabel: String,
+    enabled: Boolean,
+    onCardEnabled: (CardType, Boolean) -> Unit,
+) {
+    val cardToggleDescription = if (enabled) {
+        stringResource(R.string.settings_hide_card, cardLabel)
+    } else {
+        stringResource(R.string.settings_show_card, cardLabel)
+    }
+    val cardToggleState = if (enabled) stringResource(R.string.common_on) else stringResource(R.string.common_off)
+    Switch(
+        checked = enabled,
+        onCheckedChange = { onCardEnabled(card, it) },
+        colors = SwitchDefaults.colors(
+            checkedThumbColor = NimbusBlueAccent,
+            checkedTrackColor = NimbusBlueAccent.copy(alpha = 0.3f),
+            uncheckedThumbColor = NimbusTextTertiary,
+            uncheckedTrackColor = NimbusCardBg,
+        ),
+        modifier = Modifier.semantics {
+            contentDescription = cardToggleDescription
+            stateDescription = cardToggleState
+        },
+    )
+}
+
+private fun List<CardType>.moveItem(fromIndex: Int, toIndex: Int): List<CardType> {
+    val newOrder = toMutableList()
+    val item = newOrder.removeAt(fromIndex)
+    newOrder.add(toIndex, item)
+    return newOrder
+}
+
+@Composable
+private fun SettingsUnitsSections(
+    settings: NimbusSettings,
+    actions: SettingsActions,
+) {
+    SettingSection(stringResource(R.string.settings_temperature)) {
+        TempUnit.entries.forEach { unit ->
+            SettingRadio(stringResource(unit.labelRes), unit.symbol, settings.tempUnit == unit) {
+                actions.onTempUnit(unit)
+            }
+        }
+    }
+    SettingSection(stringResource(R.string.settings_wind_speed)) {
+        WindUnit.entries.forEach { unit ->
+            SettingRadio(stringResource(unit.labelRes), selected = settings.windUnit == unit) { actions.onWindUnit(unit) }
+        }
+    }
+    SettingSection(stringResource(R.string.settings_pressure)) {
+        PressureUnit.entries.forEach { unit ->
+            SettingRadio(stringResource(unit.labelRes), selected = settings.pressureUnit == unit) { actions.onPressureUnit(unit) }
+        }
+    }
+    SettingSection(stringResource(R.string.settings_precipitation)) {
+        PrecipUnit.entries.forEach { unit ->
+            SettingRadio(stringResource(unit.labelRes), selected = settings.precipUnit == unit) { actions.onPrecipUnit(unit) }
+        }
+    }
+    SettingSection(stringResource(R.string.settings_time_format)) {
+        TimeFormat.entries.forEach { format ->
+            SettingRadio(stringResource(format.labelRes), selected = settings.timeFormat == format) { actions.onTimeFormat(format) }
+        }
+    }
+    SettingSection(stringResource(R.string.visibility)) {
+        VisibilityUnit.entries.forEach { unit ->
+            SettingRadio(stringResource(unit.labelRes), selected = settings.visibilityUnit == unit) { actions.onVisibilityUnit(unit) }
+        }
+    }
+}
+
+@Composable
+private fun SettingsNotificationsSection(
+    settings: NimbusSettings,
+    notificationsPermissionGranted: Boolean,
+    onNavigateToCustomAlerts: () -> Unit,
+    actions: SettingsActions,
+) {
+    SettingSection(
+        title = stringResource(R.string.settings_notifications_title),
+        description = stringResource(R.string.settings_notifications_desc),
+    ) {
+        if (!notificationsPermissionGranted) {
+            PermissionNoticeCard(
+                title = stringResource(R.string.settings_notification_permission_off),
+                message = stringResource(R.string.settings_notification_permission_message),
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+        }
+        SettingToggle(stringResource(R.string.settings_alert_notifications), stringResource(R.string.settings_alert_notifications_desc), settings.alertNotificationsEnabled, actions.onAlertNotificationsEnabled)
+        if (settings.alertNotificationsEnabled) {
+            SettingsAlertNotificationDetails(settings, actions)
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(stringResource(R.string.settings_alert_source), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+        AlertSourcePreference.entries.forEach { pref ->
+            SettingRadio(stringResource(pref.labelRes), selected = settings.alertSourcePref == pref) {
+                actions.onAlertSourcePref(pref)
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        SettingToggle(stringResource(R.string.settings_persistent_notification), stringResource(R.string.settings_persistent_notification_desc), settings.persistentWeatherNotif, actions.onPersistentWeatherNotif)
+        SettingToggle(stringResource(R.string.settings_nowcasting_alerts), stringResource(R.string.settings_nowcasting_alerts_desc), settings.nowcastingAlerts, actions.onNowcastingAlerts)
+        Spacer(modifier = Modifier.height(4.dp))
+        CustomAlertRulesRow(onNavigateToCustomAlerts)
+        Spacer(modifier = Modifier.height(4.dp))
+        SettingToggle(stringResource(R.string.settings_driving_alerts), stringResource(R.string.settings_driving_alerts_desc), settings.drivingAlerts, actions.onDrivingAlerts)
+        SettingToggle(stringResource(R.string.settings_health_alerts), stringResource(R.string.settings_health_alerts_desc), settings.healthAlertsEnabled, actions.onHealthAlertsEnabled)
+    }
+}
+
+@Composable
+private fun SettingsAlertNotificationDetails(
+    settings: NimbusSettings,
+    actions: SettingsActions,
+) {
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(stringResource(R.string.settings_minimum_severity), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+    AlertMinSeverity.entries.forEach { severity ->
+        SettingRadio(stringResource(severity.labelRes), selected = settings.alertMinSeverity == severity) {
+            actions.onAlertMinSeverity(severity)
+        }
+    }
+    Spacer(modifier = Modifier.height(4.dp))
+    SettingToggle(
+        label = stringResource(R.string.settings_monitor_all_locations),
+        sublabel = stringResource(R.string.settings_monitor_all_locations_desc),
+        checked = settings.alertCheckAllLocations,
+        onCheckedChange = actions.onAlertCheckAllLocations,
+    )
+}
+
+@Composable
+private fun CustomAlertRulesRow(onNavigateToCustomAlerts: () -> Unit) {
+    val customAlertRulesDescription = stringResource(R.string.settings_custom_alert_rules_cd)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(NimbusCardBg)
+            .clickable(onClick = onNavigateToCustomAlerts, role = Role.Button)
+            .semantics(mergeDescendants = true) { contentDescription = customAlertRulesDescription }
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(stringResource(R.string.settings_custom_alert_rules), style = MaterialTheme.typography.bodyMedium, color = NimbusTextPrimary)
+            Text(stringResource(R.string.settings_custom_alert_rules_desc), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary)
+        }
+        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = NimbusTextTertiary, modifier = Modifier.size(20.dp))
+    }
+}
+
+@Composable
+private fun SettingsDataDisplaySection(
+    settings: NimbusSettings,
+    actions: SettingsActions,
+) {
+    SettingSection(
+        title = stringResource(R.string.settings_data_display_title),
+        description = stringResource(R.string.settings_data_display_desc),
+    ) {
+        SettingToggle(stringResource(R.string.settings_yesterday_comparison), stringResource(R.string.settings_yesterday_comparison_desc), settings.showYesterdayComparison, actions.onShowYesterdayComparison)
+        SettingToggle(stringResource(R.string.settings_outdoor_score), stringResource(R.string.settings_outdoor_score_desc), settings.showOutdoorScore, actions.onShowOutdoorScore)
+        SettingToggle(stringResource(R.string.settings_snowfall_insights), stringResource(R.string.settings_snowfall_insights_desc), settings.showSnowfall, actions.onShowSnowfall)
+        SettingToggle(stringResource(R.string.settings_storm_potential), stringResource(R.string.settings_storm_potential_desc), settings.showCape, actions.onShowCape)
+        SettingToggle(stringResource(R.string.settings_golden_hour_times), stringResource(R.string.settings_golden_hour_times_desc), settings.showGoldenHour, actions.onShowGoldenHour)
+        SettingToggle(stringResource(R.string.settings_sunshine_duration), stringResource(R.string.settings_sunshine_duration_desc), settings.showSunshineDuration, actions.onShowSunshineDuration)
+        SettingToggle(stringResource(R.string.settings_beaufort_colors), checked = settings.showBeaufortColors, onCheckedChange = actions.onShowBeaufortColors)
+        Text(stringResource(R.string.settings_hourly_range), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp))
+        listOf(48, 72).forEach { hours ->
+            SettingRadio(
+                label = "${hours}h",
+                sublabel = if (hours == 72) stringResource(R.string.settings_more_data_response) else null,
+                selected = settings.hourlyForecastHours == hours,
+                onClick = { actions.onHourlyForecastHours(hours) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsHealthSection(
+    settings: NimbusSettings,
+    actions: SettingsActions,
+) {
+    SettingSection(
+        title = stringResource(R.string.settings_health_title),
+        description = stringResource(R.string.settings_health_desc),
+    ) {
+        SettingToggle(stringResource(R.string.settings_migraine_alerts), stringResource(R.string.settings_migraine_alerts_desc), settings.migraineAlerts, actions.onMigraineAlerts)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(stringResource(R.string.settings_pressure_threshold), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+        listOf(3.0, 5.0, 7.0, 10.0).forEach { threshold ->
+            SettingRadio(
+                label = "$threshold hPa/3h",
+                sublabel = pressureThresholdSublabel(threshold),
+                selected = settings.migrainePressureThreshold == threshold,
+                onClick = { actions.onMigrainePressureThreshold(threshold) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun pressureThresholdSublabel(threshold: Double): String? = when (threshold) {
+    3.0 -> stringResource(R.string.settings_very_sensitive)
+    5.0 -> stringResource(R.string.settings_moderate_default)
+    7.0 -> stringResource(R.string.settings_less_sensitive)
+    10.0 -> stringResource(R.string.settings_only_major_changes)
+    else -> null
+}
+
+@Composable
+private fun SettingsAccessibilitySection(
+    settings: NimbusSettings,
+    actions: SettingsActions,
+) {
+    SettingSection(
+        title = stringResource(R.string.settings_accessibility_title),
+        description = stringResource(R.string.settings_accessibility_desc),
+    ) {
+        SettingToggle(stringResource(R.string.settings_haptic_alerts), stringResource(R.string.settings_haptic_alerts_desc), settings.hapticFeedbackForAlerts, actions.onHapticFeedbackForAlerts)
+    }
+}
+
+@Composable
+private fun SettingsVisualEffectsSection(
+    settings: NimbusSettings,
+    actions: SettingsActions,
+) {
+    SettingSection(
+        title = stringResource(R.string.settings_visual_effects_title),
+        description = stringResource(R.string.settings_visual_effects_desc),
+    ) {
+        SettingToggle(stringResource(R.string.settings_weather_particles), stringResource(R.string.settings_weather_particles_desc), settings.particlesEnabled, actions.onParticlesEnabled)
+    }
+}
+
+@Composable
+private fun SettingsDataSourcesSection(
+    settings: NimbusSettings,
+    actions: SettingsActions,
+) {
+    SettingSection(
+        title = stringResource(R.string.settings_data_sources_title),
+        description = stringResource(R.string.settings_data_sources_desc),
+        initiallyExpanded = false,
+    ) {
+        val sourceConfig = settings.sourceConfig
+        SourceDropdown(stringResource(R.string.settings_forecast_source), sourceConfig.forecast, WeatherSourceProvider.forType(WeatherDataType.FORECAST), actions.onSourceForecast)
+        Spacer(modifier = Modifier.height(4.dp))
+        SourceDropdownNullable(stringResource(R.string.settings_forecast_fallback), sourceConfig.forecastFallback, WeatherSourceProvider.forType(WeatherDataType.FORECAST).filter { it != sourceConfig.forecast }, actions.onSourceForecastFallback)
+        Spacer(modifier = Modifier.height(8.dp))
+        SourceDropdown(stringResource(R.string.settings_alert_source), sourceConfig.alerts, WeatherSourceProvider.forType(WeatherDataType.ALERTS), actions.onSourceAlerts)
+        Spacer(modifier = Modifier.height(4.dp))
+        SourceDropdownNullable(stringResource(R.string.settings_alert_fallback), sourceConfig.alertsFallback, WeatherSourceProvider.forType(WeatherDataType.ALERTS).filter { it != sourceConfig.alerts }, actions.onSourceAlertsFallback)
+        Spacer(modifier = Modifier.height(8.dp))
+        SourceDropdown(stringResource(R.string.settings_air_quality_source), sourceConfig.airQuality, WeatherSourceProvider.forType(WeatherDataType.AIR_QUALITY), actions.onSourceAirQuality)
+        Spacer(modifier = Modifier.height(8.dp))
+        SourceDropdown(stringResource(R.string.settings_minutely_source), sourceConfig.minutely, WeatherSourceProvider.forType(WeatherDataType.MINUTELY), actions.onSourceMinutely)
+        SettingsApiKeyFields(settings, actions)
+    }
+}
+
+@Composable
+private fun SettingsApiKeyFields(
+    settings: NimbusSettings,
+    actions: SettingsActions,
+) {
+    val sourceConfig = settings.sourceConfig
+    val needsOwmKey = sourceConfig.forecast == WeatherSourceProvider.OPEN_WEATHER_MAP ||
+        sourceConfig.forecastFallback == WeatherSourceProvider.OPEN_WEATHER_MAP ||
+        sourceConfig.alerts == WeatherSourceProvider.OPEN_WEATHER_MAP ||
+        sourceConfig.alertsFallback == WeatherSourceProvider.OPEN_WEATHER_MAP ||
+        sourceConfig.airQuality == WeatherSourceProvider.OPEN_WEATHER_MAP
+    val needsPirateKey = sourceConfig.forecast == WeatherSourceProvider.PIRATE_WEATHER ||
+        sourceConfig.forecastFallback == WeatherSourceProvider.PIRATE_WEATHER
+
+    if (needsOwmKey || needsPirateKey) {
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(stringResource(R.string.settings_api_keys), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
+    }
+    if (needsOwmKey) {
+        ApiKeyField(stringResource(R.string.settings_owm_key), settings.owmApiKey, actions.onOwmApiKey)
+    }
+    if (needsPirateKey) {
+        ApiKeyField(stringResource(R.string.settings_pirate_key), settings.pirateWeatherApiKey, actions.onPirateWeatherApiKey)
+    }
+}
+
+@Composable
+private fun SettingsAdvancedSection(
+    settings: NimbusSettings,
+    actions: SettingsActions,
+) {
+    SettingSection(
+        title = stringResource(R.string.settings_advanced_title),
+        description = stringResource(R.string.settings_advanced_desc),
+        initiallyExpanded = false,
+    ) {
+        Text(stringResource(R.string.settings_cache_duration), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+        listOf(15, 30, 60, 120).forEach { minutes ->
+            SettingRadio(
+                label = cacheDurationLabel(minutes),
+                selected = settings.cacheTtlMinutes == minutes,
+                onClick = { actions.onCacheTtlMinutes(minutes) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun cacheDurationLabel(minutes: Int): String = when {
+    minutes < 60 -> stringResource(R.string.settings_minutes, minutes)
+    minutes == 60 -> stringResource(R.string.settings_hour, 1)
+    else -> stringResource(R.string.settings_hours, minutes / 60)
+}
+
+@Composable
+private fun SettingsAboutSection() {
+    SettingSection(
+        title = stringResource(R.string.settings_about_title),
+        description = stringResource(R.string.settings_about_desc),
+    ) {
+        SettingInfo(stringResource(R.string.settings_version), com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME)
+        SettingInfo(stringResource(R.string.settings_data_sources_title), stringResource(R.string.settings_data_sources_value))
+        SettingInfo(stringResource(R.string.settings_license), "LGPL-3.0")
     }
 }
 
