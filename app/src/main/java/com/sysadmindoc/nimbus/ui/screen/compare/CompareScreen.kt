@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.component.LocalUnitSettings
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.component.PremiumMessageCard
@@ -83,274 +84,401 @@ fun CompareScreen(
     viewModel: CompareViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val s = LocalUnitSettings.current
+    val settings = LocalUnitSettings.current
+    val actions = CompareScreenActions(
+        onBack = onBack,
+        onNavigateToLocations = onNavigateToLocations,
+        onRetry = viewModel::retry,
+        onSelectLocation1 = viewModel::selectLocation1,
+        onSelectLocation2 = viewModel::selectLocation2,
+    )
 
     PredictiveBackScaffold(onBack = onBack) {
-        when {
-            state.isLoading && state.savedLocations.isEmpty() -> Box(
-                Modifier.fillMaxSize().background(NimbusBackgroundGradient),
-                contentAlignment = Alignment.Center,
-            ) {
-                CompareStateCard(
-                    title = stringResource(R.string.compare_preparing_title),
-                    message = stringResource(R.string.compare_preparing_message),
-                    loading = true,
-                )
-            }
-            shouldShowCompareFullScreenError(state) -> Box(
-                Modifier.fillMaxSize().background(NimbusBackgroundGradient),
-                contentAlignment = Alignment.Center,
-            ) {
-                CompareStateCard(
-                    title = stringResource(R.string.compare_unavailable_title),
-                    message = state.error ?: stringResource(R.string.common_something_went_wrong),
-                    actionLabel = stringResource(R.string.retry),
-                    onAction = { viewModel.retry() },
-                )
-            }
-            else -> Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(NimbusBackgroundGradient)
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                ScreenHeader(
-                    title = stringResource(R.string.compare_title),
-                    subtitle = stringResource(R.string.compare_subtitle),
-                    eyebrow = stringResource(R.string.compare_eyebrow),
-                    onBack = onBack,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                )
+        CompareScreenBody(state = state, settings = settings, actions = actions)
+    }
+}
 
-                if (state.savedLocations.isNotEmpty()) {
-                    CompareIntroCard(
-                        readyCount = state.savedLocations.size,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
+private data class CompareScreenActions(
+    val onBack: () -> Unit,
+    val onNavigateToLocations: () -> Unit,
+    val onRetry: () -> Unit,
+    val onSelectLocation1: (SavedLocationEntity) -> Unit,
+    val onSelectLocation2: (SavedLocationEntity) -> Unit,
+)
 
-                if (state.savedLocations.isNotEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        NimbusGlassTop.copy(alpha = 0.78f),
-                                        NimbusGlassBottom,
-                                    ),
-                                ),
-                            )
-                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 18.dp, vertical = 18.dp),
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                text = stringResource(R.string.compare_choose_two),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = NimbusTextSecondary,
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                            LocationSelector(
-                                label = stringResource(R.string.compare_primary),
-                                selected = state.location1,
-                                locations = state.savedLocations.filter {
-                                    it.id == state.location1?.id || it.id != state.location2?.id
-                                },
-                                onSelect = { viewModel.selectLocation1(it) },
-                                modifier = Modifier.weight(1f),
-                            )
-                            LocationSelector(
-                                label = stringResource(R.string.compare_against),
-                                selected = state.location2,
-                                locations = state.savedLocations.filter {
-                                    it.id == state.location2?.id || it.id != state.location1?.id
-                                },
-                                onSelect = { viewModel.selectLocation2(it) },
-                                modifier = Modifier.weight(1f),
-                            )
-                            }
-                        }
-                    }
-                }
+@Composable
+private fun CompareScreenBody(
+    state: CompareUiState,
+    settings: NimbusSettings,
+    actions: CompareScreenActions,
+) {
+    when {
+        state.isLoading && state.savedLocations.isEmpty() -> CompareFullScreenLoading()
+        shouldShowCompareFullScreenError(state) -> CompareFullScreenError(state.error, actions.onRetry)
+        else -> CompareScrollableContent(state, settings, actions)
+    }
+}
 
-                Spacer(modifier = Modifier.height(16.dp))
+@Composable
+private fun CompareFullScreenLoading() {
+    CompareCenteredState {
+        CompareStateCard(
+            title = stringResource(R.string.compare_preparing_title),
+            message = stringResource(R.string.compare_preparing_message),
+            loading = true,
+        )
+    }
+}
 
-                when {
-                    state.savedLocations.isEmpty() -> {
-                        CompareEmptyState(
-                            title = stringResource(R.string.compare_add_location_title),
-                            message = stringResource(R.string.compare_add_location_message),
-                            actionLabel = stringResource(R.string.compare_open_locations),
-                            onAction = onNavigateToLocations,
-                        )
-                    }
-                    state.savedLocations.size == 1 -> {
-                        CompareEmptyState(
-                            title = stringResource(R.string.compare_add_one_more_title),
-                            message = stringResource(
-                                R.string.compare_add_one_more_message,
-                                state.location1?.name ?: stringResource(R.string.common_current_device_location),
-                            ),
-                            actionLabel = stringResource(R.string.compare_add_another_location),
-                            onAction = onNavigateToLocations,
-                        )
-                    }
-                    state.error != null -> {
-                        CompareEmptyState(
-                            title = stringResource(R.string.compare_load_failed_title),
-                            message = state.error ?: stringResource(R.string.compare_load_failed_message),
-                            actionLabel = stringResource(R.string.retry),
-                            onAction = { viewModel.retry() },
-                        )
-                    }
-                    state.weather1 == null || state.weather2 == null -> {
-                        CompareEmptyState(
-                            title = stringResource(R.string.compare_loading_title),
-                            message = stringResource(R.string.compare_loading_message),
-                        )
-                    }
-                    else -> {
-                    val w1 = state.weather1!!
-                    val w2 = state.weather2!!
+@Composable
+private fun CompareFullScreenError(
+    error: String?,
+    onRetry: () -> Unit,
+) {
+    CompareCenteredState {
+        CompareStateCard(
+            title = stringResource(R.string.compare_unavailable_title),
+            message = error ?: stringResource(R.string.common_something_went_wrong),
+            actionLabel = stringResource(R.string.retry),
+            onAction = onRetry,
+        )
+    }
+}
 
-                    CompareSummaryCard(
-                        location1 = state.location1,
-                        location2 = state.location2,
-                        weather1 = w1,
-                        weather2 = w2,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
+@Composable
+private fun CompareCenteredState(content: @Composable () -> Unit) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(NimbusBackgroundGradient),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
+    }
+}
 
-                    Spacer(Modifier.height(12.dp))
+@Composable
+private fun CompareScrollableContent(
+    state: CompareUiState,
+    settings: NimbusSettings,
+    actions: CompareScreenActions,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NimbusBackgroundGradient)
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .verticalScroll(rememberScrollState()),
+    ) {
+        ScreenHeader(
+            title = stringResource(R.string.compare_title),
+            subtitle = stringResource(R.string.compare_subtitle),
+            eyebrow = stringResource(R.string.compare_eyebrow),
+            onBack = actions.onBack,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        )
+        CompareLocationControls(state, actions)
+        Spacer(modifier = Modifier.height(16.dp))
+        CompareResultSection(state, settings, actions)
+        Spacer(modifier = Modifier.height(32.dp))
+    }
+}
 
-                    // Weather condition icons row
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        NimbusGlassTop.copy(alpha = 0.82f),
-                                        NimbusGlassBottom,
-                                    ),
-                                ),
-                            )
-                            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 16.dp, vertical = 18.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            WeatherIcon(
-                                weatherCode = w1.current.weatherCode,
-                                isDay = w1.current.isDay,
-                                modifier = Modifier.size(48.dp),
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                WeatherFormatter.formatTemperature(w1.current.temperature, s),
-                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                                color = NimbusTextPrimary,
-                            )
-                            Text(
-                                w1.current.weatherCode.description,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = NimbusTextSecondary,
-                            )
-                        }
-                        Icon(
-                            Icons.AutoMirrored.Filled.CompareArrows,
-                            contentDescription = null,
-                            tint = NimbusTextTertiary,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            WeatherIcon(
-                                weatherCode = w2.current.weatherCode,
-                                isDay = w2.current.isDay,
-                                modifier = Modifier.size(48.dp),
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                WeatherFormatter.formatTemperature(w2.current.temperature, s),
-                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                                color = NimbusTextPrimary,
-                            )
-                            Text(
-                                w2.current.weatherCode.description,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = NimbusTextSecondary,
-                            )
-                        }
-                    }
+@Composable
+private fun CompareLocationControls(
+    state: CompareUiState,
+    actions: CompareScreenActions,
+) {
+    if (state.savedLocations.isEmpty()) return
 
-                    Spacer(Modifier.height(8.dp))
+    CompareIntroCard(
+        readyCount = state.savedLocations.size,
+        modifier = Modifier.padding(horizontal = 16.dp),
+    )
+    Spacer(modifier = Modifier.height(12.dp))
+    CompareSelectorCard(state, actions)
+}
 
-                    CompareRow(stringResource(R.string.compare_feels_like_label),
-                        WeatherFormatter.formatTemperature(w1.current.feelsLike, s),
-                        WeatherFormatter.formatTemperature(w2.current.feelsLike, s),
-                    )
-                    CompareRow(stringResource(R.string.humidity),
-                        "${w1.current.humidity}%",
-                        "${w2.current.humidity}%",
-                        highlightLower = true,
-                        raw1 = w1.current.humidity.toDouble(),
-                        raw2 = w2.current.humidity.toDouble(),
-                    )
-                    CompareRow(stringResource(R.string.wind),
-                        WeatherFormatter.formatWindSpeed(w1.current.windSpeed, w1.current.windDirection, s),
-                        WeatherFormatter.formatWindSpeed(w2.current.windSpeed, w2.current.windDirection, s),
-                    )
-                    CompareRow(stringResource(R.string.compare_uv_index_label),
-                        WeatherFormatter.formatUvIndex(w1.current.uvIndex),
-                        WeatherFormatter.formatUvIndex(w2.current.uvIndex),
-                        highlightLower = true,
-                        raw1 = w1.current.uvIndex,
-                        raw2 = w2.current.uvIndex,
-                    )
-                    CompareRow(stringResource(R.string.pressure),
-                        WeatherFormatter.formatPressure(w1.current.pressure, s),
-                        WeatherFormatter.formatPressure(w2.current.pressure, s),
-                    )
-                    CompareRow(stringResource(R.string.visibility),
-                        WeatherFormatter.formatVisibility(w1.current.visibility, s),
-                        WeatherFormatter.formatVisibility(w2.current.visibility, s),
-                    )
-                    CompareRow(stringResource(R.string.cloud_cover),
-                        "${w1.current.cloudCover}%",
-                        "${w2.current.cloudCover}%",
-                        highlightLower = true,
-                        raw1 = w1.current.cloudCover.toDouble(),
-                        raw2 = w2.current.cloudCover.toDouble(),
-                    )
-                    CompareRow(stringResource(R.string.compare_high_low_label),
-                        "${WeatherFormatter.formatTemperature(w1.current.dailyHigh, s)} / ${WeatherFormatter.formatTemperature(w1.current.dailyLow, s)}",
-                        "${WeatherFormatter.formatTemperature(w2.current.dailyHigh, s)} / ${WeatherFormatter.formatTemperature(w2.current.dailyLow, s)}",
-                    )
-
-                    val precip1 = w1.daily.firstOrNull()?.precipitationProbability ?: 0
-                    val precip2 = w2.daily.firstOrNull()?.precipitationProbability ?: 0
-                    CompareRow(stringResource(R.string.compare_rain_chance_label), "$precip1%", "$precip2%",
-                        highlightLower = true,
-                        raw1 = precip1.toDouble(),
-                        raw2 = precip2.toDouble(),
-                    )
-                }
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-            }
+@Composable
+private fun CompareSelectorCard(
+    state: CompareUiState,
+    actions: CompareScreenActions,
+) {
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(NimbusGlassTop.copy(alpha = 0.78f), NimbusGlassBottom),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
+            .padding(horizontal = 18.dp, vertical = 18.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                text = stringResource(R.string.compare_choose_two),
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
+            CompareSelectorRow(state, actions)
         }
     }
+}
+
+@Composable
+private fun CompareSelectorRow(
+    state: CompareUiState,
+    actions: CompareScreenActions,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        LocationSelector(
+            label = stringResource(R.string.compare_primary),
+            selected = state.location1,
+            locations = state.savedLocations.filter { it.id == state.location1?.id || it.id != state.location2?.id },
+            onSelect = actions.onSelectLocation1,
+            modifier = Modifier.weight(1f),
+        )
+        LocationSelector(
+            label = stringResource(R.string.compare_against),
+            selected = state.location2,
+            locations = state.savedLocations.filter { it.id == state.location2?.id || it.id != state.location1?.id },
+            onSelect = actions.onSelectLocation2,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun CompareResultSection(
+    state: CompareUiState,
+    settings: NimbusSettings,
+    actions: CompareScreenActions,
+) {
+    when {
+        state.savedLocations.isEmpty() -> CompareNeedLocations(actions.onNavigateToLocations)
+        state.savedLocations.size == 1 -> CompareNeedSecondLocation(state, actions.onNavigateToLocations)
+        state.error != null -> CompareLoadFailed(state.error, actions.onRetry)
+        state.weather1 == null || state.weather2 == null -> CompareLoadingPair()
+        else -> CompareLoadedWeather(state, settings)
+    }
+}
+
+@Composable
+private fun CompareNeedLocations(onNavigateToLocations: () -> Unit) {
+    CompareEmptyState(
+        title = stringResource(R.string.compare_add_location_title),
+        message = stringResource(R.string.compare_add_location_message),
+        actionLabel = stringResource(R.string.compare_open_locations),
+        onAction = onNavigateToLocations,
+    )
+}
+
+@Composable
+private fun CompareNeedSecondLocation(
+    state: CompareUiState,
+    onNavigateToLocations: () -> Unit,
+) {
+    CompareEmptyState(
+        title = stringResource(R.string.compare_add_one_more_title),
+        message = stringResource(
+            R.string.compare_add_one_more_message,
+            state.location1?.name ?: stringResource(R.string.common_current_device_location),
+        ),
+        actionLabel = stringResource(R.string.compare_add_another_location),
+        onAction = onNavigateToLocations,
+    )
+}
+
+@Composable
+private fun CompareLoadFailed(
+    error: String?,
+    onRetry: () -> Unit,
+) {
+    CompareEmptyState(
+        title = stringResource(R.string.compare_load_failed_title),
+        message = error ?: stringResource(R.string.compare_load_failed_message),
+        actionLabel = stringResource(R.string.retry),
+        onAction = onRetry,
+    )
+}
+
+@Composable
+private fun CompareLoadingPair() {
+    CompareEmptyState(
+        title = stringResource(R.string.compare_loading_title),
+        message = stringResource(R.string.compare_loading_message),
+    )
+}
+
+@Composable
+private fun CompareLoadedWeather(
+    state: CompareUiState,
+    settings: NimbusSettings,
+) {
+    val weather1 = state.weather1 ?: return
+    val weather2 = state.weather2 ?: return
+
+    CompareSummaryCard(
+        location1 = state.location1,
+        location2 = state.location2,
+        weather1 = weather1,
+        weather2 = weather2,
+        modifier = Modifier.padding(horizontal = 16.dp),
+    )
+    Spacer(Modifier.height(12.dp))
+    CompareConditionCard(weather1, weather2, settings)
+    Spacer(Modifier.height(8.dp))
+    CompareMetricRows(weather1, weather2, settings)
+}
+
+@Composable
+private fun CompareConditionCard(
+    weather1: WeatherData,
+    weather2: WeatherData,
+    settings: NimbusSettings,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(NimbusGlassTop.copy(alpha = 0.82f), NimbusGlassBottom),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
+            .padding(horizontal = 16.dp, vertical = 18.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CompareConditionColumn(weather1, settings)
+        Icon(
+            Icons.AutoMirrored.Filled.CompareArrows,
+            contentDescription = null,
+            tint = NimbusTextTertiary,
+            modifier = Modifier.size(20.dp),
+        )
+        CompareConditionColumn(weather2, settings)
+    }
+}
+
+@Composable
+private fun CompareConditionColumn(
+    weather: WeatherData,
+    settings: NimbusSettings,
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        WeatherIcon(
+            weatherCode = weather.current.weatherCode,
+            isDay = weather.current.isDay,
+            modifier = Modifier.size(48.dp),
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            WeatherFormatter.formatTemperature(weather.current.temperature, settings),
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+            color = NimbusTextPrimary,
+        )
+        Text(
+            weather.current.weatherCode.description,
+            style = MaterialTheme.typography.labelSmall,
+            color = NimbusTextSecondary,
+        )
+    }
+}
+
+@Composable
+private fun CompareMetricRows(
+    weather1: WeatherData,
+    weather2: WeatherData,
+    settings: NimbusSettings,
+) {
+    CompareRow(
+        stringResource(R.string.compare_feels_like_label),
+        WeatherFormatter.formatTemperature(weather1.current.feelsLike, settings),
+        WeatherFormatter.formatTemperature(weather2.current.feelsLike, settings),
+    )
+    CompareWeatherQualityRows(weather1, weather2, settings)
+    CompareDailyRows(weather1, weather2, settings)
+}
+
+@Composable
+private fun CompareWeatherQualityRows(
+    weather1: WeatherData,
+    weather2: WeatherData,
+    settings: NimbusSettings,
+) {
+    CompareRow(
+        stringResource(R.string.humidity),
+        "${weather1.current.humidity}%",
+        "${weather2.current.humidity}%",
+        highlightLower = true,
+        raw1 = weather1.current.humidity.toDouble(),
+        raw2 = weather2.current.humidity.toDouble(),
+    )
+    CompareRow(
+        stringResource(R.string.wind),
+        WeatherFormatter.formatWindSpeed(weather1.current.windSpeed, weather1.current.windDirection, settings),
+        WeatherFormatter.formatWindSpeed(weather2.current.windSpeed, weather2.current.windDirection, settings),
+    )
+    CompareRow(
+        stringResource(R.string.compare_uv_index_label),
+        WeatherFormatter.formatUvIndex(weather1.current.uvIndex),
+        WeatherFormatter.formatUvIndex(weather2.current.uvIndex),
+        highlightLower = true,
+        raw1 = weather1.current.uvIndex,
+        raw2 = weather2.current.uvIndex,
+    )
+    CompareRow(
+        stringResource(R.string.pressure),
+        WeatherFormatter.formatPressure(weather1.current.pressure, settings),
+        WeatherFormatter.formatPressure(weather2.current.pressure, settings),
+    )
+    CompareRow(
+        stringResource(R.string.visibility),
+        WeatherFormatter.formatVisibility(weather1.current.visibility, settings),
+        WeatherFormatter.formatVisibility(weather2.current.visibility, settings),
+    )
+    CompareRow(
+        stringResource(R.string.cloud_cover),
+        "${weather1.current.cloudCover}%",
+        "${weather2.current.cloudCover}%",
+        highlightLower = true,
+        raw1 = weather1.current.cloudCover.toDouble(),
+        raw2 = weather2.current.cloudCover.toDouble(),
+    )
+}
+
+@Composable
+private fun CompareDailyRows(
+    weather1: WeatherData,
+    weather2: WeatherData,
+    settings: NimbusSettings,
+) {
+    CompareRow(
+        stringResource(R.string.compare_high_low_label),
+        "${WeatherFormatter.formatTemperature(weather1.current.dailyHigh, settings)} / " +
+            WeatherFormatter.formatTemperature(weather1.current.dailyLow, settings),
+        "${WeatherFormatter.formatTemperature(weather2.current.dailyHigh, settings)} / " +
+            WeatherFormatter.formatTemperature(weather2.current.dailyLow, settings),
+    )
+
+    val precip1 = weather1.daily.firstOrNull()?.precipitationProbability ?: 0
+    val precip2 = weather2.daily.firstOrNull()?.precipitationProbability ?: 0
+    CompareRow(
+        stringResource(R.string.compare_rain_chance_label),
+        "$precip1%",
+        "$precip2%",
+        highlightLower = true,
+        raw1 = precip1.toDouble(),
+        raw2 = precip2.toDouble(),
+    )
 }
 
 @Composable

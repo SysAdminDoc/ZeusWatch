@@ -279,3 +279,23 @@ Reduced the Detekt baseline by one more ID:
 N-8 remains open. Remaining entries are larger structural extractions around
 `MainScreen`, `SettingsScreen`, `RadarScreen`, `CompareScreen`, and the
 `MainViewModel` constructor seam.
+
+## Batch: N-8 Detekt Baseline Reduction - Compare Screen
+
+Reduced the Detekt baseline by one more ID:
+
+- Split the route-level `CompareScreen` composable into route wiring,
+  full-screen state handling, scrollable content, selector controls, loaded
+  weather summary, condition card, and metric row helpers.
+- Preserved the existing `CompareScreen` public signature and all current
+  comparison states.
+- Regenerated `config/detekt/baseline.xml`; the
+  `LongMethod:CompareScreen.kt$@Composable fun CompareScreen(...)` entry is
+  removed.
+- Baseline count is now 14 IDs.
+
+## Remaining N-8 Boundary
+
+N-8 remains open. Remaining entries are larger structural extractions around
+`MainScreen`, `SettingsScreen`, `RadarScreen`, and the `MainViewModel`
+constructor seam.
