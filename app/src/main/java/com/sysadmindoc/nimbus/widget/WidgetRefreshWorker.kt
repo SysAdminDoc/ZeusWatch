@@ -22,10 +22,13 @@ import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.SavedLocation
+import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
-import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.data.repository.readPersistentWeatherNotificationEnabled
+import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import dagger.assisted.Assisted
@@ -55,130 +58,25 @@ class WidgetRefreshWorker @AssistedInject constructor(
         val lastLoc = prefs.lastLocation.first()
         val widgetMappings = WidgetLocationPrefs.getAllMappings(applicationContext)
 
-        // Skip refresh on critically low battery to preserve device life.
-        // BATTERY_PROPERTY_CAPACITY returns Integer.MIN_VALUE when capacity is unknown
-        // (emulators, devices without fuel gauge, read failure) — treat that as "unknown"
-        // and proceed, rather than incorrectly skipping forever.
-        val batteryManager = applicationContext.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
-        val batteryLevel = batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 100
-        if (batteryLevel in 0..15) return Result.success()
+        if (shouldSkipForBattery()) return Result.success()
 
         if (lastLoc == null && widgetMappings.isEmpty()) {
-            if (settings.persistentWeatherNotif) {
-                WeatherNotificationHelper.dismiss(applicationContext)
-            }
-            WidgetDataProvider.clearDefault(applicationContext)
+            clearWidgetState(settings.persistentWeatherNotif)
             return Result.success()
         }
 
-        // Helper to convert celsius to user's preferred unit
-        val convertTemp: (Double) -> Double = { celsius ->
-            when (settings.tempUnit) {
-                com.sysadmindoc.nimbus.data.repository.TempUnit.FAHRENHEIT -> celsius * 9.0 / 5.0 + 32.0
-                com.sysadmindoc.nimbus.data.repository.TempUnit.CELSIUS -> celsius
-            }
-        }
-
         return try {
-            val refreshedLocationKeys = mutableSetOf<String>()
-            var refreshedAnyLocation = false
-            var attemptedNetworkRefresh = false
-            var primaryWeather: WeatherData? = null
+            val state = WidgetRefreshState()
+            val convertTemp = tempConverter(settings)
             val savedLocations = runCatching { locationRepository.getAll() }.getOrElse { emptyList() }
 
-            if (lastLoc != null) {
-                attemptedNetworkRefresh = true
-                primaryWeather = weatherRepository
-                    .getWeather(lastLoc.latitude, lastLoc.longitude, lastLoc.name)
-                    .getOrNull()
+            refreshPrimaryLocation(lastLoc, convertTemp, state)
+            refreshMappedWidgets(widgetMappings, savedLocations, lastLoc, convertTemp, state)
+            updateWidgetsIfNeeded(state.refreshedAnyLocation, lastLoc)
+            updatePersistentNotification(settings, state.primaryWeather, lastLoc)
+            cacheRemainingSavedLocations(savedLocations, state.refreshedLocationKeys)
 
-                if (primaryWeather != null) {
-                    refreshedLocationKeys += locationKey(lastLoc.latitude, lastLoc.longitude)
-                    WidgetDataProvider.save(applicationContext, buildWidgetData(primaryWeather, convertTemp))
-                    refreshedAnyLocation = true
-                    // Sync to watch in background
-                    try { wearSyncManager.syncWeather(primaryWeather) } catch (_: Exception) {}
-                }
-            } else {
-                WidgetDataProvider.clearDefault(applicationContext)
-            }
-
-            if (widgetMappings.isNotEmpty()) {
-                val refreshPlan = buildWidgetRefreshPlan(widgetMappings, savedLocations)
-
-                for (widgetId in refreshPlan.orphanedWidgetIds) {
-                    WidgetLocationPrefs.removeWidget(applicationContext, widgetId)
-                    WidgetDataProvider.remove(applicationContext, widgetId)
-                }
-
-                val primaryLocationKey = lastLoc?.let { locationKey(it.latitude, it.longitude) }
-
-                for (request in refreshPlan.requests) {
-                    try {
-                        val locWeather = if (primaryWeather != null && request.key == primaryLocationKey) {
-                            primaryWeather
-                        } else {
-                            attemptedNetworkRefresh = true
-                            weatherRepository
-                                .getWeather(request.latitude, request.longitude, request.representativeName)
-                                .getOrNull()
-                        } ?: continue
-
-                        refreshedLocationKeys += request.key
-
-                        for (assignment in request.assignments) {
-                            WidgetDataProvider.save(
-                                applicationContext,
-                                buildWidgetData(locWeather, convertTemp, assignment.displayName),
-                                assignment.appWidgetId,
-                            )
-                        }
-                        refreshedAnyLocation = true
-                    } catch (e: Exception) {
-                        android.util.Log.w(
-                            "WidgetRefreshWorker",
-                            "Failed to refresh widget location ${request.representativeName}",
-                            e,
-                        )
-                    }
-                }
-            }
-
-            if (refreshedAnyLocation || lastLoc == null) {
-                NimbusSmallWidget().updateAll(applicationContext)
-                NimbusMediumWidget().updateAll(applicationContext)
-                NimbusLargeWidget().updateAll(applicationContext)
-                NimbusForecastStripWidget().updateAll(applicationContext)
-            }
-
-            // Update persistent weather notification if enabled
-            if (settings.persistentWeatherNotif) {
-                if (primaryWeather != null) {
-                    try {
-                        WeatherNotificationHelper.showOrUpdate(applicationContext, primaryWeather, settings)
-                    } catch (_: Exception) {}
-                } else if (lastLoc == null) {
-                    WeatherNotificationHelper.dismiss(applicationContext)
-                }
-            } else {
-                WeatherNotificationHelper.dismiss(applicationContext)
-            }
-
-            // Proactively cache weather for all saved locations
-            try {
-                for (loc in savedLocations) {
-                    if (!refreshedLocationKeys.add(locationKey(loc.latitude, loc.longitude))) continue
-                    try {
-                        weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
-                    } catch (_: Exception) { /* Individual location failure is non-fatal */ }
-                }
-            } catch (_: Exception) { /* Non-fatal; widget update already succeeded */ }
-
-            when {
-                refreshedAnyLocation -> Result.success()
-                attemptedNetworkRefresh -> Result.retry()
-                else -> Result.success()
-            }
+            state.toWorkResult()
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             // WorkManager cancels the worker via the coroutine's Job; re-throw
             // so cooperative cancellation runs the surrounding teardown rather
@@ -187,6 +85,192 @@ class WidgetRefreshWorker @AssistedInject constructor(
             throw cancelled
         } catch (_: Exception) {
             Result.retry()
+        }
+    }
+
+    private data class WidgetRefreshState(
+        var primaryWeather: WeatherData? = null,
+        var refreshedAnyLocation: Boolean = false,
+        var attemptedNetworkRefresh: Boolean = false,
+        val refreshedLocationKeys: MutableSet<String> = mutableSetOf(),
+    ) {
+        fun toWorkResult(): Result = when {
+            refreshedAnyLocation -> Result.success()
+            attemptedNetworkRefresh -> Result.retry()
+            else -> Result.success()
+        }
+    }
+
+    private fun shouldSkipForBattery(): Boolean {
+        // Unknown capacity (emulators, no fuel gauge, read failure) should proceed
+        // rather than incorrectly skipping widget updates forever.
+        val batteryManager = applicationContext.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+        val batteryLevel = batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 100
+        return batteryLevel in 0..15
+    }
+
+    private suspend fun clearWidgetState(persistentWeatherNotificationEnabled: Boolean) {
+        if (persistentWeatherNotificationEnabled) {
+            WeatherNotificationHelper.dismiss(applicationContext)
+        }
+        WidgetDataProvider.clearDefault(applicationContext)
+    }
+
+    private fun tempConverter(settings: NimbusSettings): (Double) -> Double =
+        { celsius ->
+            when (settings.tempUnit) {
+                TempUnit.FAHRENHEIT -> celsius * 9.0 / 5.0 + 32.0
+                TempUnit.CELSIUS -> celsius
+            }
+        }
+
+    private suspend fun refreshPrimaryLocation(
+        lastLoc: SavedLocation?,
+        convertTemp: (Double) -> Double,
+        state: WidgetRefreshState,
+    ) {
+        if (lastLoc == null) {
+            WidgetDataProvider.clearDefault(applicationContext)
+            return
+        }
+
+        state.attemptedNetworkRefresh = true
+        state.primaryWeather = weatherRepository
+            .getWeather(lastLoc.latitude, lastLoc.longitude, lastLoc.name)
+            .getOrNull()
+
+        val primaryWeather = state.primaryWeather ?: return
+        state.refreshedLocationKeys += locationKey(lastLoc.latitude, lastLoc.longitude)
+        WidgetDataProvider.save(applicationContext, buildWidgetData(primaryWeather, convertTemp))
+        state.refreshedAnyLocation = true
+        try {
+            wearSyncManager.syncWeather(primaryWeather)
+        } catch (_: Exception) {
+        }
+    }
+
+    private suspend fun refreshMappedWidgets(
+        widgetMappings: Map<Int, Long>,
+        savedLocations: List<SavedLocationEntity>,
+        lastLoc: SavedLocation?,
+        convertTemp: (Double) -> Double,
+        state: WidgetRefreshState,
+    ) {
+        if (widgetMappings.isEmpty()) return
+
+        val refreshPlan = buildWidgetRefreshPlan(widgetMappings, savedLocations)
+        removeOrphanedWidgets(refreshPlan.orphanedWidgetIds)
+
+        val primaryLocationKey = lastLoc?.let { locationKey(it.latitude, it.longitude) }
+        for (request in refreshPlan.requests) {
+            try {
+                refreshMappedWidgetRequest(request, primaryLocationKey, convertTemp, state)
+            } catch (e: Exception) {
+                logWidgetRefreshFailure(request, e)
+            }
+        }
+    }
+
+    private suspend fun removeOrphanedWidgets(orphanedWidgetIds: List<Int>) {
+        for (widgetId in orphanedWidgetIds) {
+            WidgetLocationPrefs.removeWidget(applicationContext, widgetId)
+            WidgetDataProvider.remove(applicationContext, widgetId)
+        }
+    }
+
+    private suspend fun refreshMappedWidgetRequest(
+        request: WidgetRefreshRequest,
+        primaryLocationKey: String?,
+        convertTemp: (Double) -> Double,
+        state: WidgetRefreshState,
+    ) {
+        val locWeather = weatherForMappedWidget(request, primaryLocationKey, state) ?: return
+        state.refreshedLocationKeys += request.key
+
+        for (assignment in request.assignments) {
+            WidgetDataProvider.save(
+                applicationContext,
+                buildWidgetData(locWeather, convertTemp, assignment.displayName),
+                assignment.appWidgetId,
+            )
+        }
+        state.refreshedAnyLocation = true
+    }
+
+    private suspend fun weatherForMappedWidget(
+        request: WidgetRefreshRequest,
+        primaryLocationKey: String?,
+        state: WidgetRefreshState,
+    ): WeatherData? {
+        val primaryWeather = state.primaryWeather
+        if (primaryWeather != null && request.key == primaryLocationKey) {
+            return primaryWeather
+        }
+
+        state.attemptedNetworkRefresh = true
+        return weatherRepository
+            .getWeather(request.latitude, request.longitude, request.representativeName)
+            .getOrNull()
+    }
+
+    private fun logWidgetRefreshFailure(
+        request: WidgetRefreshRequest,
+        error: Exception,
+    ) {
+        android.util.Log.w(
+            "WidgetRefreshWorker",
+            "Failed to refresh widget location ${request.representativeName}",
+            error,
+        )
+    }
+
+    private suspend fun updateWidgetsIfNeeded(
+        refreshedAnyLocation: Boolean,
+        lastLoc: SavedLocation?,
+    ) {
+        if (!refreshedAnyLocation && lastLoc != null) return
+
+        NimbusSmallWidget().updateAll(applicationContext)
+        NimbusMediumWidget().updateAll(applicationContext)
+        NimbusLargeWidget().updateAll(applicationContext)
+        NimbusForecastStripWidget().updateAll(applicationContext)
+    }
+
+    private fun updatePersistentNotification(
+        settings: NimbusSettings,
+        primaryWeather: WeatherData?,
+        lastLoc: SavedLocation?,
+    ) {
+        if (!settings.persistentWeatherNotif) {
+            WeatherNotificationHelper.dismiss(applicationContext)
+            return
+        }
+
+        if (primaryWeather != null) {
+            try {
+                WeatherNotificationHelper.showOrUpdate(applicationContext, primaryWeather, settings)
+            } catch (_: Exception) {
+            }
+        } else if (lastLoc == null) {
+            WeatherNotificationHelper.dismiss(applicationContext)
+        }
+    }
+
+    private suspend fun cacheRemainingSavedLocations(
+        savedLocations: List<SavedLocationEntity>,
+        refreshedLocationKeys: MutableSet<String>,
+    ) {
+        try {
+            for (loc in savedLocations) {
+                if (!refreshedLocationKeys.add(locationKey(loc.latitude, loc.longitude))) continue
+                try {
+                    weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
+                } catch (_: Exception) {
+                    // Individual location failure is non-fatal.
+                }
+            }
+        } catch (_: Exception) {
+            // Non-fatal; widget update already succeeded.
         }
     }
 
