@@ -22,17 +22,16 @@ import okhttp3.CertificatePinner
  * deployment for a full break.
  *
  * **Enabling pinning for a new host:**
- *   1. Run `tools/capture_api_pins.sh` against the host.
+ *   1. Run `tools/capture_api_pins.sh` or `tools/capture_api_pins.ps1`
+ *      against the host.
  *   2. Copy the `sha256/…` values into the [hostPins] map below.
  *   3. Ship. The [build] function wires pins into [NetworkModule]'s
  *      OkHttp client automatically.
  *
- * **Current status (v1.17.0):** the map is intentionally empty. Pins are
- * captured per-release in the release workflow, not hardcoded here —
- * this avoids the "Claude wrote a fake SHA" failure mode and lets CI
- * re-capture pins when certificates rotate. Until pins are populated,
- * [build] returns a no-op [CertificatePinner], preserving runtime
- * behavior while the scaffolding ships.
+ * **Current status:** OpenWeatherMap and Pirate Weather pins were captured
+ * from live TLS chains on 2026-05-17. OpenWeatherMap's forecast and air
+ * pollution APIs share `api.openweathermap.org`, so one host entry covers
+ * both keyed OWM clients.
  */
 object ApiCertificatePins {
 
@@ -40,18 +39,21 @@ object ApiCertificatePins {
      * Hostname → ordered list of `sha256/…` SPKI pins (leaf + intermediate(s)).
      * Populate via `tools/capture_api_pins.sh` before enabling in production.
      *
-     * Empty map = pinning disabled but scaffolding intact.
+     * Captured 2026-05-17 via both capture scripts and verified against the
+     * live chains. Re-run the capture script before every release and update
+     * these values if either host rotates leaf or intermediate certificates.
      */
     val hostPins: Map<String, List<String>> = mapOf(
-        // "api.openweathermap.org" to listOf(
-        //     "sha256/<leaf-spki>",
-        //     "sha256/<intermediate-spki>",
-        //     "sha256/<backup-intermediate-spki>",
-        // ),
-        // "api.pirateweather.net" to listOf(
-        //     "sha256/<leaf-spki>",
-        //     "sha256/<intermediate-spki>",
-        // ),
+        "api.openweathermap.org" to listOf(
+            "sha256/2rABlvP8a/45fRdYlmvSYEWrgBZyNampT8AqVpcPMtk=", // leaf: *.openweathermap.org
+            "sha256/KqkYYX5LYAYP7XGemqzbtPPIA8x7BS/BbOIcAXf3j2k=", // Sectigo Public Server Authentication CA OV R36
+            "sha256/Douxi77vs4G+Ib/BogbTFymEYq0QSFXwSgVCaZcI09Q=", // Sectigo Public Server Authentication Root R46
+        ),
+        "api.pirateweather.net" to listOf(
+            "sha256/95LHu8iEMa32s8PFk1JCca+ww8wU+Oay940so3a6Iek=", // leaf: *.pirateweather.net
+            "sha256/G9LNNAql897egYsabashkzUCTEJkWBzgoEtk8X/678c=", // Amazon RSA 2048 M04
+            "sha256/++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI=", // Amazon Root CA 1
+        ),
     )
 
     /**
