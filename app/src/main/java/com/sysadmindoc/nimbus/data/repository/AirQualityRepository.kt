@@ -122,25 +122,37 @@ class AirQualityRepository @Inject constructor(
         }
 
     /**
-     * Calculate astronomy data from date.
-     * Moon phase uses Conway's algorithm approximation.
+     * Calculate astronomy data from date and observer location.
+     * Moon position uses Meeus-style geocentric model in [MoonAstronomy];
+     * moonrise/moonset use hourly altitude sampling with linear interpolation
+     * on the observer's local-time horizon crossings.
      */
     fun getAstronomy(
         sunrise: String?,
         sunset: String?,
+        latitude: Double,
+        longitude: Double,
+        zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault(),
         referenceTime: LocalDateTime? = null,
     ): AstronomyData {
         val now = referenceTime
             ?: parseApiLocalTime(sunrise)
             ?: parseApiLocalTime(sunset)
             ?: LocalDateTime.now()
-        val lunarAge = calculateLunarAge(now.year, now.monthValue, now.dayOfMonth)
-        val illumination = calculateIllumination(lunarAge)
+        val nowZoned = now.atZone(zoneId)
+        val illumination = com.sysadmindoc.nimbus.util.MoonAstronomy.illuminationPercent(nowZoned)
+        val lunarAge = com.sysadmindoc.nimbus.util.MoonAstronomy.lunarAgeDays(nowZoned)
         val phase = MoonPhase.fromDayOfCycle(lunarAge)
 
-        // Approximate moonrise/moonset (shifts ~50 min/day after full moon)
-        val moonrise = estimateMoonTime(lunarAge, isRise = true)
-        val moonset = estimateMoonTime(lunarAge, isRise = false)
+        // True moonrise/moonset for the observer's location + date.
+        val times = com.sysadmindoc.nimbus.util.MoonAstronomy.riseSetForDate(
+            date = now.toLocalDate(),
+            latDeg = latitude,
+            lonDeg = longitude,
+            zone = zoneId,
+        )
+        val moonrise = times.rise?.let { LocalDateTime.of(now.toLocalDate(), it).format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME) }
+        val moonset = times.set?.let { LocalDateTime.of(now.toLocalDate(), it).format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME) }
 
         // Day length from sunrise/sunset
         val dayLength = calculateDayLength(sunrise, sunset)
@@ -151,40 +163,8 @@ class AirQualityRepository @Inject constructor(
             moonrise = moonrise,
             moonset = moonset,
             dayLength = dayLength,
+            observerLatitude = latitude,
         )
-    }
-
-    private fun calculateLunarAge(year: Int, month: Int, day: Int): Double {
-        // Trig approximation of lunar age
-        var y = year.toDouble()
-        var m = month.toDouble()
-        if (m <= 2) { y -= 1; m += 12 }
-        val jd = (365.25 * (y + 4716)).toInt() + (30.6001 * (m + 1)).toInt() + day - 1524.5
-        val daysSinceNew = jd - 2451550.1 // Known new moon: Jan 6 2000
-        // Normalize into [0, period): Java's % keeps the sign of the dividend,
-        // so any pre-2000 caller (or future bug producing a negative jd) would
-        // otherwise yield a negative lunar age and a wrong MoonPhase bucket.
-        val synodic = 29.53058867
-        return ((daysSinceNew % synodic) + synodic) % synodic
-    }
-
-    private fun calculateIllumination(lunarAge: Double): Double {
-        // Approximate illumination from lunar age
-        val phase = lunarAge / 29.53058867
-        return ((1 - cos(phase * 2 * Math.PI)) / 2 * 100).roundToInt().toDouble()
-    }
-
-    private fun estimateMoonTime(lunarAge: Double, isRise: Boolean): String {
-        // Very rough approximation
-        val baseHour = if (isRise) 18.0 else 6.0
-        val ageNormalized = ((lunarAge % 29.53) + 29.53) % 29.53
-        val shift = (ageNormalized / 29.53) * 24.0
-        val total = ((baseHour + shift) % 24 + 24) % 24
-        val hour = total.toInt().coerceIn(0, 23)
-        val minute = ((total - hour) * 60).toInt().coerceIn(0, 59)
-        val amPm = if (hour < 12) "AM" else "PM"
-        val h12 = if (hour == 0) 12 else if (hour > 12) hour - 12 else hour
-        return String.format(Locale.US, "%d:%02d %s", h12, minute, amPm)
     }
 
     private fun calculateDayLength(sunrise: String?, sunset: String?): String? {

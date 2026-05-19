@@ -150,6 +150,11 @@ data class AstronomyData(
     val moonrise: String?,
     val moonset: String?,
     val dayLength: String?, // "HH:mm"
+    // Observer latitude in degrees (positive north). Used by MoonPhaseCard to flip
+    // the moon visualization for southern-hemisphere observers, who see the moon
+    // rotated 180° relative to the northern view (issue #16). Optional so legacy
+    // call sites that pre-date plumbing still compile.
+    val observerLatitude: Double? = null,
 )
 
 enum class MoonPhase(val label: String, val emoji: String) {

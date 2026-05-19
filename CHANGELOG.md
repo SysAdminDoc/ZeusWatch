@@ -4,6 +4,15 @@ All notable changes to Nimbus Weather are documented here.
 
 ## [Unreleased]
 
+## [1.21.1] - 2026-05-18
+
+### Fixed
+- **Moon rise/set + illumination wildly off vs Jean Meeus astronomical algorithm** ([#16](https://github.com/SysAdminDoc/ZeusWatch/issues/16)) — The previous `estimateMoonTime` returned a location-independent `18:00`-anchored value drifted only by lunar age. Real moonrise/moonset depend on the observer's latitude, longitude, and the moon's declination (which varies seasonally + by lunar standstill cycle). Replaced with `MoonAstronomy.kt`: Meeus-style geocentric position model (chapter 47 — top periodic longitude/latitude/distance terms), with moonrise/moonset solved by hourly altitude-curve sampling and linear interpolation through the `h0 = +0.125°` horizon reference (parallax + semi-diameter absorbed per Meeus § 15). Returns explicit `alwaysUp` / `alwaysDown` flags so polar-latitude observers see "no rise today" instead of a fabricated time. Illumination now uses the Meeus 48 phase-angle formula `(1 + cos i) / 2` with the Sun-Earth-Moon geometry — was previously a synodic-day cosine that ignored the actual lunar elongation.
+- **Moon visualization upside-down for southern-hemisphere observers** ([#16](https://github.com/SysAdminDoc/ZeusWatch/issues/16)) — The moon canvas always rendered the terminator on the right side for waxing phases. Southern-hemisphere observers see the moon rotated 180° (terminator on the opposite side) — that's actually the correct view from their location, but the app forced the northern view. Fixed by XOR-ing the waxing/waning bias with `latitude < 0` so a waxing crescent reads "lit on the left" for a Sydney/Buenos Aires observer.
+
+### Internal
+- `getAstronomy()` now takes explicit `latitude` / `longitude` / `zoneId` parameters; threaded through `MainViewModel.fetchAstronomy()`. `AstronomyData.observerLatitude` added so the UI can apply the hemisphere flip without a second lookup.
+
 ## [1.21.0] - 2026-05-18
 
 Localization pipeline, Open-Meteo BOM provider, shared chrome polish, Wear OS

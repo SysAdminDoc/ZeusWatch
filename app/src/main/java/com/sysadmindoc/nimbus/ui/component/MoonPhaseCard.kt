@@ -124,6 +124,10 @@ fun MoonPhaseCard(
             MoonCanvas(
                 illumination = astronomy.moonIllumination,
                 phase = astronomy.moonPhase,
+                // Southern-hemisphere observers see the moon rotated 180° relative
+                // to the northern view — terminator on the opposite side, "upside
+                // down" relative to maps printed for northern audiences (issue #16).
+                southernHemisphere = (astronomy.observerLatitude ?: 0.0) < 0.0,
                 modifier = Modifier.size(72.dp),
             )
 
@@ -161,6 +165,7 @@ fun MoonPhaseCard(
 private fun MoonCanvas(
     illumination: Double,
     phase: MoonPhase,
+    southernHemisphere: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Canvas(modifier = modifier) {
@@ -176,7 +181,11 @@ private fun MoonCanvas(
 
         // Illuminated portion
         val illFraction = (illumination / 100.0).coerceIn(0.0, 1.0)
-        val isWaxing = phase.ordinal <= MoonPhase.FULL_MOON.ordinal
+        // In the southern hemisphere the lit hemisphere appears mirrored relative
+        // to the northern view, so flip the waxing/waning bias before drawing the
+        // terminator. Net effect: a waxing crescent reads "lit on the left" for a
+        // southern observer.
+        val isWaxing = (phase.ordinal <= MoonPhase.FULL_MOON.ordinal) xor southernHemisphere
 
         // Build illuminated path using bezier approximation
         val path = Path()

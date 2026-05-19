@@ -345,7 +345,7 @@ class MainViewModel @Inject constructor(
                         launch { fetchAlerts(lat, lon, requestId) }
                         launch { fetchAirQuality(lat, lon, requestId) }
                         launch { fetchOnThisDay(lat, lon, data.current.observationTime?.toLocalDate(), requestId) }
-                        launch { fetchAstronomy(data, requestId) }
+                        launch { fetchAstronomy(data, lat, lon, requestId) }
                         launch { fetchRadarPreview(lat, lon, requestId) }
                         launch { fetchNowcast(lat, lon, requestId) }
                     }
@@ -435,12 +435,14 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun fetchAstronomy(data: WeatherData, requestId: Long) {
+    private fun fetchAstronomy(data: WeatherData, lat: Double, lon: Double, requestId: Long) {
         try {
             val astronomy = airQualityRepository.getAstronomy(
-                data.current.sunrise,
-                data.current.sunset,
-                data.current.observationTime,
+                sunrise = data.current.sunrise,
+                sunset = data.current.sunset,
+                latitude = lat,
+                longitude = lon,
+                referenceTime = data.current.observationTime,
             )
             if (isLatestWeatherRequest(requestId)) {
                 _uiState.update { it.copy(astronomy = astronomy) }
