@@ -56,7 +56,7 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
  * Tabbed hourly trend system inspired by breezy-weather.
- * Swipeable tab chips switch between data dimensions:
+ * Swipeable tab segments switch between data dimensions:
  * Temperature, Feels Like, Wind, Precipitation, Cloud Cover, Humidity.
  */
 

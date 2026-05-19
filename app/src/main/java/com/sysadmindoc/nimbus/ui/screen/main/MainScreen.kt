@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -31,8 +30,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
@@ -78,9 +75,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -107,6 +102,9 @@ import com.sysadmindoc.nimbus.ui.component.HumidityCard
 import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
 import com.sysadmindoc.nimbus.ui.component.GlassActionButton
 import com.sysadmindoc.nimbus.ui.component.MoonPhaseCard
+import com.sysadmindoc.nimbus.ui.component.NimbusScrollableSegmentRow
+import com.sysadmindoc.nimbus.ui.component.NimbusSelectableSegment
+import com.sysadmindoc.nimbus.ui.component.NimbusStatusBadge
 import com.sysadmindoc.nimbus.ui.component.PrecipitationChartCard
 import com.sysadmindoc.nimbus.ui.component.PressureTrendCard
 import com.sysadmindoc.nimbus.ui.component.NowcastCard
@@ -138,10 +136,7 @@ import com.sysadmindoc.nimbus.ui.navigation.MainDeepLinkTarget
 import com.sysadmindoc.nimbus.ui.navigation.ZeusWatchBottomNav
 import com.sysadmindoc.nimbus.ui.screen.radar.RadarTab
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
-import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
-import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
-import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -746,7 +741,7 @@ private fun WeatherContent(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (todayPrecipChance > 0) {
-                            StatusBadge(
+                            NimbusStatusBadge(
                                 icon = Icons.Filled.WaterDrop,
                                 text = stringResource(R.string.main_rain_risk, todayPrecipChance),
                                 tint = NimbusBlueAccent,
@@ -758,7 +753,7 @@ private fun WeatherContent(
                             updatedAgeMinutes < 120 -> NimbusWarning.copy(alpha = 0.7f)
                             else -> NimbusWarning
                         }
-                        StatusBadge(
+                        NimbusStatusBadge(
                             text = if (isCached) {
                                 stringResource(R.string.main_offline_ready_status, updatedAgo)
                             } else {
@@ -828,39 +823,6 @@ private fun PremiumToolbarButton(
         onClick = onClick,
         modifier = modifier,
     )
-}
-
-@Composable
-private fun StatusBadge(
-    text: String,
-    tint: Color,
-    modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
-) {
-    val shape = RoundedCornerShape(8.dp)
-    Row(
-        modifier = modifier
-            .clip(shape)
-            .background(Color.White.copy(alpha = 0.08f))
-            .border(1.dp, Color.White.copy(alpha = 0.09f), shape)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(14.dp),
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-        }
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-            color = tint,
-        )
-    }
 }
 
 // ── Shared Card Renderer ─────────────────────────────────────────────────
@@ -1174,76 +1136,17 @@ private fun LocationSelectorBar(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        // Chip row (tappable location names)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .selectableGroup(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+        NimbusScrollableSegmentRow {
             locations.forEachIndexed { index, loc ->
                 val isActive = index == currentIndex
-                val chipShape = RoundedCornerShape(10.dp)
-                val chipBrush = if (isActive) {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NimbusBlueAccent.copy(alpha = 0.26f),
-                            NimbusGlassBottom,
-                        ),
-                    )
-                } else {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NimbusGlassTop.copy(alpha = 0.7f),
-                            NimbusCardBg,
-                        ),
-                    )
-                }
-                val borderColor = if (isActive) NimbusBlueAccent.copy(alpha = 0.65f) else NimbusCardBorder
-
-                Row(
-                    modifier = Modifier
-                        .heightIn(min = 48.dp)
-                        .clip(chipShape)
-                        .background(chipBrush)
-                        .border(1.dp, borderColor, chipShape)
-                        .selectable(
-                            selected = isActive,
-                            onClick = { onSelected(index) },
-                            role = Role.Tab,
-                        )
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (isActive) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(NimbusBlueAccent),
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    if (loc.isCurrentLocation) {
-                        Icon(
-                            Icons.Filled.MyLocation,
-                            contentDescription = null,
-                            tint = if (isActive) NimbusTextPrimary else NimbusTextTertiary,
-                            modifier = Modifier.size(14.dp),
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
-                    Text(
-                        text = if (loc.isCurrentLocation) stringResource(R.string.common_my_location) else loc.name,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium,
-                        ),
-                        color = if (isActive) NimbusTextPrimary else NimbusTextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                NimbusSelectableSegment(
+                    label = if (loc.isCurrentLocation) stringResource(R.string.common_my_location) else loc.name,
+                    selected = isActive,
+                    onClick = { onSelected(index) },
+                    role = Role.Tab,
+                    leadingIcon = if (loc.isCurrentLocation) Icons.Filled.MyLocation else null,
+                    maxLines = 1,
+                )
             }
         }
 

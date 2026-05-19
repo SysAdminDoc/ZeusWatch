@@ -1,10 +1,10 @@
 # ZeusWatch Roadmap
 
-**Current Version**: v1.20.3 (phone versionCode 86, wear versionCode 62)
+**Current Version**: v1.20.4 (phone versionCode 87, wear versionCode 63)
 **Architecture**: Kotlin 2.1.0 / Jetpack Compose / Hilt / MVVM / multi-module (phone + wear)
 **Flavors**: `standard` (Google Play services, Gemini Nano, Firestore, Wear DataLayer) / `freenet` (F-Droid clean)
 **License**: LGPL-3.0
-**Last refreshed**: 2026-05-17 — source saturation check, memory consolidation, and dependency runway refresh.
+**Last refreshed**: 2026-05-18 — premium shared-chrome polish sync after the source saturation and dependency runway refresh.
 
 > This document is the working plan. It is dense by design. Every claim in the prose maps to a source in the Appendix. Items are organized by horizon (Now / Next / Later) and by theme. Closed items move to [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
@@ -49,7 +49,7 @@ Every item below maps to at least one theme. Themes are the lens for prioritizat
 
 ## 2026-05-17 Research Delta
 
-Today's autonomous audit created a canonical context file and a durable research bundle under [.ai/research/2026-05-17/](.ai/research/2026-05-17/). The repository inventory in [STATE_OF_REPO.md](.ai/research/2026-05-17/STATE_OF_REPO.md) confirms the live project is v1.20.3, had 353 tracked files and 259 Kotlin files, and was six commits ahead of `origin/main` before this research commit.
+The 2026-05-17 autonomous audit created a canonical context file and a durable research bundle under [.ai/research/2026-05-17/](.ai/research/2026-05-17/). The repository inventory in [STATE_OF_REPO.md](.ai/research/2026-05-17/STATE_OF_REPO.md) confirmed that run's live project was v1.20.3, had 353 tracked files and 259 Kotlin files, and was six commits ahead of `origin/main` before the research commit.
 
 Key changes to planning:
 
@@ -106,7 +106,7 @@ Supporting refactor: extracted `buildPrompt` to a companion object `internal fun
 **Scope**: Chip away during normal feature work. Target: baseline empty by v1.25.0. Extract Compose helpers, not refactors-for-the-sake-of-refactor.
 
 ### N-9. Widget pure-function test coverage · **T-RELIABILITY**
-**Status**: **PARTIAL** — `WidgetThemeTest` (16 assertions) covers `widgetUpdatedLabel` (freshness pill, NTP rollback guard, locale-aware format overrides) and `weatherIconRes` (every WMO band → drawable, day/night clear-sky variant). Rescoped from the original "runGlanceAppWidgetUnitTest per widget" plan because that helper ships in `androidx.glance:glance-testing` 1.2.0+ and the repo is on Glance 1.1.1. Source: [Glance release notes](https://developer.android.com/jetpack/androidx/releases/glance).
+**Status**: **PARTIAL** — `WidgetThemeTest` (16 assertions) covers `widgetUpdatedLabel` (freshness badge, NTP rollback guard, locale-aware format overrides) and `weatherIconRes` (every WMO band → drawable, day/night clear-sky variant). Rescoped from the original "runGlanceAppWidgetUnitTest per widget" plan because that helper ships in `androidx.glance:glance-testing` 1.2.0+ and the repo is on Glance 1.1.1. Source: [Glance release notes](https://developer.android.com/jetpack/androidx/releases/glance).
 **Scope**: To use `runGlanceAppWidgetUnitTest`, upgrade Glance to 1.2.0+ — bump-and-test as a separate item once the rest of the Compose BOM is stable on 2025.04.01 (the current pin). Until then, keep adding pure-function tests for any helpers introduced into the widget package.
 
 ### N-10. Dependency runway and platform compatibility pass · **T-RELIABILITY** / **T-PERF**
@@ -136,7 +136,7 @@ Pollen is already in `AirQualityRepository`; the [docs](https://open-meteo.com/e
 Fetch the next 24h temp + precip from 2–3 enabled providers in parallel; render a "providers agree within ±X°" or "diverge >5°" badge with a tap-to-expand showing each provider's value. This is the FOSS answer to AccuWeather's MinuteCast / Carrot's multi-model. Borrowed from the [Breezy idea](https://github.com/breezy-weather/breezy-weather) of leveraging the multi-source system for transparency, not just resilience. Effort: medium. Risk: API quota multiplication — gate behind opt-in.
 
 ### NX-6. Per-location offline-first cache · **T-PERF**
-Existing roadmap calls this out: "switching to a saved location triggers a fresh API call." Cache the last-known weather per `savedLocationId` in Room and serve instantly while a background fetch refreshes. Already 80% of the infrastructure is in place (`WeatherCacheEntity` keyed by coord); just need a `getInstantThenRefresh` flow at the repository layer. Done when location switch renders <100ms with cached data + an "updating…" pill. Effort: low–medium.
+Existing roadmap calls this out: "switching to a saved location triggers a fresh API call." Cache the last-known weather per `savedLocationId` in Room and serve instantly while a background fetch refreshes. Already 80% of the infrastructure is in place (`WeatherCacheEntity` keyed by coord); just need a `getInstantThenRefresh` flow at the repository layer. Done when location switch renders <100ms with cached data + an "updating..." badge. Effort: low–medium.
 
 ### NX-7. Baseline Profiles + Macrobenchmark startup gate · **T-PERF**
 Compose-heavy apps see ~30% startup wins from Baseline Profiles. Source: [Android Developers](https://developer.android.com/develop/ui/compose/performance/baseline-profiles). Add `:benchmark` module with a Macrobenchmark covering: cold start → first frame, location switch, radar tab open, settings open. CI publishes the trace + asserts a ceiling (e.g. p95 cold start <1200ms). Profile is generated once per release; the AGP plugin handles bundling. Effort: medium.
@@ -180,7 +180,7 @@ Custom alerts today cover 5 metrics (high, low, gusts, 24h precip, UV peak). Add
 ### NX-18. WCAG 2.2 AA audit + dynamic font scaling pass · accessibility / **T-RELIABILITY**
 Strategic Compass #5 says "accessibility-first"; v1.18.0 closed the Canvas-a11y front and added Espresso `AccessibilityChecks.enable()` to the instrumented suite. The next pass:
 1. **Contrast audit** of every weather-adaptive theme variant against [WCAG 2.2 AA](https://www.w3.org/TR/WCAG21/) (4.5:1 normal text, 3:1 large text, 3:1 graphics). The amber/blue/purple condition palettes are the highest-risk areas.
-2. **Font scaling stress test** at `fontScale = 1.3 / 1.5 / 1.8` on every screen — particularly the temperature graph axis labels, daily forecast rows, and Wear pill rows. Use Compose `LocalDensity` previews.
+2. **Font scaling stress test** at `fontScale = 1.3 / 1.5 / 1.8` on every screen — particularly the temperature graph axis labels, daily forecast rows, and Wear badge rows. Use Compose `LocalDensity` previews.
 3. **Touch target ≥48dp audit** on dense settings rows and the location selector.
 4. Extend Compose UI tests with accessibility checks beyond MainScreen/Settings/Locations to all 5 phone screens.
 Source: [Mobile App Accessibility 2026 guide](https://www.accessibilitychecker.org/guides/mobile-apps-accessibility/). Effort: medium.

@@ -172,21 +172,19 @@ private fun AlertBannerItem(
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AlertMetaPill(
+                    AlertMetaBadge(
                         text = severityLabel,
-                        background = severityColor.copy(alpha = 0.16f),
-                        textColor = severityColor,
+                        tint = severityColor,
+                        emphasized = true,
                     )
-                    AlertMetaPill(
+                    AlertMetaBadge(
                         text = urgencyLabel,
-                        background = Color.White.copy(alpha = 0.06f),
-                        textColor = NimbusTextSecondary,
+                        tint = NimbusTextSecondary,
                     )
                     alert.expires?.let { formatExpiresIn(context, it) }?.let { expiresIn ->
-                        AlertMetaPill(
+                        AlertMetaBadge(
                             text = expiresIn,
-                            background = Color.White.copy(alpha = 0.06f),
-                            textColor = NimbusTextTertiary,
+                            tint = NimbusTextTertiary,
                         )
                     }
                 }
@@ -214,23 +212,17 @@ private fun AlertBannerItem(
 }
 
 @Composable
-private fun AlertMetaPill(
+private fun AlertMetaBadge(
     text: String,
-    background: Color,
-    textColor: Color,
+    tint: Color,
+    emphasized: Boolean = false,
 ) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(background)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = textColor,
-        )
-    }
+    NimbusStatusBadge(
+        text = text,
+        tint = tint,
+        emphasized = emphasized,
+        maxLines = 1,
+    )
 }
 
 private fun formatExpiresIn(context: Context, isoString: String): String? {
