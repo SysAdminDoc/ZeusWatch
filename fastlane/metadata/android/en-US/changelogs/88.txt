@@ -1,0 +1,7 @@
+v1.21.0 - Localization, BOM provider, shared chrome polish
+
+- Complete localization pipeline with initial Spanish translation.
+- Open-Meteo BOM forecast provider for Australian coverage.
+- Populated API certificate pins for key-bearing endpoints.
+- Expanded Wear OS complications and navigation touch targets.
+- Reduced detekt baseline across 11 composables.

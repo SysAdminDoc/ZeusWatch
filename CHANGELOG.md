@@ -4,63 +4,29 @@ All notable changes to Nimbus Weather are documented here.
 
 ## [Unreleased]
 
-### Fixed
-- Removed the gray system bay behind the bottom navigation dock by making the app own the bottom inset surface and disabling platform navigation-bar contrast scrims.
+## [1.21.0] - 2026-05-18
+
+Localization pipeline, Open-Meteo BOM provider, shared chrome polish, Wear OS
+complications, API certificate pins, and detekt baseline reduction.
 
 ### Added
-- Started the localization roadmap by moving core navigation, Locations, Compare, and Wear OS state copy into Android string resources, with an initial Spanish resource set for those high-traffic surfaces.
-- Extended the localization foundation through Settings, including category cards, section headers, control labels, helper copy, source selectors, API-key guidance, and accessibility state descriptions.
-- Localized home-screen widget chrome, including widget descriptions, Glance empty states, section labels, freshness announcements, setup flow copy, and compact Today/Tomorrow day labels.
-- Localized Custom Alerts screen/editor copy, rule status semantics, notification channel labels, and custom-rule notification text.
-- Localized Home Cards setting labels for every `CardType`, including move and show/hide accessibility descriptions.
-- Localized Settings enum labels for units, radar providers, icon/theme/summary styles, alert filters, alert-source preferences, and weather-source dropdowns.
-- Localized top-level Today screen loading, retry/location actions, share menu, offline banner, freshness badges, footer, location chips, and focused empty-card copy.
-- Localized visible Today card header titles through the shared `WeatherCard` resource-title overload.
-- Localized Today alert banner/details, the community report sheet, shared back action, alert severity/urgency labels, and report condition labels.
-- Localized Today card micro-labels for current-condition hero metrics, rain nowcast legend, snowfall units, and radar preview/open states.
-- Localized hourly/daily forecast card tabs, detail labels, UV/cloud/humidity descriptors, and short forecast summary sentences.
-- Localized standalone Hourly and Daily forecast tab titles, Today/Tomorrow labels, high/low summaries, rain labels, wind labels, UV chips, and feels-like copy.
-- Localized Today overview copy for current conditions, details grid labels, forecast brief chips/footer, and the skeleton loading label.
-- Localized air-quality, humidity comfort, dew-point comfort, and pollen card labels, advice, empty copy, and accessibility summaries.
-- Localized cloud cover, visibility, pressure, temperature graph, UV, and precipitation chart labels and accessibility summaries.
-- Localized astronomy, moon phase, golden-hour, sun path, and sunshine-duration labels, countdowns, and accessibility summaries.
-- Localized rain nowcast summaries, outdoor activity score labels/factors, wind compass Beaufort/gust copy, and wind trend summaries.
-- Localized On This Day history context, severe-weather CAPE descriptions, and pet-safety alert guidance.
-
-### Verified
-- `./gradlew.bat :app:compileStandardDebugKotlin :wear:compileDebugKotlin --console=plain`
-- `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.ui.screen.locations.LocationsScreenLogicTest --console=plain`
-- `./gradlew.bat :app:compileStandardDebugKotlin --console=plain`
-- `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.widget.WidgetRefreshWorkerLogicTest --tests com.sysadmindoc.nimbus.widget.WidgetConfigLogicTest --console=plain`
-- `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.util.AlertCheckWorkerTest --console=plain`
-- `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.data.repository.UserPreferencesTest --console=plain`
-- `./gradlew.bat :app:compileStandardDebugKotlin --console=plain`
-- `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.ui.screen.main.MainScreenLogicTest --console=plain`
-
-## [1.20.4] - 2026-05-18
-
-Premium product-refinement pass focused on shared status, selector, settings,
-widget, and Wear OS chrome.
+- Complete localization pipeline: moved all hardcoded strings across every surface (navigation, Today, Settings, widgets, Custom Alerts, Home Cards, forecast tabs, air quality, astronomy, wind, nowcast, On This Day, pet safety) into Android string resources with an initial Spanish translation set.
+- Open-Meteo BOM (Bureau of Meteorology) forecast provider for Australian coverage.
+- Populated API certificate pins for OWM, OWM-AQI, and Pirate Weather TLS endpoints.
+- Expanded Wear OS weather complications with additional data types.
+- Wear OS unit test infrastructure covering tile rendering and direct weather fetch paths.
 
 ### Changed
-- Centralized rectangular status badge and selectable segment treatments in `NimbusChrome`, then reused them across Today, Radar, Compare, Custom Alerts, alert banner/details, and radar preview states.
-- Rebuilt the Today location selector and radar layer selector on the shared segment system for clearer selected state, consistent TalkBack selected/not-selected announcements, and tighter spacing rhythm.
-- Tightened settings Home Cards management with framed card rows and a more discoverable reset action instead of loose text controls.
-- Strengthened Custom Alerts trust signals by making delete controls read as destructive, sharing the segment system in the rule editor, and moving trigger previews/status labels onto the shared badge chrome.
-- Renamed widget freshness controls and Wear OS mini status surfaces away from legacy status naming, while keeping the same 8dp rectangular treatment.
-- Upgraded Wear OS navigation links from tiny text-only affordances into rectangular 32dp touch targets with button roles.
+- Centralized rectangular status badge and selectable segment treatments in `NimbusChrome`, reused across Today, Radar, Compare, Custom Alerts, alert banner/details, and radar preview.
+- Rebuilt the Today location selector and radar layer selector on the shared segment system with consistent TalkBack announcements.
+- Tightened Settings Home Cards management with framed card rows and a discoverable reset action.
+- Strengthened Custom Alerts destructive affordances with shared badge chrome for trigger previews and status labels.
+- Upgraded Wear OS navigation links into rectangular 32dp touch targets with button roles.
+- Reduced detekt baseline across 11 composables: radar preview, current conditions, rule editor, sun arc, temperature graph, widget refresh worker, wear sync store, compare screen, radar screen, settings sections, main screen card renderer.
+- Converted two large `when` expressions to lookup maps for maintainability.
 
-### Verified
-- `./gradlew.bat :app:compileStandardDebugKotlin :wear:compileDebugKotlin`
-- `python tools/check_localization.py`
-- `./gradlew.bat detekt :app:compileStandardDebugKotlin :app:compileFreenetDebugKotlin :wear:compileDebugKotlin lintStandardDebug :wear:lintDebug`
-- `./gradlew.bat :app:clean :app:installStandardDebug`
-- `adb -s R5CY34G070L shell am start -n com.sysadmindoc.nimbus.debug/com.sysadmindoc.nimbus.MainActivity`
-- `adb -s R5CY34G070L logcat -b crash -d`
-
-### Version
-- phone versionCode 86 -> 87, versionName 1.20.3 -> 1.20.4
-- wear versionCode 62 -> 63, versionName 1.20.3 -> 1.20.4
+### Fixed
+- Removed the gray system bar behind the bottom navigation dock by owning the bottom inset surface and disabling platform navigation-bar contrast scrims.
 
 ## [1.20.3] - 2026-05-13
 
