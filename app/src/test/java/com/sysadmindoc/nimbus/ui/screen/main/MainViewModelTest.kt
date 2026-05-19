@@ -127,7 +127,7 @@ class MainViewModelTest {
         coEvery { weatherSourceManager.getAlerts(any(), any()) } coAnswers { Result.success(emptyList()) }
         coEvery { weatherSourceManager.getAirQuality(any(), any()) } coAnswers { Result.success(testAirQuality) }
         coEvery { weatherSourceManager.getMinutelyPrecipitation(any(), any()) } coAnswers { Result.success(emptyList()) }
-        every { airQualityRepository.getAstronomy(any(), any(), any()) } returns testAstronomy
+        every { airQualityRepository.getAstronomy(any(), any(), any(), any(), any(), any()) } returns testAstronomy
         coEvery { onThisDayRepository.getOnThisDay(any(), any(), any()) } returns null
         coEvery { weatherRepository.getWeather(any(), any(), any()) } coAnswers {
             val latitude = firstArg<Double>()
@@ -236,9 +236,12 @@ class MainViewModelTest {
         val observationTime = testWeatherData.current.observationTime ?: error("missing observation time")
         verify {
             airQualityRepository.getAstronomy(
-                testWeatherData.current.sunrise,
-                testWeatherData.current.sunset,
-                observationTime,
+                sunrise = testWeatherData.current.sunrise,
+                sunset = testWeatherData.current.sunset,
+                latitude = any(),
+                longitude = any(),
+                zoneId = any(),
+                referenceTime = observationTime,
             )
         }
         coVerify {
