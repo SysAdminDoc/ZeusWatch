@@ -102,7 +102,7 @@ private fun RadarPreviewMap(
         if (baseMapTileUrl == null && radarTileUrl == null) {
             RadarPreviewEmptyState(modifier = Modifier.align(Alignment.Center))
         }
-        RadarPreviewStatusPill(
+        RadarPreviewStatusBadge(
             hasRadarTile = radarTileUrl != null,
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -191,31 +191,21 @@ private fun RadarPreviewEmptyState(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun RadarPreviewStatusPill(
+private fun RadarPreviewStatusBadge(
     hasRadarTile: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    NimbusStatusBadge(
+        text = if (hasRadarTile) {
+            stringResource(R.string.radar_preview_live)
+        } else {
+            stringResource(R.string.radar_preview_map_preview)
+        },
+        tint = NimbusTextPrimary,
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black.copy(alpha = 0.34f))
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-        ) {
-            Text(
-                text = if (hasRadarTile) {
-                    stringResource(R.string.radar_preview_live)
-                } else {
-                    stringResource(R.string.radar_preview_map_preview)
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = NimbusTextPrimary,
-            )
-        }
-    }
+        emphasized = true,
+        maxLines = 1,
+    )
 }
 
 @Composable

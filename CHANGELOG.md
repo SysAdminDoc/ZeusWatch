@@ -34,6 +34,31 @@ All notable changes to Nimbus Weather are documented here.
 - `./gradlew.bat :app:compileStandardDebugKotlin --console=plain`
 - `./gradlew.bat :app:testStandardDebugUnitTest --tests com.sysadmindoc.nimbus.ui.screen.main.MainScreenLogicTest --console=plain`
 
+## [1.20.4] - 2026-05-18
+
+Premium product-refinement pass focused on shared status, selector, settings,
+widget, and Wear OS chrome.
+
+### Changed
+- Centralized rectangular status badge and selectable segment treatments in `NimbusChrome`, then reused them across Today, Radar, Compare, Custom Alerts, alert banner/details, and radar preview states.
+- Rebuilt the Today location selector and radar layer selector on the shared segment system for clearer selected state, consistent TalkBack selected/not-selected announcements, and tighter spacing rhythm.
+- Tightened settings Home Cards management with framed card rows and a more discoverable reset action instead of loose text controls.
+- Strengthened Custom Alerts trust signals by making delete controls read as destructive, sharing the segment system in the rule editor, and moving trigger previews/status labels onto the shared badge chrome.
+- Renamed widget freshness controls and Wear OS mini status surfaces away from legacy status naming, while keeping the same 8dp rectangular treatment.
+- Upgraded Wear OS navigation links from tiny text-only affordances into rectangular 32dp touch targets with button roles.
+
+### Verified
+- `./gradlew.bat :app:compileStandardDebugKotlin :wear:compileDebugKotlin`
+- `python tools/check_localization.py`
+- `./gradlew.bat detekt :app:compileStandardDebugKotlin :app:compileFreenetDebugKotlin :wear:compileDebugKotlin lintStandardDebug :wear:lintDebug`
+- `./gradlew.bat :app:clean :app:installStandardDebug`
+- `adb -s R5CY34G070L shell am start -n com.sysadmindoc.nimbus.debug/com.sysadmindoc.nimbus.MainActivity`
+- `adb -s R5CY34G070L logcat -b crash -d`
+
+### Version
+- phone versionCode 86 -> 87, versionName 1.20.3 -> 1.20.4
+- wear versionCode 62 -> 63, versionName 1.20.3 -> 1.20.4
+
 ## [1.20.3] - 2026-05-13
 
 Premium UX polish pass across phone, Wear OS, widgets, and project screenshots.

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -136,7 +138,7 @@ internal fun WearStateCard(
 }
 
 @Composable
-internal fun WearMiniPill(
+internal fun WearMiniBadge(
     text: String,
     modifier: Modifier = Modifier,
     accent: Color = WearBlueAccent,
@@ -160,22 +162,41 @@ internal fun WearLinkRow(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
+        WearLinkButton(
             text = primary.first,
-            fontSize = 10.sp,
-            color = WearBlueAccent,
-            modifier = Modifier.clickable(onClick = primary.second),
+            onClick = primary.second,
+            modifier = Modifier.weight(1f),
         )
         secondary?.let {
-            Text(
+            WearLinkButton(
                 text = it.first,
-                fontSize = 10.sp,
-                color = WearBlueAccent,
-                modifier = Modifier.clickable(onClick = it.second),
+                onClick = it.second,
+                modifier = Modifier.weight(1f),
             )
         }
     }
+}
+
+@Composable
+private fun WearLinkButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Medium,
+        color = WearBlueAccent,
+        textAlign = TextAlign.Center,
+        modifier = modifier
+            .heightIn(min = 32.dp)
+            .background(WearBlueAccent.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+            .border(1.dp, WearBlueAccent.copy(alpha = 0.20f), RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick, role = Role.Button)
+            .padding(horizontal = 8.dp, vertical = 7.dp),
+    )
 }

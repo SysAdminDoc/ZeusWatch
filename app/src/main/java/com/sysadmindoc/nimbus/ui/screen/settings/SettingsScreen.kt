@@ -471,12 +471,23 @@ private fun SettingsHomeCardsHeader(onResetCardPreferences: () -> Unit) {
             color = NimbusTextTertiary,
             modifier = Modifier.weight(1f),
         )
-        Text(
-            stringResource(R.string.settings_reset),
-            style = MaterialTheme.typography.labelLarge,
-            color = NimbusBlueAccent,
-            modifier = Modifier.clickable(onClick = onResetCardPreferences),
-        )
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(NimbusBlueAccent.copy(alpha = 0.12f))
+                .border(1.dp, NimbusBlueAccent.copy(alpha = 0.22f), RoundedCornerShape(8.dp))
+                .clickable(
+                    onClick = onResetCardPreferences,
+                    role = Role.Button,
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Text(
+                stringResource(R.string.settings_reset),
+                style = MaterialTheme.typography.labelLarge,
+                color = NimbusBlueAccent,
+            )
+        }
     }
 }
 
@@ -492,12 +503,36 @@ private fun SettingsHomeCardRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { actions.onCardEnabled(card, !enabled) }
-            .padding(vertical = 4.dp),
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = if (enabled) {
+                        listOf(
+                            NimbusGlassTop.copy(alpha = 0.56f),
+                            NimbusCardBg,
+                        )
+                    } else {
+                        listOf(
+                            NimbusGlassTop.copy(alpha = 0.30f),
+                            NimbusCardBg.copy(alpha = 0.72f),
+                        )
+                    },
+                ),
+            )
+            .border(
+                1.dp,
+                if (enabled) NimbusCardBorder else NimbusCardBorder.copy(alpha = 0.58f),
+                RoundedCornerShape(10.dp),
+            )
+            .clickable(
+                onClick = { actions.onCardEnabled(card, !enabled) },
+                role = Role.Switch,
+            )
+            .padding(horizontal = 6.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SettingsCardMoveButtons(settings.cardOrder, index, cardLabel, actions.onCardOrder)
-        Spacer(Modifier.width(2.dp))
+        Spacer(Modifier.width(6.dp))
         Text(
             text = cardLabel,
             style = MaterialTheme.typography.bodyLarge,

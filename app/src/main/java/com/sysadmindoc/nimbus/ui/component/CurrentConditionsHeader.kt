@@ -185,7 +185,7 @@ private fun CurrentHeaderTopRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        HeroPill(
+        HeroBadge(
             text = locationName,
             modifier = Modifier.weight(1f),
             icon = {
@@ -198,7 +198,7 @@ private fun CurrentHeaderTopRow(
             },
         )
         Spacer(modifier = Modifier.width(10.dp))
-        HeroPill(text = daylightLabel)
+        HeroBadge(text = daylightLabel)
     }
 }
 
@@ -303,18 +303,18 @@ private fun CurrentHeaderMetricsRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        HeroMetricChip(
+        HeroMetricTile(
             modifier = Modifier.weight(1f),
             label = stringResource(R.string.current_metric_high),
             value = WeatherFormatter.formatTemperature(current.dailyHigh, settings),
         )
-        HeroMetricChip(
+        HeroMetricTile(
             modifier = Modifier.weight(1f),
             label = stringResource(R.string.current_metric_low),
             value = WeatherFormatter.formatTemperature(current.dailyLow, settings),
         )
         comparisonLabel?.let {
-            HeroMetricChip(
+            HeroMetricTile(
                 modifier = Modifier.weight(1f),
                 label = stringResource(R.string.current_metric_trend),
                 value = it,
@@ -325,7 +325,7 @@ private fun CurrentHeaderMetricsRow(
 }
 
 @Composable
-private fun HeroPill(
+private fun HeroBadge(
     text: String,
     modifier: Modifier = Modifier,
     icon: @Composable (() -> Unit)? = null,
@@ -353,7 +353,7 @@ private fun HeroPill(
 }
 
 @Composable
-private fun HeroMetricChip(
+private fun HeroMetricTile(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
