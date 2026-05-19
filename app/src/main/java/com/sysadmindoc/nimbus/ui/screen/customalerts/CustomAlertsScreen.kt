@@ -3,7 +3,6 @@ package com.sysadmindoc.nimbus.ui.screen.customalerts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +23,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -37,7 +35,6 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -65,7 +62,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -75,13 +71,16 @@ import com.sysadmindoc.nimbus.data.model.CustomAlertMetric
 import com.sysadmindoc.nimbus.data.model.CustomAlertOperator
 import com.sysadmindoc.nimbus.data.model.CustomAlertRule
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.ui.component.NimbusScrollableSegmentRow
+import com.sysadmindoc.nimbus.ui.component.NimbusSelectableSegment
+import com.sysadmindoc.nimbus.ui.component.NimbusStatusBadge
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.component.PremiumMessageCard
 import com.sysadmindoc.nimbus.ui.component.ScreenHeader
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
-import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
+import com.sysadmindoc.nimbus.ui.theme.NimbusError
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
@@ -277,7 +276,7 @@ private fun RuleRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            AlertHintPill(
+            AlertHintBadge(
                 text = if (rule.enabled) {
                     stringResource(R.string.custom_alerts_status_active)
                 } else {
@@ -314,7 +313,7 @@ private fun RuleRow(
                 .padding(start = 6.dp)
                 .size(34.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color.White.copy(alpha = 0.06f))
+                .background(NimbusError.copy(alpha = 0.12f))
                 .clickable(
                     onClick = onDelete,
                     role = Role.Button,
@@ -325,7 +324,7 @@ private fun RuleRow(
             Icon(
                 Icons.Filled.Delete,
                 contentDescription = null,
-                tint = NimbusTextTertiary,
+                tint = NimbusError.copy(alpha = 0.88f),
                 modifier = Modifier.size(18.dp),
             )
         }
@@ -434,7 +433,7 @@ private fun RuleMetricPicker(
             style = MaterialTheme.typography.labelMedium,
             color = NimbusTextSecondary,
         )
-        ChipSelector(
+        SegmentSelector(
             options = CustomAlertMetric.entries,
             selected = metric,
             label = { stringResource(it.labelRes) },
@@ -454,7 +453,7 @@ private fun RuleOperatorPicker(
             style = MaterialTheme.typography.labelMedium,
             color = NimbusTextSecondary,
         )
-        ChipSelector(
+        SegmentSelector(
             options = CustomAlertOperator.entries,
             selected = operator,
             label = { option ->
@@ -540,7 +539,7 @@ private fun RuleThresholdFeedback(
             color = Color(0xFFFFB4AB),
         )
     } else {
-        AlertHintPill(
+        AlertHintBadge(
             text = stringResource(
                 R.string.custom_alerts_trigger_preview,
                 stringResource(metric.labelRes).lowercase(Locale.getDefault()),
@@ -654,67 +653,24 @@ private fun RuleEditorActions(
 }
 
 @Composable
-private fun <T> ChipSelector(
+private fun <T> SegmentSelector(
     options: List<T>,
     selected: T,
     label: @Composable (T) -> String,
     onSelect: (T) -> Unit,
 ) {
-    val selectedDescription = stringResource(R.string.common_selected)
-    val notSelectedDescription = stringResource(R.string.common_not_selected)
-
-    // Simple flow-wrapping row via a LazyColumn is overkill; 2 enums with a
-    // handful of entries fit on one or two lines of horizontally-scrolling chips.
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(androidx.compose.foundation.rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    NimbusScrollableSegmentRow {
         options.forEach { option ->
             val isSelected = option == selected
             val optionLabel = label(option)
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            colors = if (isSelected) {
-                                listOf(
-                                    NimbusBlueAccent.copy(alpha = 0.92f),
-                                    NimbusBlueAccent.copy(alpha = 0.78f),
-                                )
-                            } else {
-                                listOf(
-                                    NimbusGlassTop.copy(alpha = 0.48f),
-                                    NimbusNavyDark,
-                                )
-                            },
-                        ),
-                    )
-                    .border(
-                        1.dp,
-                        if (isSelected) NimbusBlueAccent.copy(alpha = 0.34f) else NimbusCardBorder,
-                        RoundedCornerShape(8.dp),
-                    )
-                    .selectable(
-                        selected = isSelected,
-                        onClick = { onSelect(option) },
-                        role = Role.RadioButton,
-                    )
-                    .semantics(mergeDescendants = true) {
-                        contentDescription = optionLabel
-                        stateDescription = if (isSelected) selectedDescription else notSelectedDescription
-                    }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-            ) {
-                Text(
-                    text = optionLabel,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (isSelected) Color.White else NimbusTextSecondary,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                )
-            }
+            NimbusSelectableSegment(
+                label = optionLabel,
+                selected = isSelected,
+                onClick = { onSelect(option) },
+                role = Role.RadioButton,
+                showIndicator = false,
+                compact = true,
+            )
         }
     }
 }
@@ -776,24 +732,15 @@ private fun CustomAlertsIntroCard(
 }
 
 @Composable
-private fun AlertHintPill(
+private fun AlertHintBadge(
     text: String,
     tint: Color = NimbusBlueAccent,
 ) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(tint.copy(alpha = 0.10f))
-            .border(1.dp, tint.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = if (tint == NimbusBlueAccent) NimbusTextSecondary else tint,
-            textAlign = TextAlign.Center,
-        )
-    }
+    NimbusStatusBadge(
+        text = text,
+        tint = tint,
+        emphasized = tint == NimbusBlueAccent,
+    )
 }
 
 private fun defaultThresholdText(

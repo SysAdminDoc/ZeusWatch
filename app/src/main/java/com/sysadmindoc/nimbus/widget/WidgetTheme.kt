@@ -44,7 +44,7 @@ object WidgetTheme {
         day = Color(0xFF23365D),
         night = Color(0xFF172546),
     )
-    val pillColor = ColorProvider(
+    val statusColor = ColorProvider(
         day = Color(0xFF162743),
         night = Color(0xFF101A31),
     )
@@ -117,7 +117,7 @@ object WidgetTheme {
         fontSize = 9.sp,
         fontWeight = FontWeight.Normal,
     )
-    val pillStyle = TextStyle(
+    val statusStyle = TextStyle(
         color = accentBlue,
         fontSize = 9.sp,
         fontWeight = FontWeight.Medium,
@@ -140,7 +140,7 @@ fun widgetUpdatedLabel(
 }
 
 @Composable
-fun WidgetPill(
+fun WidgetStatusBadge(
     text: String,
     modifier: GlanceModifier = GlanceModifier,
     onClick: Action? = null,
@@ -148,7 +148,7 @@ fun WidgetPill(
 ) {
     val base = modifier
         .cornerRadius(8.dp)
-        .background(WidgetTheme.pillColor)
+        .background(WidgetTheme.statusColor)
         .padding(horizontal = 8.dp, vertical = 4.dp)
     val withSemantics = if (contentDescription != null) {
         base.semantics { this.contentDescription = contentDescription }
@@ -162,19 +162,19 @@ fun WidgetPill(
     ) {
         Text(
             text = text,
-            style = WidgetTheme.pillStyle,
+            style = WidgetTheme.statusStyle,
             maxLines = 1,
         )
     }
 }
 
 /**
- * Convenience factory for a freshness pill that forces an immediate
- * refresh when tapped. Prefer over plain [WidgetPill] on data-loaded
+ * Convenience factory for a freshness badge that forces an immediate
+ * refresh when tapped. Prefer over plain [WidgetStatusBadge] on data-loaded
  * widgets so users can force-refresh without opening the app.
  */
 @Composable
-fun widgetRefreshPillAction(): Action = actionRunCallback<WidgetRefreshAction>()
+fun widgetRefreshBadgeAction(): Action = actionRunCallback<WidgetRefreshAction>()
 
 @Composable
 fun WidgetEmptyState(

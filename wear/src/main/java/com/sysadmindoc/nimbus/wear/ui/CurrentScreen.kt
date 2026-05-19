@@ -125,7 +125,7 @@ private fun WeatherContent(
         }
 
         WearPanel(modifier = Modifier.fillMaxWidth()) {
-            WearMiniPill(
+            WearMiniBadge(
                 text = stringResource(R.string.wear_right_now),
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )

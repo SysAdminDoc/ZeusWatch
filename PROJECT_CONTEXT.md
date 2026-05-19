@@ -1,6 +1,6 @@
 # ZeusWatch Project Context
 
-Last consolidated: 2026-05-17.
+Last consolidated: 2026-05-18.
 
 This is the canonical short context for future repository sessions. It reconciles
 the repo-local notes, shared memory, current code, recent commits, and the
@@ -14,10 +14,10 @@ the repo-local notes, shared memory, current code, recent commits, and the
 - Android package: `com.sysadmindoc.nimbus`
 - Wear package: `com.sysadmindoc.nimbus.wear`
 - License: LGPL-3.0, confirmed in `LICENSE`, `README.md`, and `CLAUDE.md`
-- Current live repo version: v1.20.3
-- Phone version: `versionName = "1.20.3"`, `versionCode = 86` in `app/build.gradle.kts`
-- Wear version: `versionName = "1.20.3"`, `versionCode = 62` in `wear/build.gradle.kts`
-- Branch state at consolidation: `main` was 6 commits ahead of `origin/main` before this research commit.
+- Current live repo version: v1.20.4
+- Phone version: `versionName = "1.20.4"`, `versionCode = 87` in `app/build.gradle.kts`
+- Wear version: `versionName = "1.20.4"`, `versionCode = 63` in `wear/build.gradle.kts`
+- Branch state at v1.20.4 polish start: `main` was aligned with `origin/main`.
 
 ## Required Read Order
 
@@ -169,6 +169,13 @@ after the RadarPreviewCard, CurrentConditionsHeader, CustomAlertsScreen
 RuleEditor, SunArc, TemperatureGraph, WidgetRefreshWorker, and
 SyncedWeatherStore, CompareScreen, RadarScreen, MainViewModel, and SettingsScreen
 helper/payload extractions plus the MainScreen RenderCard split on 2026-05-17.
+
+The 2026-05-18 premium polish pass raised the shared UI floor without changing
+the product model: rectangular status badges and selectable segments now come
+from `NimbusChrome`, Today/Radar/Compare/Custom Alerts share the same selection
+and status treatment, settings card management uses explicit framed controls,
+custom-alert delete actions read as destructive, widget freshness controls use
+badge naming, and Wear navigation links are proper rectangular touch targets.
 
 ## High-Value Differentiators
 

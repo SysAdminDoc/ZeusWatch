@@ -98,7 +98,7 @@ private fun HourlyRow(entry: HourlyEntry) {
                 modifier = Modifier.width(36.dp),
                 textAlign = TextAlign.End,
             )
-            WearMiniPill(text = "${entry.precipChance}%", accent = WearBlueAccent)
+            WearMiniBadge(text = "${entry.precipChance}%", accent = WearBlueAccent)
         }
     }
 }

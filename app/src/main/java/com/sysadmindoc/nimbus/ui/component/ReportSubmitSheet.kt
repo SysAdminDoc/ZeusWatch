@@ -66,7 +66,7 @@ import com.sysadmindoc.nimbus.util.labelRes
 
 /**
  * Bottom sheet for submitting a community weather report.
- * Shows a grid of weather condition chips and an optional note field.
+ * Shows a grid of weather condition segments and an optional note field.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable

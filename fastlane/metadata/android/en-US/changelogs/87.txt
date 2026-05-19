@@ -1,0 +1,5 @@
+v1.20.4 - Premium shared chrome polish
+
+- Centralized status badges and selectable segments across Today, Radar, Compare, Custom Alerts, and alert detail surfaces.
+- Tightened Settings card-management controls and Custom Alerts destructive affordances.
+- Refined widget freshness badges and Wear OS navigation touch targets.

@@ -109,7 +109,7 @@ private fun DailyRow(entry: WearDailyEntry) {
                 modifier = Modifier.width(34.dp),
                 textAlign = TextAlign.End,
             )
-            WearMiniPill(text = "${entry.precipChance}%", accent = WearBlueAccent)
+            WearMiniBadge(text = "${entry.precipChance}%", accent = WearBlueAccent)
         }
     }
 }

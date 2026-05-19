@@ -9,8 +9,6 @@ import android.webkit.WebView
 import android.webkit.WebResourceRequest
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,7 +17,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -47,12 +44,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -66,16 +60,12 @@ import com.sysadmindoc.nimbus.data.model.ReportCondition
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.RadarProvider
 import com.sysadmindoc.nimbus.ui.component.GlassActionButton
+import com.sysadmindoc.nimbus.ui.component.NimbusStatusBadge
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.component.PremiumMessageCard
 import com.sysadmindoc.nimbus.ui.component.ReportSubmitSheet
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
-import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
-import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
-import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
-import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
-import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 
@@ -561,7 +551,7 @@ private fun RadarTopControls(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            RadarInfoPill(
+            RadarInfoBadge(
                 text = if (selectedLayer == null) interactiveMapLabel else selectedLayer.label,
                 modifier = Modifier.widthIn(max = 220.dp),
             )
@@ -716,32 +706,16 @@ private val NWS_ALLOWED_HOST_PATTERNS = listOf(
 )
 
 @Composable
-private fun RadarInfoPill(
+private fun RadarInfoBadge(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.8f),
-                        NimbusGlassBottom,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = NimbusTextPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
+    NimbusStatusBadge(
+        text = text,
+        tint = NimbusTextSecondary,
+        modifier = modifier,
+        maxLines = 1,
+    )
 }
 
 @Composable

@@ -92,9 +92,9 @@ private fun MediumWidgetContent(
                 )
             }
             strings.updatedLabel(data.updatedAt)?.let { label ->
-                WidgetPill(
+                WidgetStatusBadge(
                     text = label,
-                    onClick = widgetRefreshPillAction(),
+                    onClick = widgetRefreshBadgeAction(),
                     contentDescription = strings.updatedContentDescription(label),
                 )
             }

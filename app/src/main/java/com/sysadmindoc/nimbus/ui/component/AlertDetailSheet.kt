@@ -115,23 +115,21 @@ fun AlertDetailSheet(
             Spacer(modifier = Modifier.height(14.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                AlertSheetPill(
+                AlertSheetBadge(
                     text = severityLabel,
-                    background = alert.severity.color.copy(alpha = 0.16f),
-                    textColor = alert.severity.color,
+                    tint = alert.severity.color,
+                    emphasized = true,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                AlertSheetPill(
-                    text = stringResource(R.string.alert_detail_urgency_pill, urgencyLabel),
-                    background = Color.White.copy(alpha = 0.06f),
-                    textColor = NimbusTextSecondary,
+                AlertSheetBadge(
+                    text = stringResource(R.string.alert_detail_urgency_badge, urgencyLabel),
+                    tint = NimbusTextSecondary,
                 )
                 alert.response?.takeIf { it.isNotBlank() }?.let {
                     Spacer(modifier = Modifier.width(8.dp))
-                    AlertSheetPill(
+                    AlertSheetBadge(
                         text = it,
-                        background = Color.White.copy(alpha = 0.06f),
-                        textColor = NimbusTextTertiary,
+                        tint = NimbusTextTertiary,
                     )
                 }
             }
@@ -211,23 +209,17 @@ private fun MetadataItem(label: String, value: String) {
 }
 
 @Composable
-private fun AlertSheetPill(
+private fun AlertSheetBadge(
     text: String,
-    background: Color,
-    textColor: Color,
+    tint: Color,
+    emphasized: Boolean = false,
 ) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(background)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = textColor,
-        )
-    }
+    NimbusStatusBadge(
+        text = text,
+        tint = tint,
+        emphasized = emphasized,
+        maxLines = 1,
+    )
 }
 
 private fun formatAlertTime(isoString: String): String = try {

@@ -58,6 +58,7 @@ import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.component.LocalUnitSettings
+import com.sysadmindoc.nimbus.ui.component.NimbusStatusBadge
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.component.PremiumMessageCard
 import com.sysadmindoc.nimbus.ui.component.ScreenHeader
@@ -806,7 +807,7 @@ private fun CompareSummaryCard(
             color = NimbusTextPrimary,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CompareSummaryPill(
+            CompareSummaryBadge(
                 text = stringResource(
                     R.string.compare_humidity_summary,
                     weather1.current.humidity,
@@ -814,7 +815,7 @@ private fun CompareSummaryCard(
                 ),
                 modifier = Modifier.weight(1f),
             )
-            CompareSummaryPill(
+            CompareSummaryBadge(
                 text = stringResource(
                     R.string.compare_rain_summary,
                     weather1.daily.firstOrNull()?.precipitationProbability ?: 0,
@@ -827,24 +828,16 @@ private fun CompareSummaryCard(
 }
 
 @Composable
-private fun CompareSummaryPill(
+private fun CompareSummaryBadge(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.White.copy(alpha = 0.06f))
-            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = NimbusTextSecondary,
-            textAlign = TextAlign.Center,
-        )
-    }
+    NimbusStatusBadge(
+        text = text,
+        tint = NimbusTextSecondary,
+        modifier = modifier,
+        maxLines = 2,
+    )
 }
 
 internal fun highlightedCompareSides(
