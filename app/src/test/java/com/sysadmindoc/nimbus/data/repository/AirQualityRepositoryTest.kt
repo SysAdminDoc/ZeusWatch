@@ -65,6 +65,8 @@ class AirQualityRepositoryTest {
         val astro = repository.getAstronomy(
             sunrise = "2025-01-15T07:00:00",
             sunset = "2025-01-15T17:30:00",
+            latitude = 40.7128,
+            longitude = -74.0060,
         )
         assertNotNull(astro.moonPhase)
         assertTrue(astro.moonIllumination in 0.0..100.0)
@@ -75,13 +77,20 @@ class AirQualityRepositoryTest {
         val astro = repository.getAstronomy(
             sunrise = "2025-01-15T07:00:00",
             sunset = "2025-01-15T17:30:00",
+            latitude = 40.7128,
+            longitude = -74.0060,
         )
         assertEquals("10h 30m", astro.dayLength)
     }
 
     @Test
     fun `getAstronomy handles null sunrise and sunset`() {
-        val astro = repository.getAstronomy(sunrise = null, sunset = null)
+        val astro = repository.getAstronomy(
+            sunrise = null,
+            sunset = null,
+            latitude = 40.7128,
+            longitude = -74.0060,
+        )
         assertNull(astro.dayLength)
         assertNotNull(astro.moonPhase)
     }
