@@ -4,6 +4,9 @@ All notable changes to Nimbus Weather are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- Removed the gray system bay behind the bottom navigation dock by making the app own the bottom inset surface and disabling platform navigation-bar contrast scrims.
+
 ### Added
 - Started the localization roadmap by moving core navigation, Locations, Compare, and Wear OS state copy into Android string resources, with an initial Spanish resource set for those high-traffic surfaces.
 - Extended the localization foundation through Settings, including category cards, section headers, control labels, helper copy, source selectors, API-key guidance, and accessibility state descriptions.

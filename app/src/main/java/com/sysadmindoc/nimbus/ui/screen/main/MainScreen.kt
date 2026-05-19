@@ -252,7 +252,7 @@ fun MainScreen(
         com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState provides weatherThemeState,
     ) {
         Scaffold(
-            containerColor = Color.Transparent,
+            containerColor = NimbusNavyDark,
             bottomBar = {
                 ZeusWatchBottomNav(
                     selectedTab = activeSelectedTab,
