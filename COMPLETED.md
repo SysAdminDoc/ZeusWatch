@@ -1,5 +1,9 @@
 # ZeusWatch — Completed Milestones
 
+This file is the closed-work ledger. Active planning lives in
+[ROADMAP.md](ROADMAP.md), and current research synthesis lives in
+[RESEARCH_REPORT.md](RESEARCH_REPORT.md).
+
 | Version | Milestone | Date |
 |---------|-----------|------|
 | v1.0.0 | Initial release — share, widgets, a11y, CI/CD, 108 tests | — |
@@ -25,3 +29,5 @@
 | v1.20.1 | Engineering audit round 3 — UTC-as-local timezone bug in MET Norway/ECCC/Bright Sky adapters, wear UA drift, BlitzortungService double-open race, Pirate Weather path-key log leak | 2026-05-13 |
 | v1.20.2 | Engineering audit round 4 — MoonPhase negative-modulo, nowcast worker anchored on wrong bucket, SyncedWeatherStore apply()→commit(), AlertRepository silently dropping MeteoAlarm, CancellationException swallowed in 3 workers, ECCC BC bbox put Calgary/Banff in BC | 2026-05-13 |
 | v1.20.3 | Premium UX polish — crisper surface system, tighter typography and spacing, improved settings/location/compare/custom-alert/radar/report-sheet semantics, calmer empty states, widget/Wear polish, and refreshed README screenshots | 2026-05-13 |
+| v1.21.0 | Localization pipeline, Open-Meteo BOM provider, shared chrome polish, Wear OS complications, API certificate pins, and detekt baseline reduction | 2026-05-18 |
+| v1.21.1 | Meeus-based moonrise/moonset and southern-hemisphere moon visualization fix | 2026-05-18 |
