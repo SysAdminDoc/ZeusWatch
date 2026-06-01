@@ -1,18 +1,18 @@
 # ZeusWatch Roadmap
 
-**Current Version**: v1.20.4 (phone versionCode 87, wear versionCode 63)
+**Current Version**: v1.21.1 (phone versionCode 89, wear v1.21.0 versionCode 64)
 **Architecture**: Kotlin 2.1.0 / Jetpack Compose / Hilt / MVVM / multi-module (phone + wear)
 **Flavors**: `standard` (Google Play services, Gemini Nano, Firestore, Wear DataLayer) / `freenet` (F-Droid clean)
 **License**: LGPL-3.0
 **Last refreshed**: 2026-05-18 — premium shared-chrome polish sync after the source saturation and dependency runway refresh.
 
-> This document is the working plan. It is dense by design. Every claim in the prose maps to a source in the Appendix. Items are organized by horizon (Now / Next / Later) and by theme. Closed items move to [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
+> This document is the working plan. It is dense by design. Every claim in the prose maps to a source in the Appendix. Items are organized by horizon (Now / Next / Later) and by theme. Closed items move to [COMPLETED.md](COMPLETED.md). Current research synthesis lives in [RESEARCH_REPORT.md](RESEARCH_REPORT.md).
 
 ---
 
 ## Completed Milestones
 
-Moved to [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md). High-water marks for context: 7 forecast/alert providers wired, 28 reorderable cards, native MapLibre radar with Blitzortung lightning, Wear OS DataLayer sync with on-device fallback, ACRA crash reporting, multi-source resilience, full Glance widget set, accessibility semantics on every Canvas-heavy card, Detekt baseline + CI emulator a11y, and 55 Kotlin test files as of the 2026-05-17 repository inventory.
+Moved to [COMPLETED.md](COMPLETED.md). High-water marks for context: 7 forecast/alert providers wired, 28 reorderable cards, native MapLibre radar with Blitzortung lightning, Wear OS DataLayer sync with on-device fallback, ACRA crash reporting, multi-source resilience, full Glance widget set, accessibility semantics on every Canvas-heavy card, Detekt baseline + CI emulator a11y, and 55 Kotlin test files as of the 2026-05-17 repository inventory.
 
 ---
 
@@ -39,7 +39,7 @@ Every item below maps to at least one theme. Themes are the lens for prioritizat
 
 - **T-WEAR — Watch dominance.** Zero FOSS competitor has a native Wear OS story. We do. We extend the moat with WFF data, Wear OS 6 M3 Expressive, complications, and `freenet` sync. Sources: [Breezy ecosystem (no native Wear)](https://github.com/breezy-weather/breezy-weather), [Wear OS 6 release notes](https://android-developers.googleblog.com/2025/05/whats-new-in-wear-os-6.html), [WFF weather data fields](https://developer.android.com/training/wearables/wff/weather).
 - **T-SOURCES — Provider depth.** Breezy ships 50+ sources; we ship 7. Closing the gap on regional coverage (BOM, Météo-France, GeoSphere, FMI, KNMI, AEMET) is the single biggest user-visible parity gap. Source: [Breezy SOURCES.md](https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md).
-- **T-HEALTH — Defend the blue-ocean differentiators.** Migraine/pressure/arthritis/driving/pet are uncontested. Expand them, harden them, ship them by default. Already validated in [v1.12.0 health alert system](ROADMAP-COMPLETED.md).
+- **T-HEALTH — Defend the blue-ocean differentiators.** Migraine/pressure/arthritis/driving/pet are uncontested. Expand them, harden them, ship them by default. Already validated in [v1.12.0 health alert system](COMPLETED.md).
 - **T-I18N — Make it speak everyone's language.** The localization extraction is in flight (single `values-es` locale). It is the longest open thread in the codebase. Source: [Unreleased CHANGELOG entries](CHANGELOG.md).
 - **T-PERF — Cache warm, frame fast, battery flat.** Baseline Profiles + offline-first per-location cache + smarter background cadence. Battery drain is the #1 user complaint against weather apps. Source: [unstar.app 2026 complaint ranking](https://unstar.app/blog/weather-apps-ranked-by-user-complaints-2026).
 - **T-RELIABILITY — Adversarial audits keep working.** v1.20.1/2 found 11 latent bugs across timezones, sync, modulo, dispatch. Schedule the next round; expand test surfaces (Wear, AI engine, WFF).
@@ -78,7 +78,7 @@ In-flight or top of the queue. Each item already has enough scope context that a
 
 ### N-3. Bureau of Meteorology (Australia) forecast adapter · **T-SOURCES**
 **Status**: CLOSED locally on 2026-05-17 via the safe indirect path. Existing roadmap flags **legal risk** with the undocumented `api.weather.bom.gov.au`, so the implementation intentionally uses Open-Meteo's documented [BOM ACCESS-G model proxy](https://open-meteo.com/en/docs/bom-api).
-**Scope**: The selectable forecast provider is `Open-Meteo + BOM ACCESS-G`, backed by `/v1/bom` and a BOM-specific hourly/daily variable set. Direct reverse-engineered BOM app APIs remain out of scope unless BOM publishes stable terms for them. AU severe weather warnings continue through the existing alert-source fallback surface; no direct BOM warnings API was added in this batch.
+**Scope**: The selectable forecast provider is `Open-Meteo + BOM ACCESS-G`, backed by `/v1/bom` and a BOM-specific hourly/daily variable set. Direct reverse-engineered BOM app APIs remain deferred unless BOM publishes stable terms for them. AU severe weather warnings continue through the existing alert-source fallback surface; no direct BOM warnings API was added in this batch.
 **Completion evidence**: `WeatherSourceProvider.OPEN_METEO_BOM` is exposed as a forecast source, `OpenMeteoApi.getBomForecast` calls `/v1/bom`, `WeatherRepository.getBomWeatherDirect` maps hourly-only BOM responses into current/hourly/daily `WeatherData`, and `WeatherSourceManagerTest` + `WeatherRepositoryTest` cover provider routing and hourly-only mapping.
 
 ### N-4. Watch face complication suite (extend, don't build a face) · **T-WEAR**
@@ -192,7 +192,7 @@ Source: [Mobile App Accessibility 2026 guide](https://www.accessibilitychecker.o
 - [x] `docs/RELEASE.md` added documenting the per-release checklist, pin-capture procedure, CI signing-secrets contract, ACRA report-email location, distribution channels, and rollback procedure.
 - [x] Fastlane `title.txt` / `short_description.txt` / `full_description.txt` reconciled with v1.20.3 reality (28 cards, 4 widget sizes, 72h hourly, 7 providers, native Wear OS, multi-source, "ZeusWatch" branding). Added `changelogs/86.txt`.
 - [ ] Sync `versionCode` divergence between phone (86) and wear (62) at the next release **if** Play Store distribution is on the table; ignore otherwise (current channels treat them as independent listings).
-Repo root markdown count: README, CHANGELOG, CLAUDE, CODEX_CHANGELOG, ROADMAP, ROADMAP-COMPLETED, AGENTS, LICENSE — within the ≤6-after-LICENSE target counting CODEX_CHANGELOG as a peer to CHANGELOG.
+Repo root markdown count: README, CHANGELOG, ROADMAP, COMPLETED, RESEARCH_REPORT, AGENTS, LICENSE, plus ignored local working notes — within the target once ignored local notes are excluded.
 
 ---
 
@@ -306,7 +306,7 @@ What a hostile reviewer would ask, with answers.
 
 - **"You shipped 28 cards and 7 providers — why isn't the ROADMAP shorter?"** Because the per-card density is exactly what makes the app stand out from Breezy-style minimalism. The roadmap reflects breadth obligations: i18n compound cost, Wear OS moat extension, regional source coverage, and audit cycles. Each Now item has a closure criterion.
 - **"Why no Android 16 M3 Expressive sweep in NOW?"** It's UC-6; Wear Compose M3 is still in beta01. Premature work invites churn. Phone-side: when 1.5.0 stable lands, schedule.
-- **"Where's the security story?"** N-2 (cert pinning hostmap), N-10 (dependency runway), NX-14 (reproducible builds), L-13 (no-Geocoder fallback). Plus the [v1.16.0 RateLimitInterceptor + API-key debug-log redaction](ROADMAP-COMPLETED.md) already shipped. The 2026-05-17 sampled OSV query found no known advisories in the checked Maven coordinates.
+- **"Where's the security story?"** N-2 (cert pinning hostmap), N-10 (dependency runway), NX-14 (reproducible builds), L-13 (no-Geocoder fallback). Plus the [v1.16.0 RateLimitInterceptor + API-key debug-log redaction](COMPLETED.md) already shipped. The 2026-05-17 sampled OSV query found no known advisories in the checked Maven coordinates.
 - **"You're handwaving on observability."** UC-1 + UC-2 + NX-7 form the observability arc and are explicitly held under "decide first." Anonymous telemetry is a F-Droid-sensitive call.
 - **"Distribution is thin."** NX-14 (reproducible builds) + per-ABI signed APKs (Breezy pattern) are the immediate steps. Play Store is not pursued; F-Droid + IzzyOnDroid + GitHub Releases is the explicit channel.
 - **"Multi-user/collab story?"** Already present via opt-in Firestore community reports (`standard` flavor). Not a primary axis — weather is a single-user product.

@@ -457,13 +457,18 @@ Issues and PRs welcome. Please:
 - Weather-adaptive theming reads from `LocalWeatherThemeState` CompositionLocal.
 - Multi-source forecasts use `WeatherSourceManager` with adapter pattern — add new sources by implementing `WeatherSourceAdapter`.
 - Alert sources use `AlertSourceAdapter` interface — auto-detected by country via Geocoder.
-- See `CLAUDE.md` for detailed architecture notes and `ROADMAP.md` for the current feature roadmap. Historical research lives in `docs/research-archive.md`.
+- See `ROADMAP.md` for the current feature roadmap, `COMPLETED.md` for closed
+  milestones, and `RESEARCH_REPORT.md` for the current research synthesis.
+  Historical research lives in `docs/research-archive.md`.
 
 ---
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the live development roadmap and [docs/research-archive.md](docs/research-archive.md) for the original phase-1 feature research.
+See [ROADMAP.md](ROADMAP.md) for the live development roadmap,
+[COMPLETED.md](COMPLETED.md) for closed milestones, [RESEARCH_REPORT.md](RESEARCH_REPORT.md)
+for current research synthesis, and [docs/research-archive.md](docs/research-archive.md)
+for the original phase-1 feature research.
 
 **Implemented through v1.5.0:**
 - 25 dynamic card types with user-configurable order and visibility

@@ -4,6 +4,10 @@ All notable changes to Nimbus Weather are documented here.
 
 ## [Unreleased]
 
+- Consolidated planning docs around `ROADMAP.md`, `COMPLETED.md`, and
+  `RESEARCH_REPORT.md`; renamed the tracked lowercase roadmap and completed
+  ledger to their canonical root filenames.
+
 ## [1.21.1] - 2026-05-18
 
 ### Fixed

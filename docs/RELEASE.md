@@ -13,7 +13,7 @@ hashes and are committed through `ApiCertificatePins.hostPins`.
    - README badge: `![Version](https://img.shields.io/badge/version-X.Y.Z-blue)`
 2. **Update `CHANGELOG.md`** — move `[Unreleased]` content into a dated
    version section, leave the empty `[Unreleased]` heading in place.
-3. **Update `ROADMAP-COMPLETED.md`** with the milestone row.
+3. **Update `COMPLETED.md`** with the milestone row.
 4. **Update `fastlane/metadata/android/en-US/changelogs/{versionCode}.txt`**
    with the user-facing summary. Phone versionCode is the file name.
 5. **Capture or rotate TLS pins** for keyed endpoints:
