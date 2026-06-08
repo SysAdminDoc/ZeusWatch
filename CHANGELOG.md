@@ -8,6 +8,11 @@ All notable changes to Nimbus Weather are documented here.
   `RESEARCH_REPORT.md`; renamed the tracked lowercase roadmap and completed
   ledger to their canonical root filenames.
 
+## [1.21.3] - 2026-06-08
+
+### Fixed
+- **Hourly forecast cards now have a uniform height.** Cards whose feels‑like temperature differed from the actual temperature (e.g. "Now" and the next hour) were taller than the rest because the extra line was only rendered when present. Each card now reserves space for its optional line — across the Temperature, Feels Like, Wind, and Precipitation tabs — so the row stays even regardless of which hours have a feels‑like delta, wind gust, or snowfall.
+
 ## [1.21.2] - 2026-06-08
 
 Reliability, correctness, and privacy hardening pass.
