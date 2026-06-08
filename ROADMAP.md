@@ -337,7 +337,7 @@ Breezy added [non-Latin numeral systems + alternate calendars](https://github.co
 Each of these has a real argument but also a real cost. Not scheduled until we make a decision.
 
 ### UC-1. Self-hosted ACRA crash report endpoint
-Today crash reports are emailed via consent dialog to `snafumatthew+zeuswatch@gmail.com`. A self-hosted ACRA backend would scale better but reintroduces a "server to maintain" surface that conflicts with the no-backend stance. **Open question**: is the volume actually a problem yet? If yes, self-host. If no, status quo.
+Today crash reports are emailed via consent dialog to `matt_parker@outlook.com`. A self-hosted ACRA backend would scale better but reintroduces a "server to maintain" surface that conflicts with the no-backend stance. **Open question**: is the volume actually a problem yet? If yes, self-host. If no, status quo.
 
 ### UC-2. Anonymous usage telemetry (opt-in)
 Plausible-style, no PII, opt-in toggle. Would inform "which provider do users actually pick" and "which card do users actually keep enabled" — both currently blind. Friction: an outbound endpoint at all is a F-Droid red flag and a privacy concern. **Open question**: can we live with continued blindness? If yes, reject.

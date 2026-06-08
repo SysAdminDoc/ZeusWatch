@@ -22,7 +22,7 @@ import org.acra.ktx.initAcra
  * logcat there.
  */
 object CrashReporting {
-    private const val REPORT_EMAIL = "snafumatthew+zeuswatch@gmail.com"
+    private const val REPORT_EMAIL = "matt_parker@outlook.com"
 
     fun install(application: Application) {
         if (BuildConfig.DEBUG) return
