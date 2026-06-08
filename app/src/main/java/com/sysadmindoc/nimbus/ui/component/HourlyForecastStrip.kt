@@ -251,14 +251,18 @@ private fun HourlyItemTemp(hour: HourlyConditions, highlighted: Boolean, referen
             text = WeatherFormatter.formatTemperature(hour.temperature, s),
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
         )
-        val feelsLike = hour.feelsLike
-        if (feelsLike != null && kotlin.math.abs(feelsLike - hour.temperature) >= 3) {
-            Text(
-                text = WeatherFormatter.formatTemperature(feelsLike, s),
-                style = MaterialTheme.typography.labelSmall,
-                color = NimbusTextTertiary,
-            )
-        }
+        // Always render the feels-like line (blank when it's close to the
+        // actual temp) so every card is the same height — otherwise cards that
+        // show a feels-like value are taller than the ones that don't.
+        val feelsText = hour.feelsLike
+            ?.takeIf { kotlin.math.abs(it - hour.temperature) >= 3 }
+            ?.let { WeatherFormatter.formatTemperature(it, s) }
+            ?: " "
+        Text(
+            text = feelsText,
+            style = MaterialTheme.typography.labelSmall,
+            color = NimbusTextTertiary,
+        )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = "${hour.precipitationProbability}%",
@@ -295,14 +299,17 @@ private fun HourlyItemFeelsLike(hour: HourlyConditions, highlighted: Boolean, re
             color = NimbusTextTertiary,
         )
         Spacer(modifier = Modifier.height(4.dp))
-        if (kotlin.math.abs(diff) >= 1) {
-            val diffInt = diff.toInt()
-            Text(
-                text = if (diffInt > 0) "+$diffInt" else "$diffInt",
-                style = MaterialTheme.typography.labelSmall,
-                color = diffColor,
-            )
-        }
+        // Always render the delta line (blank when negligible) for equal height.
+        val diffInt = diff.toInt()
+        Text(
+            text = when {
+                kotlin.math.abs(diff) < 1 -> " "
+                diffInt > 0 -> "+$diffInt"
+                else -> "$diffInt"
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = diffColor,
+        )
     }
 }
 
@@ -322,26 +329,24 @@ private fun HourlyItemWind(
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
         )
         Spacer(modifier = Modifier.height(4.dp))
-        if (windDir != null) {
-            Text(
-                text = windArrow(windDir),
-                style = MaterialTheme.typography.titleMedium,
-                color = NimbusTextSecondary,
-            )
-        }
-        hour.windGusts?.let { gusts ->
-            if (gusts > windSpeed * 1.3) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(
-                        R.string.forecast_gust_abbrev,
-                        WeatherFormatter.formatWindSpeed(gusts, s),
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = NimbusTextTertiary,
-                )
-            }
-        }
+        // Reserve both the arrow and gust lines (blank when absent) so every
+        // wind card is the same height regardless of which hours are gusty.
+        Text(
+            text = if (windDir != null) windArrow(windDir) else " ",
+            style = MaterialTheme.typography.titleMedium,
+            color = NimbusTextSecondary,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        val gusts = hour.windGusts
+        Text(
+            text = if (gusts != null && gusts > windSpeed * 1.3) {
+                stringResource(R.string.forecast_gust_abbrev, WeatherFormatter.formatWindSpeed(gusts, s))
+            } else {
+                " "
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = NimbusTextTertiary,
+        )
     }
 }
 
@@ -373,16 +378,14 @@ private fun HourlyItemPrecip(
                 color = NimbusTextTertiary,
             )
         }
-        hour.snowfall?.let { snow ->
-            if (snow > 0) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = WeatherFormatter.formatSnowfall(snow, s),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFFE8EAF6),
-                )
-            }
-        }
+        // Reserve the snowfall line (blank when none) so cards stay equal height.
+        Spacer(modifier = Modifier.height(4.dp))
+        val snow = hour.snowfall
+        Text(
+            text = if (snow != null && snow > 0) WeatherFormatter.formatSnowfall(snow, s) else " ",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color(0xFFE8EAF6),
+        )
     }
 }
 
