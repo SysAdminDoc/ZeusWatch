@@ -8,6 +8,46 @@ All notable changes to Nimbus Weather are documented here.
   `RESEARCH_REPORT.md`; renamed the tracked lowercase roadmap and completed
   ledger to their canonical root filenames.
 
+## [1.21.2] - 2026-06-08
+
+Reliability, correctness, and privacy hardening pass.
+
+### Fixed
+- **Widget crash on remove/disable** (`NullPointerException` on `BroadcastReceiver.PendingResult.finish()`) — `GlanceAppWidgetReceiver` already consumes the broadcast's single `PendingResult` before dispatching to `onDeleted`/`onDisabled`, so the base receiver's own `goAsync()` returned `null` and crashed when the cleanup coroutine finished. Null-guarded `finish()`; cleanup is now correctly best-effort when the parent owns the keep-alive.
+- **Forecast-strip widget dropped the last hours** — the row emitted 12 direct children, but Glance hard-caps a Row/Column at 10 and silently truncated (spamming `Row container cannot have more than 10 elements`). The hourly cells are now nested in an inner row, so only the visible hours render and the error is gone.
+- **Client rate limiter was effectively bypassed under load** — a throttled-but-under-cap request slept and proceeded without reserving its slot, so the token bucket only metered the zero-wait path and concurrent waiters all fired against an un-advanced timestamp. The wait path now reserves the slot (fail-fast still doesn't, so a rejected request can't compound the backlog).
+- **Two saved locations could show each other's weather** — the cache key rounded coordinates to ~1.1 km, colliding distinct locations and serving one location's cached forecast (and name) for another. Tightened to ~11 m, matching the location-matching precision.
+- **Cached forecasts always showed "updated just now"** — cached reads stamped `lastUpdated` with the current time instead of the original fetch time, so the freshness label and staleness colouring never reflected real cache age. Cached data now reports its true age.
+- **Today's high/low could come from the wrong day** — the current-conditions card read daily index 0 unconditionally; it now anchors on the location-local date (falling back to index 0), keeping high/low/sunrise correct across midnight and cached replays.
+- **Severe-weather and other alerts could re-notify after 200 seen alerts** — the dedupe store evicted the *newest* IDs instead of the oldest, so still-active alerts could fire again. Eviction now keeps the most recent 200.
+- **Worker schedule changes never took effect** — the alert, health, nowcast, and custom-alert periodic workers used `KEEP`, so any changed interval or constraints were silently ignored on existing installs. They now use `UPDATE`.
+- **Tapping a widget could cancel its own in-flight refresh** — the manual refresh used `REPLACE`, so a second tap killed the running refresh (losing progress and risking a livelock under flaky network). It now uses `KEEP`.
+- **Wind direction wrong for out-of-range bearings** — a "variable"/negative or ≥360° bearing collapsed to "N"; bearings are now normalized before mapping to a compass sector.
+- **Radar playback flicker** — the cross-fade showed a blank previous frame when the animation looped; it now wraps to the last frame.
+- **Stale location anchored widgets/alerts to the wrong place** — a cached last-known fix (e.g. hours old after a flight) was used with no recency check, so every widget, alert, and forecast could point at a city the user had left. Cached fixes older than 10 minutes are now rejected in favour of a fresh request, with the stale fix kept only as a last resort.
+- **Alerts could be missed on a transient network blip** — the severe-weather, health, nowcast, and custom-alert workers returned success on a failed fetch, so the configured exponential backoff never engaged and a missed alert waited a full period. Genuine fetch failures now retry (bounded).
+- **Reverse geocoding could hang** — the Android 13+ async geocoder had no error callback, so a backend failure left the coroutine waiting indefinitely; it now has an error handler and a timeout, and backend outages are logged distinctly from "no result".
+- **Repeat notification taps didn't navigate** — tapping a second notification for the same destination could be silently dropped because the deep link was keyed on the route alone; deliveries now carry a one-shot id so every tap navigates. Rotating the device no longer re-triggers the launch deep link.
+- **"Current location" could briefly vanish** — swapping the GPS current-location row did a non-atomic delete-then-insert; it's now a single transaction so a cancellation can't strand the user with no current location.
+- **Ambient notification stack could break** — the nowcast/health/custom group summary was always posted on the nowcast channel, so muting nowcast suppressed health/custom summaries; the summary now uses the same channel as its notification.
+
+### Performance
+- The Locations screen read each saved location's cached weather serially; it now reads them concurrently off the main thread, with a stale-result guard so a rapid reorder can't clobber newer data.
+- Radar playback and the lightning WebSocket no longer keep running when the radar screen is off-screen (e.g. after a tab switch).
+
+### Security & privacy
+- Removed the unused `ACCESS_BACKGROUND_LOCATION` permission (the app only fetches location in the foreground and reads the persisted last fix) — this also avoids Google Play's background-location policy review — and dropped the dead `FOREGROUND_SERVICE` permission.
+- Fixed data-extraction rules: the saved-locations database was excluded under the wrong name from cloud backup and not excluded at all from device-to-device transfer (which ignores `allowBackup`). Both now correctly exclude `nimbus.db`.
+- Crash-report redaction now also strips raw `last_lat`/`last_lon` (previously only `last_location*` matched).
+- Hardened the Pirate Weather API-key log redaction: it's now anchored on the provider host so the key is scrubbed regardless of coordinate format, without ever touching unrelated `/forecast/` paths on other providers.
+- Lightning-stream parsing no longer throws on coordinate-less frames (keepalives) — it skips them quietly instead of logging an exception per frame.
+
+### Internal
+- Hardened `WidgetLocationPrefs` mapping against non-widget keys.
+- App-startup worker scheduling now runs in a supervised scope with an exception handler, so a settings-read failure is logged instead of silently aborting all scheduling.
+- ViewModel request-id counters are `@Volatile` so background-fetch continuations reliably observe supersession.
+- Added regression tests for the rate-limiter slot reservation, wind-direction normalization, cached-read freshness timestamp, and host-anchored key redaction.
+
 ## [1.21.1] - 2026-05-18
 
 ### Fixed

@@ -73,6 +73,19 @@ class WeatherFormatterTest {
     }
 
     @Test
+    fun `formatWindDirection normalizes out-of-range degrees`() {
+        // 360 wraps to 0 (N), not the stale else-branch.
+        assertEquals("N", WeatherFormatter.formatWindDirection(360))
+        // Negative bearings (e.g. a "variable" -1, or provider sign quirks)
+        // must wrap, not collapse to N.
+        assertEquals("NW", WeatherFormatter.formatWindDirection(-45)) // 315
+        assertEquals("N", WeatherFormatter.formatWindDirection(-1)) // 359
+        // Values above 360 wrap too.
+        assertEquals("NE", WeatherFormatter.formatWindDirection(405)) // 45
+        assertEquals("N", WeatherFormatter.formatWindDirection(720)) // 0
+    }
+
+    @Test
     fun `formatWindSpeed converts kmh to mph`() {
         // 16 km/h ~= 9.9 mph -> 9 mph
         assertEquals("N 9 mph", WeatherFormatter.formatWindSpeed(16.0, 0, imperial))

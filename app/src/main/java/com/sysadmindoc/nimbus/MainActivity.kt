@@ -21,6 +21,7 @@ import com.sysadmindoc.nimbus.data.repository.ThemeMode
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.ui.component.AdaptiveLayoutInfo
 import com.sysadmindoc.nimbus.ui.component.LocalAdaptiveLayout
+import com.sysadmindoc.nimbus.ui.navigation.DeepLinkRequest
 import com.sysadmindoc.nimbus.ui.navigation.NimbusNavHost
 import com.sysadmindoc.nimbus.ui.navigation.resolveZeusWatchDeepLinkRoute
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
@@ -33,7 +34,8 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var prefs: UserPreferences
 
-    private var pendingDeepLink by mutableStateOf<String?>(null)
+    private var pendingDeepLink by mutableStateOf<DeepLinkRequest?>(null)
+    private var deepLinkCounter = 0L
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,7 +43,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         applyImmersiveMode()
 
-        pendingDeepLink = resolveDeepLink(intent)
+        // Only handle the launch intent on first creation, not on every config
+        // change — otherwise rotating the device re-navigates the deep link.
+        if (savedInstanceState == null) deliverDeepLink(intent)
 
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
@@ -53,7 +57,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 CompositionLocalProvider(LocalAdaptiveLayout provides adaptiveInfo) {
                     NimbusNavHost(
-                        startRoute = pendingDeepLink,
+                        deepLink = pendingDeepLink,
                         onDeepLinkConsumed = { pendingDeepLink = null },
                     )
                 }
@@ -64,7 +68,12 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        resolveDeepLink(intent)?.let { pendingDeepLink = it }
+        deliverDeepLink(intent)
+    }
+
+    private fun deliverDeepLink(intent: Intent?) {
+        val route = resolveDeepLink(intent) ?: return
+        pendingDeepLink = DeepLinkRequest(route, ++deepLinkCounter)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

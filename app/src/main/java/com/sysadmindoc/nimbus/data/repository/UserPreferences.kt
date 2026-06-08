@@ -315,17 +315,16 @@ class UserPreferences @Inject constructor(
     /** Mark alert IDs as seen. Caps at 200 entries to prevent unbounded growth. */
     suspend fun addSeenAlertIds(ids: Set<String>) = store.edit { prefs ->
         val existing = prefs[Keys.SEEN_ALERT_IDS] ?: emptySet()
+        // `existing + ids` is an ordered LinkedHashSet running oldest -> newest
+        // (newly-added ids land at the tail), and the Preferences store
+        // preserves that insertion order across reads. When over the cap, drop
+        // the stale head with takeLast() — keeping the *newest* 200, which the
+        // old loop got backwards (it retained the oldest existing ids and so
+        // could re-notify still-active alerts). takeLast() also guarantees the
+        // just-added ids survive whenever ids.size <= 200.
         val merged = existing + ids
-        // When over limit, keep the newest IDs (the ones just added) plus as many
-        // existing ones as we can. The new IDs are guaranteed to be retained.
         prefs[Keys.SEEN_ALERT_IDS] = if (merged.size > 200) {
-            val keep = linkedSetOf<String>()
-            keep.addAll(ids) // always keep newly added
-            for (id in existing) {
-                if (keep.size >= 200) break
-                keep.add(id)
-            }
-            keep
+            merged.toList().takeLast(200).toSet()
         } else {
             merged
         }

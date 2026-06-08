@@ -46,6 +46,11 @@ object WidgetLocationPrefs {
     suspend fun getAllMappings(context: Context): Map<Int, Long> {
         val prefs = context.widgetLocationStore.data.first()
         return prefs.asMap().mapNotNull { (key, value) ->
+            // removePrefix() returns the string unchanged when the prefix is
+            // absent, so guard explicitly — otherwise any future non-widget key
+            // in this store whose name parses as an Int would be mistaken for a
+            // widget mapping and trigger phantom refreshes.
+            if (!key.name.startsWith("widget_loc_")) return@mapNotNull null
             val widgetId = key.name.removePrefix("widget_loc_").toIntOrNull() ?: return@mapNotNull null
             val locId = (value as? Long) ?: return@mapNotNull null
             if (locId == 0L) return@mapNotNull null

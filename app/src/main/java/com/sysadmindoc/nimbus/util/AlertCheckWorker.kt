@@ -71,9 +71,16 @@ class AlertCheckWorker @AssistedInject constructor(
             return Result.success()
         }
 
+        var anyFetchFailed = false
+        var anyFetchSucceeded = false
         for ((lat, lon, locationName) in locations) {
             val result = weatherSourceManager.getAlerts(lat, lon)
-            val alerts = result.getOrNull() ?: continue
+            val alerts = result.getOrNull()
+            if (alerts == null) {
+                anyFetchFailed = true
+                continue
+            }
+            anyFetchSucceeded = true
 
             val filtered = alerts.filter { alert ->
                 alert.severity.sortOrder <= maxSortOrder &&
@@ -101,7 +108,15 @@ class AlertCheckWorker @AssistedInject constructor(
             prefs.addSeenAlertIds(newSeenIds)
         }
 
-        return Result.success()
+        // If every provider was unreachable, let WorkManager retry with the
+        // configured exponential backoff (bounded by runAttemptCount) instead of
+        // waiting a full 15-minute period — a transient blip shouldn't delay a
+        // severe-weather alert. Partial success (some locations fetched) is done.
+        return if (anyFetchFailed && !anyFetchSucceeded && runAttemptCount < MAX_RETRY_ATTEMPTS) {
+            Result.retry()
+        } else {
+            Result.success()
+        }
     }
 
     private fun isExpired(alert: WeatherAlert): Boolean {
@@ -116,6 +131,9 @@ class AlertCheckWorker @AssistedInject constructor(
 
     companion object {
         private const val WORK_NAME = "nimbus_alert_check"
+        // Cap retries per run so a sustained outage can't spin the worker; after
+        // this it falls through to the next periodic tick.
+        private const val MAX_RETRY_ATTEMPTS = 3
 
         fun schedule(context: Context) {
             val constraints = Constraints.Builder()
@@ -132,7 +150,10 @@ class AlertCheckWorker @AssistedInject constructor(
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
+                // UPDATE (not KEEP): re-scheduling with a changed interval or
+                // constraints must take effect on existing installs; KEEP makes
+                // every re-schedule after the first a silent no-op.
+                ExistingPeriodicWorkPolicy.UPDATE,
                 request,
             )
         }

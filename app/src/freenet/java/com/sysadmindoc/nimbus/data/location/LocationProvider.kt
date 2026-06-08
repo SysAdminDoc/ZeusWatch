@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import android.os.CancellationSignal
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
@@ -20,6 +21,10 @@ import kotlin.coroutines.resume
 
 private const val TAG = "LocationProvider"
 private const val LOCATION_REQUEST_TIMEOUT_MS = 6_000L
+// Reject cached/last-known fixes older than this. A fix from hours ago (e.g.
+// after a flight) would otherwise silently anchor every widget, alert, and
+// forecast to the place the user has since left.
+private const val MAX_CACHED_LOCATION_AGE_MS = 10 * 60 * 1000L
 
 @Singleton
 class LocationProvider @Inject constructor(
@@ -61,10 +66,10 @@ class LocationProvider @Inject constructor(
                 locationManager = locationManager,
                 providers = enabledProviders + LocationManager.PASSIVE_PROVIDER,
             )
-            if (cachedLocation != null) {
+            if (cachedLocation != null && cachedLocation.isRecent()) {
                 Log.d(
                     TAG,
-                    "getCurrentLocation: using cached ${cachedLocation.latitude}, ${cachedLocation.longitude}"
+                    "getCurrentLocation: using fresh cached ${cachedLocation.latitude}, ${cachedLocation.longitude}"
                 )
                 return@withContext Result.success(cachedLocation)
             }
@@ -81,6 +86,12 @@ class LocationProvider @Inject constructor(
                 }
             }
 
+            // Last resort: a stale cached fix still beats no location at all.
+            if (cachedLocation != null) {
+                Log.d(TAG, "getCurrentLocation: falling back to stale cached")
+                return@withContext Result.success(cachedLocation)
+            }
+
             Log.w(TAG, "getCurrentLocation: no location available")
             Result.failure(
                 IllegalStateException(
@@ -91,6 +102,15 @@ class LocationProvider @Inject constructor(
             Log.e(TAG, "getCurrentLocation: error", e)
             Result.failure(e)
         }
+    }
+
+    /**
+     * Freshness guard for cached fixes, measured on the monotonic boot clock
+     * ([Location.getElapsedRealtimeNanos]) so it's immune to wall-clock changes.
+     */
+    private fun Location.isRecent(): Boolean {
+        val ageMs = (SystemClock.elapsedRealtimeNanos() - elapsedRealtimeNanos) / 1_000_000L
+        return ageMs in 0..MAX_CACHED_LOCATION_AGE_MS
     }
 
     @Suppress("MissingPermission")

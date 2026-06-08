@@ -18,11 +18,4 @@ local.properties
 *.jks
 google-services.json
 .kotlin/
-CLAUDE.md
-CODEX_CHANGELOG.md
-AGENTS.md
-PROJECT_CONTEXT.md
-.factory/
-.claude/
-.ai/
 *.bak

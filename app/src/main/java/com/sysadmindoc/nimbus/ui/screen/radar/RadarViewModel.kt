@@ -168,7 +168,13 @@ class RadarViewModel @Inject constructor(
         }
     }
 
-    private fun pausePlayback() {
+    /**
+     * Stop the playback loop. Public so the screen can call it on dispose — the
+     * ViewModel is scoped to the host nav entry and survives tab switches, so
+     * without this the `while(true)` frame-advance loop keeps running (and
+     * driving recomposition) while radar is off-screen.
+     */
+    fun pausePlayback() {
         playbackJob?.cancel()
         playbackJob = null
         _uiState.update { it.copy(isPlaying = false) }

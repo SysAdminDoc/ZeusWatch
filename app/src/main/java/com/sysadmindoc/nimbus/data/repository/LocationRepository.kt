@@ -47,9 +47,9 @@ class LocationRepository @Inject constructor(
     }
 
     suspend fun addCurrentLocation(lat: Double, lon: Double, name: String): Long {
-        // Remove any existing "current location" entry
-        dao.getCurrentLocation()?.let { dao.delete(it) }
-        return dao.insert(
+        // Atomic delete-old + insert-new so a cancellation can't strand the user
+        // with no current-location row (which background workers rely on).
+        return dao.replaceCurrentLocation(
             SavedLocationEntity(
                 name = name,
                 latitude = lat,

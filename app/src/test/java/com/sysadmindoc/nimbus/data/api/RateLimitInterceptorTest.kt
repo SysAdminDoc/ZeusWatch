@@ -169,4 +169,28 @@ class RateLimitInterceptorTest {
         val retrySleep = slept.maxOrNull() ?: -1L
         assertTrue("must cap at maxRetryBackoffMs", retrySleep <= 5_000L)
     }
+
+    @Test
+    fun `throttled requests consume slots so the limiter eventually fails fast`() {
+        // Regression guard: a request that waits (but under the cap) must still
+        // reserve its slot. Previously the wait path returned a sleep without
+        // advancing the TAT, so the bucket never drained — every request slept
+        // the same amount and proceeded, and the limiter never engaged.
+        val slept = mutableListOf<Long>()
+        val interceptor = RateLimitInterceptor(
+            hostLabel = "test", rate = 1.0, burst = 2, maxWaitMs = 5_000L,
+            sleep = { slept.add(it) },
+            now = { 0L }, // frozen clock: only slot reservation can advance the TAT
+        )
+
+        val codes = (1..12).map { interceptor.intercept(buildChain({ okResponse() })).code }
+
+        // With slots actually consumed, back-pressure escalates and the limiter
+        // must fail fast once the burst + wait budget is spent. With the bug,
+        // every call returned 200 and this list would contain no 429.
+        assertTrue("limiter must eventually 429 once budget is spent", codes.contains(429))
+        assertEquals("stays throttled once over budget", 429, codes.last())
+        // Waits must escalate (proof the TAT advanced), not repeat a fixed value.
+        assertTrue("waits must escalate as slots are reserved", (slept.maxOrNull() ?: 0L) >= 4_000L)
+    }
 }

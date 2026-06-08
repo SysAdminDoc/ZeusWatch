@@ -124,9 +124,16 @@ class BlitzortungService @Inject constructor(
             if (timeNanos == 0L) return null
             val timestampMs = timeNanos / 1_000_000
 
+            // The live stream interleaves non-strike frames (keepalives/sferics)
+            // that carry no coordinates. Use optDouble + NaN check so those skip
+            // quietly instead of throwing JSONException on every frame.
+            val lat = obj.optDouble("lat", Double.NaN)
+            val lon = obj.optDouble("lon", Double.NaN)
+            if (lat.isNaN() || lon.isNaN()) return null
+
             LightningStrike(
-                lat = obj.getDouble("lat"),
-                lon = obj.getDouble("lon"),
+                lat = lat,
+                lon = lon,
                 timestamp = timestampMs,
                 polarity = obj.optInt("pol", 0),
             )

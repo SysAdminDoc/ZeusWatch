@@ -54,12 +54,15 @@ private val REDACT_REGEX = Regex(
 /**
  * Pirate Weather embeds its API key as a path segment
  * (`/forecast/{key}/{lat},{lon}` and `/forecast/{key},{exclude}/{lat},{lon}`),
- * so query-param redaction misses it. This regex captures the `/forecast/`
- * prefix and re-anchors on the coordinate pair so we only redact the
- * key segment — never a literal "forecast" path part further down the URL.
+ * so query-param redaction misses it. Anchor on the `pirateweather.net/forecast/`
+ * host+prefix and redact the whole next segment. Host-anchoring (rather than a
+ * lookahead on the following coordinate) means the key is redacted regardless of
+ * how the coordinate is formatted (`+`-prefixed, percent-encoded, …), while
+ * never touching unrelated `/forecast/…` paths on other hosts (e.g. NWS
+ * `/gridpoints/…/forecast/hourly`).
  */
 private val PIRATE_WEATHER_PATH_KEY_REGEX = Regex(
-    "(/forecast/)[^/\\s?#]+(?=/-?\\d)",
+    "(pirateweather\\.net/forecast/)[^/?#\\s]+",
     RegexOption.IGNORE_CASE,
 )
 

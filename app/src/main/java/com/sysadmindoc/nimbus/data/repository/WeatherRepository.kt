@@ -137,7 +137,16 @@ class WeatherRepository @Inject constructor(
                     latitude = cached.latitude,
                     longitude = cached.longitude,
                 )
-                mapToWeatherData(response, location)
+                mapToWeatherData(
+                    response,
+                    location,
+                    // Preserve the original fetch time so "updated X ago" and
+                    // the staleness colouring reflect the cache's real age —
+                    // not "now", which made every cached read look fresh.
+                    observedAt = Instant.ofEpochMilli(cached.cachedAt)
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime(),
+                )
             } catch (_: Exception) {
                 null
             }
@@ -205,13 +214,23 @@ class WeatherRepository @Inject constructor(
     private fun mapToWeatherData(
         response: OpenMeteoResponse,
         location: LocationInfo,
+        observedAt: LocalDateTime? = null,
     ): WeatherData {
         val hourly = response.hourly
         val daily = response.daily
         val currentHourlyIndex = nearestHourlyIndex(response)
         val snapshot = resolveCurrentSnapshot(response, currentHourlyIndex)
 
-        val todayIndex = 0
+        // Anchor "today" on the location-local date instead of assuming the
+        // daily array starts today. It does for the current API params (no
+        // past_days), so this resolves to index 0 in practice — but matching by
+        // date keeps the current-conditions high/low/sunrise correct if the
+        // params ever change or a cached response is replayed across midnight.
+        val today = response.locationLocalNow().toLocalDate()
+        val todayIndex = daily?.time
+            ?.indexOfFirst { parseDate(it) == today }
+            ?.takeIf { it >= 0 }
+            ?: 0
         val dailyHigh = daily?.temperatureMax?.getOrNull(todayIndex) ?: snapshot.temperature
         val dailyLow = daily?.temperatureMin?.getOrNull(todayIndex) ?: snapshot.temperature
 
@@ -225,6 +244,7 @@ class WeatherRepository @Inject constructor(
             ),
             hourly = mapHourlyData(hourly, snapshot.observationTime),
             daily = mapDailyData(daily),
+            lastUpdated = observedAt ?: LocalDateTime.now(),
         )
     }
 

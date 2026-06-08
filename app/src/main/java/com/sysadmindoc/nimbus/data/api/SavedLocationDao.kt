@@ -37,6 +37,20 @@ interface SavedLocationDao {
     @Query("DELETE FROM saved_locations WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    @Query("DELETE FROM saved_locations WHERE isCurrentLocation = 1")
+    suspend fun deleteCurrentLocation()
+
+    /**
+     * Atomically swap the GPS "current location" row. Doing the delete + insert
+     * in one transaction means a cancellation (config change / process death)
+     * can never leave the user with no current-location row mid-swap.
+     */
+    @Transaction
+    suspend fun replaceCurrentLocation(location: SavedLocationEntity): Long {
+        deleteCurrentLocation()
+        return insert(location)
+    }
+
     @Query("SELECT COUNT(*) FROM saved_locations")
     suspend fun count(): Int
 

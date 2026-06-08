@@ -199,7 +199,7 @@ object AlertNotificationHelper {
         try {
             val nm = NotificationManagerCompat.from(context)
             nm.notify(NOTIFICATION_ID_NOWCAST, notification)
-            nm.notify(AMBIENT_SUMMARY_NOTIFICATION_ID, ambientSummary(context))
+            nm.notify(AMBIENT_SUMMARY_NOTIFICATION_ID, ambientSummary(context, CHANNEL_NOWCAST))
             return true
         } catch (_: SecurityException) {
             // Permission revoked after check
@@ -247,7 +247,7 @@ object AlertNotificationHelper {
         try {
             val nm = NotificationManagerCompat.from(context)
             nm.notify(notifId, notification)
-            nm.notify(AMBIENT_SUMMARY_NOTIFICATION_ID, ambientSummary(context))
+            nm.notify(AMBIENT_SUMMARY_NOTIFICATION_ID, ambientSummary(context, CHANNEL_HEALTH))
             return true
         } catch (_: SecurityException) {
             // Permission revoked after check
@@ -286,7 +286,7 @@ object AlertNotificationHelper {
         try {
             val nm = NotificationManagerCompat.from(context)
             nm.notify(id, notification)
-            nm.notify(AMBIENT_SUMMARY_NOTIFICATION_ID, ambientSummary(context))
+            nm.notify(AMBIENT_SUMMARY_NOTIFICATION_ID, ambientSummary(context, CHANNEL_CUSTOM))
             return true
         } catch (_: SecurityException) {
             // Permission revoked after check
@@ -307,8 +307,12 @@ object AlertNotificationHelper {
         )
     }
 
-    private fun ambientSummary(context: Context): android.app.Notification =
-        NotificationCompat.Builder(context, CHANNEL_NOWCAST)
+    // The summary must live on the SAME channel as the child that triggered it.
+    // Building it always on CHANNEL_NOWCAST meant a health/custom notification's
+    // summary landed on an unrelated channel — if the user muted nowcast, the
+    // summary was suppressed and the whole ambient stack broke.
+    private fun ambientSummary(context: Context, channelId: String): android.app.Notification =
+        NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_alert)
             .setContentTitle(context.getString(R.string.alert_ambient_summary_title))
             .setContentText(context.getString(R.string.alert_ambient_summary_text))

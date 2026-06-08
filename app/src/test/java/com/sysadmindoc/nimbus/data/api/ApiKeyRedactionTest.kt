@@ -16,7 +16,7 @@ class ApiKeyRedactionTest {
     )
 
     private val pathRedact = Regex(
-        "(/forecast/)[^/\\s?#]+(?=/-?\\d)",
+        "(pirateweather\\.net/forecast/)[^/?#\\s]+",
         RegexOption.IGNORE_CASE,
     )
 
@@ -55,6 +55,26 @@ class ApiKeyRedactionTest {
             "--> GET https://api.pirateweather.net/forecast/***/-14.0,170.5",
             redacted,
         )
+    }
+
+    @Test
+    fun `redacts Pirate Weather key regardless of coordinate format`() {
+        // Host-anchored redaction must not depend on the coordinate shape
+        // (a leading +, percent-encoding, etc. previously defeated the lookahead).
+        val line = "--> GET https://api.pirateweather.net/forecast/MYKEY/%2B14.0,170.5"
+        val redacted = redact(line)
+        assertFalse("must not contain the key", redacted.contains("MYKEY"))
+        assertEquals(
+            "--> GET https://api.pirateweather.net/forecast/***/%2B14.0,170.5",
+            redacted,
+        )
+    }
+
+    @Test
+    fun `leaves unrelated forecast paths on other hosts untouched`() {
+        // NWS embeds a literal "/forecast/hourly" that must never be redacted.
+        val line = "--> GET https://api.weather.gov/gridpoints/BOU/63,62/forecast/hourly"
+        assertEquals(line, redact(line))
     }
 
     @Test

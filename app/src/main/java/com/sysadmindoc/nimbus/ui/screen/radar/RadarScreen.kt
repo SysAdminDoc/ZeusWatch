@@ -124,7 +124,7 @@ fun RadarScreen(
     )
 
     RadarLocationReportsEffect(coordinates, viewModel::loadNearbyReports)
-    RadarDisconnectOnDisposeEffect(viewModel::disconnectLightning)
+    RadarDisconnectOnDisposeEffect(viewModel::pausePlayback, viewModel::disconnectLightning)
     RadarPlaybackConnectionEffect(
         selectedLayer = selectedLayer,
         provider = settings.radarProvider,
@@ -196,7 +196,7 @@ fun RadarTab(
     )
 
     RadarLocationReportsEffect(coordinates, viewModel::loadNearbyReports)
-    RadarDisconnectOnDisposeEffect(viewModel::disconnectLightning)
+    RadarDisconnectOnDisposeEffect(viewModel::pausePlayback, viewModel::disconnectLightning)
     RadarPlaybackConnectionEffect(
         selectedLayer = selectedLayer,
         provider = settings.radarProvider,
@@ -258,9 +258,17 @@ private fun RadarLocationReportsEffect(
 }
 
 @Composable
-private fun RadarDisconnectOnDisposeEffect(disconnectLightning: () -> Unit) {
+private fun RadarDisconnectOnDisposeEffect(
+    pausePlayback: () -> Unit,
+    disconnectLightning: () -> Unit,
+) {
     DisposableEffect(Unit) {
-        onDispose { disconnectLightning() }
+        onDispose {
+            // Stop the off-screen frame loop and the lightning socket when radar
+            // leaves composition (e.g. a phone tab switch where the VM survives).
+            pausePlayback()
+            disconnectLightning()
+        }
     }
 }
 
@@ -399,9 +407,13 @@ private fun previousRadarTileUrl(
     radarState: RadarUiState,
 ): String? {
     if (!isRadarMode) return null
-    return radarState.frameSet?.allFrames
-        ?.getOrNull(radarState.currentFrameIndex - 1)
-        ?.tileUrl
+    val frames = radarState.frameSet?.allFrames ?: return null
+    if (frames.isEmpty()) return null
+    // Wrap with modular arithmetic so the loop-around frame (index 0) shows the
+    // last frame as its predecessor instead of a blank cross-fade layer, which
+    // otherwise flickers on every playback cycle.
+    val prevIndex = (radarState.currentFrameIndex - 1 + frames.size) % frames.size
+    return frames.getOrNull(prevIndex)?.tileUrl
 }
 
 @Composable

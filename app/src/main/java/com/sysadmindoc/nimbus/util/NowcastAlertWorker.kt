@@ -62,11 +62,16 @@ class NowcastAlertWorker @AssistedInject constructor(
         }
 
         val seriesResult = weatherRepository.getMinutelyPrecipitation(loc.latitude, loc.longitude)
+        if (seriesResult.isFailure) {
+            // A genuine fetch failure (network/provider) — retry with backoff so
+            // an incoming rain transition isn't missed for a full period.
+            Log.w(TAG, "Minutely fetch failed", seriesResult.exceptionOrNull())
+            return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
+        }
         val series = seriesResult.getOrNull()
         if (series.isNullOrEmpty()) {
+            // Legitimately empty (no precip in the window) — nothing to do.
             Log.d(TAG, "No minutely series; skipping")
-            // Not a retriable failure from the user's POV — the next 15-minute
-            // run will try again.
             return Result.success()
         }
 
@@ -100,6 +105,7 @@ class NowcastAlertWorker @AssistedInject constructor(
 
     companion object {
         private const val WORK_NAME = "nimbus_nowcast_alert"
+        private const val MAX_RETRY_ATTEMPTS = 3
 
         /** Min seconds between two back-to-back nowcast notifications. 45 min. */
         private const val MIN_SECONDS_BETWEEN_NOTIFICATIONS = 45L * 60L
@@ -119,7 +125,10 @@ class NowcastAlertWorker @AssistedInject constructor(
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
+                // UPDATE (not KEEP): re-scheduling with a changed interval or
+                // constraints must take effect on existing installs; KEEP makes
+                // every re-schedule after the first a silent no-op.
+                ExistingPeriodicWorkPolicy.UPDATE,
                 request,
             )
         }

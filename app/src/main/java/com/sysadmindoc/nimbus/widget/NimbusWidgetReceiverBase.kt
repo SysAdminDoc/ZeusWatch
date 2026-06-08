@@ -19,12 +19,17 @@ abstract class NimbusWidgetReceiverBase : GlanceAppWidgetReceiver() {
         // scheduling from these lifecycle callbacks can ANR. goAsync() keeps
         // the broadcast alive while we finish the cleanup on a background
         // dispatcher. Budget is ~10 seconds before Android kills the process.
+        //
+        // goAsync() can return null here: GlanceAppWidgetReceiver.onReceive()
+        // consumes this broadcast's single PendingResult before dispatching to
+        // us, so the parent already owns the keep-alive. In that case our
+        // cleanup is best-effort and we must NOT call finish() on null.
         val pending = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 WidgetRefreshWorker.syncFromPreferences(context)
             } finally {
-                pending.finish()
+                pending?.finish()
             }
         }
     }
@@ -40,7 +45,7 @@ abstract class NimbusWidgetReceiverBase : GlanceAppWidgetReceiver() {
                 }
                 WidgetRefreshWorker.syncFromPreferences(context)
             } finally {
-                pending.finish()
+                pending?.finish()
             }
         }
     }

@@ -129,21 +129,31 @@ enum class BottomTab(
     RADAR(R.string.nav_radar, Icons.Filled.Map),
 }
 
+/**
+ * One-shot deep-link delivery. The monotonic [id] makes each notification tap a
+ * distinct event, so re-tapping the same target (or two notifications for the
+ * same route) still triggers navigation — keying the effect on the route string
+ * alone silently dropped repeat deliveries.
+ */
+data class DeepLinkRequest(val route: String, val id: Long)
+
 @Composable
 fun NimbusNavHost(
-    startRoute: String? = null,
+    deepLink: DeepLinkRequest? = null,
     onDeepLinkConsumed: () -> Unit = {},
 ) {
     val navController = rememberNavController()
 
-    // Navigate to deep-linked route on startup or re-intent
-    LaunchedEffect(startRoute) {
-        if (startRoute != null && startRoute != Routes.MAIN) {
-            navController.navigate(startRoute) {
+    // Navigate to deep-linked route on startup or re-intent. Keyed on the
+    // delivery id (not the route) so repeat taps re-fire.
+    LaunchedEffect(deepLink?.id) {
+        val route = deepLink?.route
+        if (route != null && route != Routes.MAIN) {
+            navController.navigate(route) {
                 launchSingleTop = true
             }
-            onDeepLinkConsumed()
         }
+        if (deepLink != null) onDeepLinkConsumed()
     }
 
     NavHost(navController = navController, startDestination = Routes.MAIN) {
