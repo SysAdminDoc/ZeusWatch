@@ -46,8 +46,9 @@ class CustomAlertWorker @AssistedInject constructor(
         val settings = prefs.settings.first()
         val loc = prefs.lastLocation.first() ?: return Result.success()
 
-        val weather = weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name).getOrNull()
-            ?: return Result.success()
+        val weatherResult = weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
+        val weather = weatherResult.getOrNull()
+            ?: return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
 
         val triggered = evaluateCustomAlertRules(rules, weather)
         if (triggered.isEmpty()) return Result.success()
@@ -75,6 +76,7 @@ class CustomAlertWorker @AssistedInject constructor(
 
     companion object {
         private const val WORK_NAME = "nimbus_custom_alert"
+        private const val MAX_RETRY_ATTEMPTS = 3
 
         fun schedule(context: Context) {
             val constraints = Constraints.Builder()
@@ -91,7 +93,10 @@ class CustomAlertWorker @AssistedInject constructor(
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
+                // UPDATE (not KEEP): re-scheduling with a changed interval or
+                // constraints must take effect on existing installs; KEEP makes
+                // every re-schedule after the first a silent no-op.
+                ExistingPeriodicWorkPolicy.UPDATE,
                 request,
             )
         }

@@ -26,9 +26,11 @@ class CompareViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CompareUiState())
     val uiState: StateFlow<CompareUiState> = _uiState.asStateFlow()
 
-    private var requestTokenCounter = 0L
-    private var primaryRequestToken = 0L
-    private var secondaryRequestToken = 0L
+    // @Volatile: incremented on Main.immediate but read from background fetch
+    // continuations — ensures those reads see the latest token (stale-result guard).
+    @Volatile private var requestTokenCounter = 0L
+    @Volatile private var primaryRequestToken = 0L
+    @Volatile private var secondaryRequestToken = 0L
     private var activeLoads = 0
 
     init {

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -22,6 +23,10 @@ import kotlin.coroutines.resume
 
 private const val TAG = "LocationProvider"
 private const val LOCATION_REQUEST_TIMEOUT_MS = 6_000L
+// Reject cached/last-known fixes older than this. A fix from hours ago (e.g.
+// after a flight) would otherwise silently anchor every widget, alert, and
+// forecast to the place the user has since left.
+private const val MAX_CACHED_LOCATION_AGE_MS = 10 * 60 * 1000L
 
 @Singleton
 class LocationProvider @Inject constructor(
@@ -46,10 +51,11 @@ class LocationProvider @Inject constructor(
         }
 
         try {
-            // 1) Try cached/last known location first (instant)
+            // 1) Try cached/last known location first (instant) — but only if
+            //    it's recent. A stale fix is kept aside as a last resort below.
             val lastKnown = getLastKnownFusedLocation()
-            if (lastKnown != null) {
-                Log.d(TAG, "getCurrentLocation: using lastKnown ${lastKnown.latitude}, ${lastKnown.longitude}")
+            if (lastKnown != null && lastKnown.isRecent()) {
+                Log.d(TAG, "getCurrentLocation: using fresh lastKnown ${lastKnown.latitude}, ${lastKnown.longitude}")
                 return@withContext Result.success(lastKnown)
             }
 
@@ -69,12 +75,27 @@ class LocationProvider @Inject constructor(
                 return@withContext Result.success(fallback)
             }
 
+            // 4) Last resort: a stale last-known fix still beats no location.
+            if (lastKnown != null) {
+                Log.d(TAG, "getCurrentLocation: falling back to stale lastKnown")
+                return@withContext Result.success(lastKnown)
+            }
+
             Log.w(TAG, "getCurrentLocation: all methods failed")
             Result.failure(Exception("Unable to determine location. Make sure GPS is enabled."))
         } catch (e: Exception) {
             Log.e(TAG, "getCurrentLocation: error", e)
             Result.failure(e)
         }
+    }
+
+    /**
+     * Freshness guard for cached fixes, measured on the monotonic boot clock
+     * ([Location.getElapsedRealtimeNanos]) so it's immune to wall-clock changes.
+     */
+    private fun Location.isRecent(): Boolean {
+        val ageMs = (SystemClock.elapsedRealtimeNanos() - elapsedRealtimeNanos) / 1_000_000L
+        return ageMs in 0..MAX_CACHED_LOCATION_AGE_MS
     }
 
     @SuppressWarnings("MissingPermission")

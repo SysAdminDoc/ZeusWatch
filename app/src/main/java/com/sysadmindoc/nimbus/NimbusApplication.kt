@@ -21,8 +21,9 @@ import com.sysadmindoc.nimbus.util.NowcastAlertWorker
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.widget.WidgetRefreshWorker
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -41,6 +42,14 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
     @DefaultDispatcher
     lateinit var defaultDispatcher: CoroutineDispatcher
 
+    // A failure reading settings or scheduling workers must be logged, not
+    // silently swallowed — otherwise alert/widget scheduling just never happens
+    // and there's no signal why.
+    private val startupExceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        android.util.Log.e(TAG, "Startup scheduling failed", throwable)
+    }
+    private lateinit var appScope: CoroutineScope
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -55,11 +64,12 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
 
     override fun onCreate() {
         super.onCreate()
+        appScope = CoroutineScope(SupervisorJob() + defaultDispatcher + startupExceptionHandler)
         AlertNotificationHelper.createChannels(this)
         WeatherNotificationHelper.createChannel(this)
         DatabaseMaintenanceWorker.schedule(this)
 
-        CoroutineScope(SupervisorJob() + defaultDispatcher).launch {
+        appScope.launch {
             val settings = prefs.settings.first()
             if (settings.alertNotificationsEnabled) {
                 AlertCheckWorker.schedule(this@NimbusApplication)
@@ -111,5 +121,9 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
                     .build()
             }
             .build()
+    }
+
+    companion object {
+        private const val TAG = "NimbusApplication"
     }
 }

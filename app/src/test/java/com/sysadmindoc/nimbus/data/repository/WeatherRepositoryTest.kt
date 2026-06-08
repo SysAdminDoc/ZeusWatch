@@ -368,4 +368,22 @@ class WeatherRepositoryTest {
         assertEquals(testLat, data.location.latitude, 0.01)
         assertEquals(testLon, data.location.longitude, 0.01)
     }
+
+    @Test
+    fun getCachedWeatherStampsLastUpdatedFromCacheTime() = runTest {
+        // A cache written in the past must report that age via lastUpdated, not
+        // "now" — otherwise the "updated X ago" label and staleness colouring
+        // always render cached data as fresh.
+        val cachedAt = System.currentTimeMillis() - (5 * 60 * 1000L)
+        val cached = makeCacheEntity(cachedAt = cachedAt)
+        coEvery { weatherDao.getCached(any()) } returns cached
+
+        val data = repository.getCachedWeather(testLat, testLon)
+
+        assertNotNull(data)
+        val expected = java.time.Instant.ofEpochMilli(cachedAt)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalDateTime()
+        assertEquals(expected, data!!.lastUpdated)
+    }
 }

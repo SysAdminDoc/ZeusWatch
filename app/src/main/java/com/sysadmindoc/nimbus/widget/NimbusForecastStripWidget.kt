@@ -98,35 +98,47 @@ private fun ForecastStripContent(
 
             Spacer(modifier = GlanceModifier.width(6.dp))
 
-            val upcoming = data.hourly.drop(1).take(5)
-            upcoming.forEach { hour ->
-                Spacer(modifier = GlanceModifier.width(2.dp))
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = GlanceModifier
-                        .defaultWeight()
-                        .cornerRadius(10.dp)
-                        .background(WidgetTheme.cardColor)
-                        .padding(horizontal = 4.dp, vertical = 5.dp),
-                ) {
-                    Text(
-                        hour.hour,
-                        style = WidgetTheme.captionStyle,
-                    )
-                    Image(
-                        provider = ImageProvider(weatherIconRes(hour.code, hour.isDay)),
-                        contentDescription = strings.weatherDescription(hour.code, hour.isDay),
-                        modifier = GlanceModifier.size(14.dp),
-                    )
-                    Text(
-                        "${hour.temp}\u00B0",
-                        style = WidgetTheme.tempSmall,
-                    )
-                    if (hour.precipChance > 20) {
+            // Glance hard-caps a Row/Column at 10 direct children and silently
+            // truncates the rest (logged as "Row container cannot have more
+            // than 10 elements"). The leading Column + spacer already take 2
+            // outer slots; 5 hourly columns interleaved with spacers would push
+            // the outer Row to 12 children and drop the last hours. Nest the
+            // hourly cells in their own Row so the outer Row stays at 3 children
+            // and the inner Row holds at most 5 columns + 4 spacers = 9.
+            Row(
+                modifier = GlanceModifier.defaultWeight(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val upcoming = data.hourly.drop(1).take(5)
+                upcoming.forEachIndexed { index, hour ->
+                    if (index > 0) Spacer(modifier = GlanceModifier.width(4.dp))
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = GlanceModifier
+                            .defaultWeight()
+                            .cornerRadius(10.dp)
+                            .background(WidgetTheme.cardColor)
+                            .padding(horizontal = 4.dp, vertical = 5.dp),
+                    ) {
                         Text(
-                            "${hour.precipChance}%",
-                            style = WidgetTheme.precipStyle,
+                            hour.hour,
+                            style = WidgetTheme.captionStyle,
                         )
+                        Image(
+                            provider = ImageProvider(weatherIconRes(hour.code, hour.isDay)),
+                            contentDescription = strings.weatherDescription(hour.code, hour.isDay),
+                            modifier = GlanceModifier.size(14.dp),
+                        )
+                        Text(
+                            "${hour.temp}\u00B0",
+                            style = WidgetTheme.tempSmall,
+                        )
+                        if (hour.precipChance > 20) {
+                            Text(
+                                "${hour.precipChance}%",
+                                style = WidgetTheme.precipStyle,
+                            )
+                        }
                     }
                 }
             }

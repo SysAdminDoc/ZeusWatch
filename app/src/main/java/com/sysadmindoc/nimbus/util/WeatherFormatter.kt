@@ -54,15 +54,17 @@ object WeatherFormatter {
         return "${speed.toInt()} ${s.windUnit.symbol}"
     }
 
-    fun formatWindDirection(degrees: Int): String = when {
-        degrees < 23 -> "N"
-        degrees < 68 -> "NE"
-        degrees < 113 -> "E"
-        degrees < 158 -> "SE"
-        degrees < 203 -> "S"
-        degrees < 248 -> "SW"
-        degrees < 293 -> "W"
-        degrees < 338 -> "NW"
+    // Normalize first: some providers emit 360 or a negative / "variable"
+    // bearing, which would otherwise fall through to the wrong sector.
+    fun formatWindDirection(degrees: Int): String = when (((degrees % 360) + 360) % 360) {
+        in 0 until 23 -> "N"
+        in 23 until 68 -> "NE"
+        in 68 until 113 -> "E"
+        in 113 until 158 -> "SE"
+        in 158 until 203 -> "S"
+        in 203 until 248 -> "SW"
+        in 248 until 293 -> "W"
+        in 293 until 338 -> "NW"
         else -> "N"
     }
 

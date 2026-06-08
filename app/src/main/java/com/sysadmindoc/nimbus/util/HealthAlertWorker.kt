@@ -59,7 +59,9 @@ class HealthAlertWorker @AssistedInject constructor(
         val weatherResult = weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
         val data = weatherResult.getOrNull() ?: run {
             Log.w(TAG, "Weather fetch failed", weatherResult.exceptionOrNull())
-            return Result.success() // Don't retry; next hourly run will try again
+            // Retry transient failures with the configured backoff (bounded);
+            // give up to the next hourly tick after that.
+            return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
         }
 
         val alerts = HealthAlertEvaluator.evaluate(
@@ -103,6 +105,7 @@ class HealthAlertWorker @AssistedInject constructor(
 
     companion object {
         private const val WORK_NAME = "nimbus_health_alert"
+        private const val MAX_RETRY_ATTEMPTS = 3
 
         fun schedule(context: Context) {
             val constraints = Constraints.Builder()
@@ -119,7 +122,10 @@ class HealthAlertWorker @AssistedInject constructor(
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
+                // UPDATE (not KEEP): re-scheduling with a changed interval or
+                // constraints must take effect on existing installs; KEEP makes
+                // every re-schedule after the first a silent no-op.
+                ExistingPeriodicWorkPolicy.UPDATE,
                 request,
             )
         }
