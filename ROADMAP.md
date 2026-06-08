@@ -4,7 +4,7 @@
 **Architecture**: Kotlin 2.1.0 / Jetpack Compose / Hilt / MVVM / multi-module (phone + wear)
 **Flavors**: `standard` (Google Play services, Gemini Nano, Firestore, Wear DataLayer) / `freenet` (F-Droid clean)
 **License**: LGPL-3.0
-**Last refreshed**: 2026-05-18 — premium shared-chrome polish sync after the source saturation and dependency runway refresh.
+**Last refreshed**: 2026-06-06 - autonomous continuation pass covering repo state, dependency runway, cache architecture, community-report hardening, provider-depth ranking, and continuation scheduling.
 
 > This document is the working plan. It is dense by design. Every claim in the prose maps to a source in the Appendix. Items are organized by horizon (Now / Next / Later) and by theme. Closed items move to [COMPLETED.md](COMPLETED.md). Current research synthesis lives in [RESEARCH_REPORT.md](RESEARCH_REPORT.md).
 
@@ -60,6 +60,64 @@ Key changes to planning:
 
 ---
 
+## 2026-06-06 Autonomous Continuation Delta
+
+This pass resumed from the current tracked roadmap after `git log -10 --oneline` showed `a3d98b7 docs: consolidate roadmap planning` at `HEAD` and `git status --short --branch` showed a clean `main...origin/main`. `rtk git log -10` was attempted per the shared session-start ritual but `rtk` was not on PATH in this PowerShell shell, so normal `git` was used and the tool gap is tracked in Continuation State.
+
+Local verification changed the near-term plan in four places:
+
+- The app and README are current at phone `versionName = "1.21.1"` / `versionCode = 89`, while Wear remains `versionName = "1.21.0"` / `versionCode = 64`; the version divergence is still deliberate unless Play distribution needs alignment. Evidence: [app/build.gradle.kts](app/build.gradle.kts), [wear/build.gradle.kts](wear/build.gradle.kts), [README.md](README.md).
+- Localization is stronger than the May roadmap text: app English/Spanish string counts are 926/926 and Wear English/Spanish counts are 43/43 in this checkout. Keep N-1 focused on Weblate/community locales, not local Spanish parity. Evidence: [docs/TRANSLATION.md](docs/TRANSLATION.md), `app/src/main/res/values*/strings.xml`, `wear/src/main/res/values*/strings.xml`.
+- Dependency runway needs a more precise Lane B: official AndroidX release pages now list WorkManager 2.11.2 stable, Room 2.8.4 stable, Wear Tiles 1.6.0 stable, ProtoLayout 1.4.0 stable, and Glance 1.2.0-rc01 / 1.3.0-alpha01 while the project remains on WorkManager 2.10.0, Room 2.6.1, Tiles 1.4.1, ProtoLayout 1.2.1, and Glance 1.1.1. Sources: [WorkManager releases](https://developer.android.com/jetpack/androidx/releases/work), [Room releases](https://developer.android.com/jetpack/androidx/releases/room), [Wear Tiles releases](https://developer.android.com/jetpack/androidx/releases/wear-tiles), [ProtoLayout releases](https://developer.android.com/jetpack/androidx/releases/wear-protolayout), [Glance releases](https://developer.android.com/jetpack/androidx/releases/glance).
+- Community reports need a security/product decision before expanding: `CommunityReportRepository.deleteReport()` performs a local device-id check, but [firestore.rules](firestore.rules) uses `request.resource.data.deviceId` in a delete rule even though official Firestore ownership examples use `resource.data` plus `request.auth.uid` for delete. Without Auth or App Check, anonymous report create/delete abuse remains possible. Sources: [Firestore insecure-rules guide](https://firebase.google.com/docs/firestore/security/insecure-rules), [Firebase App Check](https://firebase.google.com/docs/app-check).
+
+Strategic market signal also remains consistent: Breezy Weather's live README still positions it as a Material 3 Expressive app with 50+ weather sources, and Breezy's source docs auto-suggest national providers plus secondary sources for missing features. That keeps T-SOURCES and provider transparency ahead of broad visual novelty. Sources: [Breezy Weather](https://github.com/breezy-weather/breezy-weather), [Breezy SOURCES.md](https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md).
+
+---
+
+## 2026-06-06 Cycle 6 Provider-Depth Gap Ranking
+
+Cycle 6 compared ZeusWatch's local provider surface in [WeatherSource.kt](app/src/main/java/com/sysadmindoc/nimbus/data/repository/WeatherSource.kt) and [WeatherSourceManager.kt](app/src/main/java/com/sysadmindoc/nimbus/data/repository/WeatherSourceManager.kt) against Breezy Weather's live source catalog plus official national API docs. Local reality: ZeusWatch has selectable forecast providers for Open-Meteo, Open-Meteo BOM ACCESS-G, OpenWeatherMap, Pirate Weather, Bright Sky, MET Norway, and Environment Canada; alert providers cover NWS, MeteoAlarm, JMA, Environment Canada, OpenWeatherMap, and Bright Sky; air quality is Open-Meteo or OWM; minutely is Open-Meteo only. Breezy's catalog still shows a much wider regional matrix and, more importantly, an auto-suggest pattern: national source first, secondary sources for missing features, Open-Meteo fallback when no national source is available. Source: [Breezy SOURCES.md](https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md).
+
+### Provider Expansion Priority Table
+
+| Rank | Provider | Coverage / Data | Auth / Terms | Why It Matters For ZeusWatch | Recommended Roadmap Action | Priority |
+|---|---|---|---|---|---|---|
+| 1 | FMI | Finland / Åland forecast, current, AQ, alerts, normals per Breezy; official WFS has stored queries and CC terms; FMI says registration is no longer required. | No API key; CC license; documented request limits. | Best source-count win with low proprietary risk. It extends the existing Nordic MET Norway story and adds alert/AQ depth without a required key. | Promote NX-3 from "FMI + KNMI bundle" to "FMI first, KNMI after key-handling decision." Add WFS adapter spike before code. | P1 |
+| 2 | DMI Forecast EDR | Denmark, Greenland, Faroe forecast/alerts in Breezy; DMI documents Open Data APIs, Forecast Data EDR, HARMONIE model collections, and smaller point/parameter queries. | Free/open but registration/API-key handling still needs exact verification before implementation. | Fills Denmark/Greenland/Faroe gap and pairs naturally with MET Norway + FMI for Nordic/Arctic credibility. Forecast EDR is closer to mobile use than downloading full STAC files. | Queue after FMI and NX-20 metadata; start with forecast-only, then alerts if the warning API is stable. | P1 |
+| 3 | Météo-France via Open-Meteo + official Vigilance | France/overseas; Open-Meteo `/v1/meteofrance` exposes ARPEGE/AROME hourly forecast and 15-minute AROME families; official Vigilance API data is on data.gouv but accessed through Météo-France API portal. | Forecast path is no-key through Open-Meteo; Vigilance needs Météo-France API portal/JWT. | Highest nowcast upgrade for France and neighboring regions, and a direct answer to commercial minute-forecast products without bundling commercial keys. | Keep NX-1 high, but split into no-key forecast/nowcast first and keyed official Vigilance second. | P1 |
+| 4 | HKO | Hong Kong 9-day forecast, current report, local forecast, weather warnings, special weather tips, rainfall/nowcast datasets. | Public HKO/data.gov.hk open data; likely no app-specific key. | Compact, high-quality regional win with forecast + current + warnings + short-nowcast data and clear update cadences. | Add HKO as a P1/P2 Asia-Pacific adapter after the Nordic/France batch. | P1/P2 |
+| 5 | BMKG | Indonesia forecast/current/AQ/alerts per Breezy; official BMKG warning CAP endpoint is public, bilingual, and rate-limited to 60 requests/minute/IP. | No key seen for warning CAP; attribution required; forecast endpoint needs current official-shape verification. | Strong safety/alert value for a large weather-risk region; CAP format fits the existing alert-adapter interface. | Add BMKG alert adapter before full forecast adapter; document attribution in provider metadata. | P2 |
+| 6 | KNMI | Netherlands forecast/alerts/normals in Breezy; official KNMI Open Data API is file-based and protected by API keys, with anonymous/shared and registered key modes. | API key in Authorization header; anonymous key rotates and has shared quota. | Valuable but not compatible with "no required API keys" as a default source unless exposed as optional and user-provided. | Keep candidate, but do not bundle with FMI. Gate behind provider metadata, optional key UI, and cache/deprecation-header handling. | P2 |
+| 7 | CWA Taiwan | Taiwan forecast/current/AQ/alerts/normals/address in Breezy; official open-data site exposes warning and forecast datasets and API formats. | Requires free key per Breezy; official datasets are documented but localization/model mapping is higher effort. | High regional value but key requirement and Chinese-language schemas make it less immediate than HKO/BMKG. | Keep in Later unless a Taiwan user signal appears. | P2/P3 |
+| 8 | SMHI | Sweden forecast in Breezy; official Open Data portal has meteorological forecast docs, including current SNOW model paths. | Keyless open-data docs appear available; endpoint migration from `pmp3g` to `snow1g` needs exact verification. | Sweden is partly covered by MET Norway/Open-Meteo but a national source would complete the Nordic set. | Revisit after FMI/DMI; first run a live endpoint and parameter mapping spike. | P2 |
+
+### Cross-Cutting Source Lessons
+
+- **Source expansion needs metadata, not just enum entries.** New providers need attribution text, license URL, auth type, quota/rate-limit notes, region coverage, fallback behavior, and whether they are allowed in `freenet`. Otherwise Settings will keep accreting special cases like the current OWM/Pirate key field checks in [SettingsScreen.kt](app/src/main/java/com/sysadmindoc/nimbus/ui/screen/settings/SettingsScreen.kt).
+- **Do not bundle rotating or shared anonymous keys.** KNMI's anonymous key model and shared quota are a warning sign. Optional user-provided keys preserve the no-required-key guardrail; no-key national APIs and Open-Meteo model proxies should be preferred.
+- **Alert-first can be higher value than forecast-first in risk regions.** BMKG CAP, HKO warnings, DMI/FMI alerts, and Météo-France Vigilance can improve safety without taking over the primary forecast source.
+- **Provider-aware cache (NX-6) is a dependency for serious source depth.** Adding more providers without normalized provider-aware caching increases API traffic, weakens offline switching, and makes fallback overwrite behavior ambiguous.
+- **Auto-suggestion is a UX differentiator.** Breezy suggests national sources and supplements missing features. ZeusWatch should eventually auto-recommend "FMI forecast + Open-Meteo pollen + MeteoAlarm alerts" style bundles instead of forcing users to understand every provider's strengths.
+
+---
+
+## 2026-06-06 Cycle 7 Radar / Lightning Lifecycle Findings
+
+Cycle 7 inspected [RadarScreen.kt](app/src/main/java/com/sysadmindoc/nimbus/ui/screen/radar/RadarScreen.kt), [RadarMapView.kt](app/src/main/java/com/sysadmindoc/nimbus/ui/screen/radar/RadarMapView.kt), [RadarViewModel.kt](app/src/main/java/com/sysadmindoc/nimbus/ui/screen/radar/RadarViewModel.kt), [RadarRepository.kt](app/src/main/java/com/sysadmindoc/nimbus/data/repository/RadarRepository.kt), [RainViewerApi.kt](app/src/main/java/com/sysadmindoc/nimbus/data/api/RainViewerApi.kt), [BlitzortungService.kt](app/src/main/java/com/sysadmindoc/nimbus/data/api/BlitzortungService.kt), and the existing radar unit tests. The native radar stack is useful and already has ViewModel-level guards, but the next roadmap item should be reliability/compliance hardening, not only a MapLibre version bump.
+
+### Radar / Lightning Gap Ranking
+
+| Rank | Gap | Local Evidence | External Evidence | Recommended Roadmap Action | Priority |
+|---|---|---|---|---|---|
+| 1 | RainViewer attribution, host, and cache compliance | `RainViewerApi.buildTileUrl()` hardcodes `https://tilecache.rainviewer.com`; `RadarRepository` ignores `RainViewerResponse.host`; native radar UI relies on MapLibre attribution but does not show a visible RainViewer credit; offline mode hides any in-memory frames. | RainViewer docs say clients should use `host` + `path`, display Rain Viewer attribution, cache aggressively, and expect no SLA. Sources: [Weather Maps API](https://www.rainviewer.com/api/weather-maps-api.html), [RainViewer API terms](https://www.rainviewer.com/api.html). | Add NX-21. Use response host, add visible data-source attribution, persist frame metadata/last frame, and degrade gracefully when JSON/tile fetch fails. | P1 |
+| 2 | MapLibre lifecycle completeness | `RadarMapView` forwards `onStart/onResume/onPause/onStop/onDestroy` and calls `onDestroy()` again in `onDispose`, but does not call `onCreate(null)`, `onLowMemory()`, or `onSaveInstanceState()`. | MapLibre docs require parent lifecycle forwarding; the official Android quickstart includes `onLowMemory()` and `onSaveInstanceState()` in addition to start/resume/pause/stop/destroy. Sources: [MapView docs](https://maplibre.org/maplibre-native/android/api/-map-libre%20-native%20-android/org.maplibre.android.maps/-map-view/), [MapLibre Android quickstart](https://maplibre.org/maplibre-native/android/examples/getting-started/). | NX-21 should introduce a guarded lifecycle wrapper, avoid double destroy, persist camera state, and add instrumentation or Robolectric coverage. | P1 |
+| 3 | Blitzortung source-policy risk for push alerts | `BlitzortungService` connects to a global WebSocket and NX-16 currently proposes high-priority lightning proximity notifications. | LightningMaps/Blitzortung docs describe the network as private/entertainment/non-commercial and not for protection of life or property. Sources: [LightningMaps About](https://www.lightningmaps.org/about?lang=en), [LightningMaps docs](https://docs.lightningmaps.org/?1740696779=). | Gate NX-16 on explicit permission or an alternate alert-grade lightning source; keep current overlay as informational only until source policy is settled. | P1 |
+| 4 | WebSocket backoff and spatial throttling | `BlitzortungService.onFailure()` clears the socket but does not schedule reconnect/backoff; the buffer keeps the last 500 global strikes and `RadarMapView` rebuilds GeoJSON for every strike-list update. | Community lightning feeds can be bursty and are not guaranteed services; app-side throttling protects battery and renderer stability. | Add reconnect backoff, dedupe/throttle, distance or viewport filtering, and tests for buffer eviction + reconnect policy. | P2 |
+| 5 | Test surface stops before rendering/source behavior | Existing tests cover `RadarViewModel` playback guards and `RadarScreen` helper predicates, but there are no tests for `RainViewerApi.buildTileUrl`, `RadarRepository` host/path mapping, Blitzortung JSON parse/buffer eviction, or MapLibre layer lifecycle. | RainViewer and MapLibre behavior is integration-heavy; without tests, dependency upgrades can silently break radar. | Add targeted unit tests plus a macrobenchmark/instrumented smoke test for native radar tab open, playback start, layer switch, and offline fallback. | P2 |
+
+---
+
 ## NOW — Current cycle (target v1.21.x – v1.22.x)
 
 In-flight or top of the queue. Each item already has enough scope context that an engineer can pick it up cold.
@@ -110,9 +168,22 @@ Supporting refactor: extracted `buildPrompt` to a companion object `internal fun
 **Scope**: To use `runGlanceAppWidgetUnitTest`, upgrade Glance to 1.2.0+ — bump-and-test as a separate item once the rest of the Compose BOM is stable on 2025.04.01 (the current pin). Until then, keep adding pure-function tests for any helpers introduced into the widget package.
 
 ### N-10. Dependency runway and platform compatibility pass · **T-RELIABILITY** / **T-PERF**
-**Status**: not started. The 2026-05-17 dependency review found no sampled OSV advisories for current Maven coordinates, but it did find major upgrade lanes that affect widgets, Room, Wear, maps, Retrofit/OkHttp, and build tooling.
-**Scope**: Split into three lanes. Lane A: low-risk patch upgrades with unchanged APIs, one PR, normal unit/lint/build verification. Lane B: feature-enabling AndroidX upgrades (Glance 1.2.0-rc01 for widget tests, Room 2.8.4, WorkManager 2.11.2, Wear Tiles 1.6.0, ProtoLayout 1.4.0, Play Services Wearable 20.0.1) with focused regression tests. Lane C: architecture-affecting upgrades (Retrofit 3.0.0, OkHttp 5.3.2, MapLibre 13.1.0, Kotlin stable 2.3.x/2.4 preview, Gradle 9.x, AGP 9.x alpha) only after an issue/branch names the migration risk and rollback path.
-**Done when**: [SECURITY_AND_DEPENDENCY_REVIEW.md](.ai/research/2026-05-17/SECURITY_AND_DEPENDENCY_REVIEW.md) is converted into actionable dependency issues or PRs; CI still covers Detekt, lint, unit tests, debug builds, connected a11y tests, and release build verification.
+**Status**: not started; refreshed on 2026-06-06 against official AndroidX release pages.
+**Scope**: Split into three lanes. Lane A: low-risk patch upgrades with unchanged APIs, one PR, normal unit/lint/build verification. Lane B: feature-enabling AndroidX upgrades with dedicated verification slices: WorkManager 2.10.0 -> 2.11.2 plus worker scheduling tests; Room 2.6.1 -> 2.8.4 plus schema diff/migration tests; Wear Tiles 1.4.1 -> 1.6.0 and ProtoLayout 1.2.1 -> 1.4.0 plus tile/complication tests; Glance 1.1.1 -> 1.2.0-rc01 only when the widget-test payoff is worth riding an RC, otherwise wait for stable and keep N-9 on pure-function tests. Lane C: architecture-affecting upgrades (Retrofit 3.0.0, OkHttp 5.3.2, MapLibre 13.2.0, Kotlin stable 2.3.x/2.4 preview, Gradle 9.x, AGP 9.x alpha) only after an issue/branch names the migration risk and rollback path.
+**Done when**: [SECURITY_AND_DEPENDENCY_REVIEW.md](.ai/research/2026-05-17/SECURITY_AND_DEPENDENCY_REVIEW.md) is converted into actionable dependency issues or PRs; CI still covers Detekt, lint, unit tests, debug builds, connected a11y tests, and release build verification; each Lane B bump records the exact before/after version and any test gaps in this roadmap or release notes.
+
+### N-11. Community reports integrity and ownership hardening · **T-RELIABILITY** / security
+**Status**: newly opened on 2026-06-06 from local rules/code inspection.
+**Problem**: Community reports are a useful differentiator on the Radar screen, but the current integrity boundary is mostly client-side. `CommunityReportRepository.submitReport()` rate-limits only in process memory, `deleteReport()` checks local `deviceId` before calling Firestore delete, and [firestore.rules](firestore.rules) validates create shape but allows any `condition` string up to 50 chars and attempts delete ownership with `request.resource.data.deviceId`. Firestore's own examples use `request.auth.uid == resource.data.author_uid` for delete ownership, so this path should be assumed fragile until rules tests prove otherwise. App Check can reduce unauthorized-client abuse, but Firebase documents it as complementary to Auth, not a user-ownership replacement.
+**Recommended decision**: choose one explicit product model before adding report features.
+- **Append-only anonymous model**: remove user deletion from the public UX, add Firestore TTL/cleanup for stale reports, tighten create rules to `keys().hasOnly([...])`, constrain `condition` to the enum names in [CommunityReport.kt](app/src/main/java/com/sysadmindoc/nimbus/data/model/CommunityReport.kt), require `timestamp` near `request.time`, and enable App Check for the `standard` flavor.
+- **Owner-managed model**: add Firebase Anonymous Auth in `standard`, store `ownerUid`, update rules to `allow create: if request.auth.uid == request.resource.data.ownerUid` and `allow delete: if request.auth.uid == resource.data.ownerUid`, keep hashed device id only as local telemetry/abuse signal, and add emulator rules tests.
+**Acceptance criteria**:
+- [ ] Firestore emulator tests cover valid create, malformed create, stale timestamp, invalid condition, owner delete, non-owner delete, and anonymous/no-auth behavior.
+- [ ] Radar report submit/delete UI reflects the chosen model and never promises deletion if the backend cannot enforce it.
+- [ ] App Check rollout is documented for `standard`; `freenet` remains unaffected and never depends on Firebase.
+- [ ] Abuse controls are server-enforced, not only local process-memory rate limits.
+**Impact / effort / confidence**: User value 4, product value 4, strategic differentiation 3, confidence 5, effort 3 => score 13, P1. Risk: adding Auth/App Check increases proprietary surface in `standard`; keep it flavor-contained and document the F-Droid boundary.
 
 ---
 
@@ -126,8 +197,8 @@ Free API key registration on [portail-api.meteofrance.fr](https://portail-api.me
 ### NX-2. GeoSphere Austria adapter (INCA nowcast + alerts) · **T-SOURCES**
 [CC0 license](https://data.hub.geosphere.at/dataset/nowcast-v1-15min-1km), no key, 15-min/1-km nowcast for Austria + nearby Alps. Highest-quality Alpine coverage; fills a gap Open-Meteo can't match at that resolution. Source: [GeoSphere data hub](https://data.hub.geosphere.at/), [Breezy SOURCES.md](https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md). Effort: medium.
 
-### NX-3. FMI (Finland) + KNMI (Netherlands) adapters · **T-SOURCES**
-Both added to Breezy in 2026 (v6.2.0 / v6.1.0). FMI adds: forecast, current, AQI, alerts, normals for Finland/Åland. KNMI adds Netherlands forecasts. Both keyless. Source: [Breezy CHANGELOG.md](https://github.com/breezy-weather/breezy-weather/blob/main/CHANGELOG.md). Effort: low–medium each. Bundle the two into one provider-expansion PR.
+### NX-3. FMI (Finland) adapter first; KNMI optional after key-policy decision · **T-SOURCES**
+Cycle 6 changed this from a bundled FMI+KNMI source-count PR into a staged provider-compliance item. FMI is the safer first adapter: Breezy lists forecast/current/AQI/alerts/normals for Finland/Åland, the official FMI WFS 2.0 docs expose stored queries such as point forecasts, and FMI says registration/API keys are no longer required. Scope: add an FMI API interface, response parser, source metadata, attribution/license text, and tests for forecast + alert/AQI availability; start with forecast if WFS alert/AQI mapping needs a second PR. KNMI remains valuable for the Netherlands, but the official KNMI Open Data API requires an Authorization key, with anonymous/shared and registered-key quota models. Do not bundle KNMI with FMI or ship a shared key; revisit after NX-20 gives Settings a generic optional-key/auth-mode model. Sources: [FMI WFS manual](https://en.ilmatieteenlaitos.fi/open-data-manual-fmi-wfs-services?doAsUserLanguageId=en_US), [FMI no-key announcement](https://en.ilmatieteenlaitos.fi/news/963113482), [KNMI Open Data API](https://developer.dataplatform.knmi.nl/open-data-api), [Breezy SOURCES.md](https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md). Effort: medium.
 
 ### NX-4. Open-Meteo pollen card refresh + Marine + Flood APIs · **T-SOURCES** / **T-HEALTH**
 Pollen is already in `AirQualityRepository`; the [docs](https://open-meteo.com/en/docs/air-quality-api) note CAMS coverage is European-only — surface this explicitly in the empty state. Add **Marine** ([wave height/period/direction, ocean current, sea surface temp](https://open-meteo.com/en/docs/marine-weather-api)) as a new opt-in card for coastal users. Add **Flood** (GloFAS river discharge, 30-day) as a new opt-in card for river-near users. Effort: low each.
@@ -136,7 +207,7 @@ Pollen is already in `AirQualityRepository`; the [docs](https://open-meteo.com/e
 Fetch the next 24h temp + precip from 2–3 enabled providers in parallel; render a "providers agree within ±X°" or "diverge >5°" badge with a tap-to-expand showing each provider's value. This is the FOSS answer to AccuWeather's MinuteCast / Carrot's multi-model. Borrowed from the [Breezy idea](https://github.com/breezy-weather/breezy-weather) of leveraging the multi-source system for transparency, not just resilience. Effort: medium. Risk: API quota multiplication — gate behind opt-in.
 
 ### NX-6. Per-location offline-first cache · **T-PERF**
-Existing roadmap calls this out: "switching to a saved location triggers a fresh API call." Cache the last-known weather per `savedLocationId` in Room and serve instantly while a background fetch refreshes. Already 80% of the infrastructure is in place (`WeatherCacheEntity` keyed by coord); just need a `getInstantThenRefresh` flow at the repository layer. Done when location switch renders <100ms with cached data + an "updating..." badge. Effort: low–medium.
+Existing roadmap calls this out: "switching to a saved location triggers a fresh API call." The 2026-06-06 code pass found that the current cache is useful but narrower than this item previously implied: [WeatherCacheEntity](app/src/main/java/com/sysadmindoc/nimbus/data/model/WeatherCacheEntity.kt) stores a serialized `OpenMeteoResponse` keyed by rounded coordinates, [WeatherRepository.getCachedWeather](app/src/main/java/com/sysadmindoc/nimbus/data/repository/WeatherRepository.kt) decodes only that Open-Meteo payload shape, and [WeatherSourceManager](app/src/main/java/com/sysadmindoc/nimbus/data/repository/WeatherSourceManager.kt) now routes many forecast providers. Upgrade this item from "wire a flow" to "make cache provider-aware." Recommended path: add a normalized `WeatherDataCacheEntity` or extend the existing entity with `sourceProvider`, `savedLocationId`, schema version, and normalized `WeatherData` JSON; serve cached normalized data immediately for every provider; refresh in background; show provider/staleness in UI. Done when saved-location switch renders <100ms with cached data, works for Open-Meteo/BOM/OWM/Pirate/Bright Sky/MET Norway/ECCC, and source fallback refresh does not overwrite fresh primary cache with older fallback data. Effort: medium.
 
 ### NX-7. Baseline Profiles + Macrobenchmark startup gate · **T-PERF**
 Compose-heavy apps see ~30% startup wins from Baseline Profiles. Source: [Android Developers](https://developer.android.com/develop/ui/compose/performance/baseline-profiles). Add `:benchmark` module with a Macrobenchmark covering: cold start → first frame, location switch, radar tab open, settings open. CI publishes the trace + asserts a ceiling (e.g. p95 cold start <1200ms). Profile is generated once per release; the AGP plugin handles bundling. Effort: medium.
@@ -172,7 +243,7 @@ NOAA SWPC endpoints already documented in the existing roadmap appendix:
 Uncontested in the FOSS Android weather space. New card type (29th); off by default; uses the existing card-toggle infra. Effort: low.
 
 ### NX-16. Lightning proximity push · **T-HEALTH** (safety)
-Blitzortung WebSocket is already wired ([`BlitzortungService`](app/src/main/java/com/sysadmindoc/nimbus/data/api/BlitzortungService.kt)). Add a `LightningProximityWorker` that fires a high-priority notification when a strike is detected within X km of the user's location (configurable; default 10 km / off). Mirrors [Carrot Ultra's storm cell alerts](https://support.meetcarrot.com/weather/) — but free. Effort: low–medium.
+Blitzortung WebSocket is already wired ([`BlitzortungService`](app/src/main/java/com/sysadmindoc/nimbus/data/api/BlitzortungService.kt)), but Cycle 7 found a source-policy blocker for push alerts: LightningMaps/Blitzortung docs describe the data as private/entertainment/non-commercial and not intended for protection of life or property. Do not ship a high-priority lightning warning from Blitzortung data without written permission or an alternate alert-grade source. First subtask: decide source policy and attribution; second subtask: if permitted, add a `LightningProximityWorker` with configurable radius (default off), distance-filtered buffering, backoff, quiet-hours/DND channel behavior, and tests. Mirrors [Carrot Ultra's storm cell alerts](https://support.meetcarrot.com/weather/) only after the data-source constraint is resolved. Effort: medium. Risk: source terms may force this to remain an informational overlay instead of a notification feature.
 
 ### NX-17. Custom-alert rule expansion · **T-HEALTH**
 Custom alerts today cover 5 metrics (high, low, gusts, 24h precip, UV peak). Add: AQI threshold, dewpoint, heat index, wind chill, snowfall sum, lightning-within-N-km (depends on NX-16), and any-source severe weather event of type X. Pure expansion of `CustomAlertEvaluator`'s rule enum + UI editor. Effort: medium.
@@ -193,6 +264,12 @@ Source: [Mobile App Accessibility 2026 guide](https://www.accessibilitychecker.o
 - [x] Fastlane `title.txt` / `short_description.txt` / `full_description.txt` reconciled with v1.20.3 reality (28 cards, 4 widget sizes, 72h hourly, 7 providers, native Wear OS, multi-source, "ZeusWatch" branding). Added `changelogs/86.txt`.
 - [ ] Sync `versionCode` divergence between phone (86) and wear (62) at the next release **if** Play Store distribution is on the table; ignore otherwise (current channels treat them as independent listings).
 Repo root markdown count: README, CHANGELOG, ROADMAP, COMPLETED, RESEARCH_REPORT, AGENTS, LICENSE, plus ignored local working notes — within the target once ignored local notes are excluded.
+
+### NX-20. Provider metadata registry + regional auto-suggestion · **T-SOURCES** / **T-RELIABILITY**
+Cycle 6 found that provider depth is now constrained by metadata and routing clarity as much as by missing adapters. [WeatherSource.kt](app/src/main/java/com/sysadmindoc/nimbus/data/repository/WeatherSource.kt) exposes provider capabilities, but provider-specific operational facts live implicitly in code and UI: [SettingsScreen.kt](app/src/main/java/com/sysadmindoc/nimbus/ui/screen/settings/SettingsScreen.kt) still special-cases OpenWeatherMap/Pirate Weather key fields, and [WeatherSourceManager.kt](app/src/main/java/com/sysadmindoc/nimbus/data/repository/WeatherSourceManager.kt) routes providers without a shared registry for auth, attribution, quota, region, fallback, or `freenet` compatibility. Scope: add a `ProviderMetadata` registry keyed by `WeatherSourceProvider` with `dataTypes`, country/region coverage, `authMode` (`NONE`, `USER_KEY`, `PROXY`, `UNSUPPORTED`), preference key name, attribution text, license URL, quota/rate-limit notes, freshness/update cadence, `freenetAllowed`, fallback role, and cache namespace. Replace Settings hardcoded key checks with metadata-driven UI; expose provider detail rows that explain why a source is recommended or unavailable; add a regional resolver that suggests a default bundle from lat/lon/country, for example FMI forecast + MeteoAlarm alerts + Open-Meteo AQ/pollen in Finland, DMI forecast + MeteoAlarm alerts in Denmark, or HKO forecast/warnings in Hong Kong. Acceptance criteria: source Settings render from metadata; no provider can be selected in `freenet` if metadata marks it unavailable; optional-key providers show one generic secure key workflow; provider agreement/cache logic can identify a provider namespace; tests cover recommendation output for US, Finland, France, Denmark, Hong Kong, Netherlands, Australia, and Indonesia. Risks: country detection can be wrong near borders, some national APIs have sub-region coverage quirks, and auto-suggestion must never silently replace a user-selected provider.
+
+### NX-21. Native radar compliance, cache, and lifecycle hardening · **T-PERF** / **T-RELIABILITY**
+Cycle 7 found that the native MapLibre/RainViewer path should be hardened before radar feature expansion or MapLibre 13.x adoption. Scope: update `RadarRepository` and `RainViewerApi` to use `RainViewerResponse.host` instead of a hardcoded tile host; store recent frame metadata and the last-rendered frame per location/provider so native radar can show a stale-but-labeled fallback offline; add the RainViewer coverage mask as an optional "coverage" overlay or empty-state hint where radar data is unavailable; show visible "Weather data by Rain Viewer" attribution in native radar and radar preview cards; wrap `MapView` lifecycle in a tested helper that calls `onCreate(null)`, start/resume/pause/stop/destroy once, handles `onLowMemory`, and preserves camera state; throttle lightning GeoJSON updates and filter strikes by viewport or distance before rendering; add reconnect/backoff to `BlitzortungService` if the overlay remains enabled. Acceptance criteria: native radar opens, rotates, backgrounds, returns, and disposes without duplicate-destroy crashes or camera reset; offline mode shows cached frame metadata when available and a clear no-cache state when unavailable; RainViewer attribution is visible; unit tests cover RainViewer URL/host mapping and Blitzortung parse/buffer/backoff logic; an instrumented or macrobenchmark smoke test covers native radar tab open, playback, layer switch, and offline fallback. Risks: MapLibre lifecycle behavior can differ across Android versions; RainViewer free terms are personal/small-community/no-SLA, so cache and attribution are compliance requirements, not polish.
 
 ---
 
@@ -227,7 +304,7 @@ Reference: [KieronQuinn/Smartspacer](https://github.com/KieronQuinn/Smartspacer)
 Publish weather entities via the ContentProvider from NX-13 + REST endpoint, or via MQTT if user has a broker. Multiple [HA community blueprints](https://www.home-assistant.io/integrations/weather/) consume `weather.*` entities. Effort: medium; doable as a separate module so HA users opt in.
 
 ### L-8. MapLibre 13.x radar compatibility and performance audit · **T-PERF**
-Maven metadata in the 2026-05-17 dependency review reports MapLibre Android 13.1.0 as current while ZeusWatch is pinned to 11.5.2. Keep this Later until the current GL ES radar path shows measurable pain or N-10 opens a compatibility branch. The first branch should measure radar tab open time, tile load behavior, and native crash rate before adopting 13.x.
+GitHub releases now show MapLibre Android 13.2.0 as latest while ZeusWatch is pinned to 11.5.2. Keep the version bump Later until NX-21 hardens the current MapView lifecycle, RainViewer compliance/cache behavior, and radar smoke tests. The first 13.x branch should measure radar tab open time, tile load behavior, memory after repeated tab open/close, and native crash rate before adopting the renderer update. Sources: [MapLibre android-v13.2.0 release](https://github.com/maplibre/maplibre-native/releases/tag/android-v13.2.0), [MapLibre Android quickstart](https://maplibre.org/maplibre-native/android/examples/getting-started/).
 
 ### L-9. Marine / Aviation power-user mode · **T-SOURCES**
 Layered atop NX-4 + Météo-France. Storm Glass / Open-Meteo marine + METAR/TAF/NOTAM (Windy-style). Off-philosophy unless we maintain a strict "no paywall, no clutter" stance — gate behind an explicit "power-user mode" preference. Effort: high.
@@ -275,7 +352,7 @@ Battery is the #1 complaint against weather apps (28% per [unstar.app](https://u
 Breezy ships a bundled AccuWeather key. AccuWeather covers global pollen + better US alerts than NWS in some cases. Friction: bundled key is paywall-adjacent and revokable. **Open question**: drop or accept the brittleness?
 
 ### UC-6. Pixel Watch / Wear OS 6 M3 Expressive UI refresh
-[wear-compose-material3 1.5.0-beta01](https://developer.android.com/jetpack/androidx/releases/wear-compose-m3) lands the M3 Expressive Wear UI. Refresh once stable. Decide at that point; today's wear UI is functional. Out of NEXT only because of "wait for stable."
+[wear-compose-material3 1.5.0-beta01](https://developer.android.com/jetpack/androidx/releases/wear-compose-m3) lands the M3 Expressive Wear UI. Refresh once stable. Decide at that point; today's wear UI is functional. Held from NEXT only because of "wait for stable."
 
 ### UC-7. ScrollAware widget refresh on home-screen interaction
 A long-tail efficiency: refresh the widget at the moment the user wakes the phone, not on a 15-min cadence. Possible via lifecycle callbacks. Friction: increases code complexity; might not actually save power. **Open question**: needs measurement (see UC-4).
@@ -294,9 +371,38 @@ Each is closed with a one-line rationale so we don't relitigate.
 - **Replace MapLibre with proprietary map SDK (Mapbox/Maps SDK for Android).** Locks `freenet`.
 - **Migrating to Firebase as primary state store.** Conflicts with `freenet` parity; today Firestore is used only for opt-in community reports (`standard` flavor only) and that's the right boundary.
 - **Android 16 "Local" weather wallpaper integration.** [Pixel-only and no public third-party API](https://gadgets.beebom.com/guides/how-to-use-lock-screen-live-effects-on-pixel-phones); not actionable.
-- **Built-in webcam / live photo feed.** Out of philosophy (third-party hosting, copyright, image moderation).
+- **Built-in webcam / live photo feed.** Conflicts with the product philosophy (third-party hosting, copyright, image moderation).
 - **Replace Hilt with Koin/Dagger pure.** Hilt works; the [Kotlin 2.1.0 + KSP2 compatibility friction](https://github.com/google/dagger/issues/4582) is real but already navigated.
 - **Move Wear app to Compose Multiplatform.** No upside today; CMP-on-Wear isn't a target.
+
+---
+
+## Research Log
+
+| Date | Cycle | Research Area | Sources / Files Reviewed | Key Findings | Roadmap Changes |
+|---|---|---|---|---|---|
+| 2026-06-06 | Cycle 1: Repository comprehension | Current repo state, recent commits, canonical notes | `git log -10`, `git status`, [CLAUDE.md](CLAUDE.md), [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md), [README.md](README.md), [ROADMAP.md](ROADMAP.md), [RESEARCH_REPORT.md](RESEARCH_REPORT.md) | Repo is clean at `a3d98b7`; public context files are partly stale against v1.21.1; `ROADMAP.md` is canonical and should be resumed, not replaced. | Added 2026-06-06 delta and Continuation State. |
+| 2026-06-06 | Cycle 2: Feature inventory | Build/version files, localization, cards, navigation, cache | [app/build.gradle.kts](app/build.gradle.kts), [wear/build.gradle.kts](wear/build.gradle.kts), [CardConfig.kt](app/src/main/java/com/sysadmindoc/nimbus/data/repository/CardConfig.kt), [WeatherRepository.kt](app/src/main/java/com/sysadmindoc/nimbus/data/repository/WeatherRepository.kt), [WeatherCacheEntity.kt](app/src/main/java/com/sysadmindoc/nimbus/data/model/WeatherCacheEntity.kt), [docs/TRANSLATION.md](docs/TRANSLATION.md) | App string parity is 926/926 and Wear parity is 43/43; 28 card types remain current; existing weather cache is Open-Meteo-response-shaped and not provider-aware. | Tightened N-1 status interpretation and rewrote NX-6 as provider-aware normalized cache work. |
+| 2026-06-06 | Cycle 3: Security and backend integrity | Community reports, Firestore rules, Firebase docs | [CommunityReportRepository.kt](app/src/standard/java/com/sysadmindoc/nimbus/data/repository/CommunityReportRepository.kt), [CommunityReport.kt](app/src/main/java/com/sysadmindoc/nimbus/data/model/CommunityReport.kt), [firestore.rules](firestore.rules), [Firestore insecure-rules guide](https://firebase.google.com/docs/firestore/security/insecure-rules), [Firebase App Check](https://firebase.google.com/docs/app-check) | Delete ownership and abuse controls need a backend-enforced model; local device-id checks and process-memory rate limits are insufficient for a public report surface. | Added N-11 with append-only vs owner-managed implementation options and acceptance criteria. |
+| 2026-06-06 | Cycle 4: Dependency/platform research | Official AndroidX release pages | [WorkManager](https://developer.android.com/jetpack/androidx/releases/work), [Room](https://developer.android.com/jetpack/androidx/releases/room), [Wear Tiles](https://developer.android.com/jetpack/androidx/releases/wear-tiles), [ProtoLayout](https://developer.android.com/jetpack/androidx/releases/wear-protolayout), [Glance](https://developer.android.com/jetpack/androidx/releases/glance) | WorkManager 2.11.2, Room 2.8.4, Tiles 1.6.0, and ProtoLayout 1.4.0 are stable; Glance is still stable at 1.1.1 with 1.2.0-rc01 and 1.3.0-alpha01 available. | Refreshed N-10 and Appendix D library watch. |
+| 2026-06-06 | Cycle 5: Competitive/product signal | OSS competitor/source docs and Open-Meteo/F-Droid docs | [Breezy Weather](https://github.com/breezy-weather/breezy-weather), [Breezy SOURCES.md](https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md), [Open-Meteo Ensemble API](https://open-meteo.com/en/docs/ensemble-api), [F-Droid Reproducible Builds](https://f-droid.org/docs/Reproducible_Builds/) | Breezy still pressures provider depth and national-source auto-suggestion; Open-Meteo ensemble remains a good uncertainty source; F-Droid reproducibility guidance supports NX-14. | Reinforced T-SOURCES, NX-5, NX-14, and future ensemble research. |
+| 2026-06-06 | Cycle 6: Provider-depth gap ranking | Local provider routing plus Breezy and official national API docs | [WeatherSource.kt](app/src/main/java/com/sysadmindoc/nimbus/data/repository/WeatherSource.kt), [WeatherSourceManager.kt](app/src/main/java/com/sysadmindoc/nimbus/data/repository/WeatherSourceManager.kt), [SettingsScreen.kt](app/src/main/java/com/sysadmindoc/nimbus/ui/screen/settings/SettingsScreen.kt), [Breezy SOURCES.md](https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md), [FMI WFS manual](https://en.ilmatieteenlaitos.fi/open-data-manual-fmi-wfs-services?doAsUserLanguageId=en_US), [DMI Forecast Data EDR](https://www.dmi.dk/friedata/dokumentation/forecast-data-edr-api), [HKO open data](https://www.hko.gov.hk/en/abouthko/opendata_intro.htm), [BMKG CAP warnings](https://data.bmkg.go.id/peringatan-dini-cuaca/), [KNMI Open Data API](https://developer.dataplatform.knmi.nl/open-data-api) | FMI is the best next no-key regional adapter; KNMI should not be bundled because official access is key-based; DMI, HKO, and BMKG add high-value regional depth; provider metadata is now required before safe scale-out. | Added Cycle 6 ranking, rewrote NX-3, added NX-20, refined Appendix C, and moved continuation to Cycle 7. |
+| 2026-06-06 | Cycle 7: Radar and lightning lifecycle | Native radar, RainViewer, MapLibre, Blitzortung | [RadarScreen.kt](app/src/main/java/com/sysadmindoc/nimbus/ui/screen/radar/RadarScreen.kt), [RadarMapView.kt](app/src/main/java/com/sysadmindoc/nimbus/ui/screen/radar/RadarMapView.kt), [RadarViewModel.kt](app/src/main/java/com/sysadmindoc/nimbus/ui/screen/radar/RadarViewModel.kt), [RadarRepository.kt](app/src/main/java/com/sysadmindoc/nimbus/data/repository/RadarRepository.kt), [RainViewerApi.kt](app/src/main/java/com/sysadmindoc/nimbus/data/api/RainViewerApi.kt), [BlitzortungService.kt](app/src/main/java/com/sysadmindoc/nimbus/data/api/BlitzortungService.kt), [RainViewer Weather Maps API](https://www.rainviewer.com/api/weather-maps-api.html), [RainViewer API terms](https://www.rainviewer.com/api.html), [MapLibre quickstart](https://maplibre.org/maplibre-native/android/examples/getting-started/), [LightningMaps About](https://www.lightningmaps.org/about?lang=en) | Native radar needs attribution/cache/host compliance, fuller MapView lifecycle handling, Blitzortung source-policy gating before push alerts, WebSocket backoff/spatial throttling, and deeper tests. | Added Cycle 7 findings, added NX-21, tightened NX-16, refreshed L-8 and MapLibre dependency watch, and moved continuation to Cycle 8. |
+
+---
+
+## Next Research Cycles
+
+1. Cycle 8: Deep-audit background jobs (`AlertCheckWorker`, `NowcastAlertWorker`, `CustomAlertWorker`, `HealthAlertWorker`, `WidgetRefreshWorker`, `DatabaseMaintenanceWorker`) for WorkManager 2.11.2 compatibility and battery budget controls.
+2. Cycle 9: Inspect Wear UI and tile code against Wear Tiles 1.6.0 / ProtoLayout 1.4.0 migration requirements, including whether Lottie ProtoLayout is now practical for L-11.
+3. Cycle 10: Build a rules-test plan for community reports using the Firebase emulator and decide whether anonymous Auth or append-only reports best preserve the FOSS/privacy model.
+4. Cycle 11: Audit all cache consumers and saved-location flows to design the provider-aware normalized cache schema, migration path, and fallback overwrite rules.
+5. Cycle 12: Re-run dependency freshness and OSV checks for every coordinate in `gradle/libs.versions.toml`, then split N-10 into exact issues/PR-ready batches.
+6. Cycle 13: Review screenshots and UI source for Material 3 Expressive pressure, text scaling, touch-target density, and weather-adaptive contrast risks.
+7. Cycle 14: Research Android Auto, Smartspacer, Home Assistant, Tasker, and Gadgetbridge integration expectations to prioritize T-ECOSYSTEM work.
+8. Cycle 15: Inspect release/distribution docs and F-Droid metadata requirements to turn NX-14 into a reproducible-build verification checklist.
+9. Cycle 16: Turn NX-20 into a schema/test plan by inspecting existing Settings, `SourceConfig`, DataStore, `freenet`, and cache consumers for every place provider metadata must replace hardcoded logic.
+10. Cycle 17: Turn NX-21 into implementation steps by checking MapLibre lifecycle patterns in Compose, RainViewer status/coverage endpoints, and existing app cache primitives.
 
 ---
 
@@ -339,7 +445,7 @@ What a hostile reviewer would ask, with answers.
 
 | App | Notable paywalled features | Implication for us |
 |---|---|---|
-| [Carrot Weather Premium Ultra](https://support.meetcarrot.com/weather/) | Storm-cell + lightning push, super-res radar, multi-model forecasts, weather-map widget | NX-16 (lightning proximity) + NX-5 (multi-model agreement) cover ~80% free. |
+| [Carrot Weather Premium Ultra](https://support.meetcarrot.com/weather/) | Storm-cell + lightning push, super-res radar, multi-model forecasts, weather-map widget | NX-5 (multi-model agreement) covers the transparency angle; NX-16 only covers lightning proximity after source-policy clearance. |
 | [1Weather Premium](https://play.google.com/store/apps/details?id=com.handmark.expressweather) | Ad-free, 10-day daily, AQI card | Already free in ZeusWatch. |
 | [Windy.com](https://www.windy.com/) | METAR/TAF/NOTAM, marine layers, drone forecast | L-9 power-user mode if pursued; otherwise out. |
 | [AccuWeather MinuteCast](https://www.accuweather.com/) | Per-minute precipitation 2–4h | ZeusWatch's `NowcastCard` already provides 60-min from Open-Meteo + 5-min from MET Norway nowcast for Nordics; expand via Météo-France PIAF in NX-1. |
@@ -385,15 +491,16 @@ Verified live in this audit pass unless noted otherwise.
 |---|---|---|---|
 | **BOM Australia (indirect via Open-Meteo)** | AU | None | [ACCESS-G model docs](https://open-meteo.com/en/docs/bom-api). Preferred path. |
 | **BOM Australia (direct)** | AU | None (undocumented) | [Reverse-engineered weather-au](https://github.com/tonyallan/weather-au). Legal risk. |
-| **Météo-France** | FR + global ARPEGE | JWT (free) | [portail-api.meteofrance.fr](https://portail-api.meteofrance.fr); [Open-Meteo MF docs](https://open-meteo.com/en/docs/meteofrance-api). |
+| **Météo-France** | FR + global ARPEGE/AROME | None for Open-Meteo forecast proxy; JWT for official Vigilance | [Open-Meteo Météo-France docs](https://open-meteo.com/en/docs/meteofrance-api) for forecast/15-minute AROME families; [data.gouv Vigilance dataset](https://www.data.gouv.fr/fr/datasets/bulletin-vigilance/) and Météo-France API portal for official alert colors. Split forecast/nowcast before keyed Vigilance. |
 | **GeoSphere Austria** | AT + Alps | None | [data.hub.geosphere.at](https://data.hub.geosphere.at/dataset/nowcast-v1-15min-1km). CC0. INCA 15-min/1km. |
-| **FMI** | FI / Åland | None | [Breezy SOURCES.md FMI entry](https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md). |
-| **KNMI** | NL | None | [Breezy SOURCES.md KNMI entry](https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md). |
-| **SMHI Sweden** | SE | None | New endpoint `pmp3g/v2 → snow1g/v1` (migrated 2026-03-31, old returns 404). |
+| **FMI** | FI / Åland | None | Official [WFS manual](https://en.ilmatieteenlaitos.fi/open-data-manual-fmi-wfs-services?doAsUserLanguageId=en_US) documents stored queries and request limits; [FMI says registration is no longer required](https://en.ilmatieteenlaitos.fi/news/963113482). First Cycle 6 provider candidate. |
+| **DMI Forecast Data EDR** | DK / Greenland / Faroe Islands | Free/open; key/registration flow needs final verification | [DMI Open Data APIs](https://www.dmi.dk/friedata/dokumentation/apis) and [Forecast Data EDR API](https://www.dmi.dk/friedata/dokumentation/forecast-data-edr-api) expose HARMONIE forecast collections and point/parameter style queries. Forecast-only first, alerts second. |
+| **KNMI** | NL | Key | [KNMI Open Data API](https://developer.dataplatform.knmi.nl/open-data-api) requires Authorization. Anonymous/shared key rotates and has shared quota; registered keys have stronger limits. Optional-user-key only after NX-20. |
+| **SMHI Sweden** | SE | None | [SMHI Open Data](https://opendata.smhi.se/) and [meteorological forecast docs](https://opendata.smhi.se/metfcst/) remain candidates; verify current `snow1g` endpoint shape before implementation. |
 | **AEMET Spain** | ES | Free key | Two-step fetch URL pattern. |
-| **HKO Hong Kong** | HK | None | [Breezy SOURCES.md HKO entry](https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md). |
+| **HKO Hong Kong** | HK | None | [HKO open data](https://www.hko.gov.hk/en/abouthko/opendata_intro.htm) includes 9-day forecast, current report, local forecast, warnings, special weather tips, and rainfall nowcast datasets. High-value compact regional adapter. |
 | **CWA Taiwan** | TW | Free key | [Breezy SOURCES.md CWA entry](https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md). |
-| **BMKG Indonesia** | ID | None | [Breezy SOURCES.md BMKG entry](https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md). |
+| **BMKG Indonesia** | ID | None for warning CAP seen in Cycle 6 | [BMKG weather warning CAP](https://data.bmkg.go.id/peringatan-dini-cuaca/) is public, bilingual, attribution-bound, and rate-limited to 60 requests/min/IP. Add alert adapter before full forecast. |
 | **NOAA SWPC** (aurora / Kp) | Global | None | `services.swpc.noaa.gov/json/ovation_aurora_latest.json`. |
 | **SPC outlook polygons** | US | None | [MapServer](https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer). Includes 2026 Conditional Intensity tiers. |
 | **Open-Meteo Marine** | Global coastal | None | [docs](https://open-meteo.com/en/docs/marine-weather-api). |
@@ -420,13 +527,14 @@ Versions tracked in `gradle/libs.versions.toml`. Notable upgrade horizons:
 | Kotlin | 2.1.0 | stable 2.3.x / 2.4.0-RC watch | [Data-flow exhaustiveness](https://kotlinlang.org/docs/whatsnew22.html), Multiplatform Swift export, KSP/Hilt compatibility risk. |
 | Hilt | 2.53.1 | 2.59.2 watch | [KSP2 + Kotlin 2.1+ compat caveats](https://github.com/google/dagger/issues/4907) — bump cautiously, run full test suite. |
 | Room | 2.6.1 | 2.8.4 | [KMP-ready](https://developer.android.com/jetpack/androidx/releases/room), SQLiteDriver. Gated on L-2 decision but safe to test for Android-only benefits. |
-| MapLibre | 11.5.2 | 13.1.0 watch | Native renderer upgrade risk; measure radar tab performance before adopting. |
+| WorkManager | 2.10.0 | 2.11.2 | Stable as of 2026-03-25; pair with worker scheduling tests for alert, health, widget, custom-alert, nowcast, and DB maintenance jobs. |
+| MapLibre | 11.5.2 | 13.2.0 watch | Latest GitHub Android release includes renderer/backend fixes; finish NX-21 lifecycle/cache/radar smoke tests before adopting. |
 | OkHttp | 4.12.0 | 5.3.2 watch | [`redactQueryParameters(vararg)` added in 5.x](https://square.github.io/okhttp/changelogs/changelog_5x/); reduces our custom redactor. Watch CVE feeds. |
 | Retrofit | 2.11.0 | 3.0.0 watch | Coordinate with OkHttp 5 and serialization adapter compatibility. |
 | Glance | 1.1.1 | 1.2.0-rc01 | [Unit-test helper `runGlanceAppWidgetUnitTest`](https://developer.android.com/jetpack/androidx/releases/glance) — enables N-9. |
 | Wear Compose M3 | (alpha27) | 1.7.0-alpha02 watch | [Wear OS 6 M3 Expressive](https://developer.android.com/jetpack/androidx/releases/wear-compose-m3); gates UC-6 until stable. |
-| Tiles | 1.4.1 | 1.6.0 | Watch tile compatibility lane; pairs with ProtoLayout. |
-| ProtoLayout | 1.2.1 | 1.4.0 | [Lottie support](https://developer.android.com/jetpack/androidx/releases/wear-protolayout) — gates L-11. |
+| Tiles | 1.4.1 | 1.6.0 | Stable as of 2026-03-25; automatic resource handling should reduce tile-loading cost but needs Wear tile regression tests. |
+| ProtoLayout | 1.2.1 | 1.4.0 | Stable as of 2026-03-25; pairs with Tiles 1.6.0 and gates L-11. |
 | Detekt | 1.23.8 | 1.23.x | Baseline reduction (N-8) is the live work, not version. |
 | ACRA | 5.13.1 | 5.13.x | Stable. |
 | Vico | not added | 3.0.x | [Compose-native multiplatform](https://github.com/patrykandpatrick/vico); NX-11 dep. |
@@ -469,6 +577,10 @@ All direct citations used in this roadmap. (URLs only — no marketing prose, no
 - [DataLayer data items](https://developer.android.com/training/wearables/data/data-items)
 - [Hilt KSP2 issue 4907](https://github.com/google/dagger/issues/4907)
 
+**Firebase / Firestore**
+- [Firestore insecure rules guide](https://firebase.google.com/docs/firestore/security/insecure-rules)
+- [Firebase App Check](https://firebase.google.com/docs/app-check)
+
 **Kotlin / JetBrains**
 - [What's new in Kotlin 2.1.20](https://kotlinlang.org/docs/whatsnew2120.html)
 - [What's new in Kotlin 2.2](https://kotlinlang.org/docs/whatsnew22.html)
@@ -477,6 +589,9 @@ All direct citations used in this roadmap. (URLs only — no marketing prose, no
 **Charts / libraries**
 - [patrykandpatrick/vico](https://github.com/patrykandpatrick/vico)
 - [MapLibre native CHANGELOG.md (Android)](https://github.com/maplibre/maplibre-native/blob/main/platform/android/CHANGELOG.md)
+- [MapLibre Android quickstart](https://maplibre.org/maplibre-native/android/examples/getting-started/)
+- [MapLibre MapView docs](https://maplibre.org/maplibre-native/android/api/-map-libre%20-native%20-android/org.maplibre.android.maps/-map-view/)
+- [MapLibre Android v13.2.0 release](https://github.com/maplibre/maplibre-native/releases/tag/android-v13.2.0)
 - [OkHttp 4.x changelog](https://square.github.io/okhttp/changelogs/changelog_4x/)
 - [OkHttp 5.x changelog](https://square.github.io/okhttp/changelogs/changelog_5x/)
 - [open-meteo/sdk (Kotlin/Flatbuffer)](https://github.com/open-meteo/sdk)
@@ -487,6 +602,20 @@ All direct citations used in this roadmap. (URLs only — no marketing prose, no
 - [Open-Meteo Ensemble API](https://open-meteo.com/en/docs/ensemble-api)
 - [Open-Meteo Météo-France API](https://open-meteo.com/en/docs/meteofrance-api)
 - [Open-Meteo BOM API](https://open-meteo.com/en/docs/bom-api)
+- [Météo-France Vigilance dataset](https://www.data.gouv.fr/fr/datasets/bulletin-vigilance/)
+- [FMI WFS Services manual](https://en.ilmatieteenlaitos.fi/open-data-manual-fmi-wfs-services?doAsUserLanguageId=en_US)
+- [FMI open-data no-registration announcement](https://en.ilmatieteenlaitos.fi/news/963113482)
+- [DMI Open Data APIs](https://www.dmi.dk/friedata/dokumentation/apis)
+- [DMI Forecast Data EDR API](https://www.dmi.dk/friedata/dokumentation/forecast-data-edr-api)
+- [HKO open data introduction](https://www.hko.gov.hk/en/abouthko/opendata_intro.htm)
+- [BMKG early warning CAP](https://data.bmkg.go.id/peringatan-dini-cuaca/)
+- [KNMI Open Data API](https://developer.dataplatform.knmi.nl/open-data-api)
+- [SMHI Open Data](https://opendata.smhi.se/)
+- [SMHI meteorological forecasts](https://opendata.smhi.se/metfcst/)
+- [RainViewer Weather Maps API](https://www.rainviewer.com/api/weather-maps-api.html)
+- [RainViewer API terms](https://www.rainviewer.com/api.html)
+- [LightningMaps About](https://www.lightningmaps.org/about?lang=en)
+- [LightningMaps project docs](https://docs.lightningmaps.org/?1740696779=)
 - [MET Norway Welcome](https://api.met.no/)
 - [MET Norway Terms of Service](https://api.met.no/doc/TermsOfService)
 - [MET Norway Nowcast](https://api.met.no/weatherapi/nowcast/2.0/documentation)
@@ -517,3 +646,68 @@ All direct citations used in this roadmap. (URLs only — no marketing prose, no
 - [Apple WeatherKit](https://developer.apple.com/weatherkit/)
 - [Tomorrow.io API](https://www.tomorrow.io/weather-api/)
 - [Windy.com](https://www.windy.com/)
+
+---
+
+## Continuation State
+
+### Last Completed Cycle
+
+Cycle 7: Radar and lightning lifecycle review on 2026-06-06. Native radar, RainViewer, MapLibre lifecycle, Blitzortung source policy, radar tests, and radar dependency runway were reviewed and written into this roadmap.
+
+### Current Focus
+
+Continue autonomous roadmap expansion from Cycle 8: WorkManager/background-job compatibility, battery-budget controls, expedited-work policy, unique-work naming, notification channels, and test gaps across alert, nowcast, custom-alert, health-alert, widget, and database-maintenance workers.
+
+### Important Findings So Far
+
+- `main` was clean and aligned with `origin/main` during this pass; recent history started at `a3d98b7 docs: consolidate roadmap planning`.
+- `rtk git log -10` could not run because `rtk` was not available on PATH in this PowerShell shell; normal `git log -10 --oneline --decorate` was used instead.
+- Current tracked version evidence is phone v1.21.1 / versionCode 89 and Wear v1.21.0 / versionCode 64.
+- Local Spanish parity is current for app and Wear string resources; N-1 should focus on Weblate/community locale rollout.
+- `WeatherCacheEntity` is still Open-Meteo-response-shaped; NX-6 now needs provider-aware normalized cache design before implementation.
+- `firestore.rules` and `CommunityReportRepository` need a backend-enforced ownership/abuse model before community reporting expands.
+- Official AndroidX release pages now make WorkManager 2.11.2, Room 2.8.4, Wear Tiles 1.6.0, and ProtoLayout 1.4.0 stable upgrade targets; Glance should remain watchlisted unless the RC is accepted for widget tests.
+- Provider expansion ranking is now concrete: FMI is the first safe no-key adapter; DMI, HKO, and BMKG are high-value regional candidates; KNMI must be optional/user-keyed, not bundled with FMI; Météo-France should split no-key Open-Meteo forecast/nowcast from keyed official Vigilance.
+- Provider scale-out needs NX-20 before broad adapter work: a metadata registry for auth mode, region coverage, attribution, license, quotas, `freenet` availability, cache namespace, fallback role, and Settings key UI.
+- Native radar needs NX-21 before bigger radar work: RainViewer attribution is mandatory, `RainViewerResponse.host` should be honored, frame metadata should be cached for offline fallback, MapLibre lifecycle should be fully guarded, and native radar needs a smoke/macrobenchmark test.
+- Blitzortung can stay as an informational overlay while source policy is reviewed, but NX-16 lightning push must not proceed until permission or an alternate alert-grade source is selected.
+- MapLibre latest Android release observed in this pass is 13.2.0; treat it as a renderer-risk upgrade after NX-21, not an incidental dependency bump.
+
+### Next Best Actions
+
+1. Run Cycle 8: inspect all WorkManager jobs against WorkManager 2.11.2 and build a battery-budget plan for alert/widget/custom-alert/health/nowcast scheduling.
+2. Run Cycle 9: inspect Wear UI and tile code against Wear Tiles 1.6.0 / ProtoLayout 1.4.0 migration requirements.
+3. Run Cycle 10: build a Firebase emulator rules-test plan for community reports.
+
+### Unprocessed Leads
+
+- WeatherMaster v3 alpha remains a fast-moving OSS challenger; run a deeper feature/release diff before changing competitive priorities.
+- Open-Meteo Ensemble API can power uncertainty bands or provider-agreement confidence without multiplying third-party provider traffic as much as NX-5 might.
+- F-Droid reproducible-build docs call out working-directory stability, R8 nondeterminism, APK signature copying, and 16 KB page-size native-library checks; convert these into NX-14 acceptance criteria.
+- Firestore App Check can reduce unauthorized-client abuse but does not replace ownership identity; choose append-only anonymous reports or Firebase Anonymous Auth for standard flavor.
+- DMI Forecast Data EDR, HKO warnings/nowcast, and BMKG CAP need endpoint-shape spikes after NX-20 defines metadata and attribution fields.
+- KNMI remains useful but should wait for a generic optional-key workflow and explicit no-shared-key policy.
+- RainViewer coverage tiles can support a "no radar coverage here" state and should be evaluated during NX-21.
+- If lightning proximity remains desired, research non-Blitzortung sources with clear alert/notification terms before implementing a worker.
+
+### Files Still To Inspect
+
+- `app/src/main/java/com/sysadmindoc/nimbus/util/AlertCheckWorker.kt`
+- `app/src/main/java/com/sysadmindoc/nimbus/util/NowcastAlertWorker.kt`
+- `app/src/main/java/com/sysadmindoc/nimbus/util/CustomAlertWorker.kt`
+- `app/src/main/java/com/sysadmindoc/nimbus/util/HealthAlertWorker.kt`
+- `app/src/main/java/com/sysadmindoc/nimbus/util/DatabaseMaintenanceWorker.kt`
+- `app/src/main/java/com/sysadmindoc/nimbus/widget/WidgetRefreshWorker.kt`
+- `wear/src/main/java/com/sysadmindoc/nimbus/wear/tile/WeatherTileService.kt`
+- `.github/workflows/release.yml`
+
+### Searches Still To Run
+
+- `WorkManager 2.11.2 Android expedited work periodic battery quota constraints`
+- `Android WorkManager foreground service notification channel exact alarm weather alerts`
+- `Android 15 16 background execution limits WorkManager weather notifications`
+- `WeatherMaster v3 alpha Android weather app release notes sources AQI widgets`
+- `Open-Meteo ensemble API uncertainty weather app user confidence`
+- `Firebase Firestore emulator security rules Android anonymous auth App Check delete ownership`
+- `F-Droid reproducible builds Android AGP 8.7 R8 nondeterminism 16 KB page size`
