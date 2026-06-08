@@ -10,6 +10,9 @@ import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -43,7 +46,10 @@ class LocationsViewModel @Inject constructor(
     val locationConditions: StateFlow<Map<Long, Pair<WeatherCode, Boolean>>> = _locationConditions.asStateFlow()
 
     private var searchJob: Job? = null
-    private var searchRequestId = 0L
+    // @Volatile: read from background fetch/cache continuations after being
+    // incremented on Main.immediate, so those reads see the latest value.
+    @Volatile private var searchRequestId = 0L
+    @Volatile private var tempsRequestId = 0L
 
     init {
         // Load cached temperatures whenever saved locations change
@@ -55,10 +61,22 @@ class LocationsViewModel @Inject constructor(
     }
 
     private suspend fun loadCachedTemps(locations: List<SavedLocationEntity>) {
+        val requestId = ++tempsRequestId
+        // Read every location's cache concurrently (each hop is a DB read on
+        // Dispatchers.IO) instead of serially, so a long saved-locations list
+        // doesn't stall the temp/condition refresh.
+        val cachedList = coroutineScope {
+            locations.map { loc ->
+                async { loc to weatherRepository.getCachedWeather(loc.latitude, loc.longitude) }
+            }.awaitAll()
+        }
+        // A newer saved-locations emission started a fresher scan — drop this
+        // stale result so it can't clobber the newer map (lost-update guard).
+        if (requestId != tempsRequestId) return
+
         val temps = mutableMapOf<Long, Double>()
         val conditions = mutableMapOf<Long, Pair<WeatherCode, Boolean>>()
-        locations.forEach { loc ->
-            val cached = weatherRepository.getCachedWeather(loc.latitude, loc.longitude)
+        for ((loc, cached) in cachedList) {
             if (cached != null) {
                 temps[loc.id] = cached.current.temperature
                 conditions[loc.id] = cached.current.weatherCode to cached.current.isDay

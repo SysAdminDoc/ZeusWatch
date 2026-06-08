@@ -39,6 +39,10 @@ object CrashReporting {
                 ".*api_key.*",
                 ".*owm_key.*",
                 ".*pirate_key.*",
+                // Location keys are last_lat / last_lon / last_location_name —
+                // the bare "last_location" pattern missed the raw coordinates.
+                ".*last_lat.*",
+                ".*last_lon.*",
                 ".*last_location.*",
             )
 

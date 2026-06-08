@@ -359,9 +359,14 @@ class WidgetRefreshWorker @AssistedInject constructor(
                 )
                 .build()
 
+            // KEEP, not REPLACE: a user double-tapping the widget (or tapping
+            // while a refresh is already running its multi-location network
+            // loop) must not cancel the in-flight worker. REPLACE would throw
+            // CancellationException, discard partial progress, and under flaky
+            // network can livelock — each tap killing the previous attempt.
             WorkManager.getInstance(context).enqueueUniqueWork(
                 "${WORK_NAME}_manual_refresh",
-                ExistingWorkPolicy.REPLACE,
+                ExistingWorkPolicy.KEEP,
                 request,
             )
         }

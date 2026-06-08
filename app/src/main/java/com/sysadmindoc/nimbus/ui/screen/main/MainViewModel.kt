@@ -111,7 +111,10 @@ class MainViewModel @Inject constructor(
     private var activeLocationId: Long? = null
     private var activeLocationName: String? = null
     private var useGpsLocation: Boolean = true
-    private var latestWeatherRequestId: Long = 0L
+    // @Volatile: incremented on Main.immediate but compared inside the parallel
+    // sub-fetches and the defaultDispatcher derived-data continuation, so those
+    // reads must see the newest id to drop superseded results.
+    @Volatile private var latestWeatherRequestId: Long = 0L
 
     init {
         Log.d(TAG, "init: overrideLocationId=$overrideLocationId")

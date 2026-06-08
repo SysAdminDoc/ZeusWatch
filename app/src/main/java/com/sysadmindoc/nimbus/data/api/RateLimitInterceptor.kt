@@ -74,24 +74,37 @@ class RateLimitInterceptor(
      * GCRA (Generic Cell Rate Algorithm) reservation. `nextSlotAt` is the
      * theoretical arrival time (TAT) of the next conforming request; it may
      * be up to `burst * intervalMs` ahead of `now` before back-pressure
-     * kicks in. Returning a positive wait means the caller must sleep that
-     * long before proceeding; a wait above [maxWaitMs] becomes a fail-fast
-     * 429 in [intercept].
+     * kicks in.
      *
-     * @return milliseconds the caller should sleep before proceeding.
+     * A conforming request (including one that must wait up to [maxWaitMs])
+     * **reserves its slot** by advancing the TAT — otherwise a request that
+     * sleeps and then proceeds would never consume quota, and N concurrent
+     * waiters would all wake and fire against the same un-advanced TAT,
+     * defeating the bucket entirely. Only the fail-fast case (wait above
+     * [maxWaitMs]) returns without reserving, so a rejected request can't
+     * compound the backlog for the requests behind it.
+     *
+     * @return milliseconds the caller should sleep before proceeding; a value
+     *   above [maxWaitMs] signals [intercept] to fail fast with a 429.
      */
     private fun reserveSlot(): Long {
         val burstWindow = burst * intervalMs
         while (true) {
             val current = nextSlotAt.get()
             val nowMs = now()
-            // Over-limit — caller would have to wait `current - nowMs - burstWindow`.
-            // Don't advance TAT when rejecting, otherwise overflow compounds.
-            val overflow = current - nowMs - burstWindow
-            if (overflow > 0) return overflow
             val baseline = max(current, nowMs)
+            // How long the caller must wait before this request conforms.
+            val wait = baseline - nowMs - burstWindow
+            if (wait > maxWaitMs) {
+                // Fail-fast territory — do not reserve, otherwise the rejected
+                // request would still advance the TAT and starve later ones.
+                return wait
+            }
             val target = baseline + intervalMs
-            if (nextSlotAt.compareAndSet(current, target)) return 0L
+            if (nextSlotAt.compareAndSet(current, target)) {
+                // Slot reserved; sleep the (non-negative) wait and proceed.
+                return max(0L, wait)
+            }
         }
     }
 

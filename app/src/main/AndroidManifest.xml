@@ -9,16 +9,15 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Location -->
+    <!-- Location — foreground only. The app fetches location while in use and
+         persists the last fix; widgets/workers read that cached fix, so no
+         ACCESS_BACKGROUND_LOCATION is required (and declaring it unused trips
+         Google Play's background-location policy review). -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- Background location for widgets/notifications -->
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-
     <!-- Notifications -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <!-- Widgets -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
