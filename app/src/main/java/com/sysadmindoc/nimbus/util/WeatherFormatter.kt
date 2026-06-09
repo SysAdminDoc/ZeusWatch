@@ -78,7 +78,7 @@ object WeatherFormatter {
     // ── Pressure ─────────────────────────────────────────────────────────
 
     fun formatPressure(hPa: Double, s: NimbusSettings = NimbusSettings()): String = when (s.pressureUnit) {
-        PressureUnit.INHG -> "%.2f inHg".format(hPa * 0.02953)
+        PressureUnit.INHG -> String.format(java.util.Locale.US, "%.2f inHg", hPa * 0.02953)
         PressureUnit.HPA -> "${hPa.toInt()} hPa"
         PressureUnit.MBAR -> "${hPa.toInt()} mbar"
     }
@@ -86,8 +86,8 @@ object WeatherFormatter {
     // ── Precipitation ────────────────────────────────────────────────────
 
     fun formatPrecipitation(mm: Double, s: NimbusSettings = NimbusSettings()): String = when (s.precipUnit) {
-        PrecipUnit.INCHES -> "%.2f in".format(mm / 25.4)
-        PrecipUnit.MM -> "%.1f mm".format(mm)
+        PrecipUnit.INCHES -> String.format(java.util.Locale.US, "%.2f in", mm / 25.4)
+        PrecipUnit.MM -> String.format(java.util.Locale.US, "%.1f mm", mm)
     }
 
     // ── Visibility ───────────────────────────────────────────────────────
@@ -97,11 +97,11 @@ object WeatherFormatter {
         return when (s.visibilityUnit) {
             VisibilityUnit.MILES -> {
                 val miles = meters / 1609.344
-                if (miles >= 10) "10+ mi" else "%.1f mi".format(miles)
+                if (miles >= 10) "10+ mi" else String.format(java.util.Locale.US, "%.1f mi", miles)
             }
             VisibilityUnit.KM -> {
                 val km = meters / 1000.0
-                if (km >= 16) "16+ km" else "%.1f km".format(km)
+                if (km >= 16) "16+ km" else String.format(java.util.Locale.US, "%.1f km", km)
             }
         }
     }
@@ -226,13 +226,13 @@ object WeatherFormatter {
     // ── Snowfall ──────────────────────────────────────────────────────────
 
     fun formatSnowfall(cm: Double, s: NimbusSettings = NimbusSettings()): String = when (s.precipUnit) {
-        PrecipUnit.INCHES -> "%.1f in".format(cm / 2.54)
-        PrecipUnit.MM -> "%.1f cm".format(cm)
+        PrecipUnit.INCHES -> String.format(java.util.Locale.US, "%.1f in", cm / 2.54)
+        PrecipUnit.MM -> String.format(java.util.Locale.US, "%.1f cm", cm)
     }
 
     fun formatSnowDepth(cm: Double, s: NimbusSettings = NimbusSettings()): String = when (s.precipUnit) {
-        PrecipUnit.INCHES -> "%.0f in".format(cm / 2.54)
-        PrecipUnit.MM -> "%.0f cm".format(cm)
+        PrecipUnit.INCHES -> String.format(java.util.Locale.US, "%.0f in", cm / 2.54)
+        PrecipUnit.MM -> String.format(java.util.Locale.US, "%.0f cm", cm)
     }
 
     // ── Sunshine Duration ─────────────────────────────────────────────────
