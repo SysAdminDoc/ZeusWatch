@@ -114,6 +114,7 @@ class AlertRepository @Inject constructor(
 
                 Result.success(merged)
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e(TAG, "Alert fetch failed", e)
                 Result.failure(e)
             }

@@ -1,13 +1,17 @@
 package com.sysadmindoc.nimbus.wear.sync
 
+import android.content.ComponentName
 import android.util.Log
+import androidx.wear.watchface.complications.datasource.ComplicationDataSourceUpdateRequester
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.WearableListenerService
+import com.sysadmindoc.nimbus.wear.complication.WeatherComplicationService
 import com.sysadmindoc.nimbus.wear.data.HourlyEntry
 import com.sysadmindoc.nimbus.wear.data.WearAlertEntry
 import com.sysadmindoc.nimbus.wear.data.WearDailyEntry
+import com.sysadmindoc.nimbus.wear.tile.WeatherTileService
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -90,6 +94,18 @@ class WeatherDataListenerService : WearableListenerService() {
                 )
 
                 Log.d(TAG, "Received weather sync: ${map.getString("locationName")} ${map.getInt("temperature")}° (${alerts.size} alerts, ${daily.size} daily)")
+
+                try {
+                    ComplicationDataSourceUpdateRequester.create(
+                        applicationContext,
+                        ComponentName(applicationContext, WeatherComplicationService::class.java),
+                    ).requestUpdateAll()
+                } catch (_: Exception) { /* Complication may not be active */ }
+
+                try {
+                    androidx.wear.tiles.TileService.getUpdater(applicationContext)
+                        .requestUpdate(WeatherTileService::class.java)
+                } catch (_: Exception) { /* Tile may not be active */ }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to process synced weather data", e)
             }
