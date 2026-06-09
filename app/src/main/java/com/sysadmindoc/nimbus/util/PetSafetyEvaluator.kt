@@ -114,14 +114,14 @@ object PetSafetyEvaluator {
     }
 
     private fun calculateHeatIndex(tempC: Double, humidity: Int): Double {
-        // Simplified heat index (Celsius). Steadman's formula approximation.
         val t = tempC
         val r = humidity.toDouble()
         if (t < 27 || r < 40) return t
-        return -8.785 + 1.611 * t + 2.339 * r - 0.1461 * t * r -
+        val hi = -8.785 + 1.611 * t + 2.339 * r - 0.1461 * t * r -
             0.01231 * t * t - 0.01642 * r * r +
             0.002212 * t * t * r + 0.0007255 * t * r * r -
             0.000003582 * t * t * r * r
+        return maxOf(t, hi)
     }
 }
 

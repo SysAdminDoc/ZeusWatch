@@ -53,8 +53,9 @@ object AlertNotificationHelper {
     const val CHANNEL_HEALTH = "nimbus_alerts_health"
     private const val NOTIFICATION_ID_HEALTH_BASE = 0x1300
 
-    // User-defined custom alert rules ("temp > 32°C tomorrow", etc.). Separate
-    // channel so users can silence custom rules without losing severe alerts.
+    // User-defined custom alert rules. Separate channel so users can silence
+    // custom rules without losing severe alerts. Base offset must not overlap
+    // with health range (0x1300 + 0..0xFF = 0x1300..0x13FF).
     const val CHANNEL_CUSTOM = "nimbus_alerts_custom"
     /** Base id for per-rule notifications; we offset by rule hash so multiple rules don't collide. */
     private const val NOTIFICATION_ID_CUSTOM_BASE = 0x1400
@@ -221,7 +222,7 @@ object AlertNotificationHelper {
     ): Boolean {
         if (!hasNotificationPermission(context)) return false
 
-        val notifId = NOTIFICATION_ID_HEALTH_BASE + (title.hashCode() and 0xFFFF)
+        val notifId = NOTIFICATION_ID_HEALTH_BASE + (title.hashCode() and 0xFF)
         val pendingIntent = deepLinkPendingIntent(
             context, requestCode = notifId, uri = URI_HEALTH,
         )
@@ -268,7 +269,7 @@ object AlertNotificationHelper {
     ): Boolean {
         if (!hasNotificationPermission(context)) return false
 
-        val id = NOTIFICATION_ID_CUSTOM_BASE + (ruleKey.hashCode() and 0xFFFF)
+        val id = NOTIFICATION_ID_CUSTOM_BASE + (ruleKey.hashCode() and 0xFF)
         val pendingIntent = deepLinkPendingIntent(
             context, requestCode = id, uri = URI_CUSTOM_ALERTS,
         )

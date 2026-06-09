@@ -61,6 +61,7 @@ import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.tan
 import kotlin.math.cos
+import java.util.concurrent.atomic.AtomicLong
 
 private const val TAG = "MainViewModel"
 
@@ -111,10 +112,7 @@ class MainViewModel @Inject constructor(
     private var activeLocationId: Long? = null
     private var activeLocationName: String? = null
     private var useGpsLocation: Boolean = true
-    // @Volatile: incremented on Main.immediate but compared inside the parallel
-    // sub-fetches and the defaultDispatcher derived-data continuation, so those
-    // reads must see the newest id to drop superseded results.
-    @Volatile private var latestWeatherRequestId: Long = 0L
+    private val weatherRequestCounter = AtomicLong(0L)
 
     init {
         Log.d(TAG, "init: overrideLocationId=$overrideLocationId")
@@ -755,9 +753,9 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun nextWeatherRequestId(): Long = ++latestWeatherRequestId
+    private fun nextWeatherRequestId(): Long = weatherRequestCounter.incrementAndGet()
 
-    private fun isLatestWeatherRequest(requestId: Long): Boolean = requestId == latestWeatherRequestId
+    private fun isLatestWeatherRequest(requestId: Long): Boolean = requestId == weatherRequestCounter.get()
 
     private fun beginWeatherLoad(clearDisplayedWeather: Boolean) {
         _uiState.update { state ->

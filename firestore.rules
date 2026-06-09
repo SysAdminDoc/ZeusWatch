@@ -25,8 +25,9 @@ service cloud.firestore {
         && request.resource.data.deviceId is string
         && request.resource.data.deviceId.size() <= 128;
 
-      // Delete: only the device that created it
-      allow delete: if resource.data.deviceId == request.resource.data.deviceId;
+      // Delete: disabled until ownership model is resolved (N-11).
+      // request.resource is null on delete — the previous rule always denied.
+      allow delete: if false;
 
       // No updates allowed
       allow update: if false;

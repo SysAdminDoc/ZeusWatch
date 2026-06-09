@@ -34,7 +34,7 @@ internal fun evaluateCustomAlertRules(
     data: WeatherData,
 ): List<TriggeredCustomAlert> {
     val today = data.daily.firstOrNull()
-    val tonight = data.daily.getOrNull(0)
+    val tonight = data.daily.getOrNull(1) ?: data.daily.firstOrNull()
     val next12h = data.hourly.take(12)
     val next24h = data.hourly.take(24)
 

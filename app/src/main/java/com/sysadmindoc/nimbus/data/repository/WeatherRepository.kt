@@ -116,6 +116,7 @@ class WeatherRepository @Inject constructor(
 
             Result.success(weatherData)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Result.failure(e)
         }
     }
@@ -167,6 +168,7 @@ class WeatherRepository @Inject constructor(
                 } ?: emptyList()
                 Result.success(locations)
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 Result.failure(e)
             }
         }
@@ -443,6 +445,7 @@ class WeatherRepository @Inject constructor(
             }
             Result.success(data)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Result.failure(e)
         }
     }
@@ -472,6 +475,7 @@ class WeatherRepository @Inject constructor(
                 )
             )
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Result.failure(e)
         }
     }
