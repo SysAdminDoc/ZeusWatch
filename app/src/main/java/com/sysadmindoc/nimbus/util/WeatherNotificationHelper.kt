@@ -42,8 +42,11 @@ object WeatherNotificationHelper {
     fun showOrUpdate(context: Context, data: WeatherData, s: NimbusSettings) {
         if (!hasNotificationPermission(context)) return
 
+        // NEW_TASK only — MainActivity is singleTask, so tapping the
+        // persistent notification surfaces the existing task instead of
+        // CLEAR_TASK wiping whatever the user had in progress.
         val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         val pendingIntent = PendingIntent.getActivity(
             context, NOTIFICATION_ID, intent,

@@ -60,8 +60,13 @@ class WeatherWallpaperService : WallpaperService() {
 
         override fun onSurfaceCreated(holder: SurfaceHolder) {
             super.onSurfaceCreated(holder)
-            startAnimation()
-            scheduleWeatherRefresh()
+            // Don't force visibility here — onVisibilityChanged is the source
+            // of truth. Only resume drawing if the engine is actually visible;
+            // starting blind burned frames on a surface nobody could see.
+            if (visible) {
+                startAnimation()
+                scheduleWeatherRefresh()
+            }
         }
 
         override fun onSurfaceChanged(
@@ -98,14 +103,15 @@ class WeatherWallpaperService : WallpaperService() {
 
         // ── Animation loop ──────────────────────────────────────────
 
+        // Note: neither start nor stop mutates [visible] — only
+        // onVisibilityChanged tracks it, so a surface destroy/recreate cycle
+        // can't desync the flag from what the system actually reports.
         private fun startAnimation() {
-            visible = true
             handler.removeCallbacks(drawRunner)
             handler.post(drawRunner)
         }
 
         private fun stopAnimation() {
-            visible = false
             handler.removeCallbacks(drawRunner)
             handler.removeCallbacks(weatherRefreshRunner)
         }
@@ -123,6 +129,13 @@ class WeatherWallpaperService : WallpaperService() {
                     particleSystem.update(width, height)
                     particleSystem.draw(canvas, width, height)
                 }
+            } catch (_: IllegalStateException) {
+                // Surface torn down between the visibility check and
+                // lockCanvas() — bail this frame instead of crashing the
+                // wallpaper process; the reschedule below keeps the loop alive.
+            } catch (_: IllegalArgumentException) {
+                // Same teardown race, surfaced as an invalid-surface argument
+                // on some OEM builds.
             } finally {
                 if (canvas != null) {
                     try {

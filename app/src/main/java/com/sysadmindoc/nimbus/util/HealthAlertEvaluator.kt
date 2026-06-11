@@ -5,6 +5,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import java.time.Duration
 import java.util.Locale
 import kotlin.math.abs
 
@@ -22,6 +23,10 @@ private fun formatHpa(value: Double): String = String.format(Locale.getDefault()
  * with temperature/humidity frontal-passage proxy as fallback.
  */
 object HealthAlertEvaluator {
+
+    /** A "3-hour" pressure window accepts reading pairs 2.5–3.5h apart. */
+    private const val MIN_WINDOW_MINUTES = 150L
+    private const val MAX_WINDOW_MINUTES = 210L
 
     /**
      * Evaluate all health alerts from hourly weather data.
@@ -81,26 +86,33 @@ object HealthAlertEvaluator {
 
     /**
      * Evaluate pressure changes using actual surface pressure readings.
-     * Scans 3-hour rolling windows in the next 12 hours of forecast data.
+     * Scans ~3-hour windows in the next 12 hours of forecast data.
+     *
+     * Deltas are computed between readings whose *timestamps* are 2.5–3.5h
+     * apart — not between fixed list offsets. Indexing a null-compacted list
+     * silently stretched the "3-hour" window across data gaps, turning
+     * ordinary diurnal drift in sparse pressure series into false WARNINGs.
      */
     private fun evaluateRealPressure(
         hourly: List<HourlyConditions>,
         thresholdHpa: Double,
     ): HealthAlert? {
         val next12 = hourly.take(12)
-        val pressures = next12.mapNotNull { it.surfacePressure }
+        val readings = next12.mapNotNull { h -> h.surfacePressure?.let { h.time to it } }
 
         // Need at least 4 pressure readings to compute a meaningful 3h window
-        if (pressures.size < 4) return null
+        if (readings.size < 4) return null
 
-        // Find the maximum pressure change across all 3-hour windows
+        // Find the maximum pressure change across all ~3-hour reading pairs
         var maxDelta = 0.0
-        val windowSize = minOf(3, pressures.size - 1)
-
-        for (i in 0 until pressures.size - windowSize) {
-            val delta = pressures[i + windowSize] - pressures[i]
-            if (abs(delta) > abs(maxDelta)) {
-                maxDelta = delta
+        for (i in readings.indices) {
+            for (j in i + 1 until readings.size) {
+                val minutesApart = abs(Duration.between(readings[i].first, readings[j].first).toMinutes())
+                if (minutesApart < MIN_WINDOW_MINUTES || minutesApart > MAX_WINDOW_MINUTES) continue
+                val delta = readings[j].second - readings[i].second
+                if (abs(delta) > abs(maxDelta)) {
+                    maxDelta = delta
+                }
             }
         }
 

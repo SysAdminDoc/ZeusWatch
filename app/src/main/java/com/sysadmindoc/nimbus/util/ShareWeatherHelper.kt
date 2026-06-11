@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.util
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -9,6 +10,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AirQualityData
@@ -16,6 +18,10 @@ import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import java.io.File
 import java.io.FileOutputStream
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * Unified sharing helper for weather data.
@@ -265,41 +271,65 @@ object ShareWeatherHelper {
         }
     }
 
+    /** Helper-owned scope so the ~3 MB render/compress/write runs off the main thread. */
+    private val shareScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Render the share card and launch the chooser. Fire-and-forget: the
+     * bitmap render + PNG compress + disk write happen on [Dispatchers.IO]
+     * (they previously janked the main thread), and the chooser launch is
+     * posted back to the main executor. The signature stays non-suspend so
+     * callers don't need a coroutine context.
+     */
     fun shareAsImage(context: Context, data: WeatherData, s: NimbusSettings = NimbusSettings()) {
-        val bitmap = renderWeatherCard(context, data, s)
-        try {
-            val cacheDir = File(context.cacheDir, "shared_images")
-            if (!cacheDir.exists() && !cacheDir.mkdirs() && !cacheDir.isDirectory) {
-                android.util.Log.w("ShareWeatherHelper", "Could not create shared_images cache dir")
-                return
-            }
-            val file = File(cacheDir, "nimbus_weather.png")
-            val compressed = FileOutputStream(file).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-            }
-            if (!compressed || !file.exists() || file.length() == 0L) {
-                android.util.Log.w("ShareWeatherHelper", "PNG compression failed or produced empty file")
-                return
-            }
-
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "image/png"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_TEXT, "Weather for ${data.location.name} - ZeusWatch")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            context.startActivity(
-                Intent.createChooser(intent, "Share weather image").apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val appContext = context.applicationContext
+        shareScope.launch {
+            val bitmap = renderWeatherCard(appContext, data, s)
+            try {
+                val cacheDir = File(appContext.cacheDir, "shared_images")
+                if (!cacheDir.exists() && !cacheDir.mkdirs() && !cacheDir.isDirectory) {
+                    android.util.Log.w("ShareWeatherHelper", "Could not create shared_images cache dir")
+                    return@launch
                 }
-            )
-        } catch (e: Exception) {
-            // Don't crash the share action on disk-full / FileProvider misconfig / etc.
-            android.util.Log.w("ShareWeatherHelper", "Failed to share as image", e)
-        } finally {
-            bitmap.recycle() // Free the ~3 MB bitmap immediately
+                val file = File(cacheDir, "nimbus_weather.png")
+                val compressed = FileOutputStream(file).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                }
+                if (!compressed || !file.exists() || file.length() == 0L) {
+                    android.util.Log.w("ShareWeatherHelper", "PNG compression failed or produced empty file")
+                    return@launch
+                }
+
+                val uri = FileProvider.getUriForFile(appContext, "${appContext.packageName}.fileprovider", file)
+
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "image/png"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_TEXT, "Weather for ${data.location.name} - ZeusWatch")
+                    // ClipData carries the grant to the share-sheet itself so
+                    // its preview can read the stream (EXTRA_STREAM alone only
+                    // grants the eventually-chosen target).
+                    clipData = ClipData.newRawUri(null, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                val chooser = Intent.createChooser(intent, "Share weather image").apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    clipData = ClipData.newRawUri(null, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                ContextCompat.getMainExecutor(appContext).execute {
+                    try {
+                        appContext.startActivity(chooser)
+                    } catch (e: Exception) {
+                        android.util.Log.w("ShareWeatherHelper", "Failed to launch share chooser", e)
+                    }
+                }
+            } catch (e: Exception) {
+                // Don't crash the share action on disk-full / FileProvider misconfig / etc.
+                android.util.Log.w("ShareWeatherHelper", "Failed to share as image", e)
+            } finally {
+                bitmap.recycle() // Free the ~3 MB bitmap immediately
+            }
         }
     }
 }

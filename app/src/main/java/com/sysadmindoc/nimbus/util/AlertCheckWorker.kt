@@ -11,6 +11,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
@@ -83,7 +84,11 @@ class AlertCheckWorker @AssistedInject constructor(
             anyFetchSucceeded = true
 
             val filtered = alerts.filter { alert ->
-                alert.severity.sortOrder <= maxSortOrder &&
+                // Fail open on UNKNOWN severity: a provider that doesn't map its
+                // severity field cleanly must not have its alerts silently
+                // suppressed by the user's min-severity filter — an unmapped
+                // tornado warning is worse than an extra notification.
+                (alert.severity.sortOrder <= maxSortOrder || alert.severity == AlertSeverity.UNKNOWN) &&
                     alert.id !in seenIds &&
                     alert.id !in newSeenIds &&
                     !isExpired(alert)

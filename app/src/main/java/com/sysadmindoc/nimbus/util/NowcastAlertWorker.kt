@@ -11,6 +11,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import dagger.assisted.Assisted
@@ -21,7 +22,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Periodic background worker that fires proactive precipitation notifications
- * for the user's current location ("Rain starts in 15 min" / "Rain stops soon").
+ * for the user's last viewed location ("Rain starts in 15 min" / "Rain stops soon").
  *
  * Behavior:
  *  - Runs every 15 minutes (matches the Open-Meteo minutely_15 cadence).
@@ -90,12 +91,19 @@ class NowcastAlertWorker @AssistedInject constructor(
             return Result.success()
         }
         val nowEpoch = System.currentTimeMillis() / 1000
-        if (nowEpoch - store.lastNotifiedAtEpoch() < MIN_SECONDS_BETWEEN_NOTIFICATIONS) {
+        val sinceLast = nowEpoch - store.lastNotifiedAtEpoch()
+        if (sinceLast < 0) {
+            // Device clock rolled back: the stored timestamp is in the future
+            // and would suppress every nowcast until the wall clock catches
+            // up. Clear it and let this run proceed.
+            Log.w(TAG, "Clock rollback detected (delta=${sinceLast}s); resetting cooldown")
+            store.clearCooldown()
+        } else if (sinceLast < MIN_SECONDS_BETWEEN_NOTIFICATIONS) {
             Log.d(TAG, "Cooldown active; skipping")
             return Result.success()
         }
 
-        val (title, body) = formatNowcastNotification(transition)
+        val (title, body) = formatNowcastNotification(applicationContext, transition, loc.name)
         val delivered = AlertNotificationHelper.showNowcastNotification(applicationContext, title, body)
         if (delivered) {
             store.record(signature, nowEpoch)
@@ -139,26 +147,37 @@ class NowcastAlertWorker @AssistedInject constructor(
     }
 }
 
+/**
+ * How far (in minutes) the wall clock may sit *outside* the series window and
+ * still be trusted as the anchor. Beyond this, the buckets are in a different
+ * local-time frame (remote location) and mixing frames would skew
+ * `minutesUntil` by up to the timezone offset.
+ */
+internal const val NOWCAST_CLOCK_SKEW_TOLERANCE_MIN = 5L
+
 internal fun nowcastReferenceTime(series: List<com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation>): LocalDateTime {
     // Minutely API returns buckets in the forecast LOCATION's local time
-    // (timezone=auto). When the wall clock falls inside (or very near) the
-    // series window, use it directly — the previous implementation anchored
-    // on the earliest bucket unconditionally, which meant `minutesUntil` was
-    // counted from the *oldest* bucket and reported "rain in 30 min" when
-    // the series-relative truth was "rain in 5 min".
+    // (timezone=auto). When the wall clock falls inside (or within a few
+    // minutes of) the series window, use it directly — anchoring on the
+    // earliest bucket unconditionally meant `minutesUntil` was counted from
+    // the *oldest* bucket and reported "rain in 30 min" when the
+    // series-relative truth was "rain in 5 min".
     //
-    // For remote-location buckets that don't align with the device clock
-    // we still fall back to the earliest bucket so `detectNowcastTransition`
-    // walks the series relative to itself rather than against an unrelated
-    // wall clock.
+    // For buckets that don't align with the device clock (a viewed location
+    // even one timezone away) we fall back to the earliest bucket so
+    // `detectNowcastTransition` walks the series relative to itself rather
+    // than against an unrelated wall clock. The previous ±60-minute earliest-
+    // bucket tolerance silently accepted exactly that 1-hour-offset case.
     if (series.isEmpty()) return LocalDateTime.now()
     val earliestTime = series.minOf { it.time }
     val latestTime = series.maxOf { it.time }
     val wallClock = LocalDateTime.now()
     val withinWindow = !wallClock.isBefore(earliestTime) && !wallClock.isAfter(latestTime)
-    return if (withinWindow ||
-        kotlin.math.abs(java.time.Duration.between(earliestTime, wallClock).toMinutes()) <= 60
-    ) {
+    val minutesFromWindow = minOf(
+        kotlin.math.abs(java.time.Duration.between(earliestTime, wallClock).toMinutes()),
+        kotlin.math.abs(java.time.Duration.between(latestTime, wallClock).toMinutes()),
+    )
+    return if (withinWindow || minutesFromWindow <= NOWCAST_CLOCK_SKEW_TOLERANCE_MIN) {
         wallClock
     } else {
         earliestTime
@@ -174,22 +193,47 @@ internal fun transitionSignature(t: NowcastTransition): String = when (t) {
     is NowcastTransition.RainStopping -> "stop:${t.endsAt}"
 }
 
-/** Build the user-facing title + body for a transition. */
-internal fun formatNowcastNotification(t: NowcastTransition): Pair<String, String> = when (t) {
+/**
+ * Build the user-facing title + body for a transition, localized via string
+ * resources. [locationName] is the saved location the worker is anchored to
+ * (it monitors the last *viewed* location, not necessarily where the device
+ * is right now) — when available it's named in the body; otherwise the copy
+ * stays neutral rather than claiming "your current location".
+ */
+internal fun formatNowcastNotification(
+    context: Context,
+    t: NowcastTransition,
+    locationName: String? = null,
+): Pair<String, String> = when (t) {
     is NowcastTransition.RainStarting -> {
         val mins = t.minutesUntil.coerceAtLeast(1)
-        val title = if (mins <= 5) "Rain starting soon" else "Rain in about $mins min"
-        val intensity = when {
-            t.peakMm >= 2.5 -> "heavy"
-            t.peakMm >= 1.0 -> "steady"
-            else -> "light"
+        val title = if (mins <= 5) {
+            context.getString(R.string.nowcast_notif_title_starting_soon)
+        } else {
+            context.getString(R.string.nowcast_notif_title_starting_in, mins)
         }
-        title to "Expect $intensity rain starting in about $mins minutes at your current location."
+        val intensity = context.getString(
+            when {
+                t.peakMm >= 2.5 -> R.string.nowcast_notif_intensity_heavy
+                t.peakMm >= 1.0 -> R.string.nowcast_notif_intensity_steady
+                else -> R.string.nowcast_notif_intensity_light
+            }
+        )
+        val body = if (!locationName.isNullOrBlank()) {
+            context.getString(R.string.nowcast_notif_body_starting_named, intensity, locationName, mins)
+        } else {
+            context.getString(R.string.nowcast_notif_body_starting, intensity, mins)
+        }
+        title to body
     }
     is NowcastTransition.RainStopping -> {
         val mins = t.minutesUntil.coerceAtLeast(1)
-        val title = if (mins <= 5) "Rain stopping soon" else "Rain easing in about $mins min"
-        title to "Current rain looks like it'll ease off in about $mins minutes."
+        val title = if (mins <= 5) {
+            context.getString(R.string.nowcast_notif_title_stopping_soon)
+        } else {
+            context.getString(R.string.nowcast_notif_title_easing_in, mins)
+        }
+        title to context.getString(R.string.nowcast_notif_body_stopping, mins)
     }
 }
 
@@ -209,6 +253,11 @@ private class NowcastNotificationStore(context: Context) {
             .putString(KEY_SIGNATURE, signature)
             .putLong(KEY_TIMESTAMP, epochSeconds)
             .apply()
+    }
+
+    /** Drop a future-dated timestamp left behind by a device-clock rollback. */
+    fun clearCooldown() {
+        prefs.edit().putLong(KEY_TIMESTAMP, 0L).apply()
     }
 
     companion object {

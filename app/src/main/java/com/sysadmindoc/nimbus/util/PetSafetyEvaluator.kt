@@ -13,12 +13,35 @@ import com.sysadmindoc.nimbus.data.model.CurrentConditions
  */
 object PetSafetyEvaluator {
 
+    /** UV index at or above which sun is strong enough to superheat pavement. */
+    private const val STRONG_SUN_UV = 4.0
+
+    /** Weak-sun residual-heat adder (°C) when UV is below [STRONG_SUN_UV]. */
+    private const val WEAK_SUN_PAVEMENT_ADDER = 10.0
+
+    /** Estimated pavement temperature (°C) at which a WARNING fires. */
+    private const val PAVEMENT_WARNING_FLOOR = 55.0
+
+    /** Air temperature (°C) that warrants a WARNING under strong sun even below the pavement floor. */
+    private const val AIR_TEMP_WARNING_FLOOR = 25.0
+
     fun evaluate(current: CurrentConditions): List<PetSafetyAlert> {
         val alerts = mutableListOf<PetSafetyAlert>()
 
-        // Pavement temperature estimate: on sunny days, pavement can be 20-30C hotter than air
+        // Pavement temperature estimate: under strong sun, pavement can run
+        // 20-30C hotter than air. The full solar adder only applies when the
+        // sun is plausibly strong (UV >= STRONG_SUN_UV) — a clear 20C morning
+        // under weak sun was previously claiming ~50C pavement. Weak sun gets
+        // a reduced residual-heat adder instead, and a WARNING needs either an
+        // estimated pavement >= 55C or air >= 25C with strong sun.
         if (current.isDay && current.cloudCover < 50) {
-            val pavementEstimate = current.temperature + 20 + (1 - current.cloudCover / 100.0) * 10
+            val strongSun = current.uvIndex >= STRONG_SUN_UV
+            val solarAdder = if (strongSun) {
+                20 + (1 - current.cloudCover / 100.0) * 10
+            } else {
+                WEAK_SUN_PAVEMENT_ADDER
+            }
+            val pavementEstimate = current.temperature + solarAdder
             when {
                 pavementEstimate > 65 -> alerts.add(
                     PetSafetyAlert(
@@ -29,7 +52,8 @@ object PetSafetyEvaluator {
                         messageArg = pavementEstimate.toInt(),
                     )
                 )
-                pavementEstimate > 50 -> alerts.add(
+                pavementEstimate >= PAVEMENT_WARNING_FLOOR ||
+                    (strongSun && current.temperature >= AIR_TEMP_WARNING_FLOOR) -> alerts.add(
                     PetSafetyAlert(
                         type = PetAlertType.HOT_PAVEMENT,
                         severity = PetSeverity.WARNING,

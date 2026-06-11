@@ -60,6 +60,14 @@ object AlertNotificationHelper {
     /** Base id for per-rule notifications; we offset by rule hash so multiple rules don't collide. */
     private const val NOTIFICATION_ID_CUSTOM_BASE = 0x1400
 
+    /**
+     * Base id for per-alert severe-weather notifications. A raw
+     * `alert.id.hashCode()` spans the full Int range and can collide with the
+     * reserved fixed ids (0x1000–0x14FF summaries/nowcast/health/custom, 9000
+     * persistent weather); folding into this band keeps them disjoint.
+     */
+    private const val NOTIFICATION_ID_SEVERE_BASE = 0x20000
+
     fun createChannels(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -215,6 +223,7 @@ object AlertNotificationHelper {
      */
     fun showHealthNotification(
         context: Context,
+        type: HealthAlertType,
         title: String,
         body: String,
         detail: String = "",
@@ -222,7 +231,9 @@ object AlertNotificationHelper {
     ): Boolean {
         if (!hasNotificationPermission(context)) return false
 
-        val notifId = NOTIFICATION_ID_HEALTH_BASE + (title.hashCode() and 0xFF)
+        // Offset by the type ordinal (not a localized-title hash): stable
+        // across locale changes, and a re-fired type replaces its predecessor.
+        val notifId = NOTIFICATION_ID_HEALTH_BASE + type.ordinal
         val pendingIntent = deepLinkPendingIntent(
             context, requestCode = notifId, uri = URI_HEALTH,
         )
@@ -300,8 +311,11 @@ object AlertNotificationHelper {
         requestCode: Int,
         uri: String,
     ): PendingIntent {
+        // NEW_TASK only — MainActivity is singleTask, so the deep link is
+        // routed through onNewIntent without nuking existing task state
+        // (CLEAR_TASK used to wipe in-progress navigation on every tap).
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri), context, MainActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return PendingIntent.getActivity(
             context, requestCode, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
@@ -347,9 +361,10 @@ object AlertNotificationHelper {
     ): Boolean {
         if (!hasNotificationPermission(context)) return false
 
+        val notificationId = NOTIFICATION_ID_SEVERE_BASE + (alert.id.hashCode() and 0xFFFF)
         val pendingIntent = deepLinkPendingIntent(
             context,
-            requestCode = alert.id.hashCode(),
+            requestCode = notificationId,
             uri = URI_WEATHER_ALERTS,
         )
 
@@ -386,10 +401,13 @@ object AlertNotificationHelper {
 
         try {
             val nm = NotificationManagerCompat.from(context)
-            nm.notify(alert.id.hashCode(), notification)
+            nm.notify(notificationId, notification)
 
-            // Group summary so multiple alerts collapse
-            val summary = NotificationCompat.Builder(context, channel)
+            // Group summary so multiple alerts collapse. Always posted on
+            // CHANNEL_SEVERE — building it on the last child's channel meant a
+            // disabled MINOR channel could break the summary while EXTREME
+            // children were still active.
+            val summary = NotificationCompat.Builder(context, CHANNEL_SEVERE)
                 .setSmallIcon(R.drawable.ic_alert)
                 .setContentTitle(context.getString(R.string.alert_weather_summary_title))
                 .setContentText(context.getString(R.string.alert_weather_summary_text))
@@ -437,20 +455,13 @@ object AlertNotificationHelper {
 
     fun dismissAll(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            nm.activeNotifications
-                .filter {
-                    it.id == SUMMARY_NOTIFICATION_ID ||
-                        it.id == AMBIENT_SUMMARY_NOTIFICATION_ID ||
-                        it.notification.group == GROUP_ID ||
-                        it.notification.group == AMBIENT_GROUP_ID
-                }
-                .forEach { nm.cancel(it.id) }
-        } else {
-            NotificationManagerCompat.from(context).apply {
-                cancel(SUMMARY_NOTIFICATION_ID)
-                cancel(AMBIENT_SUMMARY_NOTIFICATION_ID)
+        nm.activeNotifications
+            .filter {
+                it.id == SUMMARY_NOTIFICATION_ID ||
+                    it.id == AMBIENT_SUMMARY_NOTIFICATION_ID ||
+                    it.notification.group == GROUP_ID ||
+                    it.notification.group == AMBIENT_GROUP_ID
             }
-        }
+            .forEach { nm.cancel(it.id) }
     }
 }

@@ -24,10 +24,11 @@ import java.util.concurrent.TimeUnit
  * the latest forecast for the user's last-known location, and notifies
  * whenever a rule's threshold is crossed.
  *
- * Each (rule-id, yyyy-MM-dd) pair is deduped against a SharedPreferences-
- * backed seen-set so the same rule doesn't re-fire every hour on the same
- * forecast-local day. The dedupe set is trimmed to the last 7 days to keep
- * the file small.
+ * Each (rule-id, threshold, yyyy-MM-dd) triple is deduped against a
+ * SharedPreferences-backed seen-set so the same rule doesn't re-fire every
+ * hour on the same forecast-local day — while still re-arming the same day
+ * if the user edits the rule's threshold. The dedupe set is trimmed to the
+ * last 7 days to keep the file small.
  */
 private const val TAG = "CustomAlertWorker"
 
@@ -58,7 +59,9 @@ class CustomAlertWorker @AssistedInject constructor(
         store.pruneOld(today)
 
         for (hit in triggered) {
-            val dedupeKey = "${hit.rule.id}:$today"
+            // Threshold is part of the key so editing a rule re-arms
+            // evaluation the same day instead of staying muted until tomorrow.
+            val dedupeKey = "${hit.rule.id}:${hit.rule.thresholdCanonical}:$today"
             if (!store.markAndCheckNew(dedupeKey)) continue
             val (title, body) = formatTriggeredAlert(applicationContext, hit, settings)
             val delivered = AlertNotificationHelper.showCustomAlertNotification(
@@ -108,8 +111,9 @@ class CustomAlertWorker @AssistedInject constructor(
 }
 
 /**
- * Thin SharedPreferences-backed set of `"$ruleId:$yyyy-MM-dd"` keys that
- * have already been notified, so a rule fires at most once per calendar day.
+ * Thin SharedPreferences-backed set of `"$ruleId:$threshold:$yyyy-MM-dd"`
+ * keys that have already been notified, so an unchanged rule fires at most
+ * once per calendar day.
  */
 private class CustomAlertDedupeStore(context: Context) {
     private val prefs = context.getSharedPreferences("nimbus_custom_alert_dedupe", Context.MODE_PRIVATE)
@@ -134,8 +138,10 @@ private class CustomAlertDedupeStore(context: Context) {
         val cutoff = LocalDate.parse(referenceDate).minusDays(7).toString()
         val current = prefs.getStringSet(KEY_SET, emptySet()).orEmpty()
         val keep = current.filter { key ->
-            // Keys look like "$ruleId:$yyyy-MM-dd"; keep anything whose trailing
-            // date is >= cutoff. Non-matching keys are dropped defensively.
+            // Keys look like "$ruleId:$threshold:$yyyy-MM-dd" (legacy builds
+            // wrote "$ruleId:$yyyy-MM-dd") — either way the LAST segment is
+            // the date; keep anything whose trailing date is >= cutoff.
+            // Non-matching keys are dropped defensively.
             val date = key.substringAfterLast(':', "")
             date.length == 10 && date >= cutoff
         }.toSet()

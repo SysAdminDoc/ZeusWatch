@@ -73,6 +73,9 @@
     <string name="custom_alerts_threshold_label">Threshold (%1$s)</string>
     <string name="custom_alerts_threshold_uv">UV</string>
     <string name="custom_alerts_invalid_threshold">Enter a numeric threshold to save this alert.</string>
+    <string name="custom_alerts_negative_threshold">This threshold can\'t be negative. Enter zero or higher.</string>
+    <string name="custom_alerts_deleted">Alert rule deleted</string>
+    <string name="common_undo">Undo</string>
     <string name="custom_alerts_trigger_preview">This alert will trigger when %1$s %2$s %3$s%4$s</string>
     <string name="custom_alerts_enabled">Enabled</string>
     <string name="custom_alerts_enabled_cd">Enabled, %1$s</string>
@@ -624,6 +627,7 @@
     <string name="locations_remove_cd">Remove %1$s</string>
     <string name="locations_already_saved_message">Location already saved</string>
     <string name="locations_no_results_message">No results found</string>
+    <string name="locations_search_failed">Search failed. Check your connection and try again.</string>
 
     <!-- Compare -->
     <string name="compare_preparing_title">Preparing comparison</string>
@@ -983,4 +987,16 @@
     <!-- Live Wallpaper -->
     <string name="wallpaper_label">ZeusWatch Weather</string>
     <string name="wallpaper_description">Live weather particle effects over your wallpaper</string>
+
+    <!-- Nowcast notifications -->
+    <string name="nowcast_notif_title_starting_soon">Rain starting soon</string>
+    <string name="nowcast_notif_title_starting_in">Rain in about %1$d min</string>
+    <string name="nowcast_notif_title_stopping_soon">Rain stopping soon</string>
+    <string name="nowcast_notif_title_easing_in">Rain easing in about %1$d min</string>
+    <string name="nowcast_notif_intensity_heavy">heavy</string>
+    <string name="nowcast_notif_intensity_steady">steady</string>
+    <string name="nowcast_notif_intensity_light">light</string>
+    <string name="nowcast_notif_body_starting_named">Expect %1$s rain near %2$s in about %3$d minutes.</string>
+    <string name="nowcast_notif_body_starting">Expect %1$s rain starting in about %2$d minutes.</string>
+    <string name="nowcast_notif_body_stopping">Current rain looks like it\'ll ease off in about %1$d minutes.</string>
 </resources>

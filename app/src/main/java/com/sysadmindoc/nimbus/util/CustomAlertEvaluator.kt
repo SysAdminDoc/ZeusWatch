@@ -45,7 +45,12 @@ internal fun evaluateCustomAlertRules(
             CustomAlertMetric.TEMP_HIGH_TODAY -> today?.temperatureHigh
             CustomAlertMetric.TEMP_LOW_TONIGHT -> tonight?.temperatureLow
             CustomAlertMetric.WIND_GUST_NEXT_12H -> next12h.mapNotNull { it.windGusts ?: it.windSpeed }.maxOrNull()
-            CustomAlertMetric.PRECIP_SUM_NEXT_24H -> next24h.sumOf { it.precipitation ?: 0.0 }.takeIf { next24h.isNotEmpty() }
+            // Only evaluate when at least one bucket actually reports precip —
+            // an all-null series summed as 0.0 would fire false LESS_THAN
+            // triggers when the provider omits the field (mirrors the UV
+            // branch's missing-data-means-skip behavior documented above).
+            CustomAlertMetric.PRECIP_SUM_NEXT_24H ->
+                if (next24h.any { it.precipitation != null }) next24h.sumOf { it.precipitation ?: 0.0 } else null
             CustomAlertMetric.UV_INDEX_MAX_TODAY -> today?.uvIndexMax ?: next12h.mapNotNull { it.uvIndex }.maxOrNull()
         } ?: continue
 

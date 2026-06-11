@@ -12,6 +12,7 @@ class HealthAlertEvaluatorTest {
         temperature: Double = 20.0,
         humidity: Int = 50,
         hoursFromNow: Long = 0,
+        surfacePressure: Double? = null,
     ) = HourlyConditions(
         time = LocalDateTime.now().plusHours(hoursFromNow),
         temperature = temperature,
@@ -26,6 +27,7 @@ class HealthAlertEvaluatorTest {
         uvIndex = 3.0,
         cloudCover = 50,
         visibility = 10000.0,
+        surfacePressure = surfacePressure,
     )
 
     private fun stableHourly(temp: Double = 20.0, humidity: Int = 50, count: Int = 24): List<HourlyConditions> =
@@ -65,6 +67,37 @@ class HealthAlertEvaluatorTest {
         val result = HealthAlertEvaluator.evaluate(data)
         val migraine = result.filter { it.type == HealthAlertType.MIGRAINE_TRIGGER }
         assertTrue("Expected migraine advisory", migraine.isNotEmpty())
+    }
+
+    @Test
+    fun `rapid pressure drop within 3 hours triggers migraine warning`() {
+        // 6 hPa drop between h0 and h3 — a genuine 3-hour delta above the
+        // default 5.0 hPa threshold.
+        val pressures = listOf(1015.0, 1013.0, 1011.0, 1009.0, 1009.0, 1009.0, 1009.0, 1009.0, 1009.0, 1009.0, 1009.0, 1009.0)
+        val data = pressures.mapIndexed { h, p ->
+            hourly(hoursFromNow = h.toLong(), surfacePressure = p)
+        }
+        val result = HealthAlertEvaluator.evaluate(data)
+        val migraine = result.filter { it.type == HealthAlertType.MIGRAINE_TRIGGER }
+        assertTrue("Expected migraine trigger for rapid pressure drop", migraine.isNotEmpty())
+        assertTrue(migraine.any { it.severity == HealthSeverity.WARNING })
+    }
+
+    @Test
+    fun `sparse pressure readings do not stretch the 3-hour window into a false positive`() {
+        // Readings only at h0, h1, h8, h9 — a 9 hPa diurnal drift over 9
+        // hours. Index-based windowing over the null-compacted list used to
+        // treat h0→h9 as a "3-hour" delta and fire a false WARNING; the
+        // timestamp-aware pairing must find no 2.5–3.5h pair and stay silent.
+        val sparsePressures: List<Double?> = listOf(
+            1015.0, 1014.5, null, null, null, null, null, null, 1006.5, 1006.0, null, null,
+        )
+        val data = sparsePressures.mapIndexed { h, p ->
+            hourly(hoursFromNow = h.toLong(), surfacePressure = p)
+        }
+        val result = HealthAlertEvaluator.evaluate(data)
+        val migraine = result.filter { it.type == HealthAlertType.MIGRAINE_TRIGGER }
+        assertTrue("Sparse readings must not produce a false migraine alert", migraine.isEmpty())
     }
 
     @Test

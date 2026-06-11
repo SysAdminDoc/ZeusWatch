@@ -69,6 +69,29 @@ class AlertCheckWorkerTest {
     }
 
     @Test
+    fun `doWork fails open for UNKNOWN severity despite a stricter min-severity filter`() = runTest {
+        // A provider that doesn't map its severity field cleanly must not have
+        // its alerts silently dropped by the user's min-severity preference.
+        val unknownAlert = testAlert(id = "unknown-1", severity = AlertSeverity.UNKNOWN)
+        every { prefs.settings } returns flowOf(
+            NimbusSettings(
+                alertNotificationsEnabled = true,
+                alertMinSeverity = com.sysadmindoc.nimbus.data.repository.AlertMinSeverity.SEVERE,
+                alertCheckAllLocations = false,
+            )
+        )
+        every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        coEvery { prefs.getSeenAlertIds() } returns emptySet()
+        coEvery { weatherSourceManager.getAlerts(any(), any()) } returns Result.success(listOf(unknownAlert))
+
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
+        worker.doWork()
+
+        io.mockk.verify(exactly = 1) { AlertNotificationHelper.showAlertNotification(any(), any(), any()) }
+        coVerify(exactly = 1) { prefs.addSeenAlertIds(setOf("unknown-1")) }
+    }
+
+    @Test
     fun `doWork deduplicates identical alerts across monitored locations in the same run`() = runTest {
         val severeAlert = testAlert(id = "shared-1", severity = AlertSeverity.SEVERE)
         every { prefs.settings } returns flowOf(
