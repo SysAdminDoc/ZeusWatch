@@ -27,10 +27,12 @@ interface AirQualityApi {
 
         const val CURRENT_PARAMS = "us_aqi,european_aqi,pm10,pm2_5,carbon_monoxide," +
             "nitrogen_dioxide,sulphur_dioxide,ozone,dust,uv_index," +
-            "alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen"
+            "alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen," +
+            "mould_spores"
 
         const val HOURLY_PARAMS = "us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide," +
-            "alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen"
+            "alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen," +
+            "mould_spores"
     }
 }
 
@@ -62,6 +64,7 @@ data class AqCurrent(
     @SerialName("mugwort_pollen") val mugwortPollen: Double? = null,
     @SerialName("olive_pollen") val olivePollen: Double? = null,
     @SerialName("ragweed_pollen") val ragweedPollen: Double? = null,
+    @SerialName("mould_spores") val mouldSpores: Double? = null,
 )
 
 @Serializable
@@ -78,4 +81,5 @@ data class AqHourly(
     @SerialName("mugwort_pollen") val mugwortPollen: List<Double?>? = null,
     @SerialName("olive_pollen") val olivePollen: List<Double?>? = null,
     @SerialName("ragweed_pollen") val ragweedPollen: List<Double?>? = null,
+    @SerialName("mould_spores") val mouldSpores: List<Double?>? = null,
 )

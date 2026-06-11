@@ -374,6 +374,7 @@
     <string name="pollen_mugwort">Artemisa</string>
     <string name="pollen_olive">Olivo</string>
     <string name="pollen_ragweed">Ambrosia</string>
+    <string name="pollen_mold">Moho</string>
     <string name="pollen_semantics">Niveles de polen. General %1$s. %2$s.</string>
     <string name="pollen_semantics_unavailable">No hay datos de polen disponibles.</string>
     <string name="cloud_cover_clear_sky">Cielo despejado</string>

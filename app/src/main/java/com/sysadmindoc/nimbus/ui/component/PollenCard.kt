@@ -67,6 +67,11 @@ fun PollenCard(
             levelLabel = stringResource(pollen.ragweed.level.labelRes),
             reading = pollen.ragweed,
         ),
+        PollenRowText(
+            label = stringResource(R.string.pollen_mold),
+            levelLabel = stringResource(pollen.moldSpores.level.labelRes),
+            reading = pollen.moldSpores,
+        ),
     ).filter { it.reading.level != PollenLevel.NONE }
     val overallLabel = stringResource(pollen.overallLevel.labelRes)
     val semanticSummary = if (!pollen.hasData) {
