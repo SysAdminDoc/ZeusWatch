@@ -101,7 +101,7 @@ class SettingsScreenTest {
                 SettingsContent(
                     settings = NimbusSettings(tempUnit = TempUnit.FAHRENHEIT),
                     onBack = {},
-                    onTempUnit = { selectedUnit = it },
+                    actions = SettingsActions(onTempUnit = { selectedUnit = it }),
                 )
             }
         }
@@ -120,7 +120,7 @@ class SettingsScreenTest {
                 SettingsContent(
                     settings = NimbusSettings(windUnit = WindUnit.MPH),
                     onBack = {},
-                    onWindUnit = { selectedUnit = it },
+                    actions = SettingsActions(onWindUnit = { selectedUnit = it }),
                 )
             }
         }
@@ -154,7 +154,7 @@ class SettingsScreenTest {
                 SettingsContent(
                     settings = NimbusSettings(particlesEnabled = true),
                     onBack = {},
-                    onParticlesEnabled = { toggledValue = it },
+                    actions = SettingsActions(onParticlesEnabled = { toggledValue = it }),
                 )
             }
         }
