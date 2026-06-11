@@ -1,6 +1,6 @@
 # ZeusWatch
 
-![Version](https://img.shields.io/badge/version-1.21.9-blue)
+![Version](https://img.shields.io/badge/version-1.22.0-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Android%208.0+-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white)
@@ -27,6 +27,20 @@ cd zeuswatch
 Install the APK from `app/build/outputs/apk/standard/debug/` or open in Android Studio and run directly.
 
 **Requirements:** Android Studio Hedgehog+, JDK 17, Android SDK 35
+
+### Download
+
+Releases publish per-ABI APKs to reduce download size:
+
+| APK | Size | Use when |
+|-----|------|----------|
+| `ZeusWatch-standard-arm64-v8a` | ~20 MB | Most modern phones (2017+) |
+| `ZeusWatch-standard-armeabi-v7a` | ~17 MB | Older 32-bit devices |
+| `ZeusWatch-standard-universal` | ~49 MB | Unsure which ABI you need |
+| `ZeusWatch-freenet-*` | Same variants | F-Droid compatible (no Google Play Services) |
+| `ZeusWatch-wear` | ~5 MB | Wear OS companion watch app |
+
+Download from [GitHub Releases](https://github.com/SysAdminDoc/zeuswatch/releases).
 
 ---
 
