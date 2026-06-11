@@ -9,6 +9,7 @@ import android.location.Location
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -49,8 +50,8 @@ class WearLocationProvider @Inject constructor(
     @SuppressLint("MissingPermission")
     private suspend fun fetchLastLocation(): Location? = suspendCancellableCoroutine { cont ->
         locationClient.lastLocation
-            .addOnSuccessListener { cont.resume(it) }
-            .addOnFailureListener { cont.resume(null) }
+            .addOnSuccessListener { cont.resumeLocationIfActive(it) }
+            .addOnFailureListener { cont.resumeLocationIfActive(null) }
     }
 
     private suspend fun reverseGeocode(lat: Double, lon: Double): String? =
@@ -102,5 +103,16 @@ class WearLocationProvider @Inject constructor(
     companion object {
         const val DEFAULT_LAT = 39.8
         const val DEFAULT_LON = -98.5
+    }
+}
+
+private fun CancellableContinuation<Location?>.resumeLocationIfActive(location: Location?) {
+    if (!isActive) return
+    try {
+        resume(location)
+    } catch (_: IllegalStateException) {
+        // A Play services Task callback can arrive after coroutine
+        // cancellation or after another listener already completed it.
+        // The caller will fall back to cached coordinates.
     }
 }

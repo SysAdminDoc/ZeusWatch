@@ -1,0 +1,4 @@
+v1.21.7 - Wear location cancellation fix
+
+- Guarded Wear OS last-location callbacks against late delivery after coroutine cancellation.
+- Preserved cached-location fallback behavior when Play services location callbacks fail or arrive after cancellation.
