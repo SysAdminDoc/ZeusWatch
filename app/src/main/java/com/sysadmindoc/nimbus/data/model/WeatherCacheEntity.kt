@@ -6,12 +6,12 @@ import java.util.Locale
 
 /**
  * Room entity storing serialized weather data for offline access.
- * Keyed by lat/lon rounded to 2 decimal places for cache hits.
+ * Keyed by lat/lon rounded to 4 decimal places for cache hits.
  */
 @Entity(tableName = "weather_cache")
 data class WeatherCacheEntity(
     @PrimaryKey
-    val locationKey: String, // "lat,lon" rounded to 2 decimals
+    val locationKey: String, // "lat,lon" rounded to 4 decimals
     val responseJson: String,
     val locationName: String,
     val locationRegion: String = "",

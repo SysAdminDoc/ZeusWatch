@@ -233,8 +233,11 @@ object MoonAstronomy {
         // i ≈ 180° − psi adjusted by small Sun-Earth distance term.
         val r = 149597870.7 // AU in km; Sun distance treated as ~1 AU
         val delta = moon.distanceKm
+        // Meeus 48.3: tan i = (R sin psi) / (Δ − R cos psi). The x-component
+        // sign matters — (R cos psi − Δ) flips new/full moon, reporting ~100%
+        // at new moon and ~0% at full moon.
         val sinI = r * sin(psi) / sqrt(r * r + delta * delta - 2 * r * delta * cos(psi))
-        val i = Math.atan2(sinI, (r * cos(psi) - delta) / sqrt(r * r + delta * delta - 2 * r * delta * cos(psi)))
+        val i = Math.atan2(sinI, (delta - r * cos(psi)) / sqrt(r * r + delta * delta - 2 * r * delta * cos(psi)))
         val k = (1.0 + cos(i)) / 2.0
         return (k * 100.0).coerceIn(0.0, 100.0)
     }
@@ -292,8 +295,16 @@ object MoonAstronomy {
     ): LocalTime {
         // Linear root: fraction f where a + f*(b-a) = 0, f in [0,1].
         val f = (-a / (b - a)).coerceIn(0.0, 1.0)
-        val totalMinutes = (startHour * 60 + (f * 60.0)).toInt().coerceIn(0, 24 * 60 - 1)
-        return LocalTime.of(totalMinutes / 60, totalMinutes % 60)
+        // Label the crossing from the sampled instant rather than the loop
+        // hour index: on DST-transition days the wall clock and the index
+        // diverge (spring-forward sample h=3 is actually 04:00 local), so
+        // an index-derived label drifts by the DST offset.
+        val start = ZonedDateTime.of(date, LocalTime.MIDNIGHT, zone).plusHours(startHour.toLong())
+        val crossing = start.plusMinutes((f * 60.0).toLong())
+        // Keep the label within the requested date — f == 1.0 on the final
+        // interval would otherwise roll into next-day 00:00.
+        return if (crossing.toLocalDate().isAfter(date)) LocalTime.of(23, 59)
+        else crossing.toLocalTime()
     }
 
     private fun norm360(deg: Double): Double {

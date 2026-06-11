@@ -140,6 +140,28 @@ class EnvironmentCanadaForecastAdapterTest {
     }
 
     @Test
+    fun `nearest city weighs longitude by cos latitude`() = runTest {
+        // At 60°N a degree of longitude is ~half a degree of latitude on the
+        // ground. NorthCity is 0.4° of latitude away (~44 km); EastCity is
+        // 0.6° of longitude away (~33 km). Raw degree-space distance would
+        // pick NorthCity (0.16 < 0.36); ground distance must pick EastCity
+        // ((0.6·cos60°)² = 0.09 < 0.16).
+        val api = mockk<EnvironmentCanadaForecastApi>()
+        coEvery { api.getCityWeather(any(), any(), any(), any()) } returns EcccFeatureCollection(
+            type = "FeatureCollection",
+            features = listOf(
+                feature(lat = 60.4, lon = -100.0, cityEn = "NorthCity"),
+                feature(lat = 60.0, lon = -99.4, cityEn = "EastCity"),
+            ),
+        )
+        val adapter = EnvironmentCanadaForecastAdapter(api)
+
+        val data = adapter.getWeather(60.0, -100.0, null).getOrThrow()
+
+        assertEquals("EastCity", data.location.name)
+    }
+
+    @Test
     fun `named future first period keeps its actual local date`() = runTest {
         ForecastAdapterTimezoneContract.withDeviceTimeZone("Pacific/Kiritimati") {
             val adapter = EnvironmentCanadaForecastAdapter(mockk(relaxed = true))

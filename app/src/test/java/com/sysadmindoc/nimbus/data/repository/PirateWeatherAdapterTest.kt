@@ -32,7 +32,7 @@ class PirateWeatherForecastAdapterTest {
     private val prefs = mockk<UserPreferences>()
     private val adapter = PirateWeatherForecastAdapter(api, prefs)
 
-    // Stable "now" epoch: 2025-06-01 16:00:00 UTC
+    // Stable "now" epoch: 2025-06-01 08:00:00 UTC
     private val nowEpoch = 1_748_764_800L
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -126,14 +126,15 @@ class PirateWeatherForecastAdapterTest {
     }
 
     @Test
-    fun `precipType snow sets snowfall equal to precipIntensity in current`() = runTest {
+    fun `precipType snow converts precipIntensity mm to cm for current snowfall`() = runTest {
         setupMocks(
             minimalResponse(
                 currently = minimalCurrently(precipIntensity = 2.5, precipType = "snow")
             )
         )
         val c = adapter.getWeather(0.0, 0.0).getOrThrow().current
-        assertEquals(2.5, c.snowfall ?: -1.0, 0.001)
+        // 2.5 mm/h liquid-equivalent ÷ 10 = 0.25 cm (formatter contract)
+        assertEquals(0.25, c.snowfall ?: -1.0, 0.001)
     }
 
     @Test
@@ -193,7 +194,7 @@ class PirateWeatherForecastAdapterTest {
     }
 
     @Test
-    fun `hourly snow precipType populates snowfall`() = runTest {
+    fun `hourly snow precipType populates snowfall converted mm to cm`() = runTest {
         val h = PwHourly(
             time = nowEpoch + 3600,
             temperature = -5.0,
@@ -203,7 +204,8 @@ class PirateWeatherForecastAdapterTest {
         )
         setupMocks(minimalResponse(hourly = listOf(h)))
         val hourly = adapter.getWeather(0.0, 0.0).getOrThrow().hourly
-        assertEquals(1.8, hourly.first().snowfall ?: -1.0, 0.001)
+        // 1.8 mm/h liquid-equivalent ÷ 10 = 0.18 cm (formatter contract)
+        assertEquals(0.18, hourly.first().snowfall ?: -1.0, 0.001)
     }
 
     @Test
@@ -217,6 +219,45 @@ class PirateWeatherForecastAdapterTest {
         )
         setupMocks(minimalResponse(hourly = listOf(h)))
         assertNull(adapter.getWeather(0.0, 0.0).getOrThrow().hourly.first().snowfall)
+    }
+
+    @Test
+    fun `ambiguous icon hours derive isDay from the daily sun window`() = runTest {
+        // nowEpoch is 16:00 UTC; window 04:30–19:00 UTC on the same date.
+        val day = PwDaily(
+            time = nowEpoch,
+            sunriseTime = nowEpoch - 41_400L, // 04:30 UTC
+            sunsetTime = nowEpoch + 10_800L,  // 19:00 UTC
+            temperatureHigh = 20.0,
+            temperatureLow = 10.0,
+        )
+        val daytimeRain = PwHourly(time = nowEpoch + 3600, temperature = 15.0, icon = "rain")       // 17:00
+        val nighttimeRain = PwHourly(time = nowEpoch + 6 * 3600, temperature = 12.0, icon = "rain") // 22:00
+        setupMocks(minimalResponse(hourly = listOf(daytimeRain, nighttimeRain), daily = listOf(day)))
+        val hourly = adapter.getWeather(0.0, 0.0).getOrThrow().hourly
+        assertTrue("17:00 rain (before sunset) should be day", hourly[0].isDay)
+        assertFalse("22:00 rain (after sunset) should be night", hourly[1].isDay)
+    }
+
+    @Test
+    fun `ambiguous icon falls back to hour heuristic when no sun window exists`() = runTest {
+        val nightRain = PwHourly(time = nowEpoch + 14 * 3600, temperature = 12.0, icon = "rain") // 22:00 UTC
+        setupMocks(minimalResponse(hourly = listOf(nightRain)))
+        assertFalse(adapter.getWeather(0.0, 0.0).getOrThrow().hourly.first().isDay)
+    }
+
+    @Test
+    fun `explicit night suffix wins over the sun window`() = runTest {
+        val day = PwDaily(
+            time = nowEpoch,
+            sunriseTime = nowEpoch - 41_400L,
+            sunsetTime = nowEpoch + 10_800L,
+            temperatureHigh = 20.0,
+            temperatureLow = 10.0,
+        )
+        val h = PwHourly(time = nowEpoch + 3600, temperature = 15.0, icon = "partly-cloudy-night")
+        setupMocks(minimalResponse(hourly = listOf(h), daily = listOf(day)))
+        assertFalse(adapter.getWeather(0.0, 0.0).getOrThrow().hourly.first().isDay)
     }
 
     // ── Daily ─────────────────────────────────────────────────────────────────
@@ -237,17 +278,17 @@ class PirateWeatherForecastAdapterTest {
     }
 
     @Test
-    fun `daily snow precipType populates snowfallSum`() = runTest {
+    fun `daily snow precipType populates snowfallSum converted mm to cm`() = runTest {
         val day = PwDaily(
             time = nowEpoch,
-            precipIntensity = 3.0,   // 3.0 mm/h × 24 = 72 mm/day
+            precipIntensity = 3.0,   // 3.0 mm/h × 24 = 72 mm/day ÷ 10 = 7.2 cm
             precipType = "snow",
             temperatureHigh = -5.0,
             temperatureLow = -12.0,
         )
         setupMocks(minimalResponse(daily = listOf(day)))
         val d = adapter.getWeather(0.0, 0.0).getOrThrow().daily.first()
-        assertEquals(72.0, d.snowfallSum ?: -1.0, 0.01)
+        assertEquals(7.2, d.snowfallSum ?: -1.0, 0.01)
     }
 
     @Test
@@ -329,4 +370,27 @@ class PwIconMapperTest {
     @Test fun `isDayFromIcon rain (no suffix) returns true`() = assertTrue(PwIconMapper.isDayFromIcon("rain"))
     @Test fun `isDayFromIcon fog (no suffix) returns true`() = assertTrue(PwIconMapper.isDayFromIcon("fog"))
     @Test fun `isDayFromIcon snow (no suffix) returns true`() = assertTrue(PwIconMapper.isDayFromIcon("snow"))
+
+    // ── isDayFromIcon — sun-window resolution for ambiguous icons ─────────────
+
+    @Test fun `ambiguous icon inside sun window is day`() = assertTrue(
+        PwIconMapper.isDayFromIcon("rain", timeEpochSeconds = 1000, sunriseEpochSeconds = 500, sunsetEpochSeconds = 2000)
+    )
+    @Test fun `ambiguous icon after sunset is night`() = assertFalse(
+        PwIconMapper.isDayFromIcon("cloudy", timeEpochSeconds = 2500, sunriseEpochSeconds = 500, sunsetEpochSeconds = 2000)
+    )
+    @Test fun `ambiguous icon before sunrise is night`() = assertFalse(
+        PwIconMapper.isDayFromIcon("fog", timeEpochSeconds = 100, sunriseEpochSeconds = 500, sunsetEpochSeconds = 2000)
+    )
+    @Test fun `explicit night suffix beats the sun window`() = assertFalse(
+        PwIconMapper.isDayFromIcon("clear-night", timeEpochSeconds = 1000, sunriseEpochSeconds = 500, sunsetEpochSeconds = 2000)
+    )
+    @Test fun `explicit day suffix beats the sun window`() = assertTrue(
+        PwIconMapper.isDayFromIcon("clear-day", timeEpochSeconds = 2500, sunriseEpochSeconds = 500, sunsetEpochSeconds = 2000)
+    )
+    @Test fun `ambiguous icon uses hour heuristic when no sun window`() {
+        assertTrue(PwIconMapper.isDayFromIcon("snow", fallbackHour = 12))
+        assertFalse(PwIconMapper.isDayFromIcon("snow", fallbackHour = 23))
+        assertFalse(PwIconMapper.isDayFromIcon("snow", fallbackHour = 4))
+    }
 }

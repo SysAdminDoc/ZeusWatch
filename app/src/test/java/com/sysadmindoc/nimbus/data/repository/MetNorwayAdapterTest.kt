@@ -20,7 +20,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 
 class MetNorwayAdapterTest {
@@ -142,6 +144,76 @@ class MetNorwayAdapterTest {
         val result = adapter.getWeather(60.39, 5.32, null)
         assertTrue("must surface failure, not crash", result.isFailure)
         assertFalse(result.isSuccess)
+    }
+
+    /** Fixed-time entry for deterministic daily-aggregation tests. */
+    private fun entryAt(
+        time: String,
+        next1PrecipMm: Double? = null,
+        next6PrecipMm: Double? = null,
+    ) = MetTimeseriesEntry(
+        time = time,
+        data = MetEntryData(
+            instant = MetInstant(details = MetInstantDetails(airTemperature = 10.0)),
+            next1Hours = next1PrecipMm?.let {
+                MetPeriod(
+                    summary = MetSummary(symbolCode = "rain"),
+                    details = MetPeriodDetails(precipitationAmount = it),
+                )
+            },
+            next6Hours = next6PrecipMm?.let {
+                MetPeriod(
+                    summary = MetSummary(symbolCode = "rain"),
+                    details = MetPeriodDetails(precipitationAmount = it),
+                )
+            },
+        ),
+    )
+
+    @Test
+    fun `daily precip includes next6Hours blocks where next1Hours is absent`() {
+        // MET degrades to 6-hourly periods after ~48h: those entries carry
+        // only next_6_hours. They must contribute to the daily sum — and an
+        // overlapping next_6_hours on an hour already covered by
+        // next_1_hours must NOT double-count.
+        val adapter = MetNorwayForecastAdapter(mockk())
+        val entries = listOf(
+            // Hourly resolution 00:00–05:00 (first entry also carries an
+            // overlapping 6h block that must be ignored).
+            entryAt("2026-06-15T00:00:00Z", next1PrecipMm = 1.0, next6PrecipMm = 9.0),
+            entryAt("2026-06-15T01:00:00Z", next1PrecipMm = 1.0),
+            entryAt("2026-06-15T02:00:00Z", next1PrecipMm = 1.0),
+            entryAt("2026-06-15T03:00:00Z", next1PrecipMm = 1.0),
+            entryAt("2026-06-15T04:00:00Z", next1PrecipMm = 1.0),
+            entryAt("2026-06-15T05:00:00Z", next1PrecipMm = 1.0),
+            // Degraded 6-hourly resolution for the rest of the day.
+            entryAt("2026-06-15T06:00:00Z", next6PrecipMm = 5.0),
+            entryAt("2026-06-15T12:00:00Z", next6PrecipMm = 5.0),
+            entryAt("2026-06-15T18:00:00Z", next6PrecipMm = 5.0),
+        )
+        val data = adapter.mapToWeatherData(
+            MetNorwayResponse(type = "Feature", properties = MetProperties(timeseries = entries)),
+            60.39, 5.32, null, ZoneId.of("UTC"),
+        )
+        val day = data.daily.first { it.date == LocalDate.of(2026, 6, 15) }
+        // 6 × 1.0 mm (hourly) + 3 × 5.0 mm (6-hourly) = 21.0 mm
+        assertEquals(21.0, day.precipitationSum ?: -1.0, 0.001)
+    }
+
+    @Test
+    fun `overlapping next6Hours-only windows are counted once`() {
+        // Transition region: hourly entries that each repeat a rolling 6h
+        // block. Only non-overlapping stretches may be summed.
+        val adapter = MetNorwayForecastAdapter(mockk())
+        val entries = (0L..5L).map { h ->
+            entryAt("2026-06-15T0$h:00:00Z", next6PrecipMm = 6.0)
+        }
+        val data = adapter.mapToWeatherData(
+            MetNorwayResponse(type = "Feature", properties = MetProperties(timeseries = entries)),
+            60.39, 5.32, null, ZoneId.of("UTC"),
+        )
+        val day = data.daily.first { it.date == LocalDate.of(2026, 6, 15) }
+        assertEquals(6.0, day.precipitationSum ?: -1.0, 0.001)
     }
 
     @Test

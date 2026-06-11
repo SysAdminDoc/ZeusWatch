@@ -46,7 +46,10 @@ class PirateWeatherForecastAdapter @Inject constructor(
 
         val response = api.getForecast(apiKey, latitude, longitude)
         mapToWeatherData(response, latitude, longitude, locationName)
-    }.onFailure { Log.w(TAG, "Pirate Weather forecast failed", it) }
+    }.onFailure {
+        if (it is kotlinx.coroutines.CancellationException) throw it
+        Log.w(TAG, "Pirate Weather forecast failed", it)
+    }
 
     private fun mapToWeatherData(
         r: PirateWeatherResponse,
@@ -56,7 +59,8 @@ class PirateWeatherForecastAdapter @Inject constructor(
     ): WeatherData {
         val current = r.currently ?: error("No current data from Pirate Weather")
         val zone = try { ZoneId.of(r.timezone) } catch (_: Exception) { ZoneId.systemDefault() }
-        val firstDaily = r.daily?.data?.firstOrNull()
+        val dailyData = r.daily?.data ?: emptyList()
+        val firstDaily = dailyData.firstOrNull()
         val locationLocalNow = epochToLocalDateTime(current.time, zone)
 
         return WeatherData(
@@ -73,7 +77,13 @@ class PirateWeatherForecastAdapter @Inject constructor(
                     PwIconMapper.toWmoCode(current.icon, current.precipType)
                 ),
                 observationTime = locationLocalNow,
-                isDay = PwIconMapper.isDayFromIcon(current.icon),
+                isDay = PwIconMapper.isDayFromIcon(
+                    icon = current.icon,
+                    timeEpochSeconds = current.time,
+                    sunriseEpochSeconds = firstDaily?.sunriseTime,
+                    sunsetEpochSeconds = firstDaily?.sunsetTime,
+                    fallbackHour = locationLocalNow.hour,
+                ),
                 windSpeed = (current.windSpeed * 3.6).coerceAtLeast(0.0), // m/s → km/h
                 windDirection = current.windBearing,
                 windGusts = current.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
@@ -83,25 +93,32 @@ class PirateWeatherForecastAdapter @Inject constructor(
                 dewPoint = current.dewPoint,
                 cloudCover = pctToInt(current.cloudCover),
                 precipitation = current.precipIntensity.coerceAtLeast(0.0),
-                snowfall = if (current.precipType == "snow") current.precipIntensity else null,
+                // precipIntensity is mm/h liquid-equivalent; formatter contract is cm
+                snowfall = if (current.precipType == "snow") (current.precipIntensity / 10.0).coerceAtLeast(0.0) else null,
                 dailyHigh = firstDaily?.temperatureHigh ?: current.temperature,
                 dailyLow = firstDaily?.temperatureLow ?: current.temperature,
                 sunrise = firstDaily?.sunriseTime?.let { epochToTimeStr(it, zone) },
                 sunset = firstDaily?.sunsetTime?.let { epochToTimeStr(it, zone) },
             ),
-            hourly = mapHourly(r.hourly?.data ?: emptyList(), zone, locationLocalNow),
-            daily = mapDaily(r.daily?.data ?: emptyList(), zone),
+            hourly = mapHourly(r.hourly?.data ?: emptyList(), dailyData, zone, locationLocalNow),
+            daily = mapDaily(dailyData, zone),
         )
     }
 
     private fun mapHourly(
         data: List<PwHourly>,
+        dailyData: List<PwDaily>,
         zone: ZoneId,
         now: LocalDateTime,
     ): List<HourlyConditions> {
+        // Daily sunrise/sunset epochs keyed by local date so ambiguous-icon
+        // hours (cloudy/rain/snow/fog carry no day/night suffix) can compute
+        // day-ness from the actual sun window instead of defaulting to day.
+        val dailyByDate = dailyData.associateBy { epochToLocalDate(it.time, zone) }
         return data.mapNotNull { h ->
             val time = epochToLocalDateTime(h.time, zone)
             if (time.isBefore(now.minusHours(1))) return@mapNotNull null
+            val dayEntry = dailyByDate[time.toLocalDate()]
             HourlyConditions(
                 time = time,
                 temperature = h.temperature,
@@ -109,7 +126,13 @@ class PirateWeatherForecastAdapter @Inject constructor(
                 weatherCode = WeatherCode.fromCode(
                     PwIconMapper.toWmoCode(h.icon, h.precipType)
                 ),
-                isDay = PwIconMapper.isDayFromIcon(h.icon),
+                isDay = PwIconMapper.isDayFromIcon(
+                    icon = h.icon,
+                    timeEpochSeconds = h.time,
+                    sunriseEpochSeconds = dayEntry?.sunriseTime,
+                    sunsetEpochSeconds = dayEntry?.sunsetTime,
+                    fallbackHour = time.hour,
+                ),
                 precipitationProbability = pctToInt(h.precipProbability ?: 0.0),
                 precipitation = h.precipIntensity?.coerceAtLeast(0.0),
                 windSpeed = h.windSpeed?.let { (it * 3.6).coerceAtLeast(0.0) },
@@ -118,7 +141,8 @@ class PirateWeatherForecastAdapter @Inject constructor(
                 uvIndex = h.uvIndex?.coerceAtLeast(0.0),
                 cloudCover = h.cloudCover?.let { pctToInt(it) },
                 visibility = h.visibility?.let { (it * 1000.0).coerceAtLeast(0.0) }, // km → meters
-                snowfall = if (h.precipType == "snow") h.precipIntensity?.coerceAtLeast(0.0) else null,
+                // precipIntensity is mm/h liquid-equivalent; formatter contract is cm
+                snowfall = if (h.precipType == "snow") h.precipIntensity?.let { (it / 10.0).coerceAtLeast(0.0) } else null,
                 windGusts = h.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
                 surfacePressure = h.pressure,
             )
@@ -141,7 +165,8 @@ class PirateWeatherForecastAdapter @Inject constructor(
                 uvIndexMax = d.uvIndex?.coerceAtLeast(0.0),
                 windSpeedMax = d.windSpeed?.let { (it * 3.6).coerceAtLeast(0.0) },
                 windDirectionDominant = d.windBearing,
-                snowfallSum = if (d.precipType == "snow") d.precipIntensity?.let { (it * 24).coerceAtLeast(0.0) } else null,
+                // mm/h liquid-equivalent × 24 → mm/day, then ÷10 → cm (formatter contract)
+                snowfallSum = if (d.precipType == "snow") d.precipIntensity?.let { (it * 24 / 10.0).coerceAtLeast(0.0) } else null,
                 windGustsMax = d.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
             )
         }

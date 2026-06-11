@@ -46,10 +46,14 @@ class BrightSkyForecastAdapter @Inject constructor(
         // Also grab current conditions for a more accurate "now" reading
         val currentResponse = runCatching {
             api.getCurrentWeather(latitude, longitude)
-        }.getOrNull()
+        }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+            .getOrNull()
 
         mapToWeatherData(response, currentResponse, latitude, longitude, locationName, ZoneId.systemDefault())
-    }.onFailure { Log.w(TAG, "Bright Sky forecast failed", it) }
+    }.onFailure {
+        if (it is kotlinx.coroutines.CancellationException) throw it
+        Log.w(TAG, "Bright Sky forecast failed", it)
+    }
 
     /**
      * Bright Sky responses arrive in UTC (we request `tz=Etc/UTC` so the
@@ -81,8 +85,11 @@ class BrightSkyForecastAdapter @Inject constructor(
         // Build hourly from forecast entries
         val hourly = mapHourly(entries, currentLocalTime, zone)
 
-        // Aggregate daily from hourly entries
-        val daily = aggregateDaily(entries, zone)
+        // Aggregate daily from hourly entries. The fetch window deliberately
+        // starts at yesterday UTC (timezone safety), so drop any aggregated
+        // day before local-today — otherwise daily[0] is yesterday and every
+        // `daily.firstOrNull()` "today" consumer reads stale data.
+        val daily = aggregateDaily(entries, zone).filter { !it.date.isBefore(today) }
 
         // Today's high/low from daily aggregation
         val todayDaily = daily.firstOrNull { it.date == today }
@@ -161,7 +168,7 @@ class BrightSkyForecastAdapter @Inject constructor(
                 cloudCover = e.cloudCover?.toInt(),
                 visibility = e.visibility, // meters (WeatherFormatter expects meters)
                 windGusts = e.windGustSpeed,
-                sunshineDuration = e.sunshine, // minutes
+                sunshineDuration = e.sunshine?.let { it * 60.0 }, // DWD minutes → seconds (formatter contract)
                 surfacePressure = e.pressureMsl ?: e.pressure,
             )
         }
@@ -212,7 +219,7 @@ class BrightSkyForecastAdapter @Inject constructor(
                     ((Math.toDegrees(kotlin.math.atan2(sinSum, cosSum)) + 360) % 360).toInt()
                 } else null,
                 snowfallSum = null, // DWD doesn't separate snow from rain in Bright Sky
-                sunshineDuration = if (sunshine.isNotEmpty()) sunshine.sum() else null,
+                sunshineDuration = if (sunshine.isNotEmpty()) sunshine.sum() * 60.0 else null, // minutes → seconds
                 windGustsMax = gusts.maxOrNull(),
             )
         }.sortedBy { it.date }
@@ -275,5 +282,8 @@ class BrightSkyAlertAdapter @Inject constructor(
                 response = alert.responseType,
             )
         }
-    }.onFailure { Log.w(TAG, "Bright Sky alerts failed", it) }
+    }.onFailure {
+        if (it is kotlinx.coroutines.CancellationException) throw it
+        Log.w(TAG, "Bright Sky alerts failed", it)
+    }
 }

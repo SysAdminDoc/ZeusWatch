@@ -27,6 +27,7 @@ import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.cos
 import kotlin.math.pow
 
 private const val TAG = "EcccForecastAdapter"
@@ -64,7 +65,10 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         val feature = findNearestFeature(latitude, longitude)
             ?: error("No ECCC city within 1.5° of ($latitude, $longitude)")
         mapToWeatherData(feature, latitude, longitude, locationName, ZoneId.systemDefault())
-    }.onFailure { Log.w(TAG, "ECCC forecast failed", it) }
+    }.onFailure {
+        if (it is kotlinx.coroutines.CancellationException) throw it
+        Log.w(TAG, "ECCC forecast failed", it)
+    }
 
     private suspend fun findNearestFeature(lat: Double, lon: Double): EcccFeature? {
         val tight = api.getCityWeather(buildBbox(lat, lon, 0.5))
@@ -74,13 +78,18 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
     }
 
     private fun closest(features: List<EcccFeature>, lat: Double, lon: Double): EcccFeature? {
+        // A degree of longitude shrinks with cos(latitude) — at Canadian
+        // latitudes it's roughly half a degree of latitude. Weight Δlon
+        // accordingly so the "nearest" city is nearest on the ground, not
+        // in raw degree space.
+        val lonScale = cos(Math.toRadians(lat))
         return features
             .filter { (it.geometry?.coordinates?.size ?: 0) >= 2 }
             .minByOrNull { feat ->
                 val coords = feat.geometry!!.coordinates
                 val fLon = coords[0]
                 val fLat = coords[1]
-                (fLat - lat).pow(2) + (fLon - lon).pow(2)
+                (fLat - lat).pow(2) + ((fLon - lon) * lonScale).pow(2)
             }
     }
 
