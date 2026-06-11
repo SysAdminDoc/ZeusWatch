@@ -38,6 +38,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,6 +50,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -90,6 +95,7 @@ import com.sysadmindoc.nimbus.util.convertForDisplay
 import com.sysadmindoc.nimbus.util.displayUnitLabel
 import com.sysadmindoc.nimbus.util.labelRes
 import com.sysadmindoc.nimbus.util.summaryRes
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,10 +110,32 @@ fun CustomAlertsScreen(
     val startNewAlert = {
         editing = EditorState(existing = null, draft = viewModel.defaultRule())
     }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val deletedMessage = stringResource(R.string.custom_alerts_deleted)
+    val undoLabel = stringResource(R.string.common_undo)
+    // Delete is immediate (no confirmation dialog) — the snackbar provides
+    // feedback and an Undo that restores the rule at its old position.
+    val deleteWithUndo: (CustomAlertRule) -> Unit = { rule ->
+        val position = state.rules.indexOfFirst { it.id == rule.id }
+        viewModel.deleteRule(rule)
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = snackbarHostState.showSnackbar(
+                message = deletedMessage,
+                actionLabel = undoLabel,
+                duration = SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.restoreRule(rule, position)
+            }
+        }
+    }
 
     PredictiveBackScaffold(onBack = onBack) {
         Scaffold(
             containerColor = NimbusNavyDark,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 ScreenHeader(
                     title = stringResource(R.string.custom_alerts_title),
@@ -145,7 +173,7 @@ fun CustomAlertsScreen(
                     settings = state.settings,
                     onToggle = { viewModel.toggleRule(it) },
                     onEdit = { editing = EditorState(existing = it, draft = it) },
-                    onDelete = { viewModel.deleteRule(it) },
+                    onDelete = deleteWithUndo,
                     modifier = Modifier.padding(innerPadding),
                 )
             }
@@ -504,7 +532,9 @@ private fun RuleThresholdInput(
         )
         BasicTextField(
             value = thresholdText,
-            onValueChange = { onThresholdTextChange(it.filter { ch -> ch.isDigit() || ch == '.' || ch == '-' }) },
+            // Map ',' -> '.' BEFORE filtering: locales typing "5,5" must become
+            // "5.5", not have the comma stripped into "55".
+            onValueChange = { onThresholdTextChange(it.replace(',', '.').filter { ch -> ch.isDigit() || ch == '.' || ch == '-' }) },
             textStyle = TextStyle(color = NimbusTextPrimary, fontSize = 20.sp),
             cursorBrush = SolidColor(NimbusBlueAccent),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -521,7 +551,7 @@ private fun RuleThresholdInput(
                 )
                 .border(
                     1.dp,
-                    if (parsedThreshold != null) NimbusCardBorder else NimbusError.copy(alpha = 0.42f),
+                    if (isThresholdValid(metric, parsedThreshold)) NimbusCardBorder else NimbusError.copy(alpha = 0.42f),
                     RoundedCornerShape(8.dp),
                 )
                 .padding(horizontal = 12.dp, vertical = 12.dp),
@@ -544,14 +574,18 @@ private fun RuleThresholdFeedback(
     displayUnit: String,
     parsedThreshold: Double?,
 ) {
-    if (parsedThreshold == null) {
-        Text(
+    when {
+        parsedThreshold == null || parsedThreshold.isNaN() -> Text(
             text = stringResource(R.string.custom_alerts_invalid_threshold),
             style = MaterialTheme.typography.bodySmall,
             color = Color(0xFFFFB4AB),
         )
-    } else {
-        AlertHintBadge(
+        !metricAllowsNegativeThreshold(metric) && parsedThreshold < 0.0 -> Text(
+            text = stringResource(R.string.custom_alerts_negative_threshold),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color(0xFFFFB4AB),
+        )
+        else -> AlertHintBadge(
             text = stringResource(
                 R.string.custom_alerts_trigger_preview,
                 stringResource(metric.labelRes).lowercase(Locale.getDefault()),
@@ -562,6 +596,27 @@ private fun RuleThresholdFeedback(
         )
     }
 }
+
+/**
+ * Whether a metric's threshold may be negative. Temperatures can; precipitation,
+ * UV index, and wind gusts can't — a negative value would make those rules
+ * always-true (`>`) or never-true (`<`).
+ */
+private fun metricAllowsNegativeThreshold(metric: CustomAlertMetric): Boolean = when (metric) {
+    CustomAlertMetric.TEMP_HIGH_TODAY,
+    CustomAlertMetric.TEMP_LOW_TONIGHT,
+    -> true
+    CustomAlertMetric.WIND_GUST_NEXT_12H,
+    CustomAlertMetric.PRECIP_SUM_NEXT_24H,
+    CustomAlertMetric.UV_INDEX_MAX_TODAY,
+    -> false
+}
+
+/** Save-gate: a threshold must parse, not be NaN, and not be negative for non-negative metrics. */
+private fun isThresholdValid(metric: CustomAlertMetric, parsedThreshold: Double?): Boolean =
+    parsedThreshold != null &&
+        !parsedThreshold.isNaN() &&
+        (metricAllowsNegativeThreshold(metric) || parsedThreshold >= 0.0)
 
 @Composable
 private fun RuleEnabledToggle(
@@ -644,6 +699,7 @@ private fun RuleEditorActions(
     onSave: (CustomAlertMetric, CustomAlertOperator, Double, Boolean) -> Unit,
     onCancel: () -> Unit,
 ) {
+    val thresholdValid = isThresholdValid(metric, parsedThreshold)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
@@ -653,15 +709,15 @@ private fun RuleEditorActions(
         }
         Spacer(modifier = Modifier.width(8.dp))
         TextButton(
-            enabled = parsedThreshold != null,
+            enabled = thresholdValid,
             onClick = {
-                val parsed = parsedThreshold ?: return@TextButton
+                val parsed = parsedThreshold?.takeIf { thresholdValid } ?: return@TextButton
                 onSave(metric, operator, parsed, enabled)
             },
         ) {
             Text(
                 stringResource(R.string.common_save),
-                color = if (parsedThreshold != null) NimbusBlueAccent else NimbusTextTertiary,
+                color = if (thresholdValid) NimbusBlueAccent else NimbusTextTertiary,
                 fontWeight = FontWeight.Bold,
             )
         }

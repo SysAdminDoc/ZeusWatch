@@ -80,7 +80,8 @@ class SettingsViewModel @Inject constructor(
     fun setSummaryStyle(style: SummaryStyle) = viewModelScope.launch { prefs.setSummaryStyle(style) }
 
     // Card config
-    fun setCardOrder(order: List<CardType>) = viewModelScope.launch { prefs.setCardOrder(order) }
+    /** Atomic single-step card move — see [UserPreferences.moveCardInOrder]. */
+    fun moveCard(card: CardType, delta: Int) = viewModelScope.launch { prefs.moveCardInOrder(card, delta) }
     fun setCardEnabled(card: CardType, enabled: Boolean) = viewModelScope.launch { prefs.setCardEnabled(card, enabled) }
     fun resetCardPreferences() = viewModelScope.launch { prefs.resetCardPreferences() }
 

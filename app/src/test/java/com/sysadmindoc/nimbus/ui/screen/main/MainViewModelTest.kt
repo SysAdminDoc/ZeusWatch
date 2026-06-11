@@ -288,6 +288,18 @@ class MainViewModelTest {
         assertTrue(state.needsLocationPermission)
         assertNotNull(state.error)
         assertTrue(state.error!!.contains("permission", ignoreCase = true))
+        assertFalse(state.isRefreshing)
+    }
+
+    @Test
+    fun `refresh clears spinner when permission is missing`() = runTest {
+        every { locationProvider.hasLocationPermission } returns false
+        viewModel = createAndAdvance()
+
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isRefreshing)
     }
 
     // --- Error + cache fallback ---
@@ -315,6 +327,52 @@ class MainViewModelTest {
         val state = viewModel.uiState.value
         assertNull(state.weatherData)
         assertNotNull(state.error)
+    }
+
+    @Test
+    fun `failed fetch for a location does not render another location's cache`() = runTest {
+        every { locationProvider.hasLocationPermission } returns false
+        every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        coEvery { weatherRepository.getCachedWeather(39.7, -104.9) } returns testWeatherData
+        coEvery { weatherRepository.getCachedWeather(seattle.latitude, seattle.longitude) } returns null
+        coEvery {
+            weatherRepository.getWeather(seattle.latitude, seattle.longitude, any())
+        } returns Result.failure(Exception("Network error"))
+
+        viewModel = createAndAdvance()
+        // Init has no coords (permission denied), so the lastLocation cache is a valid fallback.
+        assertEquals("Denver", viewModel.uiState.value.weatherData?.location?.name)
+
+        viewModel.loadWeatherForCoords(seattle.latitude, seattle.longitude, seattle.id, seattle.name)
+        advanceUntilIdle()
+
+        // A failed Seattle fetch must NOT fall back to Denver's lastLocation cache.
+        val state = viewModel.uiState.value
+        assertNull(state.weatherData)
+        assertNotNull(state.error)
+        assertFalse(state.isLoading)
+    }
+
+    @Test
+    fun `failed fetch falls back to the requested location's own cache`() = runTest {
+        every { locationProvider.hasLocationPermission } returns false
+        every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        coEvery { weatherRepository.getCachedWeather(39.7, -104.9) } returns testWeatherData
+        coEvery {
+            weatherRepository.getCachedWeather(seattle.latitude, seattle.longitude)
+        } returns weatherFor(seattle)
+        coEvery {
+            weatherRepository.getWeather(seattle.latitude, seattle.longitude, any())
+        } returns Result.failure(Exception("Network error"))
+
+        viewModel = createAndAdvance()
+        viewModel.loadWeatherForCoords(seattle.latitude, seattle.longitude, seattle.id, seattle.name)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("Seattle", state.weatherData?.location?.name)
+        assertTrue(state.isCached)
+        assertNull(state.error)
     }
 
     @Test

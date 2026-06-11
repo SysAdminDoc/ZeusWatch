@@ -198,6 +198,7 @@ private fun LocationsList(
         visibleResults = visibleSearchResults,
         alreadySavedMessage = stringResource(R.string.locations_already_saved_message),
         noResultsMessage = stringResource(R.string.locations_no_results_message),
+        errorMessage = search.errorRes?.let { stringResource(it) },
     )
     val minimumMovableIndex = saved.indexOfFirst { !it.isCurrentLocation }.takeIf { it >= 0 } ?: 0
 
@@ -229,16 +230,16 @@ private fun LocationsList(
                 item {
                     LocationsCalloutCard(
                         title = when {
-                            search.error != null -> stringResource(R.string.locations_search_unavailable)
+                            search.errorRes != null -> stringResource(R.string.locations_search_unavailable)
                             search.results.isNotEmpty() -> stringResource(R.string.locations_already_saved_title)
                             else -> stringResource(R.string.locations_no_matches_title)
                         },
                         message = searchEmptyMessage,
                         icon = when {
-                            search.error != null -> Icons.Filled.Close
+                            search.errorRes != null -> Icons.Filled.Close
                             else -> Icons.Filled.Search
                         },
-                        tint = if (search.error != null) NimbusError else NimbusBlueAccent,
+                        tint = if (search.errorRes != null) NimbusError else NimbusBlueAccent,
                         modifier = Modifier.padding(vertical = 8.dp),
                     )
                 }
@@ -667,10 +668,11 @@ internal fun locationsSearchEmptyMessage(
     visibleResults: List<GeocodingResult>,
     alreadySavedMessage: String = "Location already saved",
     noResultsMessage: String = "No results found",
+    errorMessage: String? = null,
 ): String? {
     if (search.query.length < 2 || search.isSearching || visibleResults.isNotEmpty()) return null
     return when {
-        search.error != null -> search.error
+        search.errorRes != null -> errorMessage ?: noResultsMessage
         search.results.isNotEmpty() -> alreadySavedMessage
         else -> noResultsMessage
     }

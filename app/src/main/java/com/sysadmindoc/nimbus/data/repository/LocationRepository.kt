@@ -5,8 +5,11 @@ import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.api.SavedLocationDao
 import com.sysadmindoc.nimbus.data.model.matchesSavedLocation
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,17 +21,21 @@ class LocationRepository @Inject constructor(
 ) {
     val savedLocations: Flow<List<SavedLocationEntity>> = dao.getAllFlow()
 
+    /** Serializes [addLocation]'s check-then-insert so a double-tap can't insert duplicates. */
+    private val addLocationMutex = Mutex()
+
     suspend fun search(query: String): Result<List<GeocodingResult>> =
         withContext(Dispatchers.IO) {
             try {
                 val response = geocodingApi.searchLocation(query)
                 Result.success(response.results ?: emptyList())
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Result.failure(e)
             }
         }
 
-    suspend fun addLocation(result: GeocodingResult): Long {
+    suspend fun addLocation(result: GeocodingResult): Long = addLocationMutex.withLock {
         dao.getAll()
             .firstOrNull { location -> matchesSavedLocation(result, location) }
             ?.let { existing -> return existing.id }
