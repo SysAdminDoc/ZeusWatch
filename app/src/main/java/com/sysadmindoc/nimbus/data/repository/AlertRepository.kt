@@ -135,14 +135,14 @@ class AlertRepository @Inject constructor(
                     // otherwise show false-positive alerts for the wrong country.
                     adapters.filter { "GLOBAL" in it.supportedRegions }
                 } else {
-                    adapters.filter { adapter ->
-                        "GLOBAL" in adapter.supportedRegions ||
-                            countryCode in adapter.supportedRegions
-                    }.ifEmpty {
-                        // No specific adapter for this country — return empty
-                        // (could add Open-Meteo fallback here in future)
-                        emptyList()
-                    }
+                    // AUTO is a true fallback chain, not aggregation: GLOBAL
+                    // adapters (WMO, Pirate Weather) carry the same physical
+                    // alerts as the regional feeds under different IDs (NWS id
+                    // vs WMO capId vs pw_ hash), so querying both would emit
+                    // duplicate notifications. Only fall back to GLOBAL when
+                    // no regional adapter covers the country.
+                    adapters.filter { countryCode in it.supportedRegions }
+                        .ifEmpty { adapters.filter { "GLOBAL" in it.supportedRegions } }
                 }
             }
 
