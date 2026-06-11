@@ -7,7 +7,8 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
@@ -15,18 +16,18 @@ import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
 /**
  * Gravity sensor hook for parallax effects on weather particles.
  * Inspired by breezy-weather's DelayRotateController.
- * Returns a smoothed tilt offset (x, y) normalized to roughly -1..1 range.
+ * Returns a smoothed tilt offset (x, y) normalized to roughly -1..1 range
+ * as [State] so callers can defer the read to the draw phase — reading the
+ * values during composition would recompose at sensor rate (~60 Hz).
  * Falls back to zero tilt if sensor unavailable or reduced motion is on.
  */
 data class GravityTilt(val x: Float, val y: Float)
 
 @Composable
-fun rememberGravityTilt(): GravityTilt {
-    if (isReducedMotionEnabled()) return GravityTilt(0f, 0f)
-
+fun rememberGravityTilt(): State<GravityTilt> {
     val context = LocalContext.current
-    val tiltX = remember { mutableFloatStateOf(0f) }
-    val tiltY = remember { mutableFloatStateOf(0f) }
+    val tilt = remember { mutableStateOf(GravityTilt(0f, 0f)) }
+    if (isReducedMotionEnabled()) return tilt // stays at zero tilt
 
     DisposableEffect(context) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -38,8 +39,11 @@ fun rememberGravityTilt(): GravityTilt {
                 override fun onSensorChanged(event: SensorEvent) {
                     val rawX = (event.values[0] / 9.8f).coerceIn(-1f, 1f)
                     val rawY = (event.values[1] / 9.8f).coerceIn(-1f, 1f)
-                    tiltX.floatValue = tiltX.floatValue + alpha * (rawX - tiltX.floatValue)
-                    tiltY.floatValue = tiltY.floatValue + alpha * (rawY - tiltY.floatValue)
+                    val current = tilt.value
+                    tilt.value = GravityTilt(
+                        x = current.x + alpha * (rawX - current.x),
+                        y = current.y + alpha * (rawY - current.y),
+                    )
                 }
                 override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
             }
@@ -56,5 +60,5 @@ fun rememberGravityTilt(): GravityTilt {
         }
     }
 
-    return GravityTilt(tiltX.floatValue, tiltY.floatValue)
+    return tilt
 }

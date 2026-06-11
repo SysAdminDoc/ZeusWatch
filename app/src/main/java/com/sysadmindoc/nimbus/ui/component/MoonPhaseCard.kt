@@ -106,10 +106,12 @@ fun MoonPhaseCard(
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Sun arc showing current position in sky
+            // Sun + moon arc showing current positions in sky
             SunArc(
                 sunrise = sunrise,
                 sunset = sunset,
+                moonrise = astronomy.moonrise,
+                moonset = astronomy.moonset,
                 referenceTime = referenceTime,
             )
 

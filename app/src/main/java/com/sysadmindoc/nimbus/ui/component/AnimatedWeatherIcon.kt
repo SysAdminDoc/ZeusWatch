@@ -11,6 +11,7 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.repository.IconStyle
 import com.sysadmindoc.nimbus.util.MeteoconMapper
+import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
 
 /**
  * Animated weather icon that switches between Material Icons and Meteocons Lottie
@@ -42,9 +43,12 @@ fun AnimatedWeatherIcon(
                 LottieCompositionSpec.Asset(assetPath)
             )
             if (composition != null) {
+                // Respect the system reduced-motion setting: render a single
+                // pass instead of looping forever in every list item.
+                val reducedMotion = isReducedMotionEnabled()
                 LottieAnimation(
                     composition = composition,
-                    iterations = LottieConstants.IterateForever,
+                    iterations = if (reducedMotion) 1 else LottieConstants.IterateForever,
                     modifier = modifier,
                 )
             } else {
