@@ -1,0 +1,4 @@
+v1.21.5 - Wear sync dependency update
+
+- Upgraded Google Play services Wearable from 18.2.0 to 20.0.1.
+- Kept phone-to-watch DataLayer sync, Wear tiles, and complications on the current Play services Wearable line.
