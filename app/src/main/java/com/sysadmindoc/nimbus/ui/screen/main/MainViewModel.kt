@@ -38,9 +38,11 @@ import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
 import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.di.DefaultDispatcher
+import com.sysadmindoc.nimbus.wallpaper.WeatherWallpaperService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -135,6 +137,7 @@ class MainViewModel @Inject constructor(
 
     private fun observeSettings() {
         viewModelScope.launch {
+            var previousSettings: NimbusSettings? = null
             prefs.settings.collect { settings ->
                 _uiState.update {
                     it.copy(
@@ -142,9 +145,39 @@ class MainViewModel @Inject constructor(
                         particlesEnabled = settings.particlesEnabled,
                     )
                 }
+                val prior = previousSettings
+                previousSettings = settings
+                // Derived data (summary, golden hour, driving/health alerts)
+                // bakes units and thresholds in at compute time — recompute it
+                // when a relevant setting changes, otherwise it stays stale
+                // until the next fetch. Skipped before the first fetch and when
+                // the changed fields don't feed the derived computation.
+                if (prior != null && derivedSettingsChanged(prior, settings)) {
+                    val data = _uiState.value.weatherData ?: return@collect
+                    try {
+                        computeDerivedData(data, weatherRequestCounter.get())
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.w(TAG, "Derived weather recomputation failed", e)
+                    }
+                }
             }
         }
     }
+
+    /** True when a settings change affects [computeDerivedData] output. */
+    private fun derivedSettingsChanged(old: NimbusSettings, new: NimbusSettings): Boolean =
+        old.tempUnit != new.tempUnit ||
+            old.windUnit != new.windUnit ||
+            old.pressureUnit != new.pressureUnit ||
+            old.precipUnit != new.precipUnit ||
+            old.visibilityUnit != new.visibilityUnit ||
+            old.timeFormat != new.timeFormat ||
+            old.summaryStyle != new.summaryStyle ||
+            old.drivingAlerts != new.drivingAlerts ||
+            old.healthAlertsEnabled != new.healthAlertsEnabled ||
+            old.migraineAlerts != new.migraineAlerts ||
+            old.migrainePressureThreshold != new.migrainePressureThreshold
 
     // ── Saved Locations (for HorizontalPager) ────────────────────────────
 
@@ -221,8 +254,12 @@ class MainViewModel @Inject constructor(
 
     // ── Weather Loading ──────────────────────────────────────────────────
 
-    fun loadWeather(clearDisplayedWeather: Boolean = false) {
-        val requestId = nextWeatherRequestId()
+    fun loadWeather(
+        clearDisplayedWeather: Boolean = false,
+        // Default is evaluated in the caller's frame, so the id is allocated
+        // synchronously — a queued stale intent can't out-id a newer one.
+        requestId: Long = nextWeatherRequestId(),
+    ) {
         viewModelScope.launch {
             try {
                 if (!isLatestWeatherRequest(requestId)) return@launch
@@ -235,6 +272,7 @@ class MainViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
+                            isRefreshing = false,
                             needsLocationPermission = true,
                             error = if (!hasCached) "Location permission required to show weather." else null,
                         )
@@ -273,6 +311,7 @@ class MainViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e(TAG, "loadWeather: error", e)
                 if (!tryLoadCached(requestId) && isLatestWeatherRequest(requestId)) {
                     _uiState.update {
@@ -288,8 +327,8 @@ class MainViewModel @Inject constructor(
         lon: Double,
         locationId: Long? = activeLocationId,
         locationName: String? = activeLocationName,
+        requestId: Long = nextWeatherRequestId(),
     ) {
-        val requestId = nextWeatherRequestId()
         val clearDisplayedWeather = shouldClearDisplayedWeatherFor(lat, lon)
         viewModelScope.launch {
             if (!isLatestWeatherRequest(requestId)) return@launch
@@ -341,6 +380,13 @@ class MainViewModel @Inject constructor(
                             isCached = false,
                         )
                     }
+                    // Publish the condition to the live wallpaper; never let a
+                    // wallpaper failure break the fetch.
+                    try {
+                        WeatherWallpaperService.publishWeatherCode(appContext, data.current.weatherCode.code)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Wallpaper weather publish failed", e)
+                    }
                     // Run independent sub-fetches in parallel
                     coroutineScope {
                         launch { fetchAlerts(lat, lon, requestId) }
@@ -377,7 +423,7 @@ class MainViewModel @Inject constructor(
                 onFailure = { e ->
                     if (!isLatestWeatherRequest(requestId)) return@fold
                     Log.e(TAG, "fetchWeather: failed: ${e.message}")
-                    if (!tryLoadCached(requestId) && isLatestWeatherRequest(requestId)) {
+                    if (!tryLoadCached(requestId, lat, lon) && isLatestWeatherRequest(requestId)) {
                         _uiState.update {
                             it.copy(isLoading = false, isRefreshing = false, error = userFriendlyError(e))
                         }
@@ -385,6 +431,7 @@ class MainViewModel @Inject constructor(
                 }
             )
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             if (!isLatestWeatherRequest(requestId)) return
             Log.e(TAG, "fetchWeather: unexpected", e)
             _uiState.update {
@@ -407,7 +454,8 @@ class MainViewModel @Inject constructor(
                     }
                 }
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
             if (isLatestWeatherRequest(requestId)) {
                 _uiState.update { it.copy(alerts = persistentListOf()) }
             }
@@ -429,6 +477,7 @@ class MainViewModel @Inject constructor(
                 }
             )
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w(TAG, "fetchAirQuality failed", e)
             if (isLatestWeatherRequest(requestId)) {
                 _uiState.update { it.copy(airQuality = null) }
@@ -471,7 +520,10 @@ class MainViewModel @Inject constructor(
                 },
                 onFailure = { /* keep placeholder */ }
             )
-        } catch (e: Exception) { Log.w(TAG, "fetchRadarPreview failed", e) }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "fetchRadarPreview failed", e)
+        }
     }
 
     // ── Nowcast (minutely precipitation) ────────────────────────────────
@@ -486,7 +538,10 @@ class MainViewModel @Inject constructor(
                 },
                 onFailure = { Log.w(TAG, "fetchNowcast failed: ${it.message}") }
             )
-        } catch (e: Exception) { Log.w(TAG, "fetchNowcast failed", e) }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "fetchNowcast failed", e)
+        }
     }
 
     // ── On This Day (historical same-date snapshot) ──────────────────────
@@ -503,6 +558,7 @@ class MainViewModel @Inject constructor(
                 _uiState.update { it.copy(onThisDay = data) }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w(TAG, "fetchOnThisDay failed: ${e.message}")
             // Keep any previously cached state; only overwrite with null on first try.
             if (isLatestWeatherRequest(requestId) && _uiState.value.onThisDay == null) {
@@ -524,7 +580,10 @@ class MainViewModel @Inject constructor(
                 },
                 onFailure = { Log.w(TAG, "fetchYesterdayComparison failed: ${it.message}") }
             )
-        } catch (e: Exception) { Log.w(TAG, "fetchYesterdayComparison failed", e) }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "fetchYesterdayComparison failed", e)
+        }
     }
 
     // ── Derived Computations (summary, scores, alerts) ────────────────────
@@ -649,11 +708,32 @@ class MainViewModel @Inject constructor(
         return Pair(x, y)
     }
 
-    private suspend fun tryLoadCached(requestId: Long? = null): Boolean {
+    /**
+     * Falls back to cached weather. When [lat]/[lon] are provided (a fetch for
+     * a specific location failed), only that location's cache is consulted —
+     * never [UserPreferences.lastLocation], which may point at a different
+     * place and would render the wrong location's weather. The lastLocation
+     * fallback is reserved for the no-coords paths (missing permission, GPS
+     * resolution failure).
+     */
+    private suspend fun tryLoadCached(
+        requestId: Long? = null,
+        lat: Double? = null,
+        lon: Double? = null,
+    ): Boolean {
         return try {
             if (requestId != null && !isLatestWeatherRequest(requestId)) return false
-            val lastLoc = prefs.lastLocation.first() ?: return false
-            val cached = repository.getCachedWeather(lastLoc.latitude, lastLoc.longitude)
+            val cacheLat: Double
+            val cacheLon: Double
+            if (lat != null && lon != null) {
+                cacheLat = lat
+                cacheLon = lon
+            } else {
+                val lastLoc = prefs.lastLocation.first() ?: return false
+                cacheLat = lastLoc.latitude
+                cacheLon = lastLoc.longitude
+            }
+            val cached = repository.getCachedWeather(cacheLat, cacheLon)
             if (cached != null) {
                 if (requestId == null || isLatestWeatherRequest(requestId)) {
                     _uiState.update { state ->
@@ -670,24 +750,30 @@ class MainViewModel @Inject constructor(
                     false
                 }
             } else false
-        } catch (_: Exception) { false }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            false
+        }
     }
 
     fun refresh() {
         _uiState.update { it.copy(isRefreshing = true, error = null) }
-        viewModelScope.launch {
-            val lat = activeLatitude
-            val lon = activeLongitude
-            if (!useGpsLocation && lat != null && lon != null) {
-                val requestId = nextWeatherRequestId()
+        val lat = activeLatitude
+        val lon = activeLongitude
+        if (!useGpsLocation && lat != null && lon != null) {
+            // Allocate the id synchronously so a queued stale intent can't
+            // out-id this refresh once the coroutine actually runs.
+            val requestId = nextWeatherRequestId()
+            viewModelScope.launch {
                 fetchWeather(lat, lon, activeLocationName, requestId)
-            } else {
-                loadWeather()
             }
+        } else {
+            loadWeather()
         }
     }
 
     fun useLastLocation() {
+        val requestId = nextWeatherRequestId()
         viewModelScope.launch {
             val lastLoc = prefs.lastLocation.first()
             if (lastLoc == null) {
@@ -702,11 +788,16 @@ class MainViewModel @Inject constructor(
 
             useGpsLocation = false
             activeLocationId = null
-            loadWeatherForCoords(lastLoc.latitude, lastLoc.longitude, locationId = null, locationName = lastLoc.name)
+            loadWeatherForCoords(
+                lastLoc.latitude, lastLoc.longitude,
+                locationId = null, locationName = lastLoc.name,
+                requestId = requestId,
+            )
         }
     }
 
     fun loadForLocation(locationId: Long) {
+        val requestId = nextWeatherRequestId()
         viewModelScope.launch {
             try {
                 val loc = locationRepository.getAll().find { it.id == locationId }
@@ -726,17 +817,18 @@ class MainViewModel @Inject constructor(
                         activeLocationId = null
                         activeLocationName = null
                         useGpsLocation = true
-                        loadWeather(clearDisplayedWeather = true)
+                        loadWeather(clearDisplayedWeather = true, requestId = requestId)
                     } else {
-                        loadWeatherForCoords(loc.latitude, loc.longitude, loc.id, loc.name)
+                        loadWeatherForCoords(loc.latitude, loc.longitude, loc.id, loc.name, requestId = requestId)
                     }
                 } else {
                     activeLocationId = null
                     activeLocationName = null
                     useGpsLocation = true
-                    loadWeather(clearDisplayedWeather = true)
+                    loadWeather(clearDisplayedWeather = true, requestId = requestId)
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _uiState.update { it.copy(isLoading = false, error = userFriendlyError(e)) }
             }
         }
@@ -749,7 +841,12 @@ class MainViewModel @Inject constructor(
 
     fun onPermissionDenied() {
         _uiState.update {
-            it.copy(needsLocationPermission = true, isLoading = false, error = "Location permission required.")
+            it.copy(
+                needsLocationPermission = true,
+                isLoading = false,
+                isRefreshing = false,
+                error = "Location permission required.",
+            )
         }
     }
 

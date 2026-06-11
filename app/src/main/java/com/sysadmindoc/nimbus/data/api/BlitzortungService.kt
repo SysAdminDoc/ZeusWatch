@@ -90,16 +90,27 @@ class BlitzortungService @Inject constructor(
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 Log.w(TAG, "Blitzortung WebSocket failure: ${t.message}")
-                isConnected = false
-                this@BlitzortungService.webSocket = null
+                onSocketTerminated(webSocket)
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 Log.d(TAG, "Blitzortung WebSocket closed: $reason")
-                isConnected = false
-                this@BlitzortungService.webSocket = null
+                onSocketTerminated(webSocket)
             }
         })
+    }
+
+    /**
+     * Clear connection state only if the terminating socket is still the active one.
+     * A late onClosed/onFailure from a socket replaced by a newer connect() must not
+     * null out the newer socket, or the next connect() would open a duplicate stream.
+     */
+    @Synchronized
+    private fun onSocketTerminated(socket: WebSocket) {
+        if (webSocket === socket) {
+            isConnected = false
+            webSocket = null
+        }
     }
 
     /**

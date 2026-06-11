@@ -1,8 +1,10 @@
 package com.sysadmindoc.nimbus.ui.screen.locations
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherCode
@@ -112,7 +114,7 @@ class LocationsViewModel @Inject constructor(
                         _searchState.value = SearchState(
                             query = query,
                             isSearching = false,
-                            error = "Search failed",
+                            errorRes = R.string.locations_search_failed,
                         )
                     }
                 }
@@ -164,5 +166,6 @@ data class SearchState(
     val query: String = "",
     val results: List<GeocodingResult> = emptyList(),
     val isSearching: Boolean = false,
-    val error: String? = null,
+    /** Localized error message resource — a resource id (not a baked English string) so locale changes apply. */
+    @StringRes val errorRes: Int? = null,
 )

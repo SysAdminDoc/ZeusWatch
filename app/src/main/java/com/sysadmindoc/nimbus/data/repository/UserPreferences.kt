@@ -5,14 +5,17 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.compose.runtime.Stable
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,7 +25,10 @@ private val customAlertRulesKey = stringPreferencesKey("custom_alert_rules")
 private val persistentWeatherNotifKey = booleanPreferencesKey("persistent_weather_notif")
 
 internal suspend fun Context.readPersistentWeatherNotificationEnabled(): Boolean {
-    return dataStore.data.map { prefs -> prefs[persistentWeatherNotifKey] ?: true }.first()
+    return dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { prefs -> prefs[persistentWeatherNotifKey] ?: true }
+        .first()
 }
 
 @Singleton
@@ -103,7 +109,13 @@ class UserPreferences @Inject constructor(
         val LAST_LOCATION_NAME = stringPreferencesKey("last_location_name")
     }
 
-    val settings: Flow<NimbusSettings> = store.data.map { prefs ->
+    // A corrupted preferences file makes DataStore throw an IOException
+    // (CorruptionException) on read — without .catch that propagates into
+    // every collector and crashes the app at startup. Recover with empty
+    // preferences (defaults) instead.
+    val settings: Flow<NimbusSettings> = store.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { prefs ->
         NimbusSettings(
             tempUnit = safeValueOf<TempUnit>(prefs[Keys.TEMP_UNIT] ?: TempUnit.FAHRENHEIT.name) ?: TempUnit.FAHRENHEIT,
             windUnit = safeValueOf<WindUnit>(prefs[Keys.WIND_UNIT] ?: WindUnit.MPH.name) ?: WindUnit.MPH,
@@ -127,16 +139,7 @@ class UserPreferences @Inject constructor(
             themeMode = safeValueOf<ThemeMode>(prefs[Keys.THEME_MODE] ?: ThemeMode.STATIC_DARK.name) ?: ThemeMode.STATIC_DARK,
             summaryStyle = safeValueOf<SummaryStyle>(prefs[Keys.SUMMARY_STYLE] ?: SummaryStyle.AI_GENERATED.name) ?: SummaryStyle.AI_GENERATED,
             // Card config
-            cardOrder = (prefs[Keys.CARD_ORDER] ?: "").let { orderStr ->
-                if (orderStr.isBlank()) DEFAULT_CARD_ORDER
-                else orderStr.split(",").mapNotNull { name ->
-                    try { CardType.valueOf(name) } catch (_: Exception) { null }
-                }.let { parsed ->
-                    // Add any missing cards at the end
-                    val missing = DEFAULT_CARD_ORDER.filter { it !in parsed }
-                    parsed + missing
-                }
-            },
+            cardOrder = parseCardOrder(prefs[Keys.CARD_ORDER]),
             disabledCards = prefs[Keys.DISABLED_CARDS] ?: DEFAULT_DISABLED_CARDS,
             // Notifications
             persistentWeatherNotif = prefs[Keys.PERSISTENT_WEATHER_NOTIF] ?: true,
@@ -178,12 +181,14 @@ class UserPreferences @Inject constructor(
         )
     }
 
-    val lastLocation: Flow<SavedLocation?> = store.data.map { prefs ->
-        val lat = prefs[Keys.LAST_LAT]?.toDoubleOrNull() ?: return@map null
-        val lon = prefs[Keys.LAST_LON]?.toDoubleOrNull() ?: return@map null
-        val name = prefs[Keys.LAST_LOCATION_NAME] ?: return@map null
-        SavedLocation(lat, lon, name)
-    }
+    val lastLocation: Flow<SavedLocation?> = store.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { prefs ->
+            val lat = prefs[Keys.LAST_LAT]?.toDoubleOrNull() ?: return@map null
+            val lon = prefs[Keys.LAST_LON]?.toDoubleOrNull() ?: return@map null
+            val name = prefs[Keys.LAST_LOCATION_NAME] ?: return@map null
+            SavedLocation(lat, lon, name)
+        }
 
     suspend fun setTempUnit(unit: TempUnit) = store.edit { it[Keys.TEMP_UNIT] = unit.name }
     suspend fun setWindUnit(unit: WindUnit) = store.edit { it[Keys.WIND_UNIT] = unit.name }
@@ -206,6 +211,20 @@ class UserPreferences @Inject constructor(
 
     // Card config
     suspend fun setCardOrder(order: List<CardType>) = store.edit { it[Keys.CARD_ORDER] = order.joinToString(",") { c -> c.name } }
+
+    /**
+     * Atomically move [card] by [delta] positions within the persisted card
+     * order. Reads and rewrites the order inside one [DataStore.edit] so two
+     * rapid move taps can't replay the same move from a stale UI snapshot
+     * (lost-update race with whole-list [setCardOrder]).
+     */
+    suspend fun moveCardInOrder(card: CardType, delta: Int) = store.edit { prefs ->
+        val current = parseCardOrder(prefs[Keys.CARD_ORDER])
+        val moved = moveCardInList(current, card, delta)
+        if (moved != current) {
+            prefs[Keys.CARD_ORDER] = moved.joinToString(",") { c -> c.name }
+        }
+    }
     suspend fun setCardEnabled(card: CardType, enabled: Boolean) = store.edit { prefs ->
         val current = prefs[Keys.DISABLED_CARDS] ?: emptySet()
         prefs[Keys.DISABLED_CARDS] = if (enabled) current - card.name else current + card.name
@@ -228,27 +247,45 @@ class UserPreferences @Inject constructor(
         isLenient = true
     }
 
+    private val customAlertListSerializer =
+        kotlinx.serialization.builtins.ListSerializer(
+            com.sysadmindoc.nimbus.data.model.CustomAlertRule.serializer()
+        )
+
+    private fun decodeCustomAlertRules(raw: String?): List<com.sysadmindoc.nimbus.data.model.CustomAlertRule> {
+        if (raw == null) return emptyList()
+        return runCatching {
+            customAlertJson.decodeFromString(customAlertListSerializer, raw)
+        }.getOrDefault(emptyList())
+    }
+
     val customAlertRules: Flow<List<com.sysadmindoc.nimbus.data.model.CustomAlertRule>> =
-        store.data.map { prefs ->
-            val raw = prefs[customAlertRulesKey] ?: return@map emptyList()
-            runCatching {
-                customAlertJson.decodeFromString(
-                    kotlinx.serialization.builtins.ListSerializer(
-                        com.sysadmindoc.nimbus.data.model.CustomAlertRule.serializer()
-                    ),
-                    raw,
-                )
-            }.getOrDefault(emptyList())
-        }
+        store.data
+            .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+            .map { prefs -> decodeCustomAlertRules(prefs[customAlertRulesKey]) }
 
     suspend fun setCustomAlertRules(rules: List<com.sysadmindoc.nimbus.data.model.CustomAlertRule>) {
-        val serialized = customAlertJson.encodeToString(
-            kotlinx.serialization.builtins.ListSerializer(
-                com.sysadmindoc.nimbus.data.model.CustomAlertRule.serializer()
-            ),
-            rules,
-        )
+        val serialized = customAlertJson.encodeToString(customAlertListSerializer, rules)
         store.edit { it[customAlertRulesKey] = serialized }
+    }
+
+    /**
+     * Atomic read-modify-write of the custom alert rule list inside a single
+     * [DataStore.edit] transaction. A separate read-then-[setCustomAlertRules]
+     * pair loses updates when two mutations race (e.g. two quick toggles each
+     * read the same snapshot and the second write erases the first).
+     *
+     * @return the list that was persisted.
+     */
+    suspend fun updateCustomAlertRules(
+        transform: (List<com.sysadmindoc.nimbus.data.model.CustomAlertRule>) -> List<com.sysadmindoc.nimbus.data.model.CustomAlertRule>,
+    ): List<com.sysadmindoc.nimbus.data.model.CustomAlertRule> {
+        var updated: List<com.sysadmindoc.nimbus.data.model.CustomAlertRule> = emptyList()
+        store.edit { prefs ->
+            updated = transform(decodeCustomAlertRules(prefs[customAlertRulesKey]))
+            prefs[customAlertRulesKey] = customAlertJson.encodeToString(customAlertListSerializer, updated)
+        }
+        return updated
     }
     suspend fun setDrivingAlerts(enabled: Boolean) = store.edit { it[Keys.DRIVING_ALERTS] = enabled }
     suspend fun setHealthAlertsEnabled(enabled: Boolean) = store.edit { it[Keys.HEALTH_ALERTS_ENABLED] = enabled }
@@ -492,3 +529,28 @@ data class SavedLocation(
 /** Safe enum valueOf that returns null instead of throwing. */
 private inline fun <reified T : Enum<T>> safeValueOf(name: String): T? =
     try { enumValueOf<T>(name) } catch (_: IllegalArgumentException) { null }
+
+/**
+ * Parse a persisted comma-separated card order. Unknown names are skipped and
+ * any cards missing from the stored value are appended at the end (so newly
+ * added card types appear without a migration). Internal + pure so the logic
+ * is unit-testable without DataStore.
+ */
+internal fun parseCardOrder(raw: String?): List<CardType> {
+    if (raw.isNullOrBlank()) return DEFAULT_CARD_ORDER
+    val parsed = raw.split(",").mapNotNull { name ->
+        try { CardType.valueOf(name) } catch (_: Exception) { null }
+    }
+    // Add any missing cards at the end
+    val missing = DEFAULT_CARD_ORDER.filter { it !in parsed }
+    return parsed + missing
+}
+
+/** Move [card] by [delta] positions, clamped to the list bounds. Pure helper for [UserPreferences.moveCardInOrder]. */
+internal fun moveCardInList(order: List<CardType>, card: CardType, delta: Int): List<CardType> {
+    val from = order.indexOf(card)
+    if (from < 0 || order.isEmpty()) return order
+    val to = (from + delta).coerceIn(0, order.lastIndex)
+    if (to == from) return order
+    return order.toMutableList().apply { add(to, removeAt(from)) }
+}
