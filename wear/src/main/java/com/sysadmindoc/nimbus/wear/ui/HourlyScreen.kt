@@ -23,12 +23,14 @@ import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Text
 import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.data.HourlyEntry
+import com.sysadmindoc.nimbus.wear.data.WearUnitFormatter
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 
 @Composable
 fun HourlyScreen(
     hourly: List<HourlyEntry>,
     modifier: Modifier = Modifier,
+    tempUnit: String = WearUnitFormatter.TEMP_CELSIUS,
 ) {
     val listState = rememberScalingLazyListState()
 
@@ -62,13 +64,13 @@ fun HourlyScreen(
             )
         }
         items(hourly) { entry ->
-            HourlyRow(entry)
+            HourlyRow(entry, tempUnit)
         }
     }
 }
 
 @Composable
-private fun HourlyRow(entry: HourlyEntry) {
+private fun HourlyRow(entry: HourlyEntry, tempUnit: String) {
     WearPanel(
         modifier = Modifier
             .fillMaxWidth()
@@ -86,12 +88,12 @@ private fun HourlyRow(entry: HourlyEntry) {
                 modifier = Modifier.width(50.dp),
             )
             Text(
-                text = WearWeatherRepository.wmoEmoji(entry.weatherCode),
+                text = WearWeatherRepository.wmoEmoji(entry.weatherCode, entry.isDay),
                 fontSize = 16.sp,
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                text = "${entry.temperature}\u00B0",
+                text = "${WearUnitFormatter.displayTemp(entry.temperature, tempUnit)}\u00B0",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
                 color = WearTextPrimary,

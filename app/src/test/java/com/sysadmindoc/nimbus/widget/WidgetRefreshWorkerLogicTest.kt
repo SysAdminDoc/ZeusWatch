@@ -5,6 +5,7 @@ import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -15,6 +16,28 @@ class WidgetRefreshWorkerLogicTest {
     @Test
     fun `background refresh cadence uses Android periodic work minimum`() {
         assertEquals(15L, WIDGET_BACKGROUND_REFRESH_INTERVAL_MINUTES)
+    }
+
+    @Test
+    fun `battery skip triggers only when critically low and not charging`() {
+        assertTrue(shouldSkipWidgetRefreshForBattery(batteryLevel = 10, isCharging = false))
+        assertTrue(shouldSkipWidgetRefreshForBattery(batteryLevel = 15, isCharging = false))
+        assertFalse(shouldSkipWidgetRefreshForBattery(batteryLevel = 16, isCharging = false))
+        assertFalse(shouldSkipWidgetRefreshForBattery(batteryLevel = 100, isCharging = false))
+    }
+
+    @Test
+    fun `battery skip never triggers while charging`() {
+        assertFalse(shouldSkipWidgetRefreshForBattery(batteryLevel = 5, isCharging = true))
+        assertFalse(shouldSkipWidgetRefreshForBattery(batteryLevel = 0, isCharging = true))
+    }
+
+    @Test
+    fun `battery skip proceeds when capacity is unknown`() {
+        // Emulators / missing fuel gauge report null — never skip forever.
+        assertFalse(shouldSkipWidgetRefreshForBattery(batteryLevel = null, isCharging = false))
+        // Negative readings are also "unknown-ish" hardware glitches.
+        assertFalse(shouldSkipWidgetRefreshForBattery(batteryLevel = -1, isCharging = false))
     }
 
     @Test

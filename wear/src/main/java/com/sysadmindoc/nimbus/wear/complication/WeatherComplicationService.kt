@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.wear.complication
 
+import android.app.PendingIntent
+import android.content.Intent
 import android.graphics.drawable.Icon
 import androidx.wear.watchface.complications.data.ComplicationData
 import androidx.wear.watchface.complications.data.ComplicationType
@@ -8,7 +10,9 @@ import androidx.wear.watchface.complications.data.SmallImageType
 import androidx.wear.watchface.complications.datasource.ComplicationRequest
 import androidx.wear.watchface.complications.datasource.SuspendingComplicationDataSourceService
 import com.sysadmindoc.nimbus.wear.R
+import com.sysadmindoc.nimbus.wear.WearMainActivity
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
+import com.sysadmindoc.nimbus.wear.data.WearUnitFormatter
 import com.sysadmindoc.nimbus.wear.data.WearWeatherData
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
@@ -38,6 +42,7 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
             data = data,
             smallImage = weatherSmallImage(),
             copy = currentCopy(data),
+            tapAction = openAppTapAction(),
         )
     }
 
@@ -45,6 +50,16 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
         Icon.createWithResource(this, R.drawable.ic_complication_weather),
         SmallImageType.ICON,
     ).build()
+
+    /** Tapping any complication opens the full app. */
+    private fun openAppTapAction(): PendingIntent = PendingIntent.getActivity(
+        this,
+        0,
+        Intent(this, WearMainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        },
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
 
     private fun previewCopy(): WeatherComplicationCopy = WeatherComplicationCopy(
         shortText = getString(R.string.wear_complication_preview_temperature),
@@ -57,21 +72,25 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
         smallImageContentDescription = getString(R.string.wear_complication_preview_small_image_cd),
     )
 
-    private fun currentCopy(data: WearWeatherData): WeatherComplicationCopy =
-        WeatherComplicationCopy(
-            shortText = getString(R.string.wear_complication_temperature_value, data.temperature),
+    private fun currentCopy(data: WearWeatherData): WeatherComplicationCopy {
+        // Convert canonical metric values to the user's display units.
+        val temp = WearUnitFormatter.displayTemp(data.temperature, data.tempUnit)
+        val high = WearUnitFormatter.displayTemp(data.high, data.tempUnit)
+        val low = WearUnitFormatter.displayTemp(data.low, data.tempUnit)
+        return WeatherComplicationCopy(
+            shortText = getString(R.string.wear_complication_temperature_value, temp),
             shortContentDescription = getString(
                 R.string.wear_complication_temperature_content_description,
-                data.temperature,
+                temp,
                 data.condition,
             ),
-            longText = getString(R.string.wear_complication_long_text, data.temperature, data.condition),
+            longText = getString(R.string.wear_complication_long_text, temp, data.condition),
             longContentDescription = getString(
                 R.string.wear_complication_temperature_content_description,
-                data.temperature,
+                temp,
                 data.condition,
             ),
-            longTitle = getString(R.string.wear_tile_high_low_abbrev, data.high, data.low),
+            longTitle = getString(R.string.wear_tile_high_low_abbrev, high, low),
             rangedText = getString(R.string.wear_complication_uv_short, data.uvIndex),
             rangedContentDescription = getString(
                 R.string.wear_complication_uv_content_description,
@@ -80,7 +99,8 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
             smallImageContentDescription = getString(
                 R.string.wear_complication_small_image_content_description,
                 data.condition,
-                data.temperature,
+                temp,
             ),
         )
+    }
 }

@@ -210,6 +210,103 @@ class SyncedWeatherStoreTest {
     }
 
     @Test
+    fun `save with null alerts preserves the previously stored alerts`() {
+        val now = System.currentTimeMillis()
+        savePayload(
+            timestamp = now,
+            alerts = listOf(
+                WearAlertEntry("Tornado Warning", "Extreme", "Take shelter", "2026-06-11T20:00:00Z"),
+            ),
+        )
+        // Background widget-worker sync: alerts not fetched → null → preserved.
+        savePayload(timestamp = now + 1, alerts = null)
+
+        val data = store.getFreshData()
+        assertNotNull(data)
+        assertEquals(1, data!!.alerts.size)
+        assertEquals("Tornado Warning", data.alerts[0].event)
+    }
+
+    @Test
+    fun `save with empty alerts clears the previously stored alerts`() {
+        val now = System.currentTimeMillis()
+        savePayload(
+            timestamp = now,
+            alerts = listOf(WearAlertEntry("Heat Advisory", "Moderate", "h", "e")),
+        )
+        savePayload(timestamp = now + 1, alerts = emptyList())
+
+        val data = store.getFreshData()
+        assertNotNull(data)
+        assertEquals(0, data!!.alerts.size)
+        assertNull(prefs.getString("alert_0_event", null))
+    }
+
+    @Test
+    fun `save with null aqi preserves the previously stored air quality`() {
+        val now = System.currentTimeMillis()
+        savePayload(timestamp = now, aqi = 42, aqiLabel = "Good")
+        savePayload(timestamp = now + 1, aqi = null, aqiLabel = null)
+
+        val data = store.getFreshData()
+        assertNotNull(data)
+        assertEquals(42, data!!.aqi)
+        assertEquals("Good", data.aqiLabel)
+    }
+
+    @Test
+    fun `save with explicit aqi overwrites the previously stored air quality`() {
+        val now = System.currentTimeMillis()
+        savePayload(timestamp = now, aqi = 42, aqiLabel = "Good")
+        savePayload(timestamp = now + 1, aqi = 130, aqiLabel = "Unhealthy for Sensitive Groups")
+
+        val data = store.getFreshData()
+        assertNotNull(data)
+        assertEquals(130, data!!.aqi)
+        assertEquals("Unhealthy for Sensitive Groups", data.aqiLabel)
+    }
+
+    @Test
+    fun `save round-trips display units and defaults to metric when never synced`() {
+        assertEquals("CELSIUS", store.lastTempUnit())
+        assertEquals("KMH", store.lastWindUnit())
+
+        savePayload(
+            timestamp = System.currentTimeMillis(),
+            tempUnit = "FAHRENHEIT",
+            windUnit = "MPH",
+        )
+
+        assertEquals("FAHRENHEIT", store.lastTempUnit())
+        assertEquals("MPH", store.lastWindUnit())
+        val data = store.getFreshData()
+        assertNotNull(data)
+        assertEquals("FAHRENHEIT", data!!.tempUnit)
+        assertEquals("MPH", data.windUnit)
+    }
+
+    @Test
+    fun `save round-trips hourly isDay flags`() {
+        store.save(
+            SyncedWeatherPayload(
+                temperature = 70, condition = "Clear Sky", high = 80, low = 60,
+                locationName = "Seattle", humidity = 50, windSpeed = 5, uvIndex = 4,
+                precipChance = 0, isDay = true, weatherCode = 0,
+                timestampMs = System.currentTimeMillis(),
+                hourly = listOf(
+                    HourlyEntry(time = "21:00", temperature = 60, weatherCode = 0, isDay = false),
+                    HourlyEntry(time = "10:00", temperature = 70, weatherCode = 0, isDay = true),
+                ),
+            ),
+        )
+
+        val data = store.getFreshData()
+        assertNotNull(data)
+        assertEquals(false, data!!.hourly[0].isDay)
+        assertEquals(true, data.hourly[1].isDay)
+    }
+
+    @Test
     fun `save flushes synchronously so a subsequent read returns the new payload`() {
         // SyncedWeatherStore.save() uses commit() instead of apply() so a sync
         // arriving moments before WearableListenerService gets killed actually
@@ -224,6 +321,11 @@ class SyncedWeatherStoreTest {
         timestamp: Long,
         condition: String = "Clear Sky",
         weatherCode: Int = 0,
+        alerts: List<WearAlertEntry>? = null,
+        aqi: Int? = null,
+        aqiLabel: String? = null,
+        tempUnit: String = "CELSIUS",
+        windUnit: String = "KMH",
     ) {
         store.save(
             SyncedWeatherPayload(
@@ -240,6 +342,11 @@ class SyncedWeatherStoreTest {
                 weatherCode = weatherCode,
                 timestampMs = timestamp,
                 hourly = emptyList(),
+                alerts = alerts,
+                aqi = aqi,
+                aqiLabel = aqiLabel,
+                tempUnit = tempUnit,
+                windUnit = windUnit,
             ),
         )
     }

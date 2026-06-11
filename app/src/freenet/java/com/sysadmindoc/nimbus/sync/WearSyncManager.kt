@@ -19,7 +19,7 @@ class WearSyncManager @Inject constructor(
     @Suppress("UNUSED_PARAMETER")
     suspend fun syncWeather(
         data: WeatherData,
-        alerts: List<WeatherAlert> = emptyList(),
+        alerts: List<WeatherAlert>? = null,
         airQuality: AirQualityData? = null,
     ) {
         // No-op — Wearable DataLayer API not available without GMS
