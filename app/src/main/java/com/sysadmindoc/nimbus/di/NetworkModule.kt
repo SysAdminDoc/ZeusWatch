@@ -23,6 +23,7 @@ import com.sysadmindoc.nimbus.data.api.OpenWeatherMapApi
 import com.sysadmindoc.nimbus.data.api.PirateWeatherApi
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import com.sysadmindoc.nimbus.data.api.RateLimitInterceptor
+import com.sysadmindoc.nimbus.data.api.PirateWeatherAlertAdapter
 import com.sysadmindoc.nimbus.data.api.WmoAlertAdapter
 import com.sysadmindoc.nimbus.data.api.WmoAlertApi
 import dagger.Module
@@ -350,8 +351,9 @@ object NetworkModule {
         jmaAdapter: JmaAlertAdapter,
         ecccAdapter: EnvironmentCanadaAlertAdapter,
         wmoAdapter: WmoAlertAdapter,
+        pirateWeatherAlertAdapter: PirateWeatherAlertAdapter,
     ): Set<@JvmSuppressWildcards AlertSourceAdapter> {
-        return setOf(nwsAdapter, meteoAlarmAdapter, jmaAdapter, ecccAdapter, wmoAdapter)
+        return setOf(nwsAdapter, meteoAlarmAdapter, jmaAdapter, ecccAdapter, wmoAdapter, pirateWeatherAlertAdapter)
     }
 
     // --- WMO Severe Weather ---
