@@ -1,0 +1,6 @@
+v1.21.2 - Reliability, privacy, and worker fixes
+
+- Fixed widget cleanup crashes, stale cache freshness, and cache-key collisions.
+- Hardened workers, notification routing, geocoder timeouts, and location transactions.
+- Removed unused background-location permissions and improved backup exclusions.
+- Added regression coverage for rate limiting, wind direction, cache freshness, and key redaction.

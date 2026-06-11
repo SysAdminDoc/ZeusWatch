@@ -1,6 +1,6 @@
 # ZeusWatch
 
-![Version](https://img.shields.io/badge/version-1.21.1-blue)
+![Version](https://img.shields.io/badge/version-1.21.4-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Android%208.0+-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white)
@@ -457,18 +457,16 @@ Issues and PRs welcome. Please:
 - Weather-adaptive theming reads from `LocalWeatherThemeState` CompositionLocal.
 - Multi-source forecasts use `WeatherSourceManager` with adapter pattern — add new sources by implementing `WeatherSourceAdapter`.
 - Alert sources use `AlertSourceAdapter` interface — auto-detected by country via Geocoder.
-- See `ROADMAP.md` for the current feature roadmap, `COMPLETED.md` for closed
-  milestones, and `RESEARCH_REPORT.md` for the current research synthesis.
-  Historical research lives in `docs/research-archive.md`.
+- Current roadmap and research notes are maintained locally in `ROADMAP.md` and
+  `RESEARCH.md`. Historical research lives in `docs/research-archive.md`.
 
 ---
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the live development roadmap,
-[COMPLETED.md](COMPLETED.md) for closed milestones, [RESEARCH_REPORT.md](RESEARCH_REPORT.md)
-for current research synthesis, and [docs/research-archive.md](docs/research-archive.md)
-for the original phase-1 feature research.
+Current planning is maintained locally in `ROADMAP.md`; research synthesis is
+maintained locally in `RESEARCH.md`. Historical phase-1 research remains in
+[docs/research-archive.md](docs/research-archive.md).
 
 **Implemented through v1.5.0:**
 - 25 dynamic card types with user-configurable order and visibility
