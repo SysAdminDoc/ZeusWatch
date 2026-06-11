@@ -23,12 +23,14 @@ import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Text
 import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.data.WearDailyEntry
+import com.sysadmindoc.nimbus.wear.data.WearUnitFormatter
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 
 @Composable
 fun DailyScreen(
     daily: List<WearDailyEntry>,
     modifier: Modifier = Modifier,
+    tempUnit: String = WearUnitFormatter.TEMP_CELSIUS,
 ) {
     val listState = rememberScalingLazyListState()
 
@@ -62,13 +64,13 @@ fun DailyScreen(
             )
         }
         items(daily) { entry ->
-            DailyRow(entry)
+            DailyRow(entry, tempUnit)
         }
     }
 }
 
 @Composable
-private fun DailyRow(entry: WearDailyEntry) {
+private fun DailyRow(entry: WearDailyEntry, tempUnit: String) {
     WearPanel(
         modifier = Modifier
             .fillMaxWidth()
@@ -95,7 +97,7 @@ private fun DailyRow(entry: WearDailyEntry) {
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                text = "${entry.high}\u00B0",
+                text = "${WearUnitFormatter.displayTemp(entry.high, tempUnit)}\u00B0",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = WearTextPrimary,
@@ -103,7 +105,7 @@ private fun DailyRow(entry: WearDailyEntry) {
                 textAlign = TextAlign.End,
             )
             Text(
-                text = "${entry.low}\u00B0",
+                text = "${WearUnitFormatter.displayTemp(entry.low, tempUnit)}\u00B0",
                 fontSize = 12.sp,
                 color = WearTextTertiary,
                 modifier = Modifier.width(34.dp),

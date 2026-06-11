@@ -144,16 +144,17 @@ private fun severityColor(severity: String): Color = when (severity.lowercase(ja
 }
 
 private fun formatExpiry(isoExpires: String): String {
-    // Show just the time portion for brevity on the watch
-    val timePart = isoExpires.substringAfter("T").substringBefore("+").substringBefore("Z")
-    if (timePart.isBlank() || timePart == isoExpires) return isoExpires
-    val hourMin = timePart.substringBeforeLast(":")
-    val hour = hourMin.substringBefore(":").toIntOrNull() ?: return hourMin
-    val min = hourMin.substringAfter(":").padStart(2, '0')
-    return when {
-        hour == 0 -> "12:${min}AM"
-        hour < 12 -> "${hour}:${min}AM"
-        hour == 12 -> "12:${min}PM"
-        else -> "${hour - 12}:${min}PM"
+    // Alerts carry full ISO-8601 offsets (e.g. "2026-06-11T18:00:00-05:00").
+    // Parse properly — naive substring slicing mangled negative UTC offsets
+    // into garbage like "6:00:00-05PM". Convert to the watch's zone and show
+    // just the local time for brevity.
+    return try {
+        java.time.OffsetDateTime.parse(isoExpires)
+            .atZoneSameInstant(java.time.ZoneId.systemDefault())
+            .format(java.time.format.DateTimeFormatter.ofPattern("h:mm a"))
+    } catch (_: Exception) {
+        // Not ISO with an offset (or unparseable) — show the raw string
+        // rather than a misleadingly reformatted one.
+        isoExpires
     }
 }

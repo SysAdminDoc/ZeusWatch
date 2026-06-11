@@ -132,6 +132,45 @@ class WearWeatherRepositoryTest {
     }
 
     @Test
+    fun `getCurrentWeather direct path keeps the last synced display units`() = runTest {
+        val store = emptySyncedStore()
+        // A stale payload (>30 min) forces the direct API path, but the
+        // last-synced display units must still drive rendering.
+        store.save(
+            SyncedWeatherPayload(
+                temperature = 72,
+                condition = "Clear Sky",
+                high = 80,
+                low = 62,
+                locationName = "Phone",
+                humidity = 45,
+                windSpeed = 4,
+                uvIndex = 6,
+                precipChance = 5,
+                isDay = true,
+                weatherCode = 0,
+                timestampMs = System.currentTimeMillis() - 31 * 60 * 1000L,
+                hourly = emptyList(),
+                tempUnit = "FAHRENHEIT",
+                windUnit = "MPH",
+            ),
+        )
+        val repository = WearWeatherRepository(
+            client = okHttpClient(
+                code = 200,
+                body = """{"current": {"temperature_2m": 20.0, "weather_code": 0, "is_day": 1}}""",
+            ),
+            syncedStore = store,
+        )
+
+        val data = repository.getCurrentWeather(47.61, -122.33, "Seattle").getOrThrow()
+
+        assertEquals(DataSource.DIRECT_API, data.dataSource)
+        assertEquals("FAHRENHEIT", data.tempUnit)
+        assertEquals("MPH", data.windUnit)
+    }
+
+    @Test
     fun `getCurrentWeather reports non-successful API responses`() = runTest {
         val repository = WearWeatherRepository(
             client = okHttpClient(code = 503, body = """{"error": true}"""),

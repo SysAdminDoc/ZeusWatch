@@ -14,5 +14,5 @@
     android:description="@string/widget_forecast_strip_desc"
     android:previewLayout="@layout/widget_loading"
     android:widgetCategory="home_screen|keyguard"
-    android:widgetFeatures="reconfigurable"
+    android:widgetFeatures="reconfigurable|configuration_optional"
     android:configure="com.sysadmindoc.nimbus.widget.WidgetConfigActivity" />

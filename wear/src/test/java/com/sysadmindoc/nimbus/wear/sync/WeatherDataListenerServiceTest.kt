@@ -2,6 +2,8 @@ package com.sysadmindoc.nimbus.wear.sync
 
 import com.google.android.gms.wearable.DataMap
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -57,7 +59,7 @@ class WeatherDataListenerServiceTest {
         assertEquals(0, payload.precipChance)
         assertEquals(99, payload.weatherCode)
         assertEquals(500, payload.aqi)
-        assertEquals(80, payload.aqiLabel.length)
+        assertEquals(80, payload.aqiLabel!!.length)
 
         assertEquals(12, payload.hourly.size)
         assertEquals(-100, payload.hourly.first().temperature)
@@ -70,10 +72,65 @@ class WeatherDataListenerServiceTest {
         assertEquals(-100, payload.daily.first().low)
         assertEquals(100, payload.daily.first().precipChance)
 
-        assertEquals(8, payload.alerts.size)
-        assertTrue(payload.alerts.first().event.length <= 120)
-        assertEquals("Extreme", payload.alerts.first().severity)
-        assertEquals(240, payload.alerts.first().headline.length)
+        val alerts = payload.alerts!!
+        assertEquals(8, alerts.size)
+        assertTrue(alerts.first().event.length <= 120)
+        assertEquals("Extreme", alerts.first().severity)
+        assertEquals(240, alerts.first().headline.length)
+    }
+
+    @Test
+    fun `toSyncedWeatherPayload reports absent alerts and aqi as unknown`() {
+        // A background sync that didn't fetch alerts/AQI omits the keys —
+        // the payload must say "unknown" (null) so the store preserves the
+        // previously synced values instead of wiping them every 15 minutes.
+        val payload = DataMap().toSyncedWeatherPayload(receivedAtMs = 1_000L)
+
+        assertNull(payload.alerts)
+        assertNull(payload.aqi)
+        assertNull(payload.aqiLabel)
+    }
+
+    @Test
+    fun `toSyncedWeatherPayload keeps an explicit empty alert list as cleared`() {
+        val payload = DataMap().apply {
+            putDataMapArrayList("alerts", arrayListOf())
+        }.toSyncedWeatherPayload(receivedAtMs = 1_000L)
+
+        assertEquals(0, payload.alerts!!.size)
+    }
+
+    @Test
+    fun `toSyncedWeatherPayload defaults units to metric when keys are absent`() {
+        val payload = DataMap().toSyncedWeatherPayload(receivedAtMs = 1_000L)
+
+        assertEquals("CELSIUS", payload.tempUnit)
+        assertEquals("KMH", payload.windUnit)
+    }
+
+    @Test
+    fun `toSyncedWeatherPayload carries the phone display units`() {
+        val payload = DataMap().apply {
+            putString("tempUnit", "FAHRENHEIT")
+            putString("windUnit", "MPH")
+        }.toSyncedWeatherPayload(receivedAtMs = 1_000L)
+
+        assertEquals("FAHRENHEIT", payload.tempUnit)
+        assertEquals("MPH", payload.windUnit)
+    }
+
+    @Test
+    fun `toSyncedWeatherPayload parses hourly isDay and defaults to day when absent`() {
+        val payload = DataMap().apply {
+            putDataMapArrayList("hourly", dataMaps(2) { i ->
+                putString("time", "2026-06-11T0$i:00")
+                putInt("temperature", 10)
+                if (i == 0) putBoolean("isDay", false)
+            })
+        }.toSyncedWeatherPayload(receivedAtMs = 1_000L)
+
+        assertFalse(payload.hourly[0].isDay)
+        assertTrue(payload.hourly[1].isDay)
     }
 
     @Test
@@ -94,6 +151,24 @@ class WeatherDataListenerServiceTest {
             putLong("syncTimestampMs", receivedAt + 60 * 1000L)
         }.toSyncedWeatherPayload(receivedAtMs = receivedAt)
         assertEquals(receivedAt + 60 * 1000L, smallClockSkew.timestampMs)
+    }
+
+    @Test
+    fun `toSyncedWeatherPayload clamps far past timestamps from a slow phone clock`() {
+        val receivedAt = 60 * 60 * 1000L
+
+        // A phone clock running >5 min behind must not make every sync look
+        // instantly stale — clamp up to the watch's receive time.
+        val tooFarPast = DataMap().apply {
+            putLong("syncTimestampMs", receivedAt - 10 * 60 * 1000L)
+        }.toSyncedWeatherPayload(receivedAtMs = receivedAt)
+        assertEquals(receivedAt, tooFarPast.timestampMs)
+
+        // Small backwards skew within the allowance is preserved.
+        val smallPastSkew = DataMap().apply {
+            putLong("syncTimestampMs", receivedAt - 60 * 1000L)
+        }.toSyncedWeatherPayload(receivedAtMs = receivedAt)
+        assertEquals(receivedAt - 60 * 1000L, smallPastSkew.timestampMs)
     }
 
     private fun dataMaps(

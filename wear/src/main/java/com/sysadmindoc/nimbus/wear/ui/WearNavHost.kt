@@ -37,10 +37,10 @@ fun WearNavHost(
             )
         }
         composable(WearRoutes.HOURLY) {
-            HourlyScreen(hourly = state.hourly)
+            HourlyScreen(hourly = state.hourly, tempUnit = state.tempUnit)
         }
         composable(WearRoutes.DAILY) {
-            DailyScreen(daily = state.daily)
+            DailyScreen(daily = state.daily, tempUnit = state.tempUnit)
         }
         composable(WearRoutes.ALERTS) {
             AlertsScreen(alerts = state.alerts)

@@ -24,6 +24,15 @@
     <string name="wear_data_source_phone">Telefono</string>
     <string name="wear_data_source_watch">Reloj</string>
     <string name="wear_tap_to_refresh">%1$s \u2022 %2$s \u2022 toca para actualizar</string>
+    <string name="wear_hourly_link">Por hora \u203a</string>
+    <string name="wear_daily_link">7 dias \u203a</string>
+    <string name="wear_sync_never">sin sincronizar</string>
+    <string name="wear_sync_just_now">ahora mismo</string>
+    <string name="wear_sync_minutes_ago">hace %1$d min</string>
+    <string name="wear_sync_hours_ago">hace %1$d h</string>
+    <string name="wear_sync_days_ago">hace %1$d d</string>
+    <string name="wear_action_refresh">Actualizar</string>
+    <string name="wear_action_view_alerts">Ver alertas</string>
     <string name="wear_tile_no_data">Sin datos</string>
     <string name="wear_tile_high_low_abbrev">Max:%1$d\u00B0 Min:%2$d\u00B0</string>
     <string name="wear_tile_humidity_wind">&#128167;%1$d%%  &#128168;%2$d</string>

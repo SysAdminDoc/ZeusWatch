@@ -9,11 +9,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -23,6 +26,7 @@ import androidx.wear.compose.material3.Text
 import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.WearUiState
 import com.sysadmindoc.nimbus.wear.data.DataSource
+import com.sysadmindoc.nimbus.wear.data.WearUnitFormatter
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 import kotlin.math.max
 
@@ -72,9 +76,13 @@ private fun WeatherContent(
     onAlertsTap: () -> Unit,
     onRefresh: () -> Unit,
 ) {
+    // Scrollable so the footer/link rows aren't clipped on small round
+    // screens; when content fits, the centered arrangement keeps the old
+    // fixed-layout look.
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 18.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
@@ -102,7 +110,7 @@ private fun WeatherContent(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
             Text(
-                text = "${state.temperature}\u00B0",
+                text = "${WearUnitFormatter.displayTemp(state.temperature, state.tempUnit)}\u00B0",
                 fontSize = 42.sp,
                 fontWeight = FontWeight.Bold,
                 color = WearTextPrimary,
@@ -116,7 +124,11 @@ private fun WeatherContent(
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(
-                text = stringResource(R.string.wear_high_low, state.high, state.low),
+                text = stringResource(
+                    R.string.wear_high_low,
+                    WearUnitFormatter.displayTemp(state.high, state.tempUnit),
+                    WearUnitFormatter.displayTemp(state.low, state.tempUnit),
+                ),
                 fontSize = 10.sp,
                 color = WearTextTertiary,
                 textAlign = TextAlign.Center,
@@ -133,8 +145,12 @@ private fun WeatherContent(
         }
 
         WearLinkRow(
-            primary = "Hourly ›" to onHourlyTap,
-            secondary = if (state.daily.isNotEmpty()) "7-Day ›" to onDailyTap else null,
+            primary = stringResource(R.string.wear_hourly_link) to onHourlyTap,
+            secondary = if (state.daily.isNotEmpty()) {
+                stringResource(R.string.wear_daily_link) to onDailyTap
+            } else {
+                null
+            },
             modifier = Modifier.padding(top = 2.dp),
         )
 
@@ -161,7 +177,11 @@ private fun SyncFooter(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onRefresh)
+            .clickable(
+                onClick = onRefresh,
+                role = Role.Button,
+                onClickLabel = stringResource(R.string.wear_action_refresh),
+            )
             .padding(top = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -176,15 +196,16 @@ private fun SyncFooter(
     }
 }
 
+@Composable
 private fun freshnessLabel(syncedAtMs: Long): String {
-    if (syncedAtMs <= 0L) return "no sync yet"
+    if (syncedAtMs <= 0L) return stringResource(R.string.wear_sync_never)
     val ageMs = max(0L, System.currentTimeMillis() - syncedAtMs)
     val minutes = (ageMs / 60_000L).toInt()
     return when {
-        minutes < 1 -> "just now"
-        minutes < 60 -> "${minutes}m ago"
-        minutes < 1440 -> "${minutes / 60}h ago"
-        else -> "${minutes / 1440}d ago"
+        minutes < 1 -> stringResource(R.string.wear_sync_just_now)
+        minutes < 60 -> stringResource(R.string.wear_sync_minutes_ago, minutes)
+        minutes < 1440 -> stringResource(R.string.wear_sync_hours_ago, minutes / 60)
+        else -> stringResource(R.string.wear_sync_days_ago, minutes / 1440)
     }
 }
 
@@ -194,7 +215,11 @@ private fun AlertBanner(count: Int, topEvent: String, onTap: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(WearAlertAccent.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
-            .clickable(onClick = onTap)
+            .clickable(
+                onClick = onTap,
+                role = Role.Button,
+                onClickLabel = stringResource(R.string.wear_action_view_alerts),
+            )
             .padding(horizontal = 10.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -216,9 +241,13 @@ private fun DetailRow(state: WearUiState) {
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         DetailChip(emoji = "\uD83D\uDCA7", value = "${state.humidity}%")
-        DetailChip(emoji = "\uD83D\uDCA8", value = "${state.windSpeed}")
+        DetailChip(
+            emoji = "\uD83D\uDCA8",
+            value = "${WearUnitFormatter.displayWind(state.windSpeed, state.windUnit)} ${WearUnitFormatter.windLabel(state.windUnit)}",
+        )
         DetailChip(emoji = "\u2600\uFE0F", value = "UV${state.uvIndex}")
-        if (state.aqi > 0) {
+        // AQI sentinel is -1; 0 is a real (excellent) reading.
+        if (state.aqi >= 0) {
             DetailChip(emoji = aqiEmoji(state.aqiLabel), value = "${state.aqi}")
         } else {
             DetailChip(emoji = "\uD83C\uDF27\uFE0F", value = "${state.precipChance}%")

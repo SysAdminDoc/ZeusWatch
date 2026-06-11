@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.wear.tile
 
 import androidx.concurrent.futures.CallbackToFutureAdapter
+import androidx.wear.protolayout.ActionBuilders
 import androidx.wear.protolayout.ColorBuilders.argb
 import androidx.wear.protolayout.DimensionBuilders.dp
 import androidx.wear.protolayout.DimensionBuilders.sp
@@ -9,12 +10,15 @@ import androidx.wear.protolayout.LayoutElementBuilders.Column
 import androidx.wear.protolayout.LayoutElementBuilders.Row
 import androidx.wear.protolayout.LayoutElementBuilders.Spacer
 import androidx.wear.protolayout.LayoutElementBuilders.Text
+import androidx.wear.protolayout.ModifiersBuilders
 import androidx.wear.protolayout.ResourceBuilders
 import androidx.wear.protolayout.TimelineBuilders
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.TileBuilders
 import com.sysadmindoc.nimbus.wear.R
+import com.sysadmindoc.nimbus.wear.WearMainActivity
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
+import com.sysadmindoc.nimbus.wear.data.WearUnitFormatter
 import com.sysadmindoc.nimbus.wear.data.WearWeatherData
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
@@ -68,9 +72,35 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
     private fun buildTile(data: WearWeatherData?): TileBuilders.Tile {
         val layout = Column.Builder()
             .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
+            // Tap anywhere on the tile opens the full app.
+            .setModifiers(
+                ModifiersBuilders.Modifiers.Builder()
+                    .setClickable(
+                        ModifiersBuilders.Clickable.Builder()
+                            .setId("open_app")
+                            .setOnClick(
+                                ActionBuilders.LaunchAction.Builder()
+                                    .setAndroidActivity(
+                                        ActionBuilders.AndroidActivity.Builder()
+                                            .setPackageName(packageName)
+                                            .setClassName(WearMainActivity::class.java.name)
+                                            .build(),
+                                    )
+                                    .build(),
+                            )
+                            .build(),
+                    )
+                    .build(),
+            )
             .addContent(
                 Text.Builder()
-                    .setText(if (data != null) "${data.temperature}\u00B0" else "--")
+                    .setText(
+                        if (data != null) {
+                            "${WearUnitFormatter.displayTemp(data.temperature, data.tempUnit)}\u00B0"
+                        } else {
+                            "--"
+                        },
+                    )
                     .setFontStyle(
                         LayoutElementBuilders.FontStyle.Builder()
                             .setSize(sp(40f))
@@ -96,7 +126,11 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
                 Text.Builder()
                     .setText(
                         if (data != null) {
-                            getString(R.string.wear_tile_high_low_abbrev, data.high, data.low)
+                            getString(
+                                R.string.wear_tile_high_low_abbrev,
+                                WearUnitFormatter.displayTemp(data.high, data.tempUnit),
+                                WearUnitFormatter.displayTemp(data.low, data.tempUnit),
+                            )
                         } else {
                             ""
                         },
@@ -117,7 +151,13 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
                 Row.Builder()
                     .addContent(
                         Text.Builder()
-                            .setText(getString(R.string.wear_tile_humidity_wind, data.humidity, data.windSpeed))
+                            .setText(
+                                getString(
+                                    R.string.wear_tile_humidity_wind,
+                                    data.humidity,
+                                    WearUnitFormatter.displayWind(data.windSpeed, data.windUnit),
+                                ),
+                            )
                             .setFontStyle(
                                 LayoutElementBuilders.FontStyle.Builder()
                                     .setSize(sp(11f))

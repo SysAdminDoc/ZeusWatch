@@ -8,6 +8,7 @@ import com.sysadmindoc.nimbus.wear.data.HourlyEntry
 import com.sysadmindoc.nimbus.wear.data.WearAlertEntry
 import com.sysadmindoc.nimbus.wear.data.WearDailyEntry
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
+import com.sysadmindoc.nimbus.wear.data.WearUnitFormatter
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -61,6 +62,8 @@ class WearWeatherViewModel @Inject constructor(
                             aqiLabel = data.aqiLabel,
                             dataSource = data.dataSource,
                             syncedAtMs = data.syncedAtMs,
+                            tempUnit = data.tempUnit,
+                            windUnit = data.windUnit,
                         )
                     }
                 },
@@ -100,4 +103,7 @@ data class WearUiState(
     val dataSource: DataSource = DataSource.UNKNOWN,
     /** Epoch ms the current payload was produced (phone-sync time or fetch time). */
     val syncedAtMs: Long = 0L,
+    /** Display units (phone enum names); raw state values are always metric. */
+    val tempUnit: String = WearUnitFormatter.TEMP_CELSIUS,
+    val windUnit: String = WearUnitFormatter.WIND_KMH,
 )

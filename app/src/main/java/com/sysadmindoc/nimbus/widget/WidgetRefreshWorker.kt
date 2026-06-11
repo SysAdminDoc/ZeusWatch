@@ -16,6 +16,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
@@ -39,9 +40,13 @@ import java.time.format.TextStyle
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
+private const val TAG = "WidgetRefreshWorker"
+
 internal const val WIDGET_BACKGROUND_REFRESH_INTERVAL_MINUTES = 15L
 private const val WIDGET_BACKGROUND_REFRESH_FLEX_MINUTES = 5L
 private const val WIDGET_BACKGROUND_REFRESH_BACKOFF_MINUTES = 10L
+private const val WIDGET_REFRESH_MAX_RUN_ATTEMPTS = 3
+internal const val WIDGET_BATTERY_SKIP_THRESHOLD_PERCENT = 15
 
 @HiltWorker
 class WidgetRefreshWorker @AssistedInject constructor(
@@ -56,9 +61,21 @@ class WidgetRefreshWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val settings = prefs.settings.first()
         val lastLoc = prefs.lastLocation.first()
-        val widgetMappings = WidgetLocationPrefs.getAllMappings(applicationContext)
+        // Cross-check stored widget mappings against the launcher's live ids —
+        // a missed onDeleted (force-stop, crash) otherwise leaves orphaned
+        // per-widget data refreshing forever.
+        val widgetMappings = purgeDeletedWidgetMappings(
+            WidgetLocationPrefs.getAllMappings(applicationContext),
+        )
 
-        if (shouldSkipForBattery()) return Result.success()
+        // A user-initiated refresh (widget tap) must run even on low battery.
+        val forceRefresh = inputData.getBoolean(KEY_FORCE_REFRESH, false)
+        if (!forceRefresh && shouldSkipForBattery()) {
+            // No network work — but don't let the watch and the persistent
+            // notification silently starve: push the cached data we have.
+            pushCachedDataOnly(settings, lastLoc)
+            return Result.success()
+        }
 
         if (lastLoc == null && widgetMappings.isEmpty()) {
             clearWidgetState(settings.persistentWeatherNotif)
@@ -83,8 +100,9 @@ class WidgetRefreshWorker @AssistedInject constructor(
             // than masking the cancel as a Result.retry() and tying the worker
             // up indefinitely.
             throw cancelled
-        } catch (_: Exception) {
-            Result.retry()
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Widget refresh failed (attempt $runAttemptCount)", e)
+            if (runAttemptCount >= WIDGET_REFRESH_MAX_RUN_ATTEMPTS) Result.failure() else Result.retry()
         }
     }
 
@@ -102,11 +120,74 @@ class WidgetRefreshWorker @AssistedInject constructor(
     }
 
     private fun shouldSkipForBattery(): Boolean {
-        // Unknown capacity (emulators, no fuel gauge, read failure) should proceed
-        // rather than incorrectly skipping widget updates forever.
         val batteryManager = applicationContext.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
-        val batteryLevel = batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 100
-        return batteryLevel in 0..15
+        return shouldSkipWidgetRefreshForBattery(
+            batteryLevel = batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY),
+            isCharging = batteryManager?.isCharging == true,
+        )
+    }
+
+    /**
+     * Removes mappings (and per-widget cached data) for widget ids the
+     * launcher no longer knows about, returning only the live mappings.
+     */
+    private suspend fun purgeDeletedWidgetMappings(
+        widgetMappings: Map<Int, Long>,
+    ): Map<Int, Long> {
+        if (widgetMappings.isEmpty()) return widgetMappings
+        val liveIds = try {
+            val manager = AppWidgetManager.getInstance(applicationContext)
+            listOf(
+                NimbusSmallWidgetReceiver::class.java,
+                NimbusMediumWidgetReceiver::class.java,
+                NimbusLargeWidgetReceiver::class.java,
+                NimbusForecastStripWidgetReceiver::class.java,
+            ).flatMap { receiver ->
+                manager.getAppWidgetIds(ComponentName(applicationContext, receiver)).toList()
+            }.toSet()
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (e: Exception) {
+            // If the launcher query fails, keep everything — wrongly purging
+            // a live widget's data is worse than carrying an orphan one cycle.
+            android.util.Log.w(TAG, "Could not enumerate live widget ids", e)
+            return widgetMappings
+        }
+        val orphanedIds = widgetMappings.keys.filter { it !in liveIds }
+        for (widgetId in orphanedIds) {
+            WidgetLocationPrefs.removeWidget(applicationContext, widgetId)
+            WidgetDataProvider.remove(applicationContext, widgetId)
+        }
+        return if (orphanedIds.isEmpty()) widgetMappings else widgetMappings.filterKeys { it in liveIds }
+    }
+
+    /**
+     * Battery-skip path: refreshes the wear sync and persistent notification
+     * from already-cached weather (no network) so glanceable surfaces don't
+     * silently go stale while we conserve power.
+     */
+    private suspend fun pushCachedDataOnly(settings: NimbusSettings, lastLoc: SavedLocation?) {
+        if (lastLoc == null) return
+        val cached = try {
+            weatherRepository.getCachedWeather(lastLoc.latitude, lastLoc.longitude)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        } ?: return
+
+        try {
+            wearSyncManager.syncWeather(cached)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+        }
+        if (settings.persistentWeatherNotif) {
+            try {
+                WeatherNotificationHelper.showOrUpdate(applicationContext, cached, settings)
+            } catch (_: Exception) {
+            }
+        }
     }
 
     private suspend fun clearWidgetState(persistentWeatherNotificationEnabled: Boolean) {
@@ -218,7 +299,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
         error: Exception,
     ) {
         android.util.Log.w(
-            "WidgetRefreshWorker",
+            TAG,
             "Failed to refresh widget location ${request.representativeName}",
             error,
         )
@@ -313,6 +394,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
 
     companion object {
         private const val WORK_NAME = "nimbus_widget_refresh"
+        internal const val KEY_FORCE_REFRESH = "force"
 
         suspend fun syncFromPreferences(context: Context) {
             sync(context, context.readPersistentWeatherNotificationEnabled())
@@ -357,6 +439,9 @@ class WidgetRefreshWorker @AssistedInject constructor(
                         .setRequiredNetworkType(NetworkType.CONNECTED)
                         .build()
                 )
+                // Manual refresh bypasses the low-battery skip — the user
+                // explicitly asked for fresh data.
+                .setInputData(workDataOf(KEY_FORCE_REFRESH to true))
                 .build()
 
             // KEEP, not REPLACE: a user double-tapping the widget (or tapping
@@ -452,6 +537,16 @@ internal fun buildWidgetRefreshPlan(
 
 internal fun widgetLocationKey(latitude: Double, longitude: Double): String {
     return "${latitude.formatWidgetLocationKey()}:${longitude.formatWidgetLocationKey()}"
+}
+
+/**
+ * Background refresh is skipped only when the battery is critically low AND
+ * the device isn't charging. Unknown capacity (emulators, no fuel gauge,
+ * read failure) proceeds rather than skipping widget updates forever.
+ */
+internal fun shouldSkipWidgetRefreshForBattery(batteryLevel: Int?, isCharging: Boolean): Boolean {
+    if (isCharging) return false
+    return (batteryLevel ?: 100) in 0..WIDGET_BATTERY_SKIP_THRESHOLD_PERCENT
 }
 
 internal fun buildWidgetHourlyItems(
