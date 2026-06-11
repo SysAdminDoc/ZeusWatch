@@ -20,6 +20,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
+import java.time.ZoneId
 
 class EnvironmentCanadaForecastAdapterTest {
 
@@ -33,6 +35,7 @@ class EnvironmentCanadaForecastAdapterTest {
         pressureKpa: Double = 101.3,
         windKmh: Double = 15.0,
         forecast: List<EcccForecastEntry> = defaultForecast(),
+        timestampUtc: String = "2026-04-24T12:00:00+00:00",
     ): EcccFeature = EcccFeature(
         id = "ecccTest",
         type = "Feature",
@@ -40,7 +43,7 @@ class EnvironmentCanadaForecastAdapterTest {
         properties = EcccProperties(
             cityEn = cityEn,
             nameEn = cityEn,
-            timestampUtc = "2026-04-24T12:00:00+00:00",
+            timestampUtc = timestampUtc,
             currentConditions = EcccCurrentConditions(
                 condition = "Partly cloudy",
                 iconCode = iconCode?.let { JsonPrimitive(it) },
@@ -55,7 +58,7 @@ class EnvironmentCanadaForecastAdapterTest {
                 windGustValue = 25.0,
                 windChillValue = null,
                 humidexValue = null,
-                observationDateTimeUtc = "2026-04-24T12:00:00+00:00",
+                observationDateTimeUtc = timestampUtc,
             ),
             forecastGroup = EcccForecastGroup(forecast = forecast),
         ),
@@ -134,6 +137,59 @@ class EnvironmentCanadaForecastAdapterTest {
         assertEquals(15.0, data.daily[0].temperatureHigh, 0.0001)
         assertEquals(5.0, data.daily[0].temperatureLow, 0.0001)
         assertEquals(80, data.daily[1].precipitationProbability)
+    }
+
+    @Test
+    fun `named future first period keeps its actual local date`() {
+        val adapter = EnvironmentCanadaForecastAdapter(mockk(relaxed = true))
+        val data = adapter.mapToWeatherData(
+            feature = feature(
+                lat = 45.42,
+                lon = -75.69,
+                timestampUtc = "2026-04-23T23:30:00+00:00",
+                forecast = listOf(
+                    EcccForecastEntry(
+                        period = "Friday",
+                        textSummary = "Rain. High 9.",
+                        temperatures = listOf(EcccTemperature(tempClass = "high", value = 9.0)),
+                        abbreviatedForecast = EcccAbbreviatedForecast(
+                            iconCode = JsonPrimitive("12"),
+                            textSummary = "Rain",
+                            pop = 80.0,
+                        ),
+                    ),
+                    EcccForecastEntry(
+                        period = "Friday night",
+                        textSummary = "Clearing. Low 2.",
+                        temperatures = listOf(EcccTemperature(tempClass = "low", value = 2.0)),
+                        abbreviatedForecast = EcccAbbreviatedForecast(
+                            iconCode = JsonPrimitive("01"),
+                            textSummary = "Clear",
+                            pop = 0.0,
+                        ),
+                    ),
+                    EcccForecastEntry(
+                        period = "Saturday",
+                        textSummary = "Sunny. High 12.",
+                        temperatures = listOf(EcccTemperature(tempClass = "high", value = 12.0)),
+                        abbreviatedForecast = EcccAbbreviatedForecast(
+                            iconCode = JsonPrimitive("01"),
+                            textSummary = "Sunny",
+                            pop = 0.0,
+                        ),
+                    ),
+                ),
+            ),
+            requestedLat = 45.42,
+            requestedLon = -75.69,
+            locationName = null,
+            zone = ZoneId.of("America/Toronto"),
+        )
+
+        assertEquals(LocalDate.of(2026, 4, 24), data.daily[0].date)
+        assertEquals(LocalDate.of(2026, 4, 25), data.daily[1].date)
+        assertEquals(9.0, data.daily[0].temperatureHigh, 0.0001)
+        assertEquals(2.0, data.daily[0].temperatureLow, 0.0001)
     }
 
     @Test
