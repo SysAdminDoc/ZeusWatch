@@ -771,6 +771,16 @@ private fun WeatherContent(
             }
 
             // ── Dynamic Cards (truly lazy now) ───────────────────────
+            val cardContext = CardRenderContext(
+                state = state,
+                data = data,
+                airQuality = airQuality,
+                astronomy = astronomy,
+                settings = settings,
+                radarPreviewTileUrl = radarPreviewTileUrl,
+                radarBaseMapUrl = radarBaseMapUrl,
+                onNavigateToRadar = onNavigateToRadar,
+            )
             items(
                 items = visibleCards,
                 key = { it.name },
@@ -779,16 +789,7 @@ private fun WeatherContent(
                 RenderCard(
                     cardType = cardType,
                     modifier = cardPad,
-                    context = CardRenderContext(
-                        state = state,
-                        data = data,
-                        airQuality = airQuality,
-                        astronomy = astronomy,
-                        settings = settings,
-                        radarPreviewTileUrl = radarPreviewTileUrl,
-                        radarBaseMapUrl = radarBaseMapUrl,
-                        onNavigateToRadar = onNavigateToRadar,
-                    ),
+                    context = cardContext,
                 )
                 Spacer(modifier = Modifier.height(layout.cardSpacing))
             }
