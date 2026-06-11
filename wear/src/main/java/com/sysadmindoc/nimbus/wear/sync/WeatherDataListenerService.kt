@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.wear.watchface.complications.datasource.ComplicationDataSourceUpdateRequester
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
+import com.google.android.gms.wearable.DataMap
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.WearableListenerService
 import com.sysadmindoc.nimbus.wear.complication.WeatherComplicationService
@@ -17,6 +18,13 @@ import javax.inject.Inject
 
 private const val TAG = "WeatherDataListener"
 private const val PATH_WEATHER = "/weather/current"
+private const val MAX_HOURLY_ENTRIES = 12
+private const val MAX_DAILY_ENTRIES = 7
+private const val MAX_ALERT_ENTRIES = 8
+private const val MAX_SHORT_TEXT_CHARS = 80
+private const val MAX_ALERT_EVENT_CHARS = 120
+private const val MAX_ALERT_HEADLINE_CHARS = 240
+private const val MAX_FUTURE_CLOCK_SKEW_MS = 5 * 60 * 1000L
 
 /**
  * Receives weather data pushed from the paired phone via the DataLayer API.
@@ -35,65 +43,10 @@ class WeatherDataListenerService : WearableListenerService() {
 
             try {
                 val map = DataMapItem.fromDataItem(event.dataItem).dataMap
+                val payload = map.toSyncedWeatherPayload()
+                store.save(payload)
 
-                // Hourly entries
-                val hourlyMaps = map.getDataMapArrayList("hourly") ?: emptyList()
-                val hourly = hourlyMaps.map { h ->
-                    HourlyEntry(
-                        time = h.getString("time", ""),
-                        temperature = h.getInt("temperature", 0),
-                        weatherCode = h.getInt("weatherCode", 0),
-                        precipChance = h.getInt("precipChance", 0),
-                        windSpeed = h.getInt("windSpeed", 0),
-                    )
-                }
-
-                // Daily entries
-                val dailyMaps = map.getDataMapArrayList("daily") ?: emptyList()
-                val daily = dailyMaps.map { d ->
-                    WearDailyEntry(
-                        date = d.getString("date", ""),
-                        weatherCode = d.getInt("weatherCode", 0),
-                        high = d.getInt("high", 0),
-                        low = d.getInt("low", 0),
-                        precipChance = d.getInt("precipChance", 0),
-                    )
-                }
-
-                // Alerts
-                val alertMaps = map.getDataMapArrayList("alerts") ?: emptyList()
-                val alerts = alertMaps.map { a ->
-                    WearAlertEntry(
-                        event = a.getString("event", ""),
-                        severity = a.getString("severity", "Unknown"),
-                        headline = a.getString("headline", ""),
-                        expires = a.getString("expires", ""),
-                    )
-                }
-
-                store.save(
-                    SyncedWeatherPayload(
-                        temperature = map.getInt("temperature", 0),
-                        condition = map.getString("condition", "Unknown"),
-                        high = map.getInt("high", 0),
-                        low = map.getInt("low", 0),
-                        locationName = map.getString("locationName", "Unknown"),
-                        humidity = map.getInt("humidity", 0),
-                        windSpeed = map.getInt("windSpeed", 0),
-                        uvIndex = map.getInt("uvIndex", 0),
-                        precipChance = map.getInt("precipChance", 0),
-                        isDay = map.getBoolean("isDay", true),
-                        weatherCode = map.getInt("weatherCode", 0),
-                        timestampMs = map.getLong("syncTimestampMs", System.currentTimeMillis()),
-                        hourly = hourly,
-                        daily = daily,
-                        alerts = alerts,
-                        aqi = map.getInt("aqi", -1),
-                        aqiLabel = map.getString("aqiLabel", ""),
-                    ),
-                )
-
-                Log.d(TAG, "Received weather sync: ${map.getString("locationName")} ${map.getInt("temperature")}° (${alerts.size} alerts, ${daily.size} daily)")
+                Log.d(TAG, "Received weather sync: ${payload.locationName} ${payload.temperature}° (${payload.alerts.size} alerts, ${payload.daily.size} daily)")
 
                 try {
                     ComplicationDataSourceUpdateRequester.create(
@@ -110,5 +63,84 @@ class WeatherDataListenerService : WearableListenerService() {
                 Log.e(TAG, "Failed to process synced weather data", e)
             }
         }
+    }
+}
+
+internal fun DataMap.toSyncedWeatherPayload(
+    receivedAtMs: Long = System.currentTimeMillis(),
+): SyncedWeatherPayload {
+    val hourly = (getDataMapArrayList("hourly") ?: arrayListOf())
+        .take(MAX_HOURLY_ENTRIES)
+        .map { h ->
+            HourlyEntry(
+                time = h.cleanString("time", "", MAX_SHORT_TEXT_CHARS),
+                temperature = h.boundedInt("temperature", 0, -100, 100),
+                weatherCode = h.boundedInt("weatherCode", 0, 0, 99),
+                precipChance = h.boundedInt("precipChance", 0, 0, 100),
+                windSpeed = h.boundedInt("windSpeed", 0, 0, 500),
+            )
+        }
+
+    val daily = (getDataMapArrayList("daily") ?: arrayListOf())
+        .take(MAX_DAILY_ENTRIES)
+        .map { d ->
+            WearDailyEntry(
+                date = d.cleanString("date", "", MAX_SHORT_TEXT_CHARS),
+                weatherCode = d.boundedInt("weatherCode", 0, 0, 99),
+                high = d.boundedInt("high", 0, -100, 100),
+                low = d.boundedInt("low", 0, -100, 100),
+                precipChance = d.boundedInt("precipChance", 0, 0, 100),
+            )
+        }
+
+    val alerts = (getDataMapArrayList("alerts") ?: arrayListOf())
+        .take(MAX_ALERT_ENTRIES)
+        .map { a ->
+            WearAlertEntry(
+                event = a.cleanString("event", "", MAX_ALERT_EVENT_CHARS),
+                severity = a.cleanString("severity", "Unknown", MAX_SHORT_TEXT_CHARS),
+                headline = a.cleanString("headline", "", MAX_ALERT_HEADLINE_CHARS),
+                expires = a.cleanString("expires", "", MAX_SHORT_TEXT_CHARS),
+            )
+        }
+
+    return SyncedWeatherPayload(
+        temperature = boundedInt("temperature", 0, -100, 100),
+        condition = cleanString("condition", "Unknown", MAX_SHORT_TEXT_CHARS),
+        high = boundedInt("high", 0, -100, 100),
+        low = boundedInt("low", 0, -100, 100),
+        locationName = cleanString("locationName", "Unknown", MAX_SHORT_TEXT_CHARS),
+        humidity = boundedInt("humidity", 0, 0, 100),
+        windSpeed = boundedInt("windSpeed", 0, 0, 500),
+        uvIndex = boundedInt("uvIndex", 0, 0, 25),
+        precipChance = boundedInt("precipChance", 0, 0, 100),
+        isDay = getBoolean("isDay", true),
+        weatherCode = boundedInt("weatherCode", 0, 0, 99),
+        timestampMs = sanitizedTimestamp(receivedAtMs),
+        hourly = hourly,
+        daily = daily,
+        alerts = alerts,
+        aqi = boundedInt("aqi", -1, -1, 500),
+        aqiLabel = cleanString("aqiLabel", "", MAX_SHORT_TEXT_CHARS),
+    )
+}
+
+private fun DataMap.cleanString(key: String, defaultValue: String, maxChars: Int): String {
+    val value = getString(key, defaultValue)
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?: defaultValue
+    return value.take(maxChars)
+}
+
+private fun DataMap.boundedInt(key: String, defaultValue: Int, min: Int, max: Int): Int =
+    getInt(key, defaultValue).coerceIn(min, max)
+
+private fun DataMap.sanitizedTimestamp(receivedAtMs: Long): Long {
+    val syncedAt = getLong("syncTimestampMs", receivedAtMs)
+    return when {
+        syncedAt <= 0L -> receivedAtMs
+        syncedAt > receivedAtMs + MAX_FUTURE_CLOCK_SKEW_MS -> receivedAtMs
+        else -> syncedAt
     }
 }

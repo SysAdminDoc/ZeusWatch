@@ -1,0 +1,5 @@
+v1.21.6 - Wear sync hardening
+
+- Restricted the Wear DataLayer listener manifest filter to the exact weather sync path.
+- Bounded synced Wear payload arrays, strings, numeric values, and future timestamps before storage.
+- Added regression tests for malformed phone-to-watch sync payload handling.
