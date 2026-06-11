@@ -312,7 +312,7 @@
     <string name="forecast_humidity_humid">Humedo</string>
     <string name="forecast_humidity_muggy">Bochornoso</string>
     <string name="forecast_precip_rain_ending_soon">La lluvia termina pronto</string>
-    <string name="forecast_precip_rain_next_hours">Lluvia durante las proximas %1$s</string>
+    <string name="forecast_precip_rain_next_hours">Lluvia durante las proximas %1$dh</string>
     <string name="forecast_precip_continue">Se espera que la lluvia continue</string>
     <string name="forecast_precip_within_hours">Lluvia probable en %1$dh</string>
     <string name="forecast_precip_around">Lluvia esperada alrededor de %1$s</string>
