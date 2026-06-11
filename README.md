@@ -86,7 +86,7 @@ Download from [GitHub Releases](https://github.com/SysAdminDoc/zeuswatch/release
 
 | Feature | Description |
 |---------|-------------|
-| **Severe Weather Alerts** | Multi-source: NWS (US), MeteoAlarm (31 EU countries), JMA (Japan), Environment Canada — auto-detected by country |
+| **Severe Weather Alerts** | Multi-source: NWS (US), MeteoAlarm (31 EU countries), JMA (Japan), Environment Canada, WMO SWIC (130+ countries global fallback), Pirate Weather (with API key) — auto-detected by country |
 | **Alert Source Preference** | Configurable: Auto-detect, NWS only, MeteoAlarm, JMA, Environment Canada, All sources |
 | **4 Notification Channels** | Extreme (alarm sound, bypass DND), Severe (high), Moderate (default), Minor (low) |
 | **Alert Deduplication** | Tracks seen alert IDs so the same warning is never re-notified |
@@ -253,7 +253,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Stack:** Kotlin 2.1.0, Jetpack Compose (BOM 2025.04.01), Hilt 2.53.1, Retrofit 2.11.0, Room 2.6.1, DataStore 1.1.1, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.10.0, Lottie 6.6.2, Coil 3.0.4, Firebase Firestore
+**Stack:** Kotlin 2.1.0, Jetpack Compose (BOM 2025.04.01), Hilt 2.53.1, Retrofit 3.0.0, Room 2.6.1, DataStore 1.1.1, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore
 
 ---
 
