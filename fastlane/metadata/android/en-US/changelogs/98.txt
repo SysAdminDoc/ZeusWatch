@@ -1,0 +1,4 @@
+v1.22.0 - Android 16 SDK readiness
+
+- Raised the phone app to compileSdk/targetSdk 36 for Android 16 readiness.
+- Built the Wear module against compileSdk 36 while keeping its target SDK policy-safe for Wear OS.
