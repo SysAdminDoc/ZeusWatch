@@ -15,11 +15,15 @@ import com.sysadmindoc.nimbus.data.api.NwsAlertFeature
 import com.sysadmindoc.nimbus.data.api.NwsAlertProperties
 import com.sysadmindoc.nimbus.data.api.NwsAlertResponse
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
+import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
+import io.mockk.mockkStatic
+import io.mockk.unmockkConstructor
+import io.mockk.unmockkStatic
 import io.mockk.coVerify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -58,7 +62,13 @@ class AlertRepositoryTest {
         // Default prefs: AUTO mode
         every { prefs.settings } returns flowOf(NimbusSettings())
 
-        // Mock Geocoder to return US for default test coordinates
+        // Mock Geocoder to return US for default test coordinates.
+        // Geocoder.isPresent() must be stubbed too: with returnDefaultValues it
+        // returns false, the constructor mock never engages, and country
+        // detection silently falls back to the machine timezone — making the
+        // whole suite depend on where CI/dev machines run.
+        mockkStatic(Geocoder::class)
+        every { Geocoder.isPresent() } returns true
         mockkConstructor(Geocoder::class)
         val usAddress = mockk<Address>()
         every { usAddress.countryCode } returns "US"
@@ -70,6 +80,8 @@ class AlertRepositoryTest {
 
     @After
     fun teardown() {
+        unmockkStatic(Geocoder::class)
+        unmockkConstructor(Geocoder::class)
         Dispatchers.resetMain()
     }
 
@@ -306,6 +318,87 @@ class AlertRepositoryTest {
         } finally {
             TimeZone.setDefault(originalTimeZone)
         }
+    }
+
+    private fun makeGlobalAlert(id: String = "wmo-1") = WeatherAlert(
+        id = id,
+        event = "Severe Thunderstorm",
+        headline = "Severe Thunderstorm Warning",
+        description = "Severe storms expected.",
+        instruction = null,
+        severity = AlertSeverity.SEVERE,
+        urgency = AlertUrgency.IMMEDIATE,
+        certainty = "Likely",
+        senderName = "WMO SWIC",
+        areaDescription = "Test Region",
+        effective = null,
+        expires = null,
+        response = null,
+    )
+
+    private fun fakeGlobalAdapter(alerts: List<WeatherAlert> = emptyList()): AlertSourceAdapter {
+        val adapter = mockk<AlertSourceAdapter>()
+        every { adapter.sourceId } returns "global_fake"
+        every { adapter.displayName } returns "Global Fake"
+        every { adapter.supportedRegions } returns setOf("GLOBAL")
+        coEvery { adapter.getAlerts(any(), any()) } returns Result.success(alerts)
+        return adapter
+    }
+
+    @Test
+    fun `AUTO queries regional adapter only when one matches the country`() = runTest {
+        // setup() mocks Geocoder → US and prefs → AUTO. The GLOBAL adapter
+        // carries the same physical alerts under different IDs, so AUTO must
+        // not aggregate it on top of the regional feed.
+        val globalAdapter = fakeGlobalAdapter(listOf(makeGlobalAlert()))
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+            features = listOf(makeFeature()),
+        )
+
+        val repo = AlertRepository(context, setOf(nwsAdapter, globalAdapter), prefs)
+        val result = repo.getAlerts(39.7, -104.9)
+
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrThrow().size)
+        assertEquals("Tornado Warning", result.getOrThrow().first().event)
+        coVerify(exactly = 0) { globalAdapter.getAlerts(any(), any()) }
+    }
+
+    @Test
+    fun `AUTO falls back to GLOBAL adapters when no regional adapter covers the country`() = runTest {
+        val brAddress = mockk<Address>()
+        every { brAddress.countryCode } returns "BR"
+        every { anyConstructed<Geocoder>().getFromLocation(any(), any(), any()) } returns listOf(brAddress)
+
+        val globalAdapter = fakeGlobalAdapter(listOf(makeGlobalAlert()))
+
+        val repo = AlertRepository(context, setOf(nwsAdapter, globalAdapter), prefs)
+        val result = repo.getAlerts(-23.55, -46.63) // São Paulo
+
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrThrow().size)
+        assertEquals("Severe Thunderstorm", result.getOrThrow().first().event)
+        coVerify(exactly = 1) { globalAdapter.getAlerts(any(), any()) }
+        coVerify(exactly = 0) { api.getActiveAlerts(any(), any(), any()) }
+    }
+
+    @Test
+    fun `ALL_SOURCES queries regional and GLOBAL adapters together`() = runTest {
+        every { prefs.settings } returns flowOf(
+            NimbusSettings(alertSourcePref = AlertSourcePreference.ALL_SOURCES),
+        )
+        val globalAdapter = fakeGlobalAdapter(listOf(makeGlobalAlert()))
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+            features = listOf(makeFeature()),
+        )
+
+        val repo = AlertRepository(context, setOf(nwsAdapter, globalAdapter), prefs)
+        val result = repo.getAlerts(39.7, -104.9)
+
+        assertTrue(result.isSuccess)
+        assertEquals(2, result.getOrThrow().size)
+        coVerify(exactly = 1) { globalAdapter.getAlerts(any(), any()) }
+        coVerify(exactly = 1) { api.getActiveAlerts(any(), any(), any()) }
     }
 
     @Test

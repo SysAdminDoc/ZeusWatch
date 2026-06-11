@@ -6,7 +6,9 @@ import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.PwAlert
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import retrofit2.HttpException
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -36,9 +38,20 @@ class PirateWeatherAlertAdapter @Inject constructor(
             val response = api.getForecast(apiKey, lat, lon, exclude = "minutely,hourly,daily")
             val alerts = response.alerts.mapNotNull { mapToAlert(it) }
             Result.success(alerts)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: HttpException) {
+            // 404/400 means "no alerts for this point" — same contract as
+            // NwsAlertAdapter. Use the HTTP code, not the message string.
+            if (e.code() == 404 || e.code() == 400) {
+                Result.success(emptyList())
+            } else {
+                Log.w(TAG, "Pirate Weather alert fetch failed: HTTP ${e.code()}")
+                Result.failure(e)
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Pirate Weather alert fetch failed: ${e.message}")
-            Result.success(emptyList())
+            Result.failure(e)
         }
     }
 
@@ -50,7 +63,9 @@ class PirateWeatherAlertAdapter @Inject constructor(
             headline = pw.title,
             description = pw.description,
             instruction = null,
-            severity = mapSeverity(pw.severity),
+            // Pirate Weather severity is a CAP string ("Extreme" / "Severe" /
+            // "Moderate" / "Minor" / "Unknown"), not "warning"/"watch"/"advisory".
+            severity = AlertSeverity.from(pw.severity),
             urgency = AlertUrgency.UNKNOWN,
             certainty = "Unknown",
             senderName = "Pirate Weather",
@@ -59,13 +74,6 @@ class PirateWeatherAlertAdapter @Inject constructor(
             expires = epochToIso(pw.expires),
             response = null,
         )
-    }
-
-    private fun mapSeverity(s: String): AlertSeverity = when (s.lowercase()) {
-        "warning" -> AlertSeverity.SEVERE
-        "watch" -> AlertSeverity.MODERATE
-        "advisory" -> AlertSeverity.MINOR
-        else -> AlertSeverity.UNKNOWN
     }
 
     private fun epochToIso(epoch: Long): String? {

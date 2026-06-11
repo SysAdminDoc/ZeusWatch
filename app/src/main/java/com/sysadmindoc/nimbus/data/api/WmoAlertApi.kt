@@ -9,6 +9,10 @@ import retrofit2.http.GET
  * Aggregates active weather warnings from 130+ National Meteorological
  * and Hydrological Services worldwide via the Common Alerting Protocol.
  * Free, no key required.
+ *
+ * NOTE: `json/warnings.json` on the v2 host returns 404 — the live feed is
+ * `json/wmo_all.json` (different schema, no per-item coordinates). Rewrite
+ * is roadmapped; see [WmoAlertAdapter].
  */
 interface WmoAlertApi {
 

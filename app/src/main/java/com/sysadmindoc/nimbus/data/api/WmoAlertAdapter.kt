@@ -4,9 +4,10 @@ import android.util.Log
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import kotlinx.coroutines.CancellationException
+import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -16,6 +17,11 @@ import kotlin.math.sqrt
  * [AlertSourceAdapter] for the WMO Severe Weather Information Centre.
  * Provides global CAP-standard weather alerts from 130+ national services.
  * Used as a fallback for countries without a dedicated adapter.
+ *
+ * NOTE (2026-06-11): the v2 `json/warnings.json` endpoint is dead (404) — the
+ * live feed is `json/wmo_all.json` with a different schema and no per-item geo
+ * coordinates, so this adapter currently always returns empty. A rewrite with
+ * a proximity design is roadmapped.
  */
 @Singleton
 class WmoAlertAdapter @Inject constructor(
@@ -34,9 +40,21 @@ class WmoAlertAdapter @Inject constructor(
                 .filter { isNearby(it, lat, lon) }
                 .mapNotNull { warning -> mapToAlert(warning) }
             Result.success(nearby)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: HttpException) {
+            // 404/400 means "no alerts here" — same contract as NwsAlertAdapter.
+            // This also keeps the dead v2 endpoint's 404 from triggering the
+            // caller's failure/fallback path on every fetch.
+            if (e.code() == 404 || e.code() == 400) {
+                Result.success(emptyList())
+            } else {
+                Log.w(TAG, "WMO alert fetch failed: HTTP ${e.code()}")
+                Result.failure(e)
+            }
         } catch (e: Exception) {
             Log.w(TAG, "WMO alert fetch failed: ${e.message}")
-            Result.success(emptyList())
+            Result.failure(e)
         }
     }
 
@@ -45,8 +63,20 @@ class WmoAlertAdapter @Inject constructor(
             warning.minLon != null && warning.maxLon != null
         ) {
             val latPad = BBOX_PAD_DEG
-            return lat >= warning.minLat - latPad && lat <= warning.maxLat + latPad &&
-                lon >= warning.minLon - latPad && lon <= warning.maxLon + latPad
+            if (lat < warning.minLat - latPad || lat > warning.maxLat + latPad) return false
+
+            // Longitude degrees shrink with latitude — widen the lon pad so the
+            // padding stays roughly constant in ground distance (clamped so it
+            // doesn't blow up near the poles).
+            val lonPad = latPad / cos(Math.toRadians(lat)).coerceAtLeast(0.1)
+            val minLon = warning.minLon - lonPad
+            val maxLon = warning.maxLon + lonPad
+            // minLon > maxLon means the bbox wraps the antimeridian (±180°).
+            return if (warning.minLon > warning.maxLon) {
+                lon >= minLon || lon <= maxLon
+            } else {
+                lon in minLon..maxLon
+            }
         }
 
         val wLat = warning.lat ?: return false

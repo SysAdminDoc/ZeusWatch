@@ -112,10 +112,19 @@ class WeatherSourceManager @Inject constructor(
         WeatherSourceProvider.METEOALARM,
         WeatherSourceProvider.JMA,
         WeatherSourceProvider.ENVIRONMENT_CANADA -> {
+            // The built-in default alert source (NWS) really means "let
+            // AlertRepository decide": pass no override so the Settings
+            // alert-source preference (AUTO / ALL_SOURCES / pinned source)
+            // is honored — AUTO still dispatches the same regional adapter
+            // per country (NWS for US, etc.). A non-default pick is an
+            // explicit user choice and keeps its dedicated *_ONLY override.
+            val override = provider
+                .takeUnless { it == WeatherSourceProvider.defaultFor(WeatherDataType.ALERTS) }
+                ?.toAlertSourcePreference()
             nwsAlertAdapter.getAlerts(
                 latitude = latitude,
                 longitude = longitude,
-                preferenceOverride = provider.toAlertSourcePreference(),
+                preferenceOverride = override,
             )
         }
         WeatherSourceProvider.OPEN_WEATHER_MAP -> owmAlertAdapter.getAlerts(latitude, longitude)

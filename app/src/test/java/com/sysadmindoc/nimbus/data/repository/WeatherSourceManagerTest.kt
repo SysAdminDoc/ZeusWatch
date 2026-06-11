@@ -161,8 +161,28 @@ class WeatherSourceManagerTest {
         val result = manager.getAlerts(40.0, -74.0)
         assertTrue(result.isSuccess)
         assertEquals(1, result.getOrNull()?.size)
+        // NWS is the built-in default alert source — it passes no override so
+        // AlertRepository honors the Settings alert-source preference.
         coVerify(exactly = 1) {
-            alertAdapter.getAlerts(40.0, -74.0, AlertSourcePreference.NWS_ONLY)
+            alertAdapter.getAlerts(40.0, -74.0, null)
+        }
+    }
+
+    @Test
+    fun getAlertsPassesDedicatedOverrideForExplicitNonDefaultProvider() = runTest {
+        val settingsWithMeteoAlarm = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                alerts = WeatherSourceProvider.METEOALARM,
+            )
+        )
+        every { prefs.settings } returns flowOf(settingsWithMeteoAlarm)
+        coEvery { alertAdapter.getAlerts(any(), any(), any()) } returns Result.success(emptyList())
+
+        val result = manager.getAlerts(52.5, 13.4)
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            alertAdapter.getAlerts(52.5, 13.4, AlertSourcePreference.METEOALARM_ONLY)
         }
     }
 
