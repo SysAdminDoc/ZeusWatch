@@ -77,7 +77,8 @@ class OnThisDayRepository @Inject constructor(
                 startDate = fmt.format(startDate),
                 endDate = fmt.format(endDate),
             )
-        }.getOrNull() ?: return emptyList()
+        }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+            .getOrNull() ?: return emptyList()
 
         val daily = response.daily ?: return emptyList()
         val targetMonthDay = "%02d-%02d".format(
@@ -148,7 +149,10 @@ class OnThisDayRepository @Inject constructor(
             .putString(key, json.encodeToString(CachedData.serializer(), payload))
         val allKeys = prefs.all.keys
         if (allKeys.size > MAX_CACHE_ENTRIES) {
-            val excess = allKeys.sorted().take(allKeys.size - MAX_CACHE_ENTRIES)
+            // Never evict the key being written in this very edit — picking
+            // the lexicographically-smallest keys blindly could select it
+            // and silently undo the write we are committing.
+            val excess = (allKeys - key).sorted().take(allKeys.size - MAX_CACHE_ENTRIES)
             for (k in excess) editor.remove(k)
         }
         editor.apply()

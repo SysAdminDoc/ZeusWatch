@@ -45,7 +45,10 @@ class OwmForecastAdapter @Inject constructor(
 
         val response = api.getOneCall(latitude, longitude, apiKey)
         mapToWeatherData(response, latitude, longitude, locationName)
-    }.onFailure { Log.w(TAG, "OWM forecast failed", it) }
+    }.onFailure {
+        if (it is kotlinx.coroutines.CancellationException) throw it
+        Log.w(TAG, "OWM forecast failed", it)
+    }
 
     private fun mapToWeatherData(
         r: OwmOneCallResponse,
@@ -84,7 +87,7 @@ class OwmForecastAdapter @Inject constructor(
                 dewPoint = current.dewPoint,
                 cloudCover = current.clouds.coerceIn(0, 100),
                 precipitation = ((current.rain?.oneHour ?: 0.0) + (current.snow?.oneHour ?: 0.0)).coerceAtLeast(0.0),
-                snowfall = current.snow?.oneHour?.coerceAtLeast(0.0),
+                snowfall = current.snow?.oneHour?.let { (it / 10.0).coerceAtLeast(0.0) }, // mm liquid-equivalent → cm (formatter contract)
                 dailyHigh = firstDaily?.temp?.max ?: current.temp,
                 dailyLow = firstDaily?.temp?.min ?: current.temp,
                 sunrise = current.sunrise?.let { epochToTimeStr(it, zone) },
@@ -121,7 +124,7 @@ class OwmForecastAdapter @Inject constructor(
                 uvIndex = h.uvi?.coerceAtLeast(0.0),
                 cloudCover = h.clouds?.coerceIn(0, 100),
                 visibility = h.visibility?.toDouble()?.coerceAtLeast(0.0), // meters (WeatherFormatter expects meters)
-                snowfall = h.snow?.oneHour?.coerceAtLeast(0.0),
+                snowfall = h.snow?.oneHour?.let { (it / 10.0).coerceAtLeast(0.0) }, // mm liquid-equivalent → cm (formatter contract)
                 windGusts = h.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
                 surfacePressure = h.pressure?.toDouble(),
             )
@@ -139,13 +142,18 @@ class OwmForecastAdapter @Inject constructor(
                 temperatureHigh = d.temp.max,
                 temperatureLow = d.temp.min,
                 precipitationProbability = owmPctToInt(d.pop ?: 0.0),
-                precipitationSum = d.rain?.plus(d.snow ?: 0.0)?.coerceAtLeast(0.0),
+                // listOfNotNull keeps snow-only days (rain == null) from
+                // collapsing to null; sum stays mm liquid-equivalent.
+                precipitationSum = listOfNotNull(d.rain, d.snow)
+                    .takeIf { it.isNotEmpty() }
+                    ?.sum()
+                    ?.coerceAtLeast(0.0),
                 sunrise = d.sunrise?.let { epochToTimeStr(it, zone) },
                 sunset = d.sunset?.let { epochToTimeStr(it, zone) },
                 uvIndexMax = d.uvi?.coerceAtLeast(0.0),
                 windSpeedMax = d.windSpeed?.let { (it * 3.6).coerceAtLeast(0.0) },
                 windDirectionDominant = d.windDeg,
-                snowfallSum = d.snow?.coerceAtLeast(0.0),
+                snowfallSum = d.snow?.let { (it / 10.0).coerceAtLeast(0.0) }, // mm liquid-equivalent → cm (formatter contract)
                 windGustsMax = d.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
             )
         }
@@ -198,7 +206,10 @@ class OwmAlertAdapter @Inject constructor(
                 response = null,
             )
         }
-    }.onFailure { Log.w(TAG, "OWM alerts failed", it) }
+    }.onFailure {
+        if (it is kotlinx.coroutines.CancellationException) throw it
+        Log.w(TAG, "OWM alerts failed", it)
+    }
 
     private fun mapOwmSeverity(tags: List<String>): AlertSeverity {
         val lower = tags.map { it.lowercase() }
@@ -248,7 +259,10 @@ class OwmAqiAdapter @Inject constructor(
             carbonMonoxide = c.co / 1145.0 * 1000.0, // μg/m3 → approximate ppb
             pollen = PollenData(), // OWM doesn't provide pollen
         )
-    }.onFailure { Log.w(TAG, "OWM AQI failed", it) }
+    }.onFailure {
+        if (it is kotlinx.coroutines.CancellationException) throw it
+        Log.w(TAG, "OWM AQI failed", it)
+    }
 
     /** Approximate PM2.5 μg/m3 → US EPA AQI */
     private fun pm25ToAqi(pm: Double): Int = when {

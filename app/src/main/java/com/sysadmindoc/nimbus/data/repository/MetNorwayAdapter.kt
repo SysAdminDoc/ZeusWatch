@@ -45,7 +45,10 @@ class MetNorwayForecastAdapter @Inject constructor(
     ): Result<WeatherData> = runCatching {
         val response = api.getForecast(latitude, longitude)
         mapToWeatherData(response, latitude, longitude, locationName, ZoneId.systemDefault())
-    }.onFailure { Log.w(TAG, "MET Norway forecast failed", it) }
+    }.onFailure {
+        if (it is kotlinx.coroutines.CancellationException) throw it
+        Log.w(TAG, "MET Norway forecast failed", it)
+    }
 
     /**
      * MET Norway always emits UTC timestamps (the response carries no
@@ -179,8 +182,30 @@ class MetNorwayForecastAdapter @Inject constructor(
                 val gusts = dayEntries.mapNotNull {
                     it.data?.instant?.details?.windSpeedOfGust?.let { v -> v * MS_TO_KMH }
                 }
-                val precipSum = dayEntries.sumOf {
-                    it.data?.next1Hours?.details?.precipitationAmount ?: 0.0
+                // MET degrades to 6-hourly periods after ~48h, where entries
+                // carry only next_6_hours. Sum next_1_hours where present and
+                // fill the gaps with non-overlapping next_6_hours blocks —
+                // tracking the covered-until instant prevents double-counting
+                // when 1h and 6h windows (or overlapping 6h windows) coexist.
+                val precipSum = run {
+                    var sum = 0.0
+                    var coveredUntil: LocalDateTime? = null
+                    val timed = dayEntries
+                        .mapNotNull { e -> parseZonedLocalDateTime(e.time, zone)?.let { it to e } }
+                        .sortedBy { it.first }
+                    for ((time, e) in timed) {
+                        if (coveredUntil != null && time.isBefore(coveredUntil)) continue
+                        val next1 = e.data?.next1Hours?.details?.precipitationAmount
+                        if (next1 != null) {
+                            sum += next1
+                            coveredUntil = time.plusHours(1)
+                        } else {
+                            val next6 = e.data?.next6Hours?.details?.precipitationAmount ?: continue
+                            sum += next6
+                            coveredUntil = time.plusHours(6)
+                        }
+                    }
+                    sum
                 }
                 val precipProb = dayEntries.mapNotNull {
                     it.data?.next1Hours?.details?.probabilityOfPrecipitation

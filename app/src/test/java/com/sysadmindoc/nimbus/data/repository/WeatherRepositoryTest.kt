@@ -193,6 +193,28 @@ class WeatherRepositoryTest {
     }
 
     @Test
+    fun getWeatherDirectConvertsSnowDepthMetersToCentimeters() = runTest {
+        // Open-Meteo snow_depth arrives in meters; the formatter contract is cm.
+        val base = makeResponse()
+        val response = base.copy(current = base.current!!.copy(snowDepth = 0.12))
+        coEvery { weatherApi.getForecast(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns response
+
+        val result = repository.getWeatherDirect(testLat, testLon, testLocationName)
+
+        assertTrue(result.isSuccess)
+        assertEquals(12.0, result.getOrThrow().current.snowDepth!!, 0.001)
+    }
+
+    @Test
+    fun getWeatherDirectLeavesNullSnowDepthNull() = runTest {
+        coEvery { weatherApi.getForecast(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns makeResponse()
+
+        val result = repository.getWeatherDirect(testLat, testLon, testLocationName)
+
+        assertNull(result.getOrThrow().current.snowDepth)
+    }
+
+    @Test
     fun getWeatherDirectReturnsFailureOnApiException() = runTest {
         coEvery { weatherApi.getForecast(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } throws RuntimeException("Network error")
 

@@ -12,6 +12,7 @@ import com.sysadmindoc.nimbus.data.model.OwmDaily
 import com.sysadmindoc.nimbus.data.model.OwmDailyTemp
 import com.sysadmindoc.nimbus.data.model.OwmHourly
 import com.sysadmindoc.nimbus.data.model.OwmOneCallResponse
+import com.sysadmindoc.nimbus.data.model.OwmPrecipVolume
 import com.sysadmindoc.nimbus.data.model.OwmWeatherDesc
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import io.mockk.coEvery
@@ -39,6 +40,7 @@ private fun makeOneCallResponse(
     timezone: String = "UTC",
     weatherId: Int = 800, // Clear sky
     icon: String = "01d",
+    currentSnow1h: Double? = null, // mm liquid-equivalent
     hourly: List<OwmHourly> = emptyList(),
     daily: List<OwmDaily> = emptyList(),
     alerts: List<OwmAlert> = emptyList(),
@@ -57,6 +59,7 @@ private fun makeOneCallResponse(
         windDeg = 270,
         windGust = windGustMs,
         visibility = visibilityM,
+        snow = currentSnow1h?.let { OwmPrecipVolume(oneHour = it) },
         weather = listOf(OwmWeatherDesc(id = weatherId, icon = icon)),
     ),
     hourly = hourly,
@@ -216,6 +219,99 @@ class OwmForecastAdapterTest {
 
         val result = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null)
         assertTrue("Blank API key must yield failure", result.isFailure)
+    }
+
+    @Test
+    fun `snowfall converts mm liquid-equivalent to cm in current hourly and daily`() = runTest {
+        val api = mockk<OpenWeatherMapApi>()
+        val prefs = mockk<UserPreferences>()
+        every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
+        val futureEpoch = nowEpoch + 3600L
+        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+            nowEpoch = nowEpoch,
+            currentSnow1h = 2.0, // mm → 0.2 cm
+            hourly = listOf(
+                OwmHourly(
+                    dt = futureEpoch, temp = -2.0,
+                    snow = OwmPrecipVolume(oneHour = 1.5), // mm → 0.15 cm
+                    weather = listOf(OwmWeatherDesc(id = 600, icon = "13d")),
+                )
+            ),
+            daily = listOf(
+                OwmDaily(
+                    dt = nowEpoch, temp = OwmDailyTemp(min = -8.0, max = -1.0),
+                    snow = 12.0, // mm → 1.2 cm
+                    weather = listOf(OwmWeatherDesc(id = 600, icon = "13d")),
+                )
+            ),
+        )
+
+        val data = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow()
+        assertEquals(0.2, data.current.snowfall!!, 0.001)
+        assertEquals(0.15, data.hourly.first().snowfall!!, 0.001)
+        assertEquals(1.2, data.daily.first().snowfallSum!!, 0.001)
+    }
+
+    @Test
+    fun `snow-only day still yields precipitationSum in mm`() = runTest {
+        // rain == null must not collapse precipitationSum to null when snow
+        // is present; sum stays mm liquid-equivalent.
+        val api = mockk<OpenWeatherMapApi>()
+        val prefs = mockk<UserPreferences>()
+        every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
+        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+            nowEpoch = nowEpoch,
+            daily = listOf(
+                OwmDaily(
+                    dt = nowEpoch, temp = OwmDailyTemp(min = -8.0, max = -1.0),
+                    rain = null, snow = 8.0,
+                    weather = listOf(OwmWeatherDesc(id = 600, icon = "13d")),
+                )
+            ),
+        )
+
+        val d = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow().daily.first()
+        assertEquals(8.0, d.precipitationSum!!, 0.001)
+    }
+
+    @Test
+    fun `rain plus snow day sums precipitationSum in mm`() = runTest {
+        val api = mockk<OpenWeatherMapApi>()
+        val prefs = mockk<UserPreferences>()
+        every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
+        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+            nowEpoch = nowEpoch,
+            daily = listOf(
+                OwmDaily(
+                    dt = nowEpoch, temp = OwmDailyTemp(min = -2.0, max = 3.0),
+                    rain = 5.0, snow = 3.0,
+                    weather = listOf(OwmWeatherDesc(id = 616, icon = "13d")),
+                )
+            ),
+        )
+
+        val d = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow().daily.first()
+        assertEquals(8.0, d.precipitationSum!!, 0.001)
+    }
+
+    @Test
+    fun `dry day leaves precipitationSum null`() = runTest {
+        val api = mockk<OpenWeatherMapApi>()
+        val prefs = mockk<UserPreferences>()
+        every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
+        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+            nowEpoch = nowEpoch,
+            daily = listOf(
+                OwmDaily(
+                    dt = nowEpoch, temp = OwmDailyTemp(min = 10.0, max = 20.0),
+                    rain = null, snow = null,
+                    weather = listOf(OwmWeatherDesc(id = 800, icon = "01d")),
+                )
+            ),
+        )
+
+        val d = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow().daily.first()
+        assertNull(d.precipitationSum)
     }
 }
 

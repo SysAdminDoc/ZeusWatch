@@ -32,6 +32,7 @@ private fun makeWeatherEntry(
     precipitation: Double? = null,
     visibility: Double? = 10000.0,
     cloudCover: Double? = 20.0,
+    sunshine: Double? = null, // minutes in last hour
 ) = BsWeatherEntry(
     timestamp = timestamp,
     temperature = temp,
@@ -45,6 +46,7 @@ private fun makeWeatherEntry(
     precipitation = precipitation,
     visibility = visibility,
     cloudCover = cloudCover,
+    sunshine = sunshine,
     pressureMsl = 1013.0,
     dewPoint = 8.0,
 )
@@ -200,6 +202,51 @@ class BrightSkyForecastAdapterTest {
         // Circular mean of 350° and 10° should be near 0°/360°
         val northish = dominant!! <= 20 || dominant >= 340
         assertTrue("Expected north-ish direction, got $dominant°", northish)
+    }
+
+    @Test
+    fun `sunshine minutes convert to seconds in hourly and daily`() = runTest {
+        // DWD reports sunshine in minutes; the formatter contract is seconds.
+        val api = mockk<BrightSkyApi>()
+        val entries = listOf(
+            makeWeatherEntry(baseTs, sunshine = 30.0),
+            makeWeatherEntry(hour1Ts, sunshine = 45.0),
+        )
+        val response = BrightSkyWeatherResponse(weather = entries)
+        coEvery { api.getWeather(any(), any(), any(), any()) } returns response
+        coEvery { api.getCurrentWeather(any(), any()) } returns response
+
+        val data = BrightSkyForecastAdapter(api).getWeather(53.5, 10.0, null).getOrThrow()
+        assertEquals(30.0 * 60, data.hourly.first().sunshineDuration!!, 0.01)
+        assertEquals(45.0 * 60, data.hourly[1].sunshineDuration!!, 0.01)
+        assertEquals(75.0 * 60, data.daily.first().sunshineDuration!!, 0.01)
+    }
+
+    @Test
+    fun `daily drops the yesterday padding day from the fetch window`() = runTest {
+        // The fetch window deliberately starts at yesterday UTC (timezone
+        // safety); the aggregated daily list must not surface that stale day
+        // as daily[0], which "today" consumers read via daily.firstOrNull().
+        val api = mockk<BrightSkyApi>()
+        val yesterdayTs = "2026-06-14T12:00:00+00:00"
+        val forecast = BrightSkyWeatherResponse(
+            weather = listOf(
+                makeWeatherEntry(yesterdayTs, temp = 5.0),
+                makeWeatherEntry(baseTs, temp = 15.0),
+                makeWeatherEntry(tomorrowTs, temp = 20.0),
+            ),
+        )
+        val current = BrightSkyWeatherResponse(weather = listOf(makeWeatherEntry(baseTs, temp = 15.0)))
+        coEvery { api.getWeather(any(), any(), any(), any()) } returns forecast
+        coEvery { api.getCurrentWeather(any(), any()) } returns current
+
+        val data = BrightSkyForecastAdapter(api).getWeather(53.5, 10.0, null).getOrThrow()
+        assertEquals(2, data.daily.size)
+        assertEquals(15.0, data.daily.first().temperatureHigh, 0.01)
+        assertTrue(
+            "No daily entry may predate today (${data.daily.first().date})",
+            data.daily.none { it.date.isBefore(data.daily.first().date) },
+        )
     }
 
     @Test
