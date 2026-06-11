@@ -1,0 +1,5 @@
+v1.21.1 - Moon astronomy correction
+
+- Replaced moonrise, moonset, and illumination math with a Meeus-style astronomy model.
+- Fixed southern-hemisphere moon phase rendering.
+- Improved polar latitude handling for always-up and always-down moon states.

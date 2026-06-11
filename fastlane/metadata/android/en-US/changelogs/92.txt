@@ -1,0 +1,6 @@
+v1.21.4 - Engineering audit fixes
+
+- Fixed cancellation propagation in weather and alert repositories.
+- Restored missing BOM forecast fields for precipitation, UV, dew point, and CAPE.
+- Corrected tonight custom-alert lows, notification ID ranges, locale-safe numeric formatting, and pet heat-index clamping.
+- Hardened Firestore delete rules, Wear OS backup policy, and Wear tile/complication refresh after phone sync.
