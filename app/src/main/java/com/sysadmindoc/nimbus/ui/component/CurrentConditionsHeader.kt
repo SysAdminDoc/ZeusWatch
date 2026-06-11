@@ -37,6 +37,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusHeroGlow
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
+import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -245,7 +246,9 @@ private fun CurrentHeaderTextBlock(
         Text(
             text = current.weatherCode.description,
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.typography.titleLarge.color.copy(alpha = 0.92f),
+            color = NimbusTextPrimary.copy(alpha = 0.94f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(

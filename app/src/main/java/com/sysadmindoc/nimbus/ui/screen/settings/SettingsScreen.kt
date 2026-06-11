@@ -77,6 +77,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -528,16 +529,18 @@ private fun SettingsHomeCardRow(
                 onClick = { actions.onCardEnabled(card, !enabled) },
                 role = Role.Switch,
             )
-            .padding(horizontal = 6.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SettingsCardMoveButtons(settings.cardOrder, index, cardLabel, actions.onCardOrder)
         Spacer(Modifier.width(6.dp))
         Text(
             text = cardLabel,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
             color = if (enabled) NimbusTextPrimary else NimbusTextTertiary,
             modifier = Modifier.weight(1f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
         SettingsCardEnabledSwitch(card, cardLabel, enabled, actions.onCardEnabled)
     }
@@ -981,20 +984,20 @@ private fun SettingsCategoryPicker(
             val categorySummary = stringResource(category.summaryRes)
             Column(
                 modifier = Modifier
-                    .width(156.dp)
-                    .heightIn(min = 88.dp)
+                    .width(148.dp)
+                    .heightIn(min = 80.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(
                         Brush.verticalGradient(
                             colors = if (isSelected) {
                                 listOf(
-                                    NimbusBlueAccent.copy(alpha = 0.20f),
-                                    NimbusGlassTop.copy(alpha = 0.72f),
+                                    NimbusBlueAccent.copy(alpha = 0.18f),
+                                    NimbusGlassTop.copy(alpha = 0.70f),
                                     NimbusGlassBottom,
                                 )
                             } else {
                                 listOf(
-                                    NimbusGlassTop.copy(alpha = 0.58f),
+                                    NimbusGlassTop.copy(alpha = 0.48f),
                                     NimbusCardBg,
                                 )
                             },
@@ -1010,12 +1013,12 @@ private fun SettingsCategoryPicker(
                         onClick = { onSelectedCategory(category) },
                         role = Role.Tab,
                     )
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(8.dp)
+                            .size(if (isSelected) 8.dp else 7.dp)
                             .clip(RoundedCornerShape(3.dp))
                             .background(
                                 if (isSelected) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.45f),
@@ -1033,6 +1036,8 @@ private fun SettingsCategoryPicker(
                     text = categorySummary,
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isSelected) NimbusTextSecondary else NimbusTextTertiary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -1143,18 +1148,18 @@ private fun SettingRadio(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 68.dp)
+            .heightIn(min = 62.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(
                 Brush.verticalGradient(
                     colors = if (selected) {
                         listOf(
-                            NimbusBlueAccent.copy(alpha = 0.16f),
-                            NimbusGlassTop.copy(alpha = 0.66f),
+                            NimbusBlueAccent.copy(alpha = 0.14f),
+                            NimbusGlassTop.copy(alpha = 0.62f),
                         )
                     } else {
                         listOf(
-                            NimbusGlassTop.copy(alpha = 0.48f),
+                            NimbusGlassTop.copy(alpha = 0.42f),
                             NimbusCardBg,
                         )
                     },
@@ -1170,7 +1175,7 @@ private fun SettingRadio(
                 contentDescription = listOfNotNull(label, sublabel).joinToString(", ")
                 stateDescription = if (selected) selectedLabel else notSelectedLabel
             }
-            .padding(horizontal = 10.dp, vertical = 10.dp),
+            .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(
@@ -1181,13 +1186,25 @@ private fun SettingRadio(
                 unselectedColor = NimbusTextTertiary,
             ),
             modifier = Modifier
-                .size(36.dp)
+                .size(32.dp)
                 .clearAndSetSemantics {},
         )
-        Column(modifier = Modifier.padding(start = 4.dp)) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge, color = NimbusTextPrimary)
+        Column(modifier = Modifier.padding(start = 6.dp).weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = NimbusTextPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
             if (sublabel != null) {
-                Text(text = sublabel, style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary)
+                Text(
+                    text = sublabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -1205,18 +1222,18 @@ private fun SettingToggle(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 68.dp)
+            .heightIn(min = 62.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(
                 Brush.verticalGradient(
                     colors = if (checked) {
                         listOf(
-                            NimbusBlueAccent.copy(alpha = 0.14f),
-                            NimbusGlassTop.copy(alpha = 0.62f),
+                            NimbusBlueAccent.copy(alpha = 0.12f),
+                            NimbusGlassTop.copy(alpha = 0.58f),
                         )
                     } else {
                         listOf(
-                            NimbusGlassTop.copy(alpha = 0.46f),
+                            NimbusGlassTop.copy(alpha = 0.40f),
                             NimbusCardBg,
                         )
                     },
@@ -1237,9 +1254,21 @@ private fun SettingToggle(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge, color = NimbusTextPrimary)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = NimbusTextPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
             if (sublabel != null) {
-                Text(text = sublabel, style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary)
+                Text(
+                    text = sublabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
         Switch(

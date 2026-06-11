@@ -1,6 +1,6 @@
 # ZeusWatch
 
-![Version](https://img.shields.io/badge/version-1.22.1-blue)
+![Version](https://img.shields.io/badge/version-1.22.2-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Android%208.0+-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white)
@@ -26,7 +26,7 @@ cd zeuswatch
 
 Install the APK from `app/build/outputs/apk/standard/debug/` or open in Android Studio and run directly.
 
-**Requirements:** Android Studio Hedgehog+, JDK 17, Android SDK 35
+**Requirements:** Android Studio Hedgehog+, JDK 17, Android SDK 36
 
 ### Download
 
