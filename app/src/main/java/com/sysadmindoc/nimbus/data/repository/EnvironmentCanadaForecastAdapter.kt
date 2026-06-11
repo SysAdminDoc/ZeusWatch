@@ -16,15 +16,17 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeParseException
+import java.time.format.TextStyle
+import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.min
 import kotlin.math.pow
 
 private const val TAG = "EcccForecastAdapter"
@@ -170,10 +172,12 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
                 .replace("Tonight", "Today", ignoreCase = true)
                 .replace(" overnight", "", ignoreCase = true)
                 .trim()
-            val slot = byDayName.getOrPut(dayKey) { DayNightPair() }
+            val slot = byDayName.getOrPut(dayKey) {
+                DayNightPair(date = resolveForecastDate(dayKey, today, byDayName.size))
+            }
             if (isNight) slot.night = entry else slot.day = entry
         }
-        return byDayName.values.mapIndexedNotNull { index, pair ->
+        return byDayName.values.take(7).map { pair ->
             val highValue = pair.day?.temperatures
                 ?.firstOrNull { it.tempClass.equals("high", ignoreCase = true) }
                 ?.value
@@ -187,7 +191,7 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
             ).maxOrNull()
 
             DailyConditions(
-                date = today.plusDays(min(index.toLong(), 6L)),
+                date = pair.date,
                 weatherCode = WeatherCode.fromCode(code),
                 temperatureHigh = highValue ?: lowValue ?: 0.0,
                 temperatureLow = lowValue ?: highValue ?: 0.0,
@@ -205,7 +209,28 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         }
     }
 
+    private fun resolveForecastDate(periodDay: String, today: LocalDate, fallbackOffset: Int): LocalDate {
+        return when (periodDay.lowercase(java.util.Locale.CANADA)) {
+            "today" -> today
+            "tomorrow" -> today.plusDays(1)
+            else -> {
+                val dayOfWeek = DayOfWeek.entries.firstOrNull { day ->
+                    periodDay.equals(
+                        day.getDisplayName(TextStyle.FULL, java.util.Locale.CANADA),
+                        ignoreCase = true,
+                    ) || periodDay.equals(
+                        day.getDisplayName(TextStyle.SHORT, java.util.Locale.CANADA),
+                        ignoreCase = true,
+                    )
+                }
+                dayOfWeek?.let { today.with(TemporalAdjusters.nextOrSame(it)) }
+                    ?: today.plusDays(fallbackOffset.toLong())
+            }
+        }
+    }
+
     private class DayNightPair(
+        val date: LocalDate,
         var day: EcccForecastEntry? = null,
         var night: EcccForecastEntry? = null,
     )
