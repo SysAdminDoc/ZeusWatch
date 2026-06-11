@@ -1,0 +1,4 @@
+v1.21.9 - Forecast timezone test harness
+
+- Added a reusable forecast-adapter timezone contract test utility.
+- Extended timezone regression coverage to Open-Meteo direct and BOM hourly-fallback forecast paths.

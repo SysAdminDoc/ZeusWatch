@@ -1,12 +1,19 @@
 package com.sysadmindoc.nimbus.data.repository
 
 import com.sysadmindoc.nimbus.data.api.BrightSkyApi
+import com.sysadmindoc.nimbus.data.api.GeocodingApi
 import com.sysadmindoc.nimbus.data.api.MetNorwayApi
+import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
 import com.sysadmindoc.nimbus.data.api.OpenWeatherMapApi
 import com.sysadmindoc.nimbus.data.api.PirateWeatherApi
+import com.sysadmindoc.nimbus.data.api.WeatherDao
+import com.sysadmindoc.nimbus.data.location.ReverseGeocoder
 import com.sysadmindoc.nimbus.data.model.BrightSkyWeatherResponse
 import com.sysadmindoc.nimbus.data.model.BsSource
 import com.sysadmindoc.nimbus.data.model.BsWeatherEntry
+import com.sysadmindoc.nimbus.data.model.CurrentWeather
+import com.sysadmindoc.nimbus.data.model.DailyWeather
+import com.sysadmindoc.nimbus.data.model.HourlyWeather
 import com.sysadmindoc.nimbus.data.model.MetEntryData
 import com.sysadmindoc.nimbus.data.model.MetInstant
 import com.sysadmindoc.nimbus.data.model.MetInstantDetails
@@ -22,6 +29,7 @@ import com.sysadmindoc.nimbus.data.model.OwmDailyTemp
 import com.sysadmindoc.nimbus.data.model.OwmHourly
 import com.sysadmindoc.nimbus.data.model.OwmOneCallResponse
 import com.sysadmindoc.nimbus.data.model.OwmWeatherDesc
+import com.sysadmindoc.nimbus.data.model.OpenMeteoResponse
 import com.sysadmindoc.nimbus.data.model.PirateWeatherResponse
 import com.sysadmindoc.nimbus.data.model.PwCurrently
 import com.sysadmindoc.nimbus.data.model.PwDaily
@@ -37,19 +45,21 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Duration
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-import java.util.TimeZone
+import kotlin.math.abs
 
 class ForecastAdapterTimezoneTest {
 
     @Test
     fun `owm hourly mapping uses response timezone instead of device timezone`() = runTest {
-        withDefaultTimeZone("America/New_York") {
+        ForecastAdapterTimezoneContract.withDeviceTimeZone("America/New_York") {
             val api = mockk<OpenWeatherMapApi>()
             val prefs = mockk<UserPreferences>()
             val adapter = OwmForecastAdapter(api, prefs)
@@ -93,7 +103,7 @@ class ForecastAdapterTimezoneTest {
 
     @Test
     fun `pirate weather hourly mapping uses response timezone instead of device timezone`() = runTest {
-        withDefaultTimeZone("America/New_York") {
+        ForecastAdapterTimezoneContract.withDeviceTimeZone("America/New_York") {
             val api = mockk<PirateWeatherApi>()
             val prefs = mockk<UserPreferences>()
             val adapter = PirateWeatherForecastAdapter(api, prefs)
@@ -150,7 +160,7 @@ class ForecastAdapterTimezoneTest {
 
     @Test
     fun `bright sky hourly mapping anchors to current entry time instead of device timezone`() = runTest {
-        withDefaultTimeZone("America/New_York") {
+        ForecastAdapterTimezoneContract.withDeviceTimeZone("America/New_York") {
             val api = mockk<BrightSkyApi>()
             val adapter = BrightSkyForecastAdapter(api)
             val offset = ZoneOffset.ofHours(-11)
@@ -195,7 +205,7 @@ class ForecastAdapterTimezoneTest {
         // forecast hour labelled "20:00" while the user's wall clock
         // read "16:00" (a four-hour drift, the worst-case for
         // continental US users browsing a Nordic city).
-        withDefaultTimeZone("America/New_York") {
+        ForecastAdapterTimezoneContract.withDeviceTimeZone("America/New_York") {
             val nyZone = ZoneId.of("America/New_York")
             val api = mockk<MetNorwayApi>()
             val adapter = MetNorwayForecastAdapter(api)
@@ -275,13 +285,119 @@ class ForecastAdapterTimezoneTest {
         }
     }
 
-    private suspend fun <T> withDefaultTimeZone(zoneId: String, block: suspend () -> T): T {
-        val original = TimeZone.getDefault()
-        TimeZone.setDefault(TimeZone.getTimeZone(zoneId))
-        return try {
-            block()
-        } finally {
-            TimeZone.setDefault(original)
+    @Test
+    fun `open meteo preserves API local timestamps when device timezone differs`() = runTest {
+        ForecastAdapterTimezoneContract.withDeviceTimeZone("Pacific/Kiritimati") {
+            val api = mockk<OpenMeteoApi>()
+            val repository = openMeteoRepository(api)
+            val apiLocalTime = LocalDateTime.of(2026, 1, 1, 23, 30)
+
+            coEvery {
+                api.getForecast(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns openMeteoResponse(
+                zone = ZoneId.of("America/Adak"),
+                currentLocalTime = apiLocalTime,
+                hourlyTimes = listOf(apiLocalTime.minusHours(1), apiLocalTime, apiLocalTime.plusHours(1)),
+            )
+
+            val data = repository.getWeatherDirect(51.88, -176.65, "Adak").getOrThrow()
+
+            assertEquals(
+                "Open-Meteo current.time is already location-local and must not be device-zone shifted",
+                apiLocalTime,
+                data.current.observationTime,
+            )
+            assertEquals(apiLocalTime.minusHours(1), data.hourly.first().time)
         }
+    }
+
+    @Test
+    fun `open meteo BOM hourly fallback uses response timezone for nearest current bucket`() = runTest {
+        ForecastAdapterTimezoneContract.withDeviceTimeZone("Europe/Berlin") {
+            val api = mockk<OpenMeteoApi>()
+            val repository = openMeteoRepository(api)
+            val locationZone = ZoneId.of("Pacific/Pago_Pago")
+            val locationNow = LocalDateTime.ofInstant(Instant.now(), locationZone)
+            val hourlyTimes = listOf(
+                locationNow.minusMinutes(20),
+                locationNow,
+                locationNow.plusMinutes(20),
+            )
+
+            coEvery {
+                api.getBomForecast(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } returns openMeteoResponse(
+                zone = locationZone,
+                currentLocalTime = null,
+                hourlyTimes = hourlyTimes,
+            )
+
+            val data = repository.getBomWeatherDirect(-14.28, -170.70, "Pago Pago").getOrThrow()
+            val expectedBucket = hourlyTimes.minBy { time ->
+                abs(Duration.between(time, locationNow).toMinutes())
+            }
+
+            assertEquals(
+                "BOM has no current block, so current conditions must come from the location-local nearest hourly bucket",
+                expectedBucket,
+                data.current.observationTime,
+            )
+        }
+    }
+
+    private fun openMeteoRepository(api: OpenMeteoApi): WeatherRepository = WeatherRepository(
+        weatherApi = api,
+        geocodingApi = mockk<GeocodingApi>(relaxed = true),
+        reverseGeocoder = mockk<ReverseGeocoder>(relaxed = true),
+        weatherDao = mockk<WeatherDao>(relaxUnitFun = true),
+        userPreferences = mockk<UserPreferences>().also { prefs ->
+            every { prefs.settings } returns flowOf(NimbusSettings())
+        },
+        sourceManager = dagger.Lazy { mockk<WeatherSourceManager>(relaxed = true) },
+    )
+
+    private fun openMeteoResponse(
+        zone: ZoneId,
+        currentLocalTime: LocalDateTime?,
+        hourlyTimes: List<LocalDateTime>,
+    ): OpenMeteoResponse {
+        val dailyDate = (currentLocalTime ?: hourlyTimes.first()).toLocalDate().toString()
+        return OpenMeteoResponse(
+            latitude = 0.0,
+            longitude = 0.0,
+            timezone = zone.id,
+            current = currentLocalTime?.let { time ->
+                CurrentWeather(
+                    time = time.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                    temperature = 22.0,
+                    apparentTemperature = 21.0,
+                    humidity = 50,
+                    weatherCode = 0,
+                    isDay = 1,
+                    windSpeed = 10.0,
+                    windDirection = 180,
+                    pressureMsl = 1013.0,
+                    uvIndex = 4.0,
+                    precipitation = 0.0,
+                    cloudCover = 10,
+                )
+            },
+            hourly = HourlyWeather(
+                time = hourlyTimes.map { it.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) },
+                temperature = hourlyTimes.mapIndexed { index, _ -> 20.0 + index },
+                apparentTemperature = hourlyTimes.mapIndexed { index, _ -> 19.0 + index },
+                humidity = hourlyTimes.map { 55 },
+                weatherCode = hourlyTimes.map { 0 },
+                isDay = hourlyTimes.map { 1 },
+                windSpeed = hourlyTimes.map { 8.0 },
+                windDirection = hourlyTimes.map { 180 },
+                surfacePressure = hourlyTimes.map { 1010.0 },
+            ),
+            daily = DailyWeather(
+                time = listOf(dailyDate),
+                temperatureMax = listOf(25.0),
+                temperatureMin = listOf(15.0),
+            ),
+        )
     }
 }
