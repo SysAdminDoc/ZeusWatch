@@ -144,9 +144,14 @@ class OnThisDayRepository @Inject constructor(
             recordHighC = data.recordHighC,
             recordLowC = data.recordLowC,
         )
-        prefs.edit()
+        val editor = prefs.edit()
             .putString(key, json.encodeToString(CachedData.serializer(), payload))
-            .apply()
+        val allKeys = prefs.all.keys
+        if (allKeys.size > MAX_CACHE_ENTRIES) {
+            val excess = allKeys.sorted().take(allKeys.size - MAX_CACHE_ENTRIES)
+            for (k in excess) editor.remove(k)
+        }
+        editor.apply()
     }
 
     @Serializable
@@ -175,5 +180,6 @@ class OnThisDayRepository @Inject constructor(
     companion object {
         private const val PREFS_NAME = "nimbus_on_this_day"
         private const val HISTORY_SPAN_YEARS = 10
+        private const val MAX_CACHE_ENTRIES = 500
     }
 }
