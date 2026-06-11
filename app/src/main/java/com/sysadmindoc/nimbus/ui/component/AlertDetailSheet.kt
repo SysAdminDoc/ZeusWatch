@@ -43,6 +43,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.labelRes
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -223,8 +224,11 @@ private fun AlertSheetBadge(
 }
 
 private fun formatAlertTime(isoString: String): String = try {
-    val odt = OffsetDateTime.parse(isoString)
-    odt.format(DateTimeFormatter.ofPattern("EEE MMM d, h:mm a z", Locale.getDefault()))
+    // OffsetDateTime can't satisfy the 'z' (zone name) pattern letter — it threw
+    // DateTimeException and every alert fell back to the raw ISO string. Convert
+    // to the device zone first and drop the zone-name field.
+    val zoned = OffsetDateTime.parse(isoString).atZoneSameInstant(ZoneId.systemDefault())
+    zoned.format(DateTimeFormatter.ofPattern("EEE MMM d, h:mm a", Locale.getDefault()))
 } catch (_: Exception) {
     isoString
 }

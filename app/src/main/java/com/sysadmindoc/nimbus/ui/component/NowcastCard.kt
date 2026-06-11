@@ -133,13 +133,10 @@ fun NowcastCard(
                     size = Size(barWidth, barHeight),
                 )
 
-                // Time labels every other bar
+                // Time labels every other bar. Minutes-aware: these are 15-minute
+                // buckets, so the hour-only label rendered duplicates ("4 PM, 4 PM").
                 if (i % 2 == 0) {
-                    val label = WeatherFormatter.formatRelativeHourLabel(
-                        entry.time,
-                        referenceTime,
-                        settings,
-                    )
+                    val label = WeatherFormatter.formatClockTime(entry.time, settings)
                     val m = textMeasurer.measure(label, labelStyle)
                     drawText(m, topLeft = Offset(x, h - 14f))
                 }

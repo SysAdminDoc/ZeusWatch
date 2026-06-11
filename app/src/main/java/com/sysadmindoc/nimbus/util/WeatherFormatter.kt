@@ -83,6 +83,13 @@ object WeatherFormatter {
         PressureUnit.MBAR -> "${hPa.toInt()} mbar"
     }
 
+    /** Format a signed pressure change in the user's unit: "+1.2 hPa" / "+0.04 inHg". */
+    fun formatPressureDelta(hPa: Double, s: NimbusSettings = NimbusSettings()): String = when (s.pressureUnit) {
+        PressureUnit.INHG -> String.format(java.util.Locale.US, "%+.2f inHg", hPa * 0.02953)
+        PressureUnit.HPA -> String.format(java.util.Locale.US, "%+.1f hPa", hPa)
+        PressureUnit.MBAR -> String.format(java.util.Locale.US, "%+.1f mbar", hPa)
+    }
+
     // ── Precipitation ────────────────────────────────────────────────────
 
     fun formatPrecipitation(mm: Double, s: NimbusSettings = NimbusSettings()): String = when (s.precipUnit) {
@@ -175,6 +182,18 @@ object WeatherFormatter {
         return time.format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
     }
 
+    /**
+     * Minutes-aware clock label ("4:15 PM" / "16:15") for sub-hourly buckets
+     * where the hour-only label would render duplicates.
+     */
+    fun formatClockTime(time: LocalDateTime, s: NimbusSettings = NimbusSettings()): String {
+        val pattern = when (s.timeFormat) {
+            TimeFormat.TWELVE_HOUR -> "h:mm a"
+            TimeFormat.TWENTY_FOUR_HOUR -> "HH:mm"
+        }
+        return time.format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
+    }
+
     fun formatRelativeHourLabel(
         time: LocalDateTime,
         referenceTime: LocalDateTime?,
@@ -236,6 +255,19 @@ object WeatherFormatter {
     }
 
     // ── Sunshine Duration ─────────────────────────────────────────────────
+
+    /** Day length in minutes from ISO-local sunrise/sunset strings, or null when unavailable. */
+    fun dayLengthMinutes(sunrise: String?, sunset: String?): Long? {
+        if (sunrise == null || sunset == null) return null
+        return try {
+            val fmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+            val rise = LocalDateTime.parse(sunrise, fmt)
+            val set = LocalDateTime.parse(sunset, fmt)
+            java.time.Duration.between(rise, set).toMinutes().takeIf { it > 0 }
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     /** Convert seconds of sunshine to human-readable duration. */
     fun formatSunshineDuration(seconds: Double): String {

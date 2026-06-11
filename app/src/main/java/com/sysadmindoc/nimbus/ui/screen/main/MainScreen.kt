@@ -247,6 +247,13 @@ fun MainScreen(
             isDay = state.weatherData?.current?.isDay ?: true,
         )
     }
+    // Push the derived state up to MainActivity (via the app-scoped bus) so
+    // NimbusTheme — an ancestor of this screen — can apply the
+    // weather-adaptive color scheme. The local provider below only reaches
+    // descendants.
+    LaunchedEffect(weatherThemeState) {
+        com.sysadmindoc.nimbus.ui.theme.WeatherThemeBus.state.value = weatherThemeState
+    }
     CompositionLocalProvider(
         LocalUnitSettings provides state.settings,
         com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState provides weatherThemeState,
@@ -402,11 +409,15 @@ fun MainScreen(
                                         hourly = data.hourly,
                                         locationName = data.location.name,
                                         referenceTime = referenceTime,
+                                        isRefreshing = state.isRefreshing,
+                                        onRefresh = { viewModel.refresh() },
                                     )
                                     BottomTab.DAILY.ordinal -> DailyTab(
                                         daily = data.daily,
                                         locationName = data.location.name,
                                         referenceDate = referenceDate,
+                                        isRefreshing = state.isRefreshing,
+                                        onRefresh = { viewModel.refresh() },
                                     )
                                     BottomTab.RADAR.ordinal -> RadarTab(
                                         latitude = data.location.latitude,
@@ -706,9 +717,11 @@ private fun WeatherContent(
             // ── Hero ─────────────────────────────────────────────────
             item(key = "hero") {
                 Box(
-                    modifier = Modifier.semantics {
+                    // mergeDescendants: announce the summary once instead of the
+                    // summary plus every child element separately.
+                    modifier = Modifier.semantics(mergeDescendants = true) {
                         contentDescription = AccessibilityHelper.currentConditions(
-                            data.current, data.location.name,
+                            data.current, data.location.name, settings,
                         )
                     },
                 ) {
@@ -1015,6 +1028,10 @@ private fun RenderAtmosphereCard(
                 SunshineDurationCard(
                     sunshineDurationSeconds = seconds,
                     modifier = modifier,
+                    // Real daylight window; null (unparseable) keeps the card's default.
+                    dayLengthMinutes = WeatherFormatter.dayLengthMinutes(
+                        data.current.sunrise, data.current.sunset,
+                    ),
                 )
             }
         }

@@ -49,10 +49,11 @@ fun AnimatedTemperature(
     }
 
     val displayValue = animatable.value.roundToInt()
-    val symbol = settings.tempUnit.symbol
 
     Text(
-        text = "$displayValue$symbol",
+        // Bare degree sign to match WeatherFormatter.formatTemperature ("72°"),
+        // which the reduced-motion path above renders.
+        text = "$displayValue°",
         style = MaterialTheme.typography.displayLarge,
         modifier = modifier,
     )

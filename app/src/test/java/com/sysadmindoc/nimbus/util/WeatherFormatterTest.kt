@@ -108,6 +108,19 @@ class WeatherFormatterTest {
         assertEquals("1013 hPa", WeatherFormatter.formatPressure(1013.25, metric))
     }
 
+    @Test
+    fun `formatPressureDelta converts hPa delta to inHg`() {
+        assertEquals("+0.04 inHg", WeatherFormatter.formatPressureDelta(1.2, imperial))
+        assertEquals("-0.04 inHg", WeatherFormatter.formatPressureDelta(-1.2, imperial))
+    }
+
+    @Test
+    fun `formatPressureDelta keeps hPa when metric and is signed`() {
+        assertEquals("+1.2 hPa", WeatherFormatter.formatPressureDelta(1.2, metric))
+        assertEquals("-3.5 hPa", WeatherFormatter.formatPressureDelta(-3.5, metric))
+        assertEquals("+0.0 hPa", WeatherFormatter.formatPressureDelta(0.0, metric))
+    }
+
     // --- Precipitation (input is always mm) ---
 
     @Test
@@ -209,6 +222,37 @@ class WeatherFormatterTest {
     @Test
     fun `formatTime returns dash for invalid string`() {
         assertEquals("--", WeatherFormatter.formatTime("not-a-date"))
+    }
+
+    @Test
+    fun `formatClockTime keeps minutes in 12hr format`() {
+        // Sub-hourly buckets must not collapse to the same hour-only label.
+        assertEquals("4:15 PM", WeatherFormatter.formatClockTime(LocalDateTime.of(2025, 1, 15, 16, 15), imperial))
+        assertEquals("4:30 PM", WeatherFormatter.formatClockTime(LocalDateTime.of(2025, 1, 15, 16, 30), imperial))
+    }
+
+    @Test
+    fun `formatClockTime keeps minutes in 24hr format`() {
+        assertEquals("16:45", WeatherFormatter.formatClockTime(LocalDateTime.of(2025, 1, 15, 16, 45), metric))
+    }
+
+    // --- Day length ---
+
+    @Test
+    fun `dayLengthMinutes computes daylight window`() {
+        assertEquals(
+            600L,
+            WeatherFormatter.dayLengthMinutes("2025-01-15T07:30:00", "2025-01-15T17:30:00"),
+        )
+    }
+
+    @Test
+    fun `dayLengthMinutes returns null for missing or bad input`() {
+        assertEquals(null, WeatherFormatter.dayLengthMinutes(null, "2025-01-15T17:30:00"))
+        assertEquals(null, WeatherFormatter.dayLengthMinutes("2025-01-15T07:30:00", null))
+        assertEquals(null, WeatherFormatter.dayLengthMinutes("garbage", "2025-01-15T17:30:00"))
+        // Sunset before sunrise (bad data) must not yield a non-positive length.
+        assertEquals(null, WeatherFormatter.dayLengthMinutes("2025-01-15T17:30:00", "2025-01-15T07:30:00"))
     }
 
     @Test

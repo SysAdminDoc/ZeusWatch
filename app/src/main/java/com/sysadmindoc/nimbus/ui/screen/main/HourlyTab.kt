@@ -6,15 +6,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -74,11 +71,12 @@ fun HourlyTab(
         onRefresh = onRefresh,
         modifier = Modifier.fillMaxSize(),
     ) {
+    // No windowInsetsPadding here: the Scaffold innerPadding around this tab
+    // already covers safeDrawing — applying it again doubled the top inset.
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(NimbusBackgroundGradient)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

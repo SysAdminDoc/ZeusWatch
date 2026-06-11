@@ -91,7 +91,9 @@ fun WindCompass(
                     Color.White.copy(alpha = 0.1f)
                 }
                 val ringWidth = if (s.showBeaufortColors) 3f else 1.5f
-                Canvas(modifier = Modifier.size(120.dp).semantics { contentDescription = compassDescription }) {
+                // No semantics here: the merged WeatherCard above already carries
+                // compassDescription — duplicating it made TalkBack announce twice.
+                Canvas(modifier = Modifier.size(120.dp)) {
                     val cx = size.width / 2f
                     val cy = size.height / 2f
                     val radius = size.width / 2f - 16f
@@ -140,8 +142,9 @@ fun WindCompass(
                         }
                     }
 
-                    // Direction arrow
-                    rotate(windDirection.toFloat(), pivot = Offset(cx, cy)) {
+                    // Direction arrow. Convention: points where the wind blows TO
+                    // (meteorological bearing + 180°), matching the hourly/daily arrows.
+                    rotate(windDirection.toFloat() + 180f, pivot = Offset(cx, cy)) {
                         val arrowPath = Path().apply {
                             moveTo(cx, cy - radius + 12f) // tip
                             lineTo(cx - 6f, cy - radius + 26f)

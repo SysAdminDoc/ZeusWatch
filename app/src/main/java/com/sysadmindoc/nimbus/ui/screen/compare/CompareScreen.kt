@@ -263,6 +263,10 @@ private fun CompareResultSection(
     when {
         state.savedLocations.isEmpty() -> CompareNeedLocations(actions.onNavigateToLocations)
         state.savedLocations.size == 1 -> CompareNeedSecondLocation(state, actions.onNavigateToLocations)
+        // One slot failed but the other loaded: keep the healthy slot's data
+        // visible and scope the error card to the failed slot only.
+        state.error != null && (state.weather1 != null || state.weather2 != null) ->
+            ComparePartialWeather(state, settings, actions)
         state.error != null -> CompareLoadFailed(state.error, actions.onRetry)
         state.weather1 == null || state.weather2 == null -> CompareLoadingPair()
         else -> CompareLoadedWeather(state, settings)
@@ -316,6 +320,48 @@ private fun CompareLoadingPair() {
     )
 }
 
+/**
+ * Partial result: one slot loaded, the other errored. Shows the healthy slot's
+ * current conditions plus a retry card scoped to the failed slot.
+ */
+@Composable
+private fun ComparePartialWeather(
+    state: CompareUiState,
+    settings: NimbusSettings,
+    actions: CompareScreenActions,
+) {
+    val loadedWeather = state.weather1 ?: state.weather2 ?: return
+    val loadedLocation = if (state.weather1 != null) state.location1 else state.location2
+    val myLocationLabel = stringResource(R.string.common_my_location)
+    val loadedName = loadedLocation?.let { if (it.isCurrentLocation) myLocationLabel else it.name }
+        ?: loadedWeather.location.name
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(NimbusGlassTop.copy(alpha = 0.82f), NimbusGlassBottom),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
+            .padding(horizontal = 16.dp, vertical = 18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = loadedName,
+            style = MaterialTheme.typography.labelLarge,
+            color = NimbusTextSecondary,
+        )
+        CompareConditionColumn(loadedWeather, settings)
+    }
+    Spacer(Modifier.height(12.dp))
+    CompareLoadFailed(state.error, actions.onRetry)
+}
+
 @Composable
 private fun CompareLoadedWeather(
     state: CompareUiState,
@@ -329,6 +375,7 @@ private fun CompareLoadedWeather(
         location2 = state.location2,
         weather1 = weather1,
         weather2 = weather2,
+        settings = settings,
         modifier = Modifier.padding(horizontal = 16.dp),
     )
     Spacer(Modifier.height(12.dp))
@@ -748,10 +795,14 @@ private fun CompareSummaryCard(
     location2: SavedLocationEntity?,
     weather1: WeatherData,
     weather2: WeatherData,
+    settings: NimbusSettings,
     modifier: Modifier = Modifier,
 ) {
     val myLocationLabel = stringResource(R.string.common_my_location)
-    val tempDelta = weather1.current.temperature - weather2.current.temperature
+    // Compare in display units: a Celsius delta shown to Fahrenheit users both
+    // understated the difference and tripped the "nearly identical" threshold.
+    val tempDelta = WeatherFormatter.convertedTemp(weather1.current.temperature, settings) -
+        WeatherFormatter.convertedTemp(weather2.current.temperature, settings)
     val deltaMagnitude = kotlin.math.abs(tempDelta)
     val leadingName = if (tempDelta >= 0) {
         location1?.let { if (it.isCurrentLocation) myLocationLabel else it.name } ?: weather1.location.name

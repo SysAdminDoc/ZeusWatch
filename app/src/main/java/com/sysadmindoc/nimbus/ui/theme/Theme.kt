@@ -86,7 +86,8 @@ fun NimbusTheme(
     useWeatherAdaptive: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    // Read weather state from CompositionLocal (provided by MainScreen)
+    // Read weather state from CompositionLocal (provided by MainActivity, fed
+    // from MainScreen via WeatherThemeBus)
     val weatherState = LocalWeatherThemeState.current
     val colorScheme = if (useWeatherAdaptive && weatherState.weatherCode != null) {
         weatherAdaptiveScheme(weatherState.weatherCode, weatherState.isDay)

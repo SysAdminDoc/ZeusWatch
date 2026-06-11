@@ -21,10 +21,14 @@ import com.sysadmindoc.nimbus.data.repository.ThemeMode
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.ui.component.AdaptiveLayoutInfo
 import com.sysadmindoc.nimbus.ui.component.LocalAdaptiveLayout
+import com.sysadmindoc.nimbus.ui.component.LocalIconPackManager
 import com.sysadmindoc.nimbus.ui.navigation.DeepLinkRequest
 import com.sysadmindoc.nimbus.ui.navigation.NimbusNavHost
 import com.sysadmindoc.nimbus.ui.navigation.resolveZeusWatchDeepLinkRoute
+import com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
+import com.sysadmindoc.nimbus.ui.theme.WeatherThemeBus
+import com.sysadmindoc.nimbus.util.IconPackManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -33,6 +37,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var prefs: UserPreferences
+
+    @Inject
+    lateinit var iconPackManager: IconPackManager
 
     private var pendingDeepLink by mutableStateOf<DeepLinkRequest?>(null)
     private var deepLinkCounter = 0L
@@ -51,15 +58,24 @@ class MainActivity : ComponentActivity() {
             val windowSizeClass = calculateWindowSizeClass(this)
             val adaptiveInfo = AdaptiveLayoutInfo.from(windowSizeClass.widthSizeClass)
             val settings by prefs.settings.collectAsStateWithLifecycle(initialValue = NimbusSettings())
+            // Hoisted above NimbusTheme: the weather-adaptive scheme reads
+            // LocalWeatherThemeState inside the theme, so the provider must be
+            // an ancestor of it. MainScreen pushes updates via WeatherThemeBus.
+            val weatherThemeState by WeatherThemeBus.state.collectAsStateWithLifecycle()
 
-            NimbusTheme(
-                useWeatherAdaptive = settings.themeMode == ThemeMode.WEATHER_ADAPTIVE,
-            ) {
-                CompositionLocalProvider(LocalAdaptiveLayout provides adaptiveInfo) {
-                    NimbusNavHost(
-                        deepLink = pendingDeepLink,
-                        onDeepLinkConsumed = { pendingDeepLink = null },
-                    )
+            CompositionLocalProvider(LocalWeatherThemeState provides weatherThemeState) {
+                NimbusTheme(
+                    useWeatherAdaptive = settings.themeMode == ThemeMode.WEATHER_ADAPTIVE,
+                ) {
+                    CompositionLocalProvider(
+                        LocalAdaptiveLayout provides adaptiveInfo,
+                        LocalIconPackManager provides iconPackManager,
+                    ) {
+                        NimbusNavHost(
+                            deepLink = pendingDeepLink,
+                            onDeepLinkConsumed = { pendingDeepLink = null },
+                        )
+                    }
                 }
             }
         }

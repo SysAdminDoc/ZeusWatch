@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.WbTwilight
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -27,6 +28,14 @@ import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.repository.IconStyle
 import com.sysadmindoc.nimbus.ui.theme.*
 import com.sysadmindoc.nimbus.util.IconPackManager
+
+/**
+ * CompositionLocal providing the Hilt-managed [IconPackManager] to weather icon
+ * composables (mirrors the [LocalUnitSettings] pattern). Provided at the
+ * MainActivity level so the CUSTOM icon style works app-wide without threading
+ * the manager through every call site. Defaults to null (Material fallback).
+ */
+val LocalIconPackManager = staticCompositionLocalOf<IconPackManager?> { null }
 
 /**
  * Maps WMO weather codes to icons.
@@ -45,13 +54,15 @@ fun WeatherIcon(
     iconPackManager: IconPackManager? = null,
 ) {
     val settings = LocalUnitSettings.current
+    // Explicit param wins; otherwise fall back to the app-provided local.
+    val packManager = iconPackManager ?: LocalIconPackManager.current
 
     // Try custom icon pack first
-    if (settings.iconStyle == IconStyle.CUSTOM && iconPackManager != null && settings.customIconPackId.isNotEmpty()) {
+    if (settings.iconStyle == IconStyle.CUSTOM && packManager != null && settings.customIconPackId.isNotEmpty()) {
         val context = LocalContext.current
         val bitmap: Bitmap? = remember(settings.customIconPackId, weatherCode.code, isDay) {
-            val pack = iconPackManager.findPack(settings.customIconPackId, context)
-            pack?.let { iconPackManager.loadIcon(context, it, weatherCode.code, isDay) }
+            val pack = packManager.findPack(settings.customIconPackId, context)
+            pack?.let { packManager.loadIcon(context, it, weatherCode.code, isDay) }
         }
         if (bitmap != null) {
             Image(

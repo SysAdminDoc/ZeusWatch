@@ -227,7 +227,13 @@ fun NimbusNavHost(
                 onBack = { navController.popBackStack() },
                 onLocationSelected = { id ->
                     navController.navigate(Routes.mainWithLocation(id)) {
-                        popUpTo(Routes.MAIN) { inclusive = true }
+                        // Keep the start destination as the stack base and pop
+                        // everything above it (this screen + any previous
+                        // main/{locationId} entry). The old inclusive pop of
+                        // MAIN no-oped after the first pick — MAIN was already
+                        // gone — so repeat picks stacked stale location entries
+                        // that back-navigation then walked through.
+                        popUpTo(Routes.MAIN)
                     }
                 },
             )
