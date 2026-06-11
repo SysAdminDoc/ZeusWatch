@@ -1,0 +1,6 @@
+v1.22.1 - Global alerts and ABI splits
+
+- Added WMO global alert coverage for 130+ countries in Auto mode.
+- Added Pirate Weather alert support for users with an API key.
+- Added mold spore data to the pollen card.
+- Smaller per-ABI APKs and lockscreen widget eligibility on Android 16+.

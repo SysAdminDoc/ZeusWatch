@@ -1,0 +1,7 @@
+v1.23.0 - Deep audit: ~70 fixes
+
+- Weather-adaptive theme, custom icon packs, and live wallpaper weather now actually work.
+- Fixed inverted moon illumination and snow/sunshine unit errors (up to 100x off).
+- Watch now honors your temperature/wind units; tiles and complications open the app.
+- Alert severity, dedupe, and notification fixes; Auto/All alert sources now honored.
+- Backup rules, Firestore validation, and radar WebView hardening.
