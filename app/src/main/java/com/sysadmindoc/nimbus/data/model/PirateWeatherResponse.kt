@@ -135,6 +135,26 @@ object PwIconMapper {
         else -> -1
     }
 
-    fun isDayFromIcon(icon: String): Boolean =
-        icon.endsWith("-day") || (!icon.endsWith("-night") && !icon.contains("night"))
+    /**
+     * Day/night state for an icon. Explicit `-day`/`-night` suffixes win.
+     * Ambiguous icons (cloudy/rain/snow/fog/wind/…) carry no diurnal hint,
+     * so derive day-ness from the timestamp against the day's sunrise/sunset
+     * window when available; otherwise fall back to a 6..19 local-hour
+     * heuristic (applied ONLY to ambiguous icons). With no time information
+     * at all, default to day.
+     */
+    fun isDayFromIcon(
+        icon: String,
+        timeEpochSeconds: Long? = null,
+        sunriseEpochSeconds: Long? = null,
+        sunsetEpochSeconds: Long? = null,
+        fallbackHour: Int? = null,
+    ): Boolean = when {
+        icon.endsWith("-day") -> true
+        icon.endsWith("-night") || icon.contains("night") -> false
+        timeEpochSeconds != null && sunriseEpochSeconds != null && sunsetEpochSeconds != null ->
+            timeEpochSeconds in sunriseEpochSeconds until sunsetEpochSeconds
+        fallbackHour != null -> fallbackHour in 6..19
+        else -> true
+    }
 }

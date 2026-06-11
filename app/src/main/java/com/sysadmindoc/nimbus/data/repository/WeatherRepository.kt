@@ -275,7 +275,10 @@ class WeatherRepository @Inject constructor(
             cloudCover = current?.cloudCover ?: hourly?.cloudCover.valueAt(hourlyIndex) ?: 0,
             precipitation = current?.precipitation ?: hourly?.precipitation.valueAt(hourlyIndex) ?: 0.0,
             snowfall = current?.snowfall ?: hourly?.snowfall.valueAt(hourlyIndex),
-            snowDepth = current?.snowDepth ?: hourly?.snowDepth.valueAt(hourlyIndex),
+            // Open-Meteo snow_depth arrives in meters; the formatter contract
+            // (WeatherFormatter.formatSnowDepth) expects centimeters.
+            snowDepth = (current?.snowDepth ?: hourly?.snowDepth.valueAt(hourlyIndex))
+                ?.let { it * 100.0 },
             cape = current?.cape ?: hourly?.cape.valueAt(hourlyIndex),
         )
     }
