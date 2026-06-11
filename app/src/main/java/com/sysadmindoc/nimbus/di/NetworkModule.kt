@@ -23,6 +23,8 @@ import com.sysadmindoc.nimbus.data.api.OpenWeatherMapApi
 import com.sysadmindoc.nimbus.data.api.PirateWeatherApi
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import com.sysadmindoc.nimbus.data.api.RateLimitInterceptor
+import com.sysadmindoc.nimbus.data.api.WmoAlertAdapter
+import com.sysadmindoc.nimbus.data.api.WmoAlertApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -347,8 +349,28 @@ object NetworkModule {
         meteoAlarmAdapter: MeteoAlarmAdapter,
         jmaAdapter: JmaAlertAdapter,
         ecccAdapter: EnvironmentCanadaAlertAdapter,
+        wmoAdapter: WmoAlertAdapter,
     ): Set<@JvmSuppressWildcards AlertSourceAdapter> {
-        return setOf(nwsAdapter, meteoAlarmAdapter, jmaAdapter, ecccAdapter)
+        return setOf(nwsAdapter, meteoAlarmAdapter, jmaAdapter, ecccAdapter, wmoAdapter)
+    }
+
+    // --- WMO Severe Weather ---
+
+    @Provides
+    @Singleton
+    @Named("wmo")
+    fun provideWmoRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(WmoAlertApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideWmoAlertApi(@Named("wmo") retrofit: Retrofit): WmoAlertApi {
+        return retrofit.create(WmoAlertApi::class.java)
     }
 
     // --- OpenWeatherMap ---
