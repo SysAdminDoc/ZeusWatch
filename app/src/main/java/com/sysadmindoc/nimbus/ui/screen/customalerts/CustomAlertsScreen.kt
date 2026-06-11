@@ -101,6 +101,9 @@ fun CustomAlertsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<EditorState?>(null) }
     val addCustomAlertDescription = stringResource(R.string.custom_alerts_add_cd)
+    val startNewAlert = {
+        editing = EditorState(existing = null, draft = viewModel.defaultRule())
+    }
 
     PredictiveBackScaffold(onBack = onBack) {
         Scaffold(
@@ -117,20 +120,25 @@ fun CustomAlertsScreen(
                 )
             },
             floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { editing = EditorState(existing = null, draft = viewModel.defaultRule()) },
-                    containerColor = NimbusBlueAccent,
-                    contentColor = NimbusTextPrimary,
-                    modifier = Modifier
-                        .navigationBarsPadding()
-                        .semantics { contentDescription = addCustomAlertDescription },
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
+                if (editing == null) {
+                    FloatingActionButton(
+                        onClick = startNewAlert,
+                        containerColor = NimbusBlueAccent,
+                        contentColor = NimbusTextPrimary,
+                        modifier = Modifier
+                            .navigationBarsPadding()
+                            .semantics { contentDescription = addCustomAlertDescription },
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = null)
+                    }
                 }
             },
         ) { innerPadding ->
             if (state.rules.isEmpty()) {
-                EmptyState(modifier = Modifier.padding(innerPadding).fillMaxSize())
+                EmptyState(
+                    onAdd = startNewAlert,
+                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                )
             } else {
                 RuleList(
                     rules = state.rules,
@@ -208,7 +216,10 @@ private fun RuleList(
 }
 
 @Composable
-private fun EmptyState(modifier: Modifier = Modifier) {
+private fun EmptyState(
+    onAdd: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Box(
         modifier = modifier.padding(24.dp),
         contentAlignment = Alignment.Center,
@@ -217,7 +228,8 @@ private fun EmptyState(modifier: Modifier = Modifier) {
             title = stringResource(R.string.custom_alerts_empty_title),
             message = stringResource(R.string.custom_alerts_empty_message),
             icon = Icons.Filled.Notifications,
-            badgeText = stringResource(R.string.custom_alerts_empty_badge),
+            primaryActionLabel = stringResource(R.string.custom_alerts_empty_action),
+            onPrimaryAction = onAdd,
         )
     }
 }
@@ -509,7 +521,7 @@ private fun RuleThresholdInput(
                 )
                 .border(
                     1.dp,
-                    if (parsedThreshold != null) NimbusCardBorder else Color.Red.copy(alpha = 0.3f),
+                    if (parsedThreshold != null) NimbusCardBorder else NimbusError.copy(alpha = 0.42f),
                     RoundedCornerShape(8.dp),
                 )
                 .padding(horizontal = 12.dp, vertical = 12.dp),
@@ -647,7 +659,11 @@ private fun RuleEditorActions(
                 onSave(metric, operator, parsed, enabled)
             },
         ) {
-            Text(stringResource(R.string.common_save), color = NimbusBlueAccent, fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(R.string.common_save),
+                color = if (parsedThreshold != null) NimbusBlueAccent else NimbusTextTertiary,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }

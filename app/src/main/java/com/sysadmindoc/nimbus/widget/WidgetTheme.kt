@@ -61,8 +61,8 @@ object WidgetTheme {
         night = Color(0xFF7A839E),
     )
     val accentBlue = ColorProvider(
-        day = Color(0xFF3D6CB9),
-        night = Color(0xFF3D6CB9),
+        day = Color(0xFF6EA9E8),
+        night = Color(0xFF7AB8FF),
     )
     val precipBlue = ColorProvider(
         day = Color(0xFF64B5F6),

@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
@@ -25,9 +26,9 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material3.Text
 
 internal val WearBackground = Color(0xFF070B14)
-internal val WearPanelTop = Color(0xFF111A2D)
-internal val WearPanelBottom = Color(0xFF0B1222)
-internal val WearPanelBorder = Color(0x334E6D9E)
+internal val WearPanelTop = Color(0xFF121D32)
+internal val WearPanelBottom = Color(0xFF08101F)
+internal val WearPanelBorder = Color(0x446EA9E8)
 internal val WearTextPrimary = Color(0xFFF4F7FC)
 internal val WearTextSecondary = Color(0xFFBCC6DB)
 internal val WearTextTertiary = Color(0xFF7D89A3)
@@ -40,8 +41,10 @@ internal fun WearPanel(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val shape = RoundedCornerShape(10.dp)
     Column(
         modifier = modifier
+            .clip(shape)
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -49,9 +52,9 @@ internal fun WearPanel(
                         WearPanelBottom,
                     ),
                 ),
-                RoundedCornerShape(10.dp),
+                shape,
             )
-            .border(1.dp, WearPanelBorder, RoundedCornerShape(10.dp))
+            .border(1.dp, WearPanelBorder, shape)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         content = content,
@@ -130,7 +133,7 @@ internal fun WearStateCard(
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onAction)
+                    .clickable(onClick = onAction, role = Role.Button)
                     .padding(top = 2.dp),
             )
         }

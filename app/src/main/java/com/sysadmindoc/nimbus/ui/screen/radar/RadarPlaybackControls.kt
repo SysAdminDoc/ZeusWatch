@@ -29,7 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
@@ -57,6 +59,14 @@ fun RadarPlaybackControls(
     onSeekToFrame: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val playbackTitle = stringResource(R.string.radar_playback_title)
+    val staticLabel = stringResource(R.string.radar_playback_static)
+    val forecastLabel = stringResource(R.string.radar_playback_forecast)
+    val pastLabel = stringResource(R.string.radar_playback_past)
+    val noFramesLabel = stringResource(R.string.radar_playback_no_frames)
+    val unavailableLabel = stringResource(R.string.radar_playback_unavailable)
+    val playLabel = stringResource(R.string.radar_playback_play)
+    val pauseLabel = stringResource(R.string.radar_playback_pause)
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -80,14 +90,14 @@ fun RadarPlaybackControls(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Radar Playback",
+                text = playbackTitle,
                 style = MaterialTheme.typography.labelMedium,
                 color = NimbusTextSecondary,
             )
 
             if (!playbackEnabled) {
                 Text(
-                    text = "Static",
+                    text = staticLabel,
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusTextTertiary,
                 )
@@ -114,7 +124,7 @@ fun RadarPlaybackControls(
             ) {
                 Icon(
                     if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    contentDescription = if (isPlaying) pauseLabel else playLabel,
                     tint = if (playbackEnabled) NimbusTextPrimary else NimbusTextTertiary,
                     modifier = Modifier.size(24.dp),
                 )
@@ -144,10 +154,10 @@ fun RadarPlaybackControls(
                     val timestampText = currentTimestamp?.let { ts ->
                         val dateFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
                         dateFormat.format(Date(ts * 1000))
-                    } ?: "No frames"
+                    } ?: noFramesLabel
 
                     Text(
-                        text = if (isForecast) "Forecast" else "Past",
+                        text = if (isForecast) forecastLabel else pastLabel,
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isForecast) NimbusBlueAccent else NimbusTextSecondary,
                         modifier = Modifier
@@ -160,7 +170,7 @@ fun RadarPlaybackControls(
                     )
 
                     Text(
-                        text = if (playbackEnabled) timestampText else "Animation unavailable",
+                        text = if (playbackEnabled) timestampText else unavailableLabel,
                         style = MaterialTheme.typography.labelSmall,
                         color = NimbusTextSecondary,
                     )

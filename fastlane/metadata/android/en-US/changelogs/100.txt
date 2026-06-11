@@ -1,0 +1,6 @@
+v1.22.2 - Premium UI polish
+
+- Refined Settings density, selected states, and long-label resilience.
+- Improved Custom Alerts validation and disabled Save feedback.
+- Localized radar playback labels and accessibility actions.
+- Brightened widget accents and tightened Wear panel chrome.

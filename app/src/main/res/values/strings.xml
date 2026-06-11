@@ -55,7 +55,7 @@
     <string name="custom_alerts_add_cd">Add custom alert</string>
     <string name="custom_alerts_empty_title">No custom alerts yet</string>
     <string name="custom_alerts_empty_message">Create a rule for heat, low temperatures, heavy rain, strong wind, or high UV so ZeusWatch can watch the forecast for you.</string>
-    <string name="custom_alerts_empty_badge">Use the + button to create your first alert</string>
+    <string name="custom_alerts_empty_action">Create first alert</string>
     <string name="custom_alerts_status_active">Alert active</string>
     <string name="custom_alerts_status_paused">Paused</string>
     <string name="custom_alerts_state_active">active</string>
@@ -255,6 +255,14 @@
     <string name="radar_offline_title">Radar needs a connection</string>
     <string name="radar_offline_message">Reconnect to resume live radar, lightning, and community weather reports.</string>
     <string name="radar_offline_badge">Forecast cards still work with cached data</string>
+    <string name="radar_playback_title">Radar playback</string>
+    <string name="radar_playback_static">Static</string>
+    <string name="radar_playback_forecast">Forecast</string>
+    <string name="radar_playback_past">Past</string>
+    <string name="radar_playback_no_frames">No frames</string>
+    <string name="radar_playback_unavailable">Animation unavailable</string>
+    <string name="radar_playback_play">Play radar animation</string>
+    <string name="radar_playback_pause">Pause radar animation</string>
     <string name="forecast_tab_overview">Overview</string>
     <string name="forecast_tab_temp">Temp</string>
     <string name="forecast_tab_wind">Wind</string>
