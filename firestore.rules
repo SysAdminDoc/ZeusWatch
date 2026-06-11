@@ -11,8 +11,11 @@ service cloud.firestore {
       // Anyone can read reports (needed for map display)
       allow read: if true;
 
-      // Create: validate required fields and enforce limits
+      // Create: validate required fields and enforce limits.
+      // hasOnly() rejects payloads with unexpected extra keys; timestamp must be
+      // epoch millis near the server clock (+2 min future skew, -10 min past).
       allow create: if request.resource.data.keys().hasAll(['latitude', 'longitude', 'condition', 'deviceId', 'timestamp'])
+        && request.resource.data.keys().hasOnly(['latitude', 'longitude', 'condition', 'deviceId', 'timestamp', 'note'])
         && request.resource.data.latitude is number
         && request.resource.data.latitude >= -90
         && request.resource.data.latitude <= 90
@@ -21,7 +24,11 @@ service cloud.firestore {
         && request.resource.data.longitude <= 180
         && request.resource.data.condition is string
         && request.resource.data.condition.size() <= 50
-        && (!request.resource.data.keys().hasAny(['note']) || request.resource.data.note.size() <= 100)
+        && request.resource.data.timestamp is int
+        && request.resource.data.timestamp <= request.time.toMillis() + 120000
+        && request.resource.data.timestamp >= request.time.toMillis() - 600000
+        && (!request.resource.data.keys().hasAny(['note'])
+          || (request.resource.data.note is string && request.resource.data.note.size() <= 100))
         && request.resource.data.deviceId is string
         && request.resource.data.deviceId.size() <= 128;
 
