@@ -11,14 +11,14 @@ plugins {
 
 android {
     namespace = "com.sysadmindoc.nimbus.wear"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.sysadmindoc.nimbus.wear"
         minSdk = 30
         targetSdk = 35
-        versionCode = 70
-        versionName = "1.21.9"
+        versionCode = 71
+        versionName = "1.22.0"
     }
 
     // Same conditional-signing pattern as :app — absent keystore produces
