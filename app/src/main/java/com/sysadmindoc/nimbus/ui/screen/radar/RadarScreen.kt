@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.ui.screen.radar
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.net.Uri
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
@@ -130,6 +131,7 @@ fun RadarScreen(
         provider = settings.radarProvider,
         isOffline = isOffline,
         loadFrames = { viewModel.loadFrames() },
+        pausePlayback = viewModel::pausePlayback,
         connectLightning = viewModel::connectLightning,
         disconnectLightning = viewModel::disconnectLightning,
     )
@@ -202,6 +204,7 @@ fun RadarTab(
         provider = settings.radarProvider,
         isOffline = isOffline,
         loadFrames = { viewModel.loadFrames() },
+        pausePlayback = viewModel::pausePlayback,
         connectLightning = viewModel::connectLightning,
         disconnectLightning = viewModel::disconnectLightning,
     )
@@ -278,6 +281,7 @@ private fun RadarPlaybackConnectionEffect(
     provider: RadarProvider,
     isOffline: Boolean,
     loadFrames: () -> Unit,
+    pausePlayback: () -> Unit,
     connectLightning: () -> Unit,
     disconnectLightning: () -> Unit,
 ) {
@@ -285,6 +289,10 @@ private fun RadarPlaybackConnectionEffect(
         val useNativeRadar = provider.supportsNativePlayback && !isOffline
         if (useNativeRadar && selectedLayer == RadarLayer.RADAR) {
             loadFrames()
+        } else {
+            // Frame playback is only meaningful on the native radar layer; stop
+            // the loop when the provider or layer switches away from it.
+            pausePlayback()
         }
         if (useNativeRadar && (selectedLayer == RadarLayer.LIGHTNING || selectedLayer == RadarLayer.RADAR)) {
             connectLightning()
@@ -429,6 +437,7 @@ private fun BoxScope.RadarPlaybackAndStatus(
             totalFrames = state.radarState.totalFrames,
             pastFrameCount = state.radarState.pastFrameCount,
             currentTimestamp = state.radarState.currentFrame?.timestamp,
+            timeFormat = state.settings.timeFormat,
             onTogglePlayback = actions.onTogglePlayback,
             onSeekToFrame = actions.onSeekToFrame,
             modifier = Modifier
@@ -520,7 +529,6 @@ private fun RadarReportSheet(
     )
 }
 
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun RadarTopControls(
     providerLabel: String,
@@ -592,6 +600,7 @@ private fun RadarBackButton(
     )
 }
 
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun RadarWebView(
     provider: RadarProvider,
@@ -638,10 +647,21 @@ private fun RadarWebView(
                             request: WebResourceRequest?,
                         ): Boolean {
                             val uri = request?.url ?: return false
-                            if (request.isForMainFrame.not()) {
+                            if (isAllowedUrl(uri)) {
                                 return false
                             }
-                            return !isAllowedUrl(uri)
+                            // Blocked main-frame navigations are handed to the
+                            // browser so external links don't silently dead-end;
+                            // non-allowlisted subframe navigations are blocked
+                            // outright (same allowlist as the main frame).
+                            if (request.isForMainFrame) {
+                                try {
+                                    view?.context?.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                                } catch (_: Exception) {
+                                    // No browser available — swallow and just block.
+                                }
+                            }
+                            return true
                         }
                     }
                     webChromeClient = WebChromeClient()
@@ -654,6 +674,8 @@ private fun RadarWebView(
                         displayZoomControls = false
                         cacheMode = WebSettings.LOAD_DEFAULT
                         mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                        allowFileAccess = false
+                        allowContentAccess = false
                     }
                     setBackgroundColor(android.graphics.Color.parseColor("#0F1526"))
                     webViewRef[0] = this

@@ -17,6 +17,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.MapLibreMap
@@ -35,6 +36,7 @@ import com.sysadmindoc.nimbus.data.model.CommunityReport
 import com.sysadmindoc.nimbus.data.model.ReportCondition
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.SymbolLayer
+import kotlin.math.abs
 
 /**
  * MapLibre composable wrapper displaying radar tiles from RainViewer
@@ -118,6 +120,22 @@ fun RadarMapView(
     LaunchedEffect(communityReports) {
         val style = styleRef ?: return@LaunchedEffect
         updateCommunityReports(style, communityReports)
+    }
+
+    // Re-center when the requested coordinates change materially (e.g. a deep
+    // link that opened at 0,0 resolves to the real location after the map was
+    // created). Keyed on styleRef so it re-runs once the style is ready and
+    // wins over the initial camera set in the style callback.
+    LaunchedEffect(styleRef, latitude, longitude) {
+        if (styleRef == null) return@LaunchedEffect
+        val map = mapRef ?: return@LaunchedEffect
+        val target = map.cameraPosition.target
+        val materiallyMoved = target == null ||
+            abs(target.latitude - latitude) > CAMERA_RECENTER_EPSILON_DEGREES ||
+            abs(target.longitude - longitude) > CAMERA_RECENTER_EPSILON_DEGREES
+        if (materiallyMoved) {
+            map.animateCamera(CameraUpdateFactory.newLatLng(LatLng(latitude, longitude)))
+        }
     }
 
     AndroidView(
@@ -225,13 +243,29 @@ private fun updateRadarLayers(
                     PropertyFactory.rasterOpacity(0f)
                 )
             }
-            style.addLayer(layer)
+            addRadarLayerBelowMarkers(style, layer)
         }
 
         // Fade in
         style.getLayerAs<RasterLayer>(curLayerId)?.setProperties(
             PropertyFactory.rasterOpacity(0.75f)
         )
+    }
+}
+
+/**
+ * Insert a radar raster layer beneath the lightning/community marker layers
+ * (or, failing that, beneath the basemap's first symbol layer) so strikes,
+ * reports, and labels stay visible while frames animate above the basemap.
+ */
+private fun addRadarLayerBelowMarkers(style: Style, layer: RasterLayer) {
+    // style.layers is ordered bottom-to-top; anchor below the lowest marker layer.
+    val anchorId = style.layers.firstOrNull { it.id in RADAR_ANCHOR_LAYER_IDS }?.id
+        ?: style.layers.firstOrNull { it is SymbolLayer }?.id
+    if (anchorId != null) {
+        style.addLayerBelow(layer, anchorId)
+    } else {
+        style.addLayer(layer)
     }
 }
 
@@ -406,6 +440,15 @@ private const val LIGHTNING_POINT_LAYER = "lightning-points"
 private const val REPORTS_SOURCE_ID = "community-reports-source"
 private const val REPORTS_LAYER_ID = "community-reports-circles"
 private const val REPORTS_LABEL_LAYER_ID = "community-reports-labels"
+private const val CAMERA_RECENTER_EPSILON_DEGREES = 0.001
+
+/** Marker layers radar rasters must always render beneath. */
+private val RADAR_ANCHOR_LAYER_IDS = setOf(
+    LIGHTNING_GLOW_LAYER,
+    LIGHTNING_POINT_LAYER,
+    REPORTS_LAYER_ID,
+    REPORTS_LABEL_LAYER_ID,
+)
 private const val DARK_BASEMAP_URL =
     "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
 

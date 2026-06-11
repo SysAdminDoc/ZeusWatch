@@ -78,7 +78,13 @@ class RadarViewModel @Inject constructor(
         ) {
             return
         }
+        if (force) {
+            // A forced reload bypasses the in-flight guard above; cancel the
+            // previous request so a stale response can't clobber newer state.
+            frameLoadJob?.cancel()
+        }
         frameLoadJob = viewModelScope.launch {
+            val thisJob = coroutineContext[Job]
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 radarRepository.getRadarFrames().fold(
@@ -100,7 +106,11 @@ class RadarViewModel @Inject constructor(
                     }
                 )
             } finally {
-                frameLoadJob = null
+                // Only clear our own handle — an older cancelled job finishing
+                // late must not null out a newer in-flight job's reference.
+                if (frameLoadJob === thisJob) {
+                    frameLoadJob = null
+                }
             }
         }
     }
@@ -143,20 +153,26 @@ class RadarViewModel @Inject constructor(
             _uiState.update { it.copy(isPlaying = false) }
             return
         }
-        val playableFrameSet = frameSet ?: return
         _uiState.update { it.copy(isPlaying = true) }
         playbackJob = viewModelScope.launch {
-            val total = playableFrameSet.totalFrames
-
             while (true) {
-                val currentState = _uiState.value
-                val idx = currentState.currentFrameIndex
+                // Re-read the frame set every iteration: the 5-minute refresh can
+                // swap frames underneath the loop, so a snapshot taken at start
+                // would index out of bounds and render blank frames after a wrap.
+                val frames = _uiState.value.frameSet
+                if (frames == null || !canAnimateRadarPlayback(frames)) {
+                    _uiState.update { it.copy(isPlaying = false) }
+                    break
+                }
+                val total = frames.totalFrames
+                // Clamp in case the refreshed set shrank below the current index.
+                val idx = _uiState.value.currentFrameIndex.coerceIn(0, total - 1)
                 val nextIdx = (idx + 1) % total
 
                 _uiState.update { it.copy(currentFrameIndex = nextIdx) }
 
                 // Pause longer on last past frame and last forecast frame
-                val isLastPast = nextIdx == playableFrameSet.past.size - 1
+                val isLastPast = nextIdx == frames.past.size - 1
                 val isLastForecast = nextIdx == total - 1
                 val delayMs = when {
                     isLastPast -> 1500L

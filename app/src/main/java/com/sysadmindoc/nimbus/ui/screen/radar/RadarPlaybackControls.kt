@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.data.repository.TimeFormat
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
@@ -55,6 +56,7 @@ fun RadarPlaybackControls(
     totalFrames: Int,
     pastFrameCount: Int,
     currentTimestamp: Long?,
+    timeFormat: TimeFormat,
     onTogglePlayback: () -> Unit,
     onSeekToFrame: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -138,7 +140,10 @@ fun RadarPlaybackControls(
                     enabled = playbackEnabled,
                     value = currentFrame.toFloat(),
                     onValueChange = { onSeekToFrame(it.toInt()) },
-                    valueRange = 0f..(totalFrames - 1).coerceAtLeast(1).toFloat(),
+                    // A single (or empty) frame set must not invent a phantom
+                    // second frame — collapse the range to 0..0 (the slider is
+                    // already disabled via playbackEnabled in that case).
+                    valueRange = 0f..(totalFrames - 1).coerceAtLeast(0).toFloat(),
                     colors = SliderDefaults.colors(
                         thumbColor = NimbusBlueAccent,
                         activeTrackColor = NimbusBlueAccent,
@@ -152,7 +157,8 @@ fun RadarPlaybackControls(
                 ) {
                     val isForecast = currentFrame >= pastFrameCount
                     val timestampText = currentTimestamp?.let { ts ->
-                        val dateFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+                        val pattern = if (timeFormat == TimeFormat.TWENTY_FOUR_HOUR) "HH:mm" else "h:mm a"
+                        val dateFormat = SimpleDateFormat(pattern, Locale.getDefault())
                         dateFormat.format(Date(ts * 1000))
                     } ?: noFramesLabel
 
