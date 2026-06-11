@@ -313,7 +313,7 @@
     <string name="forecast_humidity_humid">Humid</string>
     <string name="forecast_humidity_muggy">Muggy</string>
     <string name="forecast_precip_rain_ending_soon">Rain ending soon</string>
-    <string name="forecast_precip_rain_next_hours">Rain for the next %1$s</string>
+    <string name="forecast_precip_rain_next_hours">Rain for the next %1$dh</string>
     <string name="forecast_precip_continue">Rain expected to continue</string>
     <string name="forecast_precip_within_hours">Rain likely within %1$dh</string>
     <string name="forecast_precip_around">Rain expected around %1$s</string>
