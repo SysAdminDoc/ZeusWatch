@@ -15,6 +15,7 @@ import io.mockk.justRun
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -24,6 +25,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -187,6 +189,33 @@ class RadarViewModelTest {
 
         coVerify(exactly = 2) { radarRepository.getRadarFrames() }
     }
+
+    @Test
+    fun `forced reload cancels the in-flight request so a stale response cannot clobber newer state`() =
+        runTest(scheduler) {
+            var calls = 0
+            coEvery { radarRepository.getRadarFrames() } coAnswers {
+                calls++
+                if (calls == 1) {
+                    // Slow first request: still in flight when the forced reload lands.
+                    delay(60_000L)
+                    Result.success(frameSet(totalFrames = 2))
+                } else {
+                    Result.success(frameSet(totalFrames = 3))
+                }
+            }
+            val viewModel = createViewModel()
+
+            viewModel.loadFrames()
+            scheduler.runCurrent()
+
+            viewModel.loadFrames(force = true)
+            advanceUntilIdle()
+
+            // The stale 2-frame response must not overwrite the forced 3-frame result.
+            assertEquals(3, viewModel.uiState.value.totalFrames)
+            coVerify(exactly = 2) { radarRepository.getRadarFrames() }
+        }
 
     @Test
     fun `creating the view model does not eagerly fetch radar frames`() = runTest(scheduler) {
