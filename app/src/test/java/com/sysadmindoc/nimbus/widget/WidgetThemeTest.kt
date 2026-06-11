@@ -105,11 +105,19 @@ class WidgetThemeTest {
     }
 
     @Test
-    fun `weatherIconRes maps cloudy and overcast and fog to the cloudy glyph`() {
-        assertEquals(R.drawable.ic_w_cloudy, weatherIconRes(code = 2, isDay = true))
+    fun `weatherIconRes maps partly cloudy with day-night variant and overcast to cloudy`() {
+        // Mirrors WeatherNotificationHelper: partly cloudy gets its dedicated
+        // glyph by day and falls back to cloudy at night (no moon variant).
+        assertEquals(R.drawable.ic_w_partly_cloudy, weatherIconRes(code = 2, isDay = true))
+        assertEquals(R.drawable.ic_w_cloudy, weatherIconRes(code = 2, isDay = false))
         assertEquals(R.drawable.ic_w_cloudy, weatherIconRes(code = 3, isDay = true))
-        assertEquals(R.drawable.ic_w_cloudy, weatherIconRes(code = 45, isDay = true))
-        assertEquals(R.drawable.ic_w_cloudy, weatherIconRes(code = 48, isDay = false))
+        assertEquals(R.drawable.ic_w_cloudy, weatherIconRes(code = 3, isDay = false))
+    }
+
+    @Test
+    fun `weatherIconRes maps fog codes to the fog glyph`() {
+        assertEquals(R.drawable.ic_w_fog, weatherIconRes(code = 45, isDay = true))
+        assertEquals(R.drawable.ic_w_fog, weatherIconRes(code = 48, isDay = false))
     }
 
     @Test
@@ -132,12 +140,12 @@ class WidgetThemeTest {
     }
 
     @Test
-    fun `weatherIconRes maps showers and thunderstorms to the rain glyph`() {
+    fun `weatherIconRes maps showers to rain and thunderstorms to the thunderstorm glyph`() {
         assertEquals(R.drawable.ic_w_rain, weatherIconRes(code = 80, isDay = true))
         assertEquals(R.drawable.ic_w_rain, weatherIconRes(code = 82, isDay = false))
-        assertEquals(R.drawable.ic_w_rain, weatherIconRes(code = 95, isDay = true))
-        assertEquals(R.drawable.ic_w_rain, weatherIconRes(code = 96, isDay = true))
-        assertEquals(R.drawable.ic_w_rain, weatherIconRes(code = 99, isDay = false))
+        assertEquals(R.drawable.ic_w_thunderstorm, weatherIconRes(code = 95, isDay = true))
+        assertEquals(R.drawable.ic_w_thunderstorm, weatherIconRes(code = 96, isDay = true))
+        assertEquals(R.drawable.ic_w_thunderstorm, weatherIconRes(code = 99, isDay = false))
     }
 
     @Test

@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import com.sysadmindoc.nimbus.wear.data.HourlyEntry
 import com.sysadmindoc.nimbus.wear.data.WearAlertEntry
 import com.sysadmindoc.nimbus.wear.data.WearDailyEntry
+import com.sysadmindoc.nimbus.wear.data.WearUnitFormatter
 import com.sysadmindoc.nimbus.wear.data.WearWeatherData
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -29,6 +30,8 @@ private const val KEY_DAILY_COUNT = "dailyCount"
 private const val KEY_ALERT_COUNT = "alertCount"
 private const val KEY_AQI = "aqi"
 private const val KEY_AQI_LABEL = "aqiLabel"
+private const val KEY_TEMP_UNIT = "tempUnit"
+private const val KEY_WIND_UNIT = "windUnit"
 private const val MAX_STALENESS_MS = 30 * 60 * 1000L // 30 minutes
 
 /**
@@ -70,8 +73,11 @@ class SyncedWeatherStore @Inject constructor(
         editor.putBoolean(KEY_IS_DAY, payload.isDay)
         editor.putInt(KEY_WEATHER_CODE, payload.weatherCode)
         editor.putLong(KEY_SYNC_TIMESTAMP, payload.timestampMs)
-        editor.putInt(KEY_AQI, payload.aqi)
-        editor.putString(KEY_AQI_LABEL, payload.aqiLabel)
+        editor.putString(KEY_TEMP_UNIT, payload.tempUnit)
+        editor.putString(KEY_WIND_UNIT, payload.windUnit)
+        // null AQI means "not fetched in this sync" — keep the stored value.
+        if (payload.aqi != null) editor.putInt(KEY_AQI, payload.aqi)
+        if (payload.aqiLabel != null) editor.putString(KEY_AQI_LABEL, payload.aqiLabel)
 
         editor.putInt(KEY_HOURLY_COUNT, hourly.size)
         hourly.forEachIndexed { i, entry ->
@@ -80,6 +86,7 @@ class SyncedWeatherStore @Inject constructor(
             editor.putInt("hourly_${i}_code", entry.weatherCode)
             editor.putInt("hourly_${i}_precip", entry.precipChance)
             editor.putInt("hourly_${i}_wind", entry.windSpeed)
+            editor.putBoolean("hourly_${i}_isday", entry.isDay)
         }
         // Remove any stale indexed keys from a previous (larger) save so
         // the prefs file doesn't grow without bound and a future reader
@@ -90,6 +97,7 @@ class SyncedWeatherStore @Inject constructor(
             editor.remove("hourly_${i}_code")
             editor.remove("hourly_${i}_precip")
             editor.remove("hourly_${i}_wind")
+            editor.remove("hourly_${i}_isday")
         }
 
         editor.putInt(KEY_DAILY_COUNT, daily.size)
@@ -108,18 +116,22 @@ class SyncedWeatherStore @Inject constructor(
             editor.remove("daily_${i}_precip")
         }
 
-        editor.putInt(KEY_ALERT_COUNT, alerts.size)
-        alerts.forEachIndexed { i, alert ->
-            editor.putString("alert_${i}_event", alert.event)
-            editor.putString("alert_${i}_severity", alert.severity)
-            editor.putString("alert_${i}_headline", alert.headline)
-            editor.putString("alert_${i}_expires", alert.expires)
-        }
-        for (i in alerts.size until previousCounts.third) {
-            editor.remove("alert_${i}_event")
-            editor.remove("alert_${i}_severity")
-            editor.remove("alert_${i}_headline")
-            editor.remove("alert_${i}_expires")
+        // null alerts means "not fetched in this sync" — preserve the stored
+        // list. An empty (non-null) list still clears it.
+        if (alerts != null) {
+            editor.putInt(KEY_ALERT_COUNT, alerts.size)
+            alerts.forEachIndexed { i, alert ->
+                editor.putString("alert_${i}_event", alert.event)
+                editor.putString("alert_${i}_severity", alert.severity)
+                editor.putString("alert_${i}_headline", alert.headline)
+                editor.putString("alert_${i}_expires", alert.expires)
+            }
+            for (i in alerts.size until previousCounts.third) {
+                editor.remove("alert_${i}_event")
+                editor.remove("alert_${i}_severity")
+                editor.remove("alert_${i}_headline")
+                editor.remove("alert_${i}_expires")
+            }
         }
 
         editor.commit()
@@ -147,6 +159,7 @@ class SyncedWeatherStore @Inject constructor(
                 weatherCode = prefs.getInt("hourly_${i}_code", 0),
                 precipChance = prefs.getInt("hourly_${i}_precip", 0),
                 windSpeed = prefs.getInt("hourly_${i}_wind", 0),
+                isDay = prefs.getBoolean("hourly_${i}_isday", true),
             )
         }
 
@@ -191,11 +204,24 @@ class SyncedWeatherStore @Inject constructor(
             alerts = alerts,
             aqi = prefs.getInt(KEY_AQI, -1),
             aqiLabel = prefs.getString(KEY_AQI_LABEL, "") ?: "",
+            tempUnit = lastTempUnit(),
+            windUnit = lastWindUnit(),
         )
     }
 
     /** Timestamp of the last successful sync, or 0 if never synced. */
     fun lastSyncTimestamp(): Long = prefs.getLong(KEY_SYNC_TIMESTAMP, 0L)
+
+    /**
+     * Last display units synced from the phone (metric defaults when never
+     * synced). Kept readable even when the weather payload itself has gone
+     * stale so the watch's direct-API fallback renders in the user's units.
+     */
+    fun lastTempUnit(): String =
+        prefs.getString(KEY_TEMP_UNIT, null) ?: WearUnitFormatter.TEMP_CELSIUS
+
+    fun lastWindUnit(): String =
+        prefs.getString(KEY_WIND_UNIT, null) ?: WearUnitFormatter.WIND_KMH
 }
 
 data class SyncedWeatherPayload(
@@ -213,7 +239,12 @@ data class SyncedWeatherPayload(
     val timestampMs: Long,
     val hourly: List<HourlyEntry>,
     val daily: List<WearDailyEntry> = emptyList(),
-    val alerts: List<WearAlertEntry> = emptyList(),
-    val aqi: Int = -1,
-    val aqiLabel: String = "",
+    /** null = alerts not fetched in this sync (preserve stored); empty = none active (clear). */
+    val alerts: List<WearAlertEntry>? = null,
+    /** null = AQI not fetched in this sync (preserve stored); -1 = explicitly no data. */
+    val aqi: Int? = null,
+    val aqiLabel: String? = null,
+    /** Display units from the phone's settings ("CELSIUS"/"FAHRENHEIT", "KMH"/"MPH"/"MS"/"KNOTS"). */
+    val tempUnit: String = WearUnitFormatter.TEMP_CELSIUS,
+    val windUnit: String = WearUnitFormatter.WIND_KMH,
 )

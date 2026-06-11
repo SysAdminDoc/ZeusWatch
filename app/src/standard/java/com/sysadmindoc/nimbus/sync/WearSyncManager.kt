@@ -8,8 +8,10 @@ import com.google.android.gms.wearable.Wearable
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -18,22 +20,40 @@ import javax.inject.Singleton
 private const val TAG = "WearSyncManager"
 private const val PATH_WEATHER = "/weather/current"
 
+// Mirrors the watch listener's caps (WeatherDataListenerService) so we never
+// ship payload bytes the watch is going to truncate anyway.
+private const val MAX_ALERT_ENTRIES = 8
+private const val MAX_ALERT_EVENT_CHARS = 120
+private const val MAX_ALERT_HEADLINE_CHARS = 240
+
 /**
  * Pushes weather data from the phone to a paired Wear OS device via the
  * DataLayer API. Called after every successful weather fetch so the watch
  * can display phone-sourced data without making its own network calls.
+ *
+ * Values are sent in canonical metric (°C / km/h); the user's display units
+ * are sent alongside ("tempUnit"/"windUnit") so the watch converts at render.
  */
 @Singleton
 class WearSyncManager @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val prefs: UserPreferences,
 ) {
 
+    /**
+     * @param alerts null means "not fetched in this code path" — the keys are
+     *   omitted from the DataMap and the watch keeps its previously stored
+     *   alerts. An empty list means "fetched, none active" and clears them.
+     * @param airQuality same convention: null omits the AQI keys (watch keeps
+     *   its previous value) rather than overwriting with "no data".
+     */
     suspend fun syncWeather(
         data: WeatherData,
-        alerts: List<WeatherAlert> = emptyList(),
+        alerts: List<WeatherAlert>? = null,
         airQuality: AirQualityData? = null,
     ) = withContext(Dispatchers.IO) {
         try {
+            val settings = prefs.settings.first()
             val request = PutDataMapRequest.create(PATH_WEATHER).apply {
                 dataMap.apply {
                     putInt("temperature", data.current.temperature.toInt())
@@ -49,6 +69,11 @@ class WearSyncManager @Inject constructor(
                     putInt("weatherCode", data.current.weatherCode.code)
                     putLong("syncTimestampMs", System.currentTimeMillis())
 
+                    // Display units — raw values above stay metric; the watch
+                    // converts at render time.
+                    putString("tempUnit", settings.tempUnit.name)
+                    putString("windUnit", settings.windUnit.name)
+
                     // Hourly entries (next 12 hours for watch display)
                     val hourlyMaps = ArrayList<DataMap>()
                     data.hourly.take(12).forEach { h ->
@@ -58,6 +83,7 @@ class WearSyncManager @Inject constructor(
                             putInt("weatherCode", h.weatherCode.code)
                             putInt("precipChance", h.precipitationProbability)
                             putInt("windSpeed", h.windSpeed?.toInt() ?: 0)
+                            putBoolean("isDay", h.isDay)
                         })
                     }
                     putDataMapArrayList("hourly", hourlyMaps)
@@ -75,25 +101,26 @@ class WearSyncManager @Inject constructor(
                     }
                     putDataMapArrayList("daily", dailyMaps)
 
-                    // Weather alerts
-                    val alertMaps = ArrayList<DataMap>()
-                    alerts.forEach { a ->
-                        alertMaps.add(DataMap().apply {
-                            putString("event", a.event)
-                            putString("severity", a.severity.label)
-                            putString("headline", a.headline)
-                            putString("expires", a.expires ?: "")
-                        })
+                    // Weather alerts — omit the key entirely when the caller
+                    // didn't fetch alerts so the watch preserves its last
+                    // known set instead of wiping it every background sync.
+                    if (alerts != null) {
+                        val alertMaps = ArrayList<DataMap>()
+                        alerts.take(MAX_ALERT_ENTRIES).forEach { a ->
+                            alertMaps.add(DataMap().apply {
+                                putString("event", a.event.take(MAX_ALERT_EVENT_CHARS))
+                                putString("severity", a.severity.label)
+                                putString("headline", a.headline.take(MAX_ALERT_HEADLINE_CHARS))
+                                putString("expires", a.expires ?: "")
+                            })
+                        }
+                        putDataMapArrayList("alerts", alertMaps)
                     }
-                    putDataMapArrayList("alerts", alertMaps)
 
-                    // Air quality
+                    // Air quality — same omit-when-unknown convention.
                     if (airQuality != null) {
                         putInt("aqi", airQuality.usAqi)
                         putString("aqiLabel", airQuality.aqiLevel.label)
-                    } else {
-                        putInt("aqi", -1)
-                        putString("aqiLabel", "")
                     }
                 }
                 setUrgent()
@@ -103,7 +130,7 @@ class WearSyncManager @Inject constructor(
                 .putDataItem(request.asPutDataRequest())
                 .await()
 
-            Log.d(TAG, "Synced weather to watch: ${data.location.name} ${data.current.temperature}° (${alerts.size} alerts, AQI=${airQuality?.usAqi ?: -1})")
+            Log.d(TAG, "Synced weather to watch: ${data.location.name} ${data.current.temperature}° (${alerts?.size ?: "unchanged"} alerts, AQI=${airQuality?.usAqi ?: "unchanged"})")
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             // Propagate cancellation so the caller's structured concurrency
             // sees the cancel — otherwise a fast `putDataItem().await()`

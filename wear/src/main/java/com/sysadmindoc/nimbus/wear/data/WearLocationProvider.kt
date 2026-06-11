@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -35,6 +36,10 @@ class WearLocationProvider @Inject constructor(
                     prefs.edit().putString("name", name).apply()
                     return LocationResult(loc.latitude, loc.longitude, name)
                 }
+            } catch (cancelled: CancellationException) {
+                // Never mask cancellation as "use cached location" — the
+                // caller's structured concurrency must see the cancel.
+                throw cancelled
             } catch (_: Exception) {
                 // Fall through to cached
             }
@@ -61,6 +66,8 @@ class WearLocationProvider @Inject constructor(
                 @Suppress("DEPRECATION")
                 val addrs = geocoder.getFromLocation(lat, lon, 1)
                 addrs?.firstOrNull()?.let { it.locality ?: it.subAdminArea ?: it.adminArea }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (_: Exception) {
                 null
             }

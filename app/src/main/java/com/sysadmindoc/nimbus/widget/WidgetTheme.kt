@@ -200,16 +200,19 @@ fun WidgetEmptyState(
 /**
  * Map WMO weather code to drawable resource for Glance widgets.
  * Covers all major condition groups with day/night variants for clear skies.
+ * Mirrors WeatherNotificationHelper's mapping so the widget and the
+ * persistent notification never disagree about the same sky.
  */
 fun weatherIconRes(code: Int, isDay: Boolean): Int = when {
     code == 0 || code == 1 -> if (isDay) R.drawable.ic_w_sunny else R.drawable.ic_w_night
-    code in 2..3 -> R.drawable.ic_w_cloudy
-    code in 45..48 -> R.drawable.ic_w_cloudy // fog
+    code == 2 -> if (isDay) R.drawable.ic_w_partly_cloudy else R.drawable.ic_w_cloudy
+    code == 3 -> R.drawable.ic_w_cloudy      // overcast
+    code in 45..48 -> R.drawable.ic_w_fog
     code in 51..57 -> R.drawable.ic_w_rain   // drizzle
     code in 61..67 -> R.drawable.ic_w_rain   // rain + freezing rain
     code in 71..77 -> R.drawable.ic_w_snow   // snow + snow grains
     code in 80..82 -> R.drawable.ic_w_rain   // rain showers
     code in 85..86 -> R.drawable.ic_w_snow   // snow showers
-    code in 95..99 -> R.drawable.ic_w_rain   // thunderstorms
+    code in 95..99 -> R.drawable.ic_w_thunderstorm
     else -> R.drawable.ic_w_cloudy
 }

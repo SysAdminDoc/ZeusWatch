@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.wear.complication
 
+import android.app.PendingIntent
 import androidx.wear.watchface.complications.data.ComplicationData
 import androidx.wear.watchface.complications.data.ComplicationType
 import androidx.wear.watchface.complications.data.LongTextComplicationData
@@ -43,25 +44,26 @@ object WeatherComplicationDataFactory {
         data: WearWeatherData,
         smallImage: SmallImage,
         copy: WeatherComplicationCopy,
+        tapAction: PendingIntent? = null,
     ): ComplicationData? = when (type) {
         ComplicationType.SHORT_TEXT -> ShortTextComplicationData.Builder(
             text = text(copy.shortText),
             contentDescription = text(copy.shortContentDescription),
-        ).build()
+        ).setTapAction(tapAction).build()
         ComplicationType.LONG_TEXT -> LongTextComplicationData.Builder(
             text = text(copy.longText),
             contentDescription = text(copy.longContentDescription),
-        ).setTitle(text(copy.longTitle)).build()
+        ).setTitle(text(copy.longTitle)).setTapAction(tapAction).build()
         ComplicationType.RANGED_VALUE -> RangedValueComplicationData.Builder(
             value = data.uvIndex.toFloat().coerceIn(0f, 12f),
             min = 0f,
             max = 12f,
             contentDescription = text(copy.rangedContentDescription),
-        ).setText(text(copy.rangedText)).build()
+        ).setText(text(copy.rangedText)).setTapAction(tapAction).build()
         ComplicationType.SMALL_IMAGE -> SmallImageComplicationData.Builder(
             smallImage = smallImage,
             contentDescription = text(copy.smallImageContentDescription),
-        ).build()
+        ).setTapAction(tapAction).build()
         else -> null
     }
 

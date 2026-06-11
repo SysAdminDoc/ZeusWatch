@@ -43,11 +43,13 @@ class WearWeatherRepository @Inject constructor(
         }
         Log.d(TAG, "No fresh synced data, fetching from API")
         try {
+            // Always request metric — values stay metric end-to-end and the
+            // UI converts at render via WearUnitFormatter.
             val url = "https://api.open-meteo.com/v1/forecast" +
                 "?latitude=$lat&longitude=$lon" +
                 "&current=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m,uv_index,is_day" +
                 "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
-                "&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m" +
+                "&hourly=temperature_2m,weather_code,precipitation_probability,wind_speed_10m,is_day" +
                 "&forecast_hours=12" +
                 "&timezone=auto&forecast_days=1"
 
@@ -91,9 +93,18 @@ class WearWeatherRepository @Inject constructor(
                         hourly = buildHourlyList(data.hourly),
                         dataSource = DataSource.DIRECT_API,
                         syncedAtMs = System.currentTimeMillis(),
+                        // Last units synced from the phone (metric defaults) —
+                        // the direct API path still fetches metric and converts
+                        // at render like the phone-sync path.
+                        tempUnit = syncedStore.lastTempUnit(),
+                        windUnit = syncedStore.lastWindUnit(),
                     ),
                 )
             }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            // Never swallow cancellation — the caller's structured concurrency
+            // must see the cancel rather than a fabricated Result.failure.
+            throw cancelled
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -110,6 +121,7 @@ class WearWeatherRepository @Inject constructor(
                 weatherCode = hourly.weatherCode?.getOrNull(i) ?: 0,
                 precipChance = hourly.precipProb?.getOrNull(i) ?: 0,
                 windSpeed = hourly.windSpeed?.getOrNull(i)?.toInt() ?: 0,
+                isDay = (hourly.isDay?.getOrNull(i) ?: 1) == 1,
             )
         }
     }
@@ -178,6 +190,9 @@ data class WearWeatherData(
     val aqiLabel: String = "",
     val dataSource: DataSource = DataSource.UNKNOWN,
     val syncedAtMs: Long = 0L,
+    /** Display units (phone enum names); raw values above are always metric. */
+    val tempUnit: String = WearUnitFormatter.TEMP_CELSIUS,
+    val windUnit: String = WearUnitFormatter.WIND_KMH,
 )
 
 data class HourlyEntry(
@@ -186,6 +201,7 @@ data class HourlyEntry(
     val weatherCode: Int,
     val precipChance: Int = 0,
     val windSpeed: Int = 0,
+    val isDay: Boolean = true,
 )
 
 data class WearDailyEntry(
@@ -234,4 +250,5 @@ private data class WearApiHourly(
     @SerialName("weather_code") val weatherCode: List<Int?>? = null,
     @SerialName("precipitation_probability") val precipProb: List<Int?>? = null,
     @SerialName("wind_speed_10m") val windSpeed: List<Double?>? = null,
+    @SerialName("is_day") val isDay: List<Int?>? = null,
 )
