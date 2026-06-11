@@ -123,6 +123,23 @@ class NowcastAlertLogicTest {
     }
 
     @Test
+    fun `nowcastReferenceTime prefers earliest bucket when series frame is offset from device clock`() {
+        // Buckets ~45 min ahead of the wall clock — e.g. the last viewed
+        // location sits in a neighbouring timezone. That's outside the series
+        // window and beyond the small skew tolerance, so the anchor must be
+        // the earliest bucket; mixing frames here used to skew `minutesUntil`
+        // by up to the full timezone offset.
+        val wallClock = LocalDateTime.now()
+        val earliest = wallClock.plusMinutes(45)
+        val series = listOf(
+            MinutelyPrecipitation(time = earliest, precipitation = 0.0),
+            MinutelyPrecipitation(time = earliest.plusMinutes(15), precipitation = 0.3),
+            MinutelyPrecipitation(time = earliest.plusMinutes(30), precipitation = 0.4),
+        )
+        assertEquals(earliest, nowcastReferenceTime(series))
+    }
+
+    @Test
     fun `nowcastReferenceTime uses wall clock when buckets are aligned with device time`() {
         // When the buckets straddle the wall clock — the common case for
         // a user's own current location — the anchor is the wall clock
