@@ -79,23 +79,44 @@ class CustomAlertsViewModel @Inject constructor(
             thresholdCanonical = canonical,
             enabled = enabled,
         )
-        val current = prefs.customAlertRules.first()
-        val replaced = current.filter { it.id != next.id } + next
-        prefs.setCustomAlertRules(replaced)
+        // Atomic RMW (single store.edit) so quick successive mutations can't
+        // lose each other's writes; map-replace keeps an edited rule at its
+        // existing position instead of reordering it to the bottom.
+        val replaced = prefs.updateCustomAlertRules { current ->
+            if (current.any { it.id == next.id }) {
+                current.map { if (it.id == next.id) next else it }
+            } else {
+                current + next
+            }
+        }
         reschedule(replaced)
     }
 
     fun toggleRule(rule: CustomAlertRule) = viewModelScope.launch {
-        val current = prefs.customAlertRules.first()
-        val updated = current.map { if (it.id == rule.id) it.copy(enabled = !it.enabled) else it }
-        prefs.setCustomAlertRules(updated)
+        val updated = prefs.updateCustomAlertRules { current ->
+            current.map { if (it.id == rule.id) it.copy(enabled = !it.enabled) else it }
+        }
         reschedule(updated)
     }
 
     fun deleteRule(rule: CustomAlertRule) = viewModelScope.launch {
-        val current = prefs.customAlertRules.first()
-        val updated = current.filter { it.id != rule.id }
-        prefs.setCustomAlertRules(updated)
+        val updated = prefs.updateCustomAlertRules { current ->
+            current.filter { it.id != rule.id }
+        }
+        reschedule(updated)
+    }
+
+    /** Undo a delete: re-insert [rule] at its previous [position] (clamped). */
+    fun restoreRule(rule: CustomAlertRule, position: Int) = viewModelScope.launch {
+        val updated = prefs.updateCustomAlertRules { current ->
+            if (current.any { it.id == rule.id }) {
+                current
+            } else {
+                current.toMutableList().apply {
+                    add(position.coerceIn(0, size), rule)
+                }
+            }
+        }
         reschedule(updated)
     }
 

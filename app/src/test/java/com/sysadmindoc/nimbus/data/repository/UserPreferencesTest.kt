@@ -240,6 +240,61 @@ class UserPreferencesTest {
         assertTrue(combined.containsAll(CardType.entries))
     }
 
+    // --- parseCardOrder (shared by the settings flow and moveCardInOrder) ---
+
+    @Test
+    fun parseCardOrderReturnsDefaultForNullOrBlank() {
+        assertEquals(DEFAULT_CARD_ORDER, parseCardOrder(null))
+        assertEquals(DEFAULT_CARD_ORDER, parseCardOrder(""))
+        assertEquals(DEFAULT_CARD_ORDER, parseCardOrder("  "))
+    }
+
+    @Test
+    fun parseCardOrderSkipsUnknownNamesAndAppendsMissingCards() {
+        val parsed = parseCardOrder("DAILY_FORECAST,BOGUS_CARD,HOURLY_FORECAST")
+
+        assertEquals(CardType.DAILY_FORECAST, parsed[0])
+        assertEquals(CardType.HOURLY_FORECAST, parsed[1])
+        assertEquals(CardType.entries.size, parsed.size)
+        assertTrue(parsed.containsAll(CardType.entries))
+    }
+
+    // --- moveCardInList (atomic card-reorder helper) ---
+
+    @Test
+    fun moveCardInListMovesUpAndDownByDelta() {
+        val order = listOf(CardType.WEATHER_SUMMARY, CardType.HOURLY_FORECAST, CardType.DAILY_FORECAST)
+
+        assertEquals(
+            listOf(CardType.HOURLY_FORECAST, CardType.WEATHER_SUMMARY, CardType.DAILY_FORECAST),
+            moveCardInList(order, CardType.HOURLY_FORECAST, -1),
+        )
+        assertEquals(
+            listOf(CardType.WEATHER_SUMMARY, CardType.DAILY_FORECAST, CardType.HOURLY_FORECAST),
+            moveCardInList(order, CardType.HOURLY_FORECAST, 1),
+        )
+    }
+
+    @Test
+    fun moveCardInListClampsAtTheListBounds() {
+        val order = listOf(CardType.WEATHER_SUMMARY, CardType.HOURLY_FORECAST, CardType.DAILY_FORECAST)
+
+        // Already first / last — no change.
+        assertEquals(order, moveCardInList(order, CardType.WEATHER_SUMMARY, -1))
+        assertEquals(order, moveCardInList(order, CardType.DAILY_FORECAST, 1))
+        // Oversized delta clamps to the edge instead of throwing.
+        assertEquals(
+            listOf(CardType.HOURLY_FORECAST, CardType.DAILY_FORECAST, CardType.WEATHER_SUMMARY),
+            moveCardInList(order, CardType.WEATHER_SUMMARY, 99),
+        )
+    }
+
+    @Test
+    fun moveCardInListIgnoresCardsNotInTheList() {
+        val order = listOf(CardType.WEATHER_SUMMARY, CardType.HOURLY_FORECAST)
+        assertEquals(order, moveCardInList(order, CardType.DAILY_FORECAST, 1))
+    }
+
     // --- TempUnit enum ---
 
     @Test

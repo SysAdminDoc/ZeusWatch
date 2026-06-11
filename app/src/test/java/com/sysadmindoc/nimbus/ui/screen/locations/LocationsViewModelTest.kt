@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.ui.screen.locations
 
 import app.cash.turbine.test
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
@@ -128,6 +129,7 @@ class LocationsViewModelTest {
             val state = expectMostRecentItem()
             assertTrue(state.results.isEmpty())
             assertFalse(state.isSearching)
+            assertEquals(R.string.locations_search_failed, state.errorRes)
         }
     }
 
@@ -139,13 +141,13 @@ class LocationsViewModelTest {
         viewModel = createViewModel()
         viewModel.onSearchQueryChanged("De")
         advanceUntilIdle()
-        assertNotNull(viewModel.searchState.value.error)
+        assertNotNull(viewModel.searchState.value.errorRes)
 
         viewModel.onSearchQueryChanged("Denver")
         advanceUntilIdle()
 
         val state = viewModel.searchState.value
-        assertNull(state.error)
+        assertNull(state.errorRes)
         assertEquals("Denver", state.query)
         assertEquals(2, state.results.size)
     }

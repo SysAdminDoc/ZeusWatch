@@ -59,6 +59,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -79,6 +81,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.annotation.StringRes
@@ -174,7 +177,7 @@ fun SettingsScreen(
             onThemeMode = viewModel::setThemeMode,
             onSummaryStyle = viewModel::setSummaryStyle,
             onCardEnabled = viewModel::setCardEnabled,
-            onCardOrder = viewModel::setCardOrder,
+            onMoveCard = viewModel::moveCard,
             onResetCardPreferences = viewModel::resetCardPreferences,
             onPersistentWeatherNotif = { enabled ->
                 if (enabled) {
@@ -237,7 +240,9 @@ internal fun SettingsContent(
 ) {
     PredictiveBackScaffold(onBack = onBack) {
         val scrollState = rememberScrollState()
-        var selectedCategory by remember { mutableStateOf(SettingsCategory.APPEARANCE) }
+        // rememberSaveable: survive configuration change / process recreation
+        // instead of snapping back to Appearance.
+        var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.APPEARANCE) }
 
         LaunchedEffect(selectedCategory) {
             scrollState.scrollTo(0)
@@ -306,7 +311,7 @@ internal data class SettingsActions(
     val onThemeMode: (ThemeMode) -> Unit = {},
     val onSummaryStyle: (SummaryStyle) -> Unit = {},
     val onCardEnabled: (CardType, Boolean) -> Unit = { _, _ -> },
-    val onCardOrder: (List<CardType>) -> Unit = {},
+    val onMoveCard: (CardType, Int) -> Unit = { _, _ -> },
     val onResetCardPreferences: () -> Unit = {},
     val onPersistentWeatherNotif: (Boolean) -> Unit = {},
     val onNowcastingAlerts: (Boolean) -> Unit = {},
@@ -532,7 +537,7 @@ private fun SettingsHomeCardRow(
             .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SettingsCardMoveButtons(settings.cardOrder, index, cardLabel, actions.onCardOrder)
+        SettingsCardMoveButtons(settings.cardOrder, index, card, cardLabel, actions.onMoveCard)
         Spacer(Modifier.width(6.dp))
         Text(
             text = cardLabel,
@@ -550,12 +555,16 @@ private fun SettingsHomeCardRow(
 private fun SettingsCardMoveButtons(
     cardOrder: List<CardType>,
     index: Int,
+    card: CardType,
     cardLabel: String,
-    onCardOrder: (List<CardType>) -> Unit,
+    onMoveCard: (CardType, Int) -> Unit,
 ) {
+    // Moves are expressed as (card, delta) and applied atomically against the
+    // persisted order — two rapid taps each move one step instead of replaying
+    // the same move from a stale composition snapshot.
     Row {
         IconButton(
-            onClick = { onCardOrder(cardOrder.moveItem(index, index - 1)) },
+            onClick = { onMoveCard(card, -1) },
             enabled = index > 0,
         ) {
             Icon(
@@ -565,7 +574,7 @@ private fun SettingsCardMoveButtons(
             )
         }
         IconButton(
-            onClick = { onCardOrder(cardOrder.moveItem(index, index + 1)) },
+            onClick = { onMoveCard(card, 1) },
             enabled = index < cardOrder.lastIndex,
         ) {
             Icon(
@@ -604,13 +613,6 @@ private fun SettingsCardEnabledSwitch(
             stateDescription = cardToggleState
         },
     )
-}
-
-private fun List<CardType>.moveItem(fromIndex: Int, toIndex: Int): List<CardType> {
-    val newOrder = toMutableList()
-    val item = newOrder.removeAt(fromIndex)
-    newOrder.add(toIndex, item)
-    return newOrder
 }
 
 @Composable
@@ -857,8 +859,13 @@ private fun SettingsApiKeyFields(
         sourceConfig.alerts == WeatherSourceProvider.OPEN_WEATHER_MAP ||
         sourceConfig.alertsFallback == WeatherSourceProvider.OPEN_WEATHER_MAP ||
         sourceConfig.airQuality == WeatherSourceProvider.OPEN_WEATHER_MAP
+    // AUTO / ALL_SOURCES alert preferences route through the global Pirate
+    // Weather alert adapter, which also needs this key — so the field must be
+    // visible even when no forecast source selects Pirate Weather.
     val needsPirateKey = sourceConfig.forecast == WeatherSourceProvider.PIRATE_WEATHER ||
-        sourceConfig.forecastFallback == WeatherSourceProvider.PIRATE_WEATHER
+        sourceConfig.forecastFallback == WeatherSourceProvider.PIRATE_WEATHER ||
+        settings.alertSourcePref == AlertSourcePreference.AUTO ||
+        settings.alertSourcePref == AlertSourcePreference.ALL_SOURCES
 
     if (needsOwmKey || needsPirateKey) {
         Spacer(modifier = Modifier.height(12.dp))
@@ -1502,6 +1509,10 @@ private fun ApiKeyField(
     var text by remember(label) { mutableStateOf(value) }
     var isFocused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    // Latest value/callback for the onDispose commit below — the disposal
+    // lambda is captured once, so direct captures would go stale.
+    val currentValue by rememberUpdatedState(value)
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
 
     LaunchedEffect(value, isFocused) {
         if (!isFocused && value != text) {
@@ -1511,12 +1522,18 @@ private fun ApiKeyField(
 
     fun commitValue() {
         val committed = text.trim()
-        if (committed != value) {
-            onValueChange(committed)
+        if (committed != currentValue) {
+            currentOnValueChange(committed)
         }
         if (committed != text) {
             text = committed
         }
+    }
+
+    // Commit any pending text when the field leaves composition (back nav,
+    // section collapse, category switch) so a typed key isn't silently lost.
+    DisposableEffect(Unit) {
+        onDispose { commitValue() }
     }
 
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
@@ -1539,7 +1556,10 @@ private fun ApiKeyField(
             textStyle = MaterialTheme.typography.bodyMedium.copy(color = NimbusTextPrimary),
             cursorBrush = SolidColor(NimbusBlueAccent),
             visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Done,
+            ),
             keyboardActions = KeyboardActions(
                 onDone = {
                     commitValue()
