@@ -88,13 +88,14 @@ data class PollenData(
     val mugwort: PollenReading = PollenReading.NONE,
     val olive: PollenReading = PollenReading.NONE,
     val ragweed: PollenReading = PollenReading.NONE,
+    val moldSpores: PollenReading = PollenReading.NONE,
 ) {
     val hasData: Boolean
-        get() = listOf(alder, birch, grass, mugwort, olive, ragweed)
+        get() = listOf(alder, birch, grass, mugwort, olive, ragweed, moldSpores)
             .any { it != PollenReading.NONE }
 
     val overallLevel: PollenLevel
-        get() = listOf(alder, birch, grass, mugwort, olive, ragweed)
+        get() = listOf(alder, birch, grass, mugwort, olive, ragweed, moldSpores)
             .maxByOrNull { it.level.ordinal }?.level ?: PollenLevel.NONE
 }
 
@@ -138,6 +139,7 @@ object PollenThresholdsDb {
     val MUGWORT = PollenThresholds(5.0, 20.0, 50.0)
     val OLIVE = PollenThresholds(10.0, 50.0, 200.0)
     val RAGWEED = PollenThresholds(5.0, 20.0, 50.0)
+    val MOLD_SPORES = PollenThresholds(6500.0, 13000.0, 50000.0)
 }
 
 /**
