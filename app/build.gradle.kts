@@ -19,14 +19,14 @@ if (rootProject.file("app/google-services.json").exists()) {
 
 android {
     namespace = "com.sysadmindoc.nimbus"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.sysadmindoc.nimbus"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 97
-        versionName = "1.21.9"
+        targetSdk = 36
+        versionCode = 98
+        versionName = "1.22.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -209,8 +209,8 @@ dependencies {
     // Firebase (Phase 3.8 — Community Reports) — standard flavor only
     // NOTE: Requires google-services.json in app/ directory.
     // Configure at https://console.firebase.google.com and download the config file.
-    "standardImplementation"(platform("com.google.firebase:firebase-bom:33.7.0"))
-    "standardImplementation"("com.google.firebase:firebase-firestore-ktx")
+    "standardImplementation"(platform("com.google.firebase:firebase-bom:34.3.0"))
+    "standardImplementation"("com.google.firebase:firebase-firestore")
 
     // ACRA — crash reporting that works in both standard and freenet flavors
     // (no Google Play Services dependency). Core + mail sender so F-Droid
