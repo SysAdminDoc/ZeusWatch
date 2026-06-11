@@ -4,5 +4,6 @@
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
+        <certificateTransparency enabled="true" />
     </base-config>
 </network-security-config>
