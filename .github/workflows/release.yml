@@ -17,6 +17,8 @@ jobs:
     permissions:
       contents: write
     timeout-minutes: 45
+    env:
+      HAS_RELEASE_SIGNING: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' && secrets.SIGNING_STORE_PASSWORD != '' && secrets.SIGNING_KEY_ALIAS != '' && secrets.SIGNING_KEY_PASSWORD != '' }}
 
     steps:
       - name: Checkout
@@ -46,9 +48,8 @@ jobs:
       #   SIGNING_KEYSTORE_BASE64, SIGNING_STORE_PASSWORD,
       #   SIGNING_KEY_ALIAS, SIGNING_KEY_PASSWORD.
       - name: Reconstruct signing config (if secrets present)
-        if: env.HAS_KEYSTORE == 'true'
+        if: env.HAS_RELEASE_SIGNING == 'true'
         env:
-          HAS_KEYSTORE: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' }}
           KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
           STORE_PW: ${{ secrets.SIGNING_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}

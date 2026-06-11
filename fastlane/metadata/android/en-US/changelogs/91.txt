@@ -1,0 +1,4 @@
+v1.21.3 - Hourly forecast card polish
+
+- Kept hourly forecast cards at a uniform height across temperature, feels-like, wind, and precipitation tabs.
+- Reserved optional detail rows so mixed hours no longer resize the forecast strip.
