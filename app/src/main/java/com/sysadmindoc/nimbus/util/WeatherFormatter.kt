@@ -187,8 +187,8 @@ object WeatherFormatter {
         }
     }
 
-    fun formatDayLabel(date: LocalDate): String {
-        val today = LocalDate.now()
+    fun formatDayLabel(date: LocalDate, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): String {
+        val today = LocalDate.now(zone)
         return when (date) {
             today -> "Today"
             today.plusDays(1) -> "Tomorrow"
