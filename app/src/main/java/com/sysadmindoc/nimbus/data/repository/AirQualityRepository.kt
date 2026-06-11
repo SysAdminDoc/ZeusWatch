@@ -44,6 +44,7 @@ class AirQualityRepository @Inject constructor(
                     mugwort = PollenReading.fromConcentration(current.mugwortPollen, "Mugwort", PollenThresholdsDb.MUGWORT),
                     olive = PollenReading.fromConcentration(current.olivePollen, "Olive", PollenThresholdsDb.OLIVE),
                     ragweed = PollenReading.fromConcentration(current.ragweedPollen, "Ragweed", PollenThresholdsDb.RAGWEED),
+                    moldSpores = PollenReading.fromConcentration(current.mouldSpores, "Mold", PollenThresholdsDb.MOLD_SPORES),
                 )
 
                 // Build hourly AQI (next 24h). The API is called with `timezone=auto`,
@@ -213,6 +214,7 @@ class AirQualityRepository @Inject constructor(
             mugwort = PollenReading.fromConcentration(hourly.mugwortPollen?.getOrNull(currentIndex), "Mugwort", PollenThresholdsDb.MUGWORT),
             olive = PollenReading.fromConcentration(hourly.olivePollen?.getOrNull(currentIndex), "Olive", PollenThresholdsDb.OLIVE),
             ragweed = PollenReading.fromConcentration(hourly.ragweedPollen?.getOrNull(currentIndex), "Ragweed", PollenThresholdsDb.RAGWEED),
+            moldSpores = PollenReading.fromConcentration(hourly.mouldSpores?.getOrNull(currentIndex), "Mold", PollenThresholdsDb.MOLD_SPORES),
         )
     }
 }

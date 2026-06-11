@@ -375,6 +375,7 @@
     <string name="pollen_mugwort">Mugwort</string>
     <string name="pollen_olive">Olive</string>
     <string name="pollen_ragweed">Ragweed</string>
+    <string name="pollen_mold">Mold</string>
     <string name="pollen_semantics">Pollen levels. Overall %1$s. %2$s.</string>
     <string name="pollen_semantics_unavailable">No pollen data available.</string>
     <string name="cloud_cover_clear_sky">Clear Sky</string>
