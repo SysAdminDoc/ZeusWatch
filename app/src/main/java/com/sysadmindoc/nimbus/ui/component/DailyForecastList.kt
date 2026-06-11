@@ -173,7 +173,7 @@ private fun DailyTrendTabChip(
         ),
         color = if (isSelected) NimbusBlueAccent else NimbusTextTertiary,
         modifier = Modifier
-            .heightIn(min = 40.dp)
+            .heightIn(min = 48.dp) // a11y minimum touch target
             .clip(shape)
             .background(
                 if (isSelected) NimbusBlueAccent.copy(alpha = 0.15f)
@@ -669,6 +669,7 @@ private fun DetailMini(icon: androidx.compose.ui.graphics.vector.ImageVector, la
     }
 }
 
+// Convention: arrow points where the wind blows TO (bearing + 180°).
 private fun windArrowChar(degrees: Int): String = when {
     degrees < 23 -> "\u2193"
     degrees < 68 -> "\u2199"

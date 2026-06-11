@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -167,7 +168,7 @@ private fun TrendTabChip(
         ),
         color = if (isSelected) NimbusBlueAccent else NimbusTextTertiary,
         modifier = Modifier
-            .height(40.dp)
+            .heightIn(min = 48.dp) // a11y minimum touch target
             .clip(shape)
             .background(
                 if (isSelected) NimbusBlueAccent.copy(alpha = 0.15f)
@@ -488,7 +489,7 @@ private fun HourlyItemHumidity(
     }
 }
 
-/** Wind direction to arrow character. */
+/** Wind direction to arrow character. Convention: arrow points where the wind blows TO (bearing + 180°). */
 private fun windArrow(degrees: Int): String = when {
     degrees < 23 -> "\u2193"   // N wind blows south
     degrees < 68 -> "\u2199"   // NE

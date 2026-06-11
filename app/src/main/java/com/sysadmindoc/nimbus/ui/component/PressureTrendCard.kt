@@ -104,7 +104,8 @@ fun PressureTrendCard(
                     color = NimbusTextTertiary,
                 )
                 Text(
-                    text = "%+.1f hPa".format(delta),
+                    // Honor the user's pressure unit like the headline value does.
+                    text = WeatherFormatter.formatPressureDelta(delta, s),
                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                     color = trendColor,
                 )

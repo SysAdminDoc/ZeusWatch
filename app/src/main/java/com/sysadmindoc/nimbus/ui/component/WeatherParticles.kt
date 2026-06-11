@@ -13,8 +13,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.Lifecycle
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -40,18 +40,20 @@ fun WeatherParticles(
     isDay: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    // Stop animations when app is backgrounded to save battery
+    // Stop animations when app is backgrounded to save battery.
+    // currentStateAsState() observes lifecycle transitions; deriving from the
+    // raw (non-snapshot) currentState computed once and never updated.
     val lifecycleOwner = LocalLifecycleOwner.current
-    val isResumed by remember {
-        derivedStateOf { lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) }
-    }
-    if (!isResumed) return
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
+    if (!lifecycleState.isAtLeast(Lifecycle.State.RESUMED)) return
 
     // Respect system reduced motion / animation off setting
     if (isReducedMotionEnabled()) return
 
-    // Gravity sensor for gyroscopic parallax
-    val gravity = rememberGravityTilt()
+    // Gravity sensor for gyroscopic parallax. Keep the State unwrapped here and
+    // read .value inside the Canvas draw lambda so sensor updates only
+    // invalidate the draw phase instead of recomposing at sensor rate.
+    val gravityTilt = rememberGravityTilt()
 
     val transition = rememberInfiniteTransition(label = "particles")
 
@@ -89,14 +91,12 @@ fun WeatherParticles(
         generateParticles(weatherCode, count = 40)
     }
 
-    // Gravity-based pixel offset for parallax (max ~20px shift)
-    val gx = gravity.x
-    val gy = gravity.y
-
     Canvas(modifier = modifier.fillMaxSize()) {
-        // Apply gravity offset as a translation for parallax
-        val offsetX = gx * 20f
-        val offsetY = gy * 12f
+        // Gravity-based pixel offset for parallax (max ~20px shift) — read in
+        // the draw phase, see note above.
+        val gravity = gravityTilt.value
+        val offsetX = gravity.x * 20f
+        val offsetY = gravity.y * 12f
 
         when {
             weatherCode.isRainy -> drawRain(particles, phase, offsetX, offsetY)
