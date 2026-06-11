@@ -58,7 +58,7 @@
                 <data
                     android:scheme="wear"
                     android:host="*"
-                    android:pathPrefix="/weather/current" />
+                    android:path="/weather/current" />
             </intent-filter>
         </service>
 
