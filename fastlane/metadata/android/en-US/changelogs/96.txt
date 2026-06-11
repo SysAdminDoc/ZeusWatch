@@ -1,0 +1,4 @@
+v1.21.8 - Environment Canada date fix
+
+- Fixed Environment Canada daily forecast date assignment when the first returned period is a named future day.
+- Added regression coverage for ECCC feeds that omit today's daytime period.
