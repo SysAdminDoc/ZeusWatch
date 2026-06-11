@@ -14,6 +14,7 @@ class PetSafetyEvaluatorTest {
         isDay: Boolean = true,
         cloudCover: Int = 20,
         cape: Double? = null,
+        uvIndex: Double = 3.0,
     ) = CurrentConditions(
         temperature = temperature,
         feelsLike = feelsLike,
@@ -24,7 +25,7 @@ class PetSafetyEvaluatorTest {
         windDirection = 180,
         windGusts = null,
         pressure = 1013.0,
-        uvIndex = 3.0,
+        uvIndex = uvIndex,
         visibility = 10000.0,
         dewPoint = 10.0,
         cloudCover = cloudCover,
@@ -38,14 +39,16 @@ class PetSafetyEvaluatorTest {
 
     @Test
     fun `hot sunny day triggers hot pavement warning`() {
-        val result = PetSafetyEvaluator.evaluate(conditions(temperature = 35.0, cloudCover = 10))
+        // Strong sun (UV 7): 35 + 20 + (1-0.1)*10 = 64°C estimated pavement → WARNING
+        val result = PetSafetyEvaluator.evaluate(conditions(temperature = 35.0, cloudCover = 10, uvIndex = 7.0))
         val pavement = result.filter { it.type == PetAlertType.HOT_PAVEMENT }
         assertTrue("Expected hot pavement alert", pavement.isNotEmpty())
     }
 
     @Test
     fun `extreme heat triggers pavement danger`() {
-        val result = PetSafetyEvaluator.evaluate(conditions(temperature = 42.0, cloudCover = 0))
+        // Strong sun (UV 9): 42 + 30 = 72°C estimated pavement → DANGER
+        val result = PetSafetyEvaluator.evaluate(conditions(temperature = 42.0, cloudCover = 0, uvIndex = 9.0))
         val pavement = result.filter { it.type == PetAlertType.HOT_PAVEMENT }
         assertTrue(pavement.any { it.severity == PetSeverity.DANGER })
     }
@@ -58,11 +61,30 @@ class PetSafetyEvaluatorTest {
     }
 
     @Test
+    fun `clear cool morning with weak sun does not trigger hot pavement`() {
+        // Regression: a clear 20°C morning under weak sun (UV 3) used to be
+        // estimated as ~50°C pavement and fire a WARNING. With the strong-sun
+        // gate the weak-sun adder yields ~30°C — no alert.
+        val result = PetSafetyEvaluator.evaluate(conditions(temperature = 20.1, cloudCover = 0, uvIndex = 3.0))
+        val pavement = result.filter { it.type == PetAlertType.HOT_PAVEMENT }
+        assertTrue("Weak morning sun must not claim dangerous pavement", pavement.isEmpty())
+    }
+
+    @Test
+    fun `strong sun with warm air triggers warning below the pavement floor`() {
+        // 26°C air under strong sun (UV 6, 45% cloud): pavement estimate is
+        // ~51.5°C (< 55 floor) but air >= 25 with strong sun still warrants a WARNING.
+        val result = PetSafetyEvaluator.evaluate(conditions(temperature = 26.0, cloudCover = 45, uvIndex = 6.0))
+        val pavement = result.filter { it.type == PetAlertType.HOT_PAVEMENT }
+        assertTrue("Expected hot pavement warning", pavement.isNotEmpty())
+        assertTrue(pavement.all { it.severity == PetSeverity.WARNING })
+    }
+
+    @Test
     fun `cloudy day reduces pavement risk`() {
-        // With 80% cloud cover, pavement estimate is lower
+        // Cloud cover >= 50% skips the pavement estimate entirely
         val result = PetSafetyEvaluator.evaluate(conditions(temperature = 30.0, cloudCover = 80))
         val pavement = result.filter { it.type == PetAlertType.HOT_PAVEMENT }
-        // 30 + 20 + (1-0.8)*10 = 52, which is WARNING level
         assertTrue(pavement.isEmpty() || pavement.all { it.severity != PetSeverity.DANGER })
     }
 
@@ -158,7 +180,7 @@ class PetSafetyEvaluatorTest {
     @Test
     fun `results sorted by severity`() {
         // Multiple alerts at different severities
-        val result = PetSafetyEvaluator.evaluate(conditions(temperature = 40.0, humidity = 80, cloudCover = 0))
+        val result = PetSafetyEvaluator.evaluate(conditions(temperature = 40.0, humidity = 80, cloudCover = 0, uvIndex = 9.0))
         if (result.size >= 2) {
             for (i in 0 until result.size - 1) {
                 assertTrue(

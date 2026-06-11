@@ -25,7 +25,9 @@ import java.util.concurrent.TimeUnit
  * and fires proactive notifications.
  *
  * Runs every 1 hour. Uses the same [HealthAlertEvaluator] logic as the UI card.
- * Deduplicates per alert type per forecast-local calendar date — each type fires at most once/day.
+ * Deduplicates per (alert type, severity) per forecast-local calendar date:
+ * a same-day escalation (ADVISORY → WARNING) still notifies, but a same-day
+ * downgrade (WARNING → ADVISORY) or repeat stays suppressed.
  *
  * Silently skips if:
  *  - user toggled `healthAlertsEnabled` off
@@ -79,14 +81,18 @@ class HealthAlertWorker @AssistedInject constructor(
         val today = weatherReferenceDate(data).toString()
 
         for (alert in alerts) {
-            val key = "${alert.type.name}:$today"
-            if (store.isNotified(key)) {
-                Log.d(TAG, "Already notified for $key today")
+            // Key includes severity so a same-day escalation isn't suppressed:
+            // a morning ADVISORY must not swallow an afternoon WARNING. The
+            // reverse (ADVISORY after WARNING) stays suppressed.
+            val key = "${alert.type.name}:${alert.severity.name}:$today"
+            if (store.isNotifiedAtOrAbove(alert.type, alert.severity, today)) {
+                Log.d(TAG, "Already notified for $key (or higher severity) today")
                 continue
             }
 
             val delivered = AlertNotificationHelper.showHealthNotification(
                 context = applicationContext,
+                type = alert.type,
                 title = applicationContext.getString(alert.type.labelRes),
                 body = applicationContext.healthAlertText(alert.messageRes, alert.messageArgs),
                 detail = alert.detailRes?.let { applicationContext.healthAlertText(it, alert.detailArgs) } ?: "",
@@ -146,12 +152,24 @@ private fun Context.healthAlertText(resId: Int, args: List<Any>): String {
 
 /**
  * SharedPreferences-backed dedupe store for health alert notifications.
- * Keys are "TYPE:YYYY-MM-DD" — each alert type fires at most once per day.
+ * Keys are "TYPE:SEVERITY:YYYY-MM-DD" — each (type, severity) fires at most
+ * once per day, and a lower severity is also suppressed once a higher one
+ * has fired the same day. (Legacy "TYPE:YYYY-MM-DD" keys from older builds
+ * are tolerated by the pruner and simply age out.)
  */
 private class HealthNotificationStore(context: Context) {
     private val prefs = context.getSharedPreferences("nimbus_health_alerts", Context.MODE_PRIVATE)
 
-    fun isNotified(key: String): Boolean = prefs.getBoolean(key, false)
+    /**
+     * True if [severity] or any *more severe* tier (lower [HealthSeverity]
+     * ordinal) was already notified for [type] on [date]. A WARNING after an
+     * ADVISORY returns false (escalation re-fires); an ADVISORY after a
+     * WARNING returns true (downgrade stays quiet).
+     */
+    fun isNotifiedAtOrAbove(type: HealthAlertType, severity: HealthSeverity, date: String): Boolean =
+        HealthSeverity.entries
+            .filter { it.ordinal <= severity.ordinal }
+            .any { prefs.getBoolean("${type.name}:${it.name}:$date", false) }
 
     fun record(key: String) {
         prefs.edit().putBoolean(key, true).apply()
@@ -162,7 +180,9 @@ private class HealthNotificationStore(context: Context) {
         val cutoff = LocalDate.parse(referenceDate).minusDays(7).toString()
         val editor = prefs.edit()
         prefs.all.keys.forEach { key ->
-            val datePart = key.substringAfter(":", "")
+            // The trailing segment is always the date, for both the current
+            // "TYPE:SEVERITY:date" shape and legacy "TYPE:date" keys.
+            val datePart = key.substringAfterLast(":", "")
             if (datePart.isNotEmpty() && datePart < cutoff) {
                 editor.remove(key)
             }
