@@ -140,19 +140,23 @@ class WeatherRepositoryTest {
     @Test
     fun getWeatherDelegatesToSourceManager() = runTest {
         val fakeData = mockk<WeatherData>()
-        coEvery { sourceManager.getWeather(testLat, testLon, testLocationName) } returns Result.success(fakeData)
+        coEvery {
+            sourceManager.getWeather(testLat, testLon, testLocationName, null, SourceOverrides())
+        } returns Result.success(fakeData)
 
         val result = repository.getWeather(testLat, testLon, testLocationName)
 
         assertTrue(result.isSuccess)
         assertEquals(fakeData, result.getOrThrow())
-        coVerify(exactly = 1) { sourceManager.getWeather(testLat, testLon, testLocationName) }
+        coVerify(exactly = 1) {
+            sourceManager.getWeather(testLat, testLon, testLocationName, null, SourceOverrides())
+        }
     }
 
     @Test
     fun getWeatherReturnsFailureFromSourceManager() = runTest {
         val error = RuntimeException("API down")
-        coEvery { sourceManager.getWeather(testLat, testLon, null) } returns Result.failure(error)
+        coEvery { sourceManager.getWeather(testLat, testLon, null, null, SourceOverrides()) } returns Result.failure(error)
 
         val result = repository.getWeather(testLat, testLon)
 

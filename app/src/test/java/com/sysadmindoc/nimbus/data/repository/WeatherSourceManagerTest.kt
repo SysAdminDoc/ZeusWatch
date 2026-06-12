@@ -9,6 +9,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WeatherSourceManagerTest {
@@ -27,6 +28,7 @@ class WeatherSourceManagerTest {
     private lateinit var brightSkyAlertAdapter: BrightSkyAlertAdapter
     private lateinit var metNorwayForecastAdapter: MetNorwayForecastAdapter
     private lateinit var ecccForecastAdapter: EnvironmentCanadaForecastAdapter
+    private lateinit var timeZoneResolver: LocationTimeZoneResolver
     private lateinit var manager: WeatherSourceManager
 
     private val testWeatherData = WeatherData(
@@ -70,6 +72,7 @@ class WeatherSourceManagerTest {
         brightSkyAlertAdapter = mockk()
         metNorwayForecastAdapter = mockk()
         ecccForecastAdapter = mockk()
+        timeZoneResolver = mockk()
         every { prefs.settings } returns flowOf(defaultSettings)
         manager = WeatherSourceManager(
             prefs = prefs,
@@ -86,6 +89,7 @@ class WeatherSourceManagerTest {
             brightSkyAlertAdapter = brightSkyAlertAdapter,
             metNorwayForecastAdapter = metNorwayForecastAdapter,
             ecccForecastAdapter = ecccForecastAdapter,
+            timeZoneResolver = timeZoneResolver,
         )
     }
 
@@ -160,6 +164,31 @@ class WeatherSourceManagerTest {
         }
         coVerify(exactly = 0) {
             openMeteoAdapter.getWeather(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun getWeatherPassesResolvedLocationZoneToUtcProjectedForecastProvider() = runTest {
+        val settingsWithBrightSky = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                forecast = WeatherSourceProvider.BRIGHT_SKY,
+            )
+        )
+        val berlin = ZoneId.of("Europe/Berlin")
+        every { prefs.settings } returns flowOf(settingsWithBrightSky)
+        coEvery { timeZoneResolver.resolveZone(52.5, 13.4, "Europe/Berlin") } returns berlin
+        coEvery { brightSkyForecastAdapter.getWeather(any(), any(), any(), any()) } returns Result.success(testWeatherData)
+
+        val result = manager.getWeather(
+            latitude = 52.5,
+            longitude = 13.4,
+            locationName = "Berlin",
+            locationTimeZone = "Europe/Berlin",
+        )
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            brightSkyForecastAdapter.getWeather(52.5, 13.4, "Berlin", berlin)
         }
     }
 

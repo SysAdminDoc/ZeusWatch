@@ -9,7 +9,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherCacheEntity
 
 @Database(
     entities = [WeatherCacheEntity::class, SavedLocationEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class NimbusDatabase : RoomDatabase() {
@@ -49,6 +49,12 @@ abstract class NimbusDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE saved_locations ADD COLUMN forecastSource TEXT")
                 db.execSQL("ALTER TABLE saved_locations ADD COLUMN alertSource TEXT")
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE saved_locations ADD COLUMN timeZone TEXT")
             }
         }
     }

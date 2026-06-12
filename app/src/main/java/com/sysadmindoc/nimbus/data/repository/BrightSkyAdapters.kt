@@ -30,7 +30,9 @@ class BrightSkyForecastAdapter @Inject constructor(
         latitude: Double,
         longitude: Double,
         locationName: String? = null,
+        locationZone: ZoneId? = null,
     ): Result<WeatherData> = runCatching {
+        val zone = locationZone ?: ZoneId.systemDefault()
         // Use yesterday UTC as start date to ensure we capture today's data
         // in all timezones (UTC+14 is already tomorrow in UTC).
         val today = LocalDate.now(ZoneOffset.UTC).minusDays(1)
@@ -49,7 +51,7 @@ class BrightSkyForecastAdapter @Inject constructor(
         }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
             .getOrNull()
 
-        mapToWeatherData(response, currentResponse, latitude, longitude, locationName, ZoneId.systemDefault())
+        mapToWeatherData(response, currentResponse, latitude, longitude, locationName, zone)
     }.onFailure {
         if (it is kotlinx.coroutines.CancellationException) throw it
         Log.w(TAG, "Bright Sky forecast failed", it)
@@ -101,6 +103,7 @@ class BrightSkyForecastAdapter @Inject constructor(
                 name = locationName ?: stationName ?: "Unknown",
                 latitude = lat,
                 longitude = lon,
+                timeZone = zone.id,
             ),
             current = CurrentConditions(
                 temperature = currentEntry.temperature ?: 0.0,

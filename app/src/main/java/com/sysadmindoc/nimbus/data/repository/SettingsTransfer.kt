@@ -187,6 +187,7 @@ data class SettingsBackupLocation(
     val addedAt: Long = 0,
     val forecastSource: String? = null,
     val alertSource: String? = null,
+    val timeZone: String? = null,
 )
 
 @Serializable
@@ -379,6 +380,7 @@ fun SavedLocationEntity.toBackup(): SettingsBackupLocation = SettingsBackupLocat
     addedAt = addedAt,
     forecastSource = forecastSource,
     alertSource = alertSource,
+    timeZone = timeZone,
 )
 
 fun SettingsBackupLocation.toEntity(): SavedLocationEntity = SavedLocationEntity(
@@ -392,6 +394,7 @@ fun SettingsBackupLocation.toEntity(): SavedLocationEntity = SavedLocationEntity
     addedAt = addedAt.takeIf { it > 0 } ?: System.currentTimeMillis(),
     forecastSource = WeatherSourceProvider.fromStoredName(forecastSource, WeatherDataType.FORECAST)?.name,
     alertSource = WeatherSourceProvider.fromStoredName(alertSource, WeatherDataType.ALERTS)?.name,
+    timeZone = timeZone?.takeIf { it.toZoneIdOrNull() != null },
 )
 
 fun SavedLocation.toBackup(): SettingsBackupLastLocation = SettingsBackupLastLocation(

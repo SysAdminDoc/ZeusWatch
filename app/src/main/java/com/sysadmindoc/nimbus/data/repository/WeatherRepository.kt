@@ -43,9 +43,16 @@ class WeatherRepository @Inject constructor(
         latitude: Double,
         longitude: Double,
         locationName: String? = null,
+        locationTimeZone: String? = null,
         sourceOverrides: SourceOverrides = SourceOverrides(),
     ): Result<WeatherData> {
-        return sourceManager.get().getWeather(latitude, longitude, locationName, sourceOverrides)
+        return sourceManager.get().getWeather(
+            latitude = latitude,
+            longitude = longitude,
+            locationName = locationName,
+            locationTimeZone = locationTimeZone,
+            sourceOverrides = sourceOverrides,
+        )
     }
 
     suspend fun getWeather(location: SavedLocationEntity): Result<WeatherData> =
@@ -53,6 +60,7 @@ class WeatherRepository @Inject constructor(
             latitude = location.latitude,
             longitude = location.longitude,
             locationName = location.name,
+            locationTimeZone = location.timeZone,
             sourceOverrides = location.sourceOverrides(),
         )
 
@@ -146,6 +154,7 @@ class WeatherRepository @Inject constructor(
                     country = cached.locationCountry,
                     latitude = cached.latitude,
                     longitude = cached.longitude,
+                    timeZone = response.timezone?.takeIf { it.toZoneIdOrNull() != null },
                 )
                 mapToWeatherData(
                     response,
@@ -173,6 +182,7 @@ class WeatherRepository @Inject constructor(
                         country = result.country ?: "",
                         latitude = result.latitude,
                         longitude = result.longitude,
+                        timeZone = result.timezone?.takeIf { it.toZoneIdOrNull() != null },
                     )
                 } ?: emptyList()
                 Result.success(locations)
@@ -211,6 +221,7 @@ class WeatherRepository @Inject constructor(
                     country = first?.country ?: "",
                     latitude = latitude,
                     longitude = longitude,
+                    timeZone = first?.timezone?.takeIf { it.toZoneIdOrNull() != null },
                 )
             } catch (_: Exception) {
                 LocationInfo(
@@ -227,6 +238,7 @@ class WeatherRepository @Inject constructor(
         location: LocationInfo,
         observedAt: LocalDateTime? = null,
     ): WeatherData {
+        val mappedLocation = location.withResponseTimeZone(response.timezone)
         val hourly = response.hourly
         val daily = response.daily
         val currentHourlyIndex = nearestHourlyIndex(response)
@@ -246,7 +258,7 @@ class WeatherRepository @Inject constructor(
         val dailyLow = daily?.temperatureMin?.getOrNull(todayIndex) ?: snapshot.temperature
 
         return WeatherData(
-            location = location,
+            location = mappedLocation,
             current = snapshot.toCurrentConditions(
                 dailyHigh = dailyHigh,
                 dailyLow = dailyLow,
@@ -499,4 +511,13 @@ class WeatherRepository @Inject constructor(
     private fun parseDate(str: String): LocalDate? = try {
         LocalDate.parse(str, DateTimeFormatter.ISO_LOCAL_DATE)
     } catch (_: Exception) { null }
+
+    private fun LocationInfo.withResponseTimeZone(responseTimeZone: String?): LocationInfo {
+        val validResponseTimeZone = responseTimeZone?.takeIf { it.toZoneIdOrNull() != null }
+        return if (timeZone == null && validResponseTimeZone != null) {
+            copy(timeZone = validResponseTimeZone)
+        } else {
+            this
+        }
+    }
 }

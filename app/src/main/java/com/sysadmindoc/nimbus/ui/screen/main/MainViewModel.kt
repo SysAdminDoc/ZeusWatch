@@ -42,6 +42,7 @@ import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
 import com.sysadmindoc.nimbus.data.repository.sourceOverrides
+import com.sysadmindoc.nimbus.data.repository.toZoneIdOrNull
 import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import com.sysadmindoc.nimbus.wallpaper.WeatherWallpaperService
@@ -65,6 +66,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.math.abs
 import kotlin.math.ln
@@ -439,7 +441,12 @@ class MainViewModel @Inject constructor(
             activeLatitude = lat
             activeLongitude = lon
 
-            val result = repository.getWeather(lat, lon, locationName, sourceOverrides)
+            val result = repository.getWeather(
+                latitude = lat,
+                longitude = lon,
+                locationName = locationName,
+                sourceOverrides = sourceOverrides,
+            )
             if (!isLatestWeatherRequest(requestId)) return
             result.fold(
                 onSuccess = { data ->
@@ -625,6 +632,7 @@ class MainViewModel @Inject constructor(
                 sunset = data.current.sunset,
                 latitude = lat,
                 longitude = lon,
+                zoneId = data.location.timeZone.toZoneIdOrNull() ?: ZoneId.systemDefault(),
                 referenceTime = data.current.observationTime,
             )
             if (isLatestWeatherRequest(requestId)) {

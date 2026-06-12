@@ -136,7 +136,7 @@ class MainViewModelTest {
         coEvery { forecastEvolutionRepository.getForecastEvolution(any(), any(), any()) } returns Result.failure(
             IllegalStateException("disabled in default tests"),
         )
-        coEvery { weatherRepository.getWeather(any(), any(), any()) } coAnswers {
+        coEvery { weatherRepository.getWeather(any(), any(), any(), any(), any()) } coAnswers {
             val latitude = firstArg<Double>()
             val longitude = secondArg<Double>()
             val locationName = thirdArg<String?>() ?: testWeatherData.location.name
@@ -341,7 +341,9 @@ class MainViewModelTest {
     @Test
     fun `loadWeather falls back to cache on API error`() = runTest {
         stubLocationSuccess()
-        coEvery { weatherRepository.getWeather(any(), any(), any()) } coAnswers { Result.failure(Exception("Network error")) }
+        coEvery { weatherRepository.getWeather(any(), any(), any(), any(), any()) } coAnswers {
+            Result.failure(Exception("Network error"))
+        }
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
         coEvery { weatherRepository.getCachedWeather(39.7, -104.9) } returns testWeatherData
 
@@ -354,7 +356,9 @@ class MainViewModelTest {
     @Test
     fun `loadWeather shows error when API fails and no cache`() = runTest {
         stubLocationSuccess()
-        coEvery { weatherRepository.getWeather(any(), any(), any()) } coAnswers { Result.failure(Exception("Network error")) }
+        coEvery { weatherRepository.getWeather(any(), any(), any(), any(), any()) } coAnswers {
+            Result.failure(Exception("Network error"))
+        }
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
 
         viewModel = createAndAdvance()
@@ -370,7 +374,7 @@ class MainViewModelTest {
         coEvery { weatherRepository.getCachedWeather(39.7, -104.9) } returns testWeatherData
         coEvery { weatherRepository.getCachedWeather(seattle.latitude, seattle.longitude) } returns null
         coEvery {
-            weatherRepository.getWeather(seattle.latitude, seattle.longitude, any())
+            weatherRepository.getWeather(seattle.latitude, seattle.longitude, any(), null, any())
         } returns Result.failure(Exception("Network error"))
 
         viewModel = createAndAdvance()
@@ -396,7 +400,7 @@ class MainViewModelTest {
             weatherRepository.getCachedWeather(seattle.latitude, seattle.longitude)
         } returns weatherFor(seattle)
         coEvery {
-            weatherRepository.getWeather(seattle.latitude, seattle.longitude, any())
+            weatherRepository.getWeather(seattle.latitude, seattle.longitude, any(), null, any())
         } returns Result.failure(Exception("Network error"))
 
         viewModel = createAndAdvance()
@@ -486,7 +490,7 @@ class MainViewModelTest {
         assertEquals(0, state.currentPage)
         assertEquals(listOf(seattle), state.savedLocations)
         assertEquals("Seattle", state.weatherData?.location?.name)
-        coVerify { weatherRepository.getWeather(seattle.latitude, seattle.longitude, seattle.name) }
+        coVerify { weatherRepository.getWeather(seattle.latitude, seattle.longitude, seattle.name, null, any()) }
     }
 
     @Test
@@ -513,7 +517,7 @@ class MainViewModelTest {
             )
         )
         coEvery {
-            weatherRepository.getWeather(seattle.latitude, seattle.longitude, seattle.name)
+            weatherRepository.getWeather(seattle.latitude, seattle.longitude, seattle.name, null, any())
         } returns Result.failure(Exception("Network error"))
 
         viewModel = createAndAdvance()
@@ -545,7 +549,7 @@ class MainViewModelTest {
         val releaseSecondRequest = CompletableDeferred<Unit>()
         var requestCount = 0
 
-        coEvery { weatherRepository.getWeather(any(), any(), any()) } coAnswers {
+        coEvery { weatherRepository.getWeather(any(), any(), any(), any(), any()) } coAnswers {
             when (++requestCount) {
                 1 -> {
                     firstRequestStarted.complete(Unit)

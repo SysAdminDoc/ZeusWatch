@@ -49,6 +49,7 @@ class LocationRepository @Inject constructor(
                 latitude = result.latitude,
                 longitude = result.longitude,
                 sortOrder = nextOrder,
+                timeZone = result.timezone?.takeIf { it.toZoneIdOrNull() != null },
             )
         )
     }
@@ -148,6 +149,7 @@ class LocationRepository @Inject constructor(
                     name = name,
                     sortOrder = -1,
                     isCurrentLocation = true,
+                    timeZone = existing.timeZone,
                 )
             )
         }
