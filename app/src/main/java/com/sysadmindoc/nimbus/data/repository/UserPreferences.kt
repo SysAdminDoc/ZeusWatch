@@ -181,6 +181,8 @@ class UserPreferences @Inject constructor(
         // Notifications
         val PERSISTENT_WEATHER_NOTIF = booleanPreferencesKey("persistent_weather_notif")
         val NOWCASTING_ALERTS = booleanPreferencesKey("nowcasting_alerts")
+        val DAILY_BRIEFING_ENABLED = booleanPreferencesKey("daily_briefing_enabled")
+        val DAILY_BRIEFING_MINUTES = stringPreferencesKey("daily_briefing_minutes")
         val DRIVING_ALERTS = booleanPreferencesKey("driving_alerts")
         val HEALTH_ALERTS_ENABLED = booleanPreferencesKey("health_alerts_enabled")
         val MIGRAINE_ALERTS = booleanPreferencesKey("migraine_alerts")
@@ -273,6 +275,11 @@ class UserPreferences @Inject constructor(
             // Notifications
             persistentWeatherNotif = prefs[Keys.PERSISTENT_WEATHER_NOTIF] ?: true,
             nowcastingAlerts = prefs[Keys.NOWCASTING_ALERTS] ?: true,
+            dailyBriefingEnabled = prefs[Keys.DAILY_BRIEFING_ENABLED] ?: false,
+            dailyBriefingMinutes = normalizeDailyBriefingMinutes(
+                prefs[Keys.DAILY_BRIEFING_MINUTES]?.toIntOrNull()
+                    ?: DEFAULT_DAILY_BRIEFING_MINUTES,
+            ),
             drivingAlerts = prefs[Keys.DRIVING_ALERTS] ?: false,
             healthAlertsEnabled = prefs[Keys.HEALTH_ALERTS_ENABLED] ?: false,
             migraineAlerts = prefs[Keys.MIGRAINE_ALERTS] ?: false,
@@ -378,6 +385,10 @@ class UserPreferences @Inject constructor(
     // Notifications
     suspend fun setPersistentWeatherNotif(enabled: Boolean) = store.edit { it[Keys.PERSISTENT_WEATHER_NOTIF] = enabled }
     suspend fun setNowcastingAlerts(enabled: Boolean) = store.edit { it[Keys.NOWCASTING_ALERTS] = enabled }
+    suspend fun setDailyBriefingEnabled(enabled: Boolean) = store.edit { it[Keys.DAILY_BRIEFING_ENABLED] = enabled }
+    suspend fun setDailyBriefingMinutes(minutes: Int) = store.edit {
+        it[Keys.DAILY_BRIEFING_MINUTES] = normalizeDailyBriefingMinutes(minutes).toString()
+    }
 
     // ── Custom alert rules ──────────────────────────────────────────────
     // Stored as a JSON-serialized list under a single preferences key to
@@ -552,6 +563,8 @@ data class NimbusSettings(
     // Notifications
     val persistentWeatherNotif: Boolean = true,
     val nowcastingAlerts: Boolean = true,
+    val dailyBriefingEnabled: Boolean = false,
+    val dailyBriefingMinutes: Int = DEFAULT_DAILY_BRIEFING_MINUTES,
     val drivingAlerts: Boolean = false,
     val healthAlertsEnabled: Boolean = false,
     val migraineAlerts: Boolean = false,
@@ -618,6 +631,13 @@ enum class StarterCardSet(val label: String) {
     MINIMAL("Minimal"),
     STANDARD("Standard"),
     EVERYTHING("Everything"),
+}
+
+internal const val DEFAULT_DAILY_BRIEFING_MINUTES = 8 * 60
+private const val MINUTES_PER_DAY = 24 * 60
+
+internal fun normalizeDailyBriefingMinutes(minutes: Int): Int {
+    return minutes.coerceIn(0, MINUTES_PER_DAY - 1)
 }
 
 enum class AlertMinSeverity(val label: String, val maxSortOrder: Int) {

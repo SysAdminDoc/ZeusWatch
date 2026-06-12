@@ -15,6 +15,7 @@ import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
 import com.sysadmindoc.nimbus.util.CrashReporting
 import com.sysadmindoc.nimbus.util.CustomAlertWorker
+import com.sysadmindoc.nimbus.util.DailyBriefingWorker
 import com.sysadmindoc.nimbus.util.DatabaseMaintenanceWorker
 import com.sysadmindoc.nimbus.util.HealthAlertWorker
 import com.sysadmindoc.nimbus.util.NowcastAlertWorker
@@ -101,6 +102,13 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
 
             if (!settings.persistentWeatherNotif) {
                 WeatherNotificationHelper.dismiss(this@NimbusApplication)
+            }
+
+            if (settings.dailyBriefingEnabled) {
+                DailyBriefingWorker.schedule(this@NimbusApplication, settings.dailyBriefingMinutes)
+            } else {
+                DailyBriefingWorker.cancel(this@NimbusApplication)
+                WeatherNotificationHelper.dismissDailyBriefing(this@NimbusApplication)
             }
 
             WidgetRefreshWorker.sync(this@NimbusApplication, settings.persistentWeatherNotif)
