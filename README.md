@@ -360,7 +360,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 │   ├── screen/
 │   │   ├── main/                # Today/Hourly/Daily tabs + tablet two-pane
 │   │   ├── radar/               # Dual-provider radar + playback + layers
-│   │   ├── settings/            # 11 collapsible sections (40+ preferences)
+│   │   ├── settings/            # Entry shell + extracted section/control composables
 │   │   ├── locations/           # Search + drag-to-reorder saved locations
 │   │   └── compare/             # Side-by-side weather comparison
 │   ├── navigation/              # NavHost with typed routes
@@ -473,7 +473,7 @@ Issues and PRs welcome. Please:
 
 - All raw API values are **metric** (Celsius, km/h, mm, hPa, meters). Unit conversion happens in `WeatherFormatter`.
 - Unit settings flow via `CompositionLocalProvider(LocalUnitSettings provides ...)`. Standalone screens (Radar, Compare) read from their ViewModel's `prefs.settings` flow.
-- Card rendering is driven by `CardType` enum + `LazyColumn items()` in MainScreen. Add new cards by extending `CardType` and adding a `when` branch in `RenderCard`.
+- Card rendering is driven by `CardType` enum + `LazyColumn items()` in the main-screen content renderer. Add new cards by extending `CardType` and adding a render branch.
 - Weather-adaptive theming reads from `LocalWeatherThemeState` CompositionLocal.
 - Multi-source forecasts use `WeatherSourceManager` with adapter pattern — add new sources by implementing `WeatherSourceAdapter`.
 - Alert sources use `AlertSourceAdapter` interface — auto-detected by country via Geocoder.
