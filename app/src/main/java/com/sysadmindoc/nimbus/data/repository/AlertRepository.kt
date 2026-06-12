@@ -7,6 +7,7 @@ import android.os.Build
 import android.util.Log
 import com.sysadmindoc.nimbus.data.api.AlertSourceAdapter
 import com.sysadmindoc.nimbus.data.api.MeteoAlarmAdapter
+import com.sysadmindoc.nimbus.data.api.WmoAlertAdapter
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -87,6 +88,13 @@ class AlertRepository @Inject constructor(
                                         if (countryCode != null &&
                                             countryCode in adapter.supportedRegions
                                         ) {
+                                            adapter.getAlertsForCountry(countryCode)
+                                        } else {
+                                            Result.success(emptyList())
+                                        }
+                                    }
+                                    adapter is WmoAlertAdapter -> {
+                                        if (countryCode != null) {
                                             adapter.getAlertsForCountry(countryCode)
                                         } else {
                                             Result.success(emptyList())

@@ -1,7 +1,9 @@
 package com.sysadmindoc.nimbus.data.api
 
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
+import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
@@ -27,128 +29,217 @@ class WmoAlertAdapterTest {
         adapter = WmoAlertAdapter(api)
     }
 
-    private fun warning(
-        id: String = "cap-1",
-        event: String = "Tropical Cyclone",
-        severity: String = "Severe",
-        lat: Double? = null,
-        lon: Double? = null,
-        minLat: Double? = null,
-        maxLat: Double? = null,
-        minLon: Double? = null,
-        maxLon: Double? = null,
-    ) = WmoWarning(
-        capId = id,
-        event = event,
-        severity = severity,
-        status = "Actual",
-        lat = lat,
-        lon = lon,
-        minLat = minLat,
-        maxLat = maxLat,
-        minLon = minLon,
-        maxLon = maxLon,
+    private fun member(
+        mid: String = "093",
+        name: String = "United States of America",
+        dept: String = "National Weather Service",
+    ) = WmoMember(
+        mid = mid,
+        name = name,
+        dept = dept,
     )
 
-    private fun respond(vararg warnings: WmoWarning) {
-        coEvery { api.getWarnings() } returns WmoWarningsResponse(warnings.toList())
+    private fun warning(
+        id: String = "urn:oid:us-warning-1",
+        mid: String = "093",
+        event: String? = "Tornado Warning",
+        headline: String? = "Tornado Warning issued for central county",
+        areaDesc: String? = "Central County",
+        severity: Int? = 4,
+        urgency: Int? = 4,
+        certainty: Int? = 4,
+        effective: String? = "2026-06-11 23:32:00",
+        sent: String? = "2026-06-11 23:30:00",
+        expires: String? = "2026-06-12 01:00:00",
+        capUrl: String? = "us-noaa-nws-en/2026/06/11/23/34/24-700-281.xml",
+    ) = WmoWarning(
+        id = id,
+        event = event,
+        headline = headline,
+        sent = sent,
+        expires = expires,
+        areaDesc = areaDesc,
+        mid = mid,
+        s = severity,
+        u = urgency,
+        c = certainty,
+        capURL = capUrl,
+        effective = effective,
+    )
+
+    private fun respondMembers(vararg members: WmoMember) {
+        coEvery { api.getMembers() } returns listOf(WmoMemberRegion(ra = 4, members = members.toList()))
     }
 
-    // --- Bounding-box proximity ---
-
-    @Test
-    fun `point inside bbox is matched`() = runTest {
-        respond(warning(minLat = 30.0, maxLat = 40.0, minLon = -110.0, maxLon = -100.0))
-
-        val alerts = adapter.getAlerts(35.0, -105.0).getOrThrow()
-        assertEquals(1, alerts.size)
-        assertEquals(AlertSeverity.SEVERE, alerts.first().severity)
+    private fun respondWarnings(vararg warnings: WmoWarning) {
+        coEvery { api.getWarnings() } returns WmoWarningsResponse(
+            itemCount = warnings.size,
+            lastUpdated = "2026-06-11 23:38:04",
+            items = warnings.toList(),
+        )
     }
 
     @Test
-    fun `point outside latitude band is rejected`() = runTest {
-        respond(warning(minLat = 30.0, maxLat = 40.0, minLon = -110.0, maxLon = -100.0))
-
-        assertTrue(adapter.getAlerts(45.0, -105.0).getOrThrow().isEmpty())
-    }
-
-    @Test
-    fun `longitude pad widens with latitude instead of reusing the lat pad`() = runTest {
-        // At lat 60° the lon pad is 0.5 / cos(60°) = 1.0°. A point 0.8° east of
-        // maxLon is inside with the latitude-aware pad but was rejected by the
-        // old code that applied the 0.5° lat pad to longitude.
-        respond(warning(minLat = 55.0, maxLat = 65.0, minLon = 10.0, maxLon = 20.0))
-
-        assertEquals(1, adapter.getAlerts(60.0, 20.8).getOrThrow().size)
-        assertTrue(adapter.getAlerts(60.0, 21.2).getOrThrow().isEmpty())
-    }
-
-    @Test
-    fun `bbox wrapping the antimeridian matches points on both sides`() = runTest {
-        // minLon > maxLon means the box spans ±180° (e.g. Fiji).
-        respond(warning(minLat = -25.0, maxLat = -10.0, minLon = 170.0, maxLon = -170.0))
-
-        assertEquals(1, adapter.getAlerts(-17.0, 178.0).getOrThrow().size)
-        assertEquals(1, adapter.getAlerts(-17.0, -178.0).getOrThrow().size)
-        assertTrue(adapter.getAlerts(-17.0, 0.0).getOrThrow().isEmpty())
-    }
-
-    // --- Point-radius fallback ---
-
-    @Test
-    fun `falls back to haversine radius when no bbox is present`() = runTest {
-        respond(warning(lat = 10.0, lon = 10.0))
-
-        assertEquals(1, adapter.getAlerts(10.5, 10.0).getOrThrow().size) // ~56 km
-        assertTrue(adapter.getAlerts(12.0, 12.0).getOrThrow().isEmpty()) // ~310 km
-    }
-
-    // --- Status filtering ---
-
-    @Test
-    fun `non-Actual warnings are filtered out`() = runTest {
-        respond(
-            warning(minLat = 30.0, maxLat = 40.0, minLon = -110.0, maxLon = -100.0)
-                .copy(status = "Exercise"),
+    fun `getAlertsForCountry maps live SWIC schema by WMO member country`() = runTest {
+        respondMembers(
+            member(mid = "093", name = "United States of America"),
+            member(mid = "038", name = "Belize", dept = "National Meteorological Service"),
+        )
+        respondWarnings(
+            warning(mid = "093"),
+            warning(id = "urn:oid:bz-warning-1", mid = "038", event = "Wind", headline = "Small craft caution"),
         )
 
-        assertTrue(adapter.getAlerts(35.0, -105.0).getOrThrow().isEmpty())
+        val alerts = adapter.getAlertsForCountry("US").getOrThrow()
+
+        assertEquals(1, alerts.size)
+        val alert = alerts.first()
+        assertEquals("urn:oid:us-warning-1", alert.id)
+        assertEquals("Tornado Warning", alert.event)
+        assertEquals("Tornado Warning issued for central county", alert.headline)
+        assertEquals("Central County", alert.areaDescription)
+        assertEquals("National Weather Service", alert.senderName)
+        assertEquals(AlertSeverity.EXTREME, alert.severity)
+        assertEquals(AlertUrgency.IMMEDIATE, alert.urgency)
+        assertEquals("Observed", alert.certainty)
+        assertEquals("2026-06-11 23:32:00", alert.effective)
+        assertEquals("2026-06-12 01:00:00", alert.expires)
     }
 
-    // --- Error handling ---
+    @Test
+    fun `getAlertsForCountry maps SWIC numeric codes`() = runTest {
+        respondMembers(member())
+        respondWarnings(
+            warning(id = "unknown", severity = 0, urgency = 0, certainty = 0),
+            warning(id = "minor", severity = 1, urgency = 1, certainty = 1),
+            warning(id = "moderate", severity = 2, urgency = 2, certainty = 2),
+            warning(id = "severe", severity = 3, urgency = 3, certainty = 3),
+            warning(id = "extreme", severity = 4, urgency = 4, certainty = 4),
+        )
+
+        val alerts = adapter.getAlertsForCountry("US").getOrThrow().associateBy { it.id }
+
+        assertEquals(AlertSeverity.UNKNOWN, alerts.getValue("unknown").severity)
+        assertEquals(AlertSeverity.MINOR, alerts.getValue("minor").severity)
+        assertEquals(AlertSeverity.MODERATE, alerts.getValue("moderate").severity)
+        assertEquals(AlertSeverity.SEVERE, alerts.getValue("severe").severity)
+        assertEquals(AlertSeverity.EXTREME, alerts.getValue("extreme").severity)
+        assertEquals(AlertUrgency.PAST, alerts.getValue("minor").urgency)
+        assertEquals(AlertUrgency.FUTURE, alerts.getValue("moderate").urgency)
+        assertEquals(AlertUrgency.EXPECTED, alerts.getValue("severe").urgency)
+        assertEquals(AlertUrgency.IMMEDIATE, alerts.getValue("extreme").urgency)
+        assertEquals("Unknown", alerts.getValue("unknown").certainty)
+        assertEquals("Unlikely", alerts.getValue("minor").certainty)
+        assertEquals("Possible", alerts.getValue("moderate").certainty)
+        assertEquals("Likely", alerts.getValue("severe").certainty)
+        assertEquals("Observed", alerts.getValue("extreme").certainty)
+    }
 
     @Test
-    fun `getAlerts returns empty success on 404`() = runTest {
-        // The v2 warnings.json endpoint is currently dead (404) — this must
-        // not surface as a failure or it would trip fallback/retry storms.
+    fun `getAlertsForCountry falls back from blank effective to sent time`() = runTest {
+        respondMembers(member())
+        respondWarnings(warning(effective = "", sent = "2026-06-11 23:30:00"))
+
+        val alert = adapter.getAlertsForCountry("US").getOrThrow().single()
+
+        assertEquals("2026-06-11 23:30:00", alert.effective)
+    }
+
+    @Test
+    fun `getAlertsForCountry matches country aliases used by WMO members`() = runTest {
+        respondMembers(member(mid = "107", name = "Russian Federation", dept = "Roshydromet"))
+        respondWarnings(warning(mid = "107"))
+
+        val alerts = adapter.getAlertsForCountry("RU").getOrThrow()
+
+        assertEquals(1, alerts.size)
+        assertEquals("Roshydromet", alerts.single().senderName)
+    }
+
+    @Test
+    fun `getAlertsForCountry filters warnings when no WMO member matches the country`() = runTest {
+        respondMembers(member(mid = "038", name = "Belize"))
+
+        val alerts = adapter.getAlertsForCountry("US").getOrThrow()
+
+        assertTrue(alerts.isEmpty())
+        coVerify(exactly = 0) { api.getWarnings() }
+    }
+
+    @Test
+    fun `getAlerts returns empty without calling the SWIC APIs when only coordinates are available`() = runTest {
+        val alerts = adapter.getAlerts(35.0, -105.0).getOrThrow()
+
+        assertTrue(alerts.isEmpty())
+        coVerify(exactly = 0) { api.getMembers() }
+        coVerify(exactly = 0) { api.getWarnings() }
+    }
+
+    @Test
+    fun `getAlertsForCountry filters blank events and ids`() = runTest {
+        respondMembers(member())
+        respondWarnings(
+            warning(id = "valid"),
+            warning(id = "", event = "Wind", capUrl = ""),
+            warning(id = "blank-event", event = ""),
+        )
+
+        val alerts = adapter.getAlertsForCountry("US").getOrThrow()
+
+        assertEquals(listOf("valid"), alerts.map { it.id })
+    }
+
+    @Test
+    fun `getAlertsForCountry collapses duplicate alert ids`() = runTest {
+        respondMembers(member())
+        respondWarnings(
+            warning(id = "duplicate", headline = "English headline"),
+            warning(id = "duplicate", headline = "Spanish headline"),
+        )
+
+        val alerts = adapter.getAlertsForCountry("US").getOrThrow()
+
+        assertEquals(1, alerts.size)
+        assertEquals("English headline", alerts.single().headline)
+    }
+
+    @Test
+    fun `getAlertsForCountry returns empty success on 404`() = runTest {
+        respondMembers(member())
         coEvery { api.getWarnings() } throws httpException(404)
 
-        val result = adapter.getAlerts(35.0, -105.0)
+        val result = adapter.getAlertsForCountry("US")
+
         assertTrue(result.isSuccess)
         assertTrue(result.getOrThrow().isEmpty())
     }
 
     @Test
-    fun `getAlerts returns empty success on 400`() = runTest {
+    fun `getAlertsForCountry returns empty success on 400`() = runTest {
+        respondMembers(member())
         coEvery { api.getWarnings() } throws httpException(400)
 
-        val result = adapter.getAlerts(35.0, -105.0)
+        val result = adapter.getAlertsForCountry("US")
+
         assertTrue(result.isSuccess)
         assertTrue(result.getOrThrow().isEmpty())
     }
 
     @Test
-    fun `getAlerts returns failure on server error`() = runTest {
+    fun `getAlertsForCountry returns failure on server error`() = runTest {
+        respondMembers(member())
         coEvery { api.getWarnings() } throws httpException(500)
 
-        assertTrue(adapter.getAlerts(35.0, -105.0).isFailure)
+        assertTrue(adapter.getAlertsForCountry("US").isFailure)
     }
 
     @Test
-    fun `getAlerts returns failure on other exceptions`() = runTest {
+    fun `getAlertsForCountry returns failure on other exceptions`() = runTest {
+        respondMembers(member())
         coEvery { api.getWarnings() } throws RuntimeException("Connection timeout")
 
-        val result = adapter.getAlerts(35.0, -105.0)
+        val result = adapter.getAlertsForCountry("US")
+
         assertTrue(result.isFailure)
         assertEquals("Connection timeout", result.exceptionOrNull()?.message)
     }

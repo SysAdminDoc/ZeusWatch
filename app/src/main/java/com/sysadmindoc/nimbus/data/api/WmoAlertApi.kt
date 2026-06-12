@@ -1,6 +1,5 @@
 package com.sysadmindoc.nimbus.data.api
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import retrofit2.http.GET
 
@@ -9,15 +8,14 @@ import retrofit2.http.GET
  * Aggregates active weather warnings from 130+ National Meteorological
  * and Hydrological Services worldwide via the Common Alerting Protocol.
  * Free, no key required.
- *
- * NOTE: `json/warnings.json` on the v2 host returns 404 — the live feed is
- * `json/wmo_all.json` (different schema, no per-item coordinates). Rewrite
- * is roadmapped; see [WmoAlertAdapter].
  */
 interface WmoAlertApi {
 
-    @GET("json/warnings.json")
+    @GET("json/wmo_all.json")
     suspend fun getWarnings(): WmoWarningsResponse
+
+    @GET("json/wmo_member.json")
+    suspend fun getMembers(): List<WmoMemberRegion>
 
     companion object {
         const val BASE_URL = "https://severeweather.wmo.int/v2/"
@@ -26,33 +24,37 @@ interface WmoAlertApi {
 
 @Serializable
 data class WmoWarningsResponse(
-    val warnings: List<WmoWarning> = emptyList(),
+    val itemCount: Int = 0,
+    val lastUpdated: String? = null,
+    val items: List<WmoWarning> = emptyList(),
 )
 
 @Serializable
 data class WmoWarning(
     val id: String? = null,
-    val capId: String? = null,
     val event: String? = null,
     val headline: String? = null,
-    val description: String? = null,
-    val instruction: String? = null,
-    val severity: String? = null,
-    val urgency: String? = null,
-    val certainty: String? = null,
-    val sender: String? = null,
-    @SerialName("sender_name") val senderName: String? = null,
-    val effective: String? = null,
+    val sent: String? = null,
     val expires: String? = null,
-    val onset: String? = null,
-    @SerialName("area_desc") val areaDesc: String? = null,
-    val country: String? = null,
-    val lat: Double? = null,
-    val lon: Double? = null,
-    @SerialName("min_lat") val minLat: Double? = null,
-    @SerialName("max_lat") val maxLat: Double? = null,
-    @SerialName("min_lon") val minLon: Double? = null,
-    @SerialName("max_lon") val maxLon: Double? = null,
-    val status: String? = null,
-    @SerialName("msg_type") val msgType: String? = null,
+    val areaDesc: String? = null,
+    val mid: String? = null,
+    val ra: String? = null,
+    val s: Int? = null,
+    val u: Int? = null,
+    val c: Int? = null,
+    val capURL: String? = null,
+    val effective: String? = null,
+)
+
+@Serializable
+data class WmoMemberRegion(
+    val ra: Int? = null,
+    val members: List<WmoMember> = emptyList(),
+)
+
+@Serializable
+data class WmoMember(
+    val mid: String? = null,
+    val name: String? = null,
+    val dept: String? = null,
 )
