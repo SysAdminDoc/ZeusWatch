@@ -81,8 +81,8 @@ object AlertNotificationHelper {
             NotificationChannelGroup(GROUP_ID, context.getString(R.string.alert_channel_group_weather))
         )
 
-        val audioAttr = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+        val alarmAudioAttr = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
 
@@ -98,7 +98,7 @@ object AlertNotificationHelper {
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 500, 200, 500, 200, 500)
                 enableLights(true)
-                setSound(Settings.System.DEFAULT_ALARM_ALERT_URI, audioAttr)
+                setSound(Settings.System.DEFAULT_ALARM_ALERT_URI, alarmAudioAttr)
                 setBypassDnd(true)
             }
         )
@@ -442,7 +442,7 @@ object AlertNotificationHelper {
             }
         }
 
-        val notification = NotificationCompat.Builder(context, channel)
+        val builder = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_alert)
             .setContentTitle(title)
             .setContentText(alert.headline)
@@ -453,7 +453,16 @@ object AlertNotificationHelper {
             .setGroup(GROUP_ID)
             .setCategory(categoryForSeverity(alert.severity))
             .setColor(alert.severity.color.toArgb())
-            .build()
+
+        fullScreenPendingIntentForExtremeAlert(
+            context = context,
+            notificationId = notificationId,
+            severity = alert.severity,
+        )?.let { fullScreenIntent ->
+            builder.setFullScreenIntent(fullScreenIntent, true)
+        }
+
+        val notification = builder.build()
 
         try {
             val nm = NotificationManagerCompat.from(context)
@@ -497,6 +506,23 @@ object AlertNotificationHelper {
         AlertSeverity.EXTREME -> NotificationCompat.CATEGORY_ALARM
         AlertSeverity.SEVERE -> NotificationCompat.CATEGORY_ALARM
         else -> NotificationCompat.CATEGORY_RECOMMENDATION
+    }
+
+    private fun fullScreenPendingIntentForExtremeAlert(
+        context: Context,
+        notificationId: Int,
+        severity: AlertSeverity,
+    ): PendingIntent? {
+        if (severity != AlertSeverity.EXTREME) return null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (!nm.canUseFullScreenIntent()) return null
+        }
+        return deepLinkPendingIntent(
+            context = context,
+            requestCode = notificationId + 0x10000,
+            uri = URI_WEATHER_ALERTS,
+        )
     }
 
     private fun hasNotificationPermission(context: Context): Boolean {

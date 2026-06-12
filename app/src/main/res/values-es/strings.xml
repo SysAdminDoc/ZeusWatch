@@ -153,6 +153,10 @@
     <string name="alert_banner_list_cd">%1$s. Toca para ver detalles.</string>
     <string name="alert_banner_item_cd">%1$s: %2$s</string>
     <string name="alert_banner_icon_cd">Alerta meteorologica: %1$s</string>
+    <string name="alert_extreme_takeover_title">Alerta meteorologica extrema</string>
+    <string name="alert_extreme_takeover_instruction_title">Indicaciones inmediatas</string>
+    <string name="alert_extreme_takeover_action">Abrir detalles de seguridad</string>
+    <string name="alert_extreme_takeover_cd">%1$s. %2$s. %3$s. Toca para ver detalles de seguridad.</string>
     <string name="alert_detail_alert_cd">Alerta meteorologica %1$s</string>
     <string name="alert_detail_urgency_badge">Urgencia %1$s</string>
     <string name="alert_detail_title">Detalles de alerta</string>
