@@ -18,6 +18,7 @@ import androidx.compose.runtime.Stable
 import com.google.crypto.tink.Aead
 import com.google.crypto.tink.KeyTemplate
 import com.google.crypto.tink.RegistryConfiguration
+import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.aead.PredefinedAeadParameters
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -74,6 +75,7 @@ private fun createEncryptedApiKeyStore(
 }
 
 private fun createApiKeyAead(context: Context): Aead {
+    AeadConfig.register()
     val keysetHandle = AndroidKeysetManager.Builder()
         .withSharedPref(context, API_KEY_TINK_KEYSET_NAME, API_KEY_TINK_KEYSET_PREFS)
         .withKeyTemplate(KeyTemplate.createFrom(PredefinedAeadParameters.AES256_GCM))

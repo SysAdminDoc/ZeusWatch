@@ -85,6 +85,38 @@ class RadarScreenLogicTest {
     }
 
     @Test
+    fun `report fab is hidden for embedded web radar to avoid third party map controls`() {
+        assertTrue(
+            shouldShowRadarReportFab(
+                canSubmitReport = true,
+                provider = RadarProvider.NATIVE_MAPLIBRE,
+                embedded = true,
+            )
+        )
+        assertFalse(
+            shouldShowRadarReportFab(
+                canSubmitReport = true,
+                provider = RadarProvider.WINDY_WEBVIEW,
+                embedded = true,
+            )
+        )
+        assertTrue(
+            shouldShowRadarReportFab(
+                canSubmitReport = true,
+                provider = RadarProvider.WINDY_WEBVIEW,
+                embedded = false,
+            )
+        )
+        assertFalse(
+            shouldShowRadarReportFab(
+                canSubmitReport = false,
+                provider = RadarProvider.NATIVE_MAPLIBRE,
+                embedded = true,
+            )
+        )
+    }
+
+    @Test
     fun `radarTopControlsSpacing keeps extra clearance when the back button is present`() {
         assertEquals(8.dp, radarTopControlsSpacing(showBackButton = false))
         assertEquals(10.dp, radarTopControlsSpacing(showBackButton = true))
