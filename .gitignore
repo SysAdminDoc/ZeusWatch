@@ -18,6 +18,8 @@ local.properties
 *.jks
 google-services.json
 .kotlin/
+node_modules/
+firestore-debug.log
 *.bak
 
 # Markdown files local-only (except README)

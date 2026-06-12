@@ -182,7 +182,7 @@
 
     <!-- Community Reports -->
     <string name="report_sheet_title">Reportar condiciones</string>
-    <string name="report_sheet_body">Comparte lo que ves ahora. Los reportes son anonimos y ayudan a usuarios cercanos.</string>
+    <string name="report_sheet_body">Comparte lo que ves ahora. Los reportes son anonimos, ayudan a usuarios cercanos y no se pueden editar despues de enviarlos.</string>
     <string name="report_note_label">Agregar nota (opcional)</string>
     <string name="report_note_placeholder">p. ej. Llovizna ligera comenzando</string>
     <string name="report_note_count">%1$d/%2$d</string>
