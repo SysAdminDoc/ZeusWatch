@@ -949,8 +949,8 @@
     <string name="wind_nw">NW</string>
 
     <!-- App Shortcuts -->
-    <string name="shortcut_search">Search</string>
-    <string name="shortcut_search_long">Search Location</string>
+    <string name="shortcut_search">Add</string>
+    <string name="shortcut_search_long">Add Location</string>
     <string name="shortcut_radar">Radar</string>
     <string name="shortcut_radar_long">Weather Radar</string>
     <string name="shortcut_settings">Settings</string>
