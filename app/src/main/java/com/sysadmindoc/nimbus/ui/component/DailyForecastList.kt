@@ -205,6 +205,7 @@ private fun DailyTempRow(
     onClick: () -> Unit,
 ) {
     val s = LocalUnitSettings.current
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -218,7 +219,7 @@ private fun DailyTempRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
+            WeatherFormatter.formatRelativeDayLabel(context, day.date, referenceDate),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
             modifier = Modifier.width(72.dp),
         )
@@ -260,6 +261,7 @@ private fun DailyWindRow(
     onClick: () -> Unit,
 ) {
     val s = LocalUnitSettings.current
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -273,7 +275,7 @@ private fun DailyWindRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
+            WeatherFormatter.formatRelativeDayLabel(context, day.date, referenceDate),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
             modifier = Modifier.width(72.dp),
         )
@@ -318,6 +320,7 @@ private fun DailyUvRow(
     onClick: () -> Unit,
 ) {
     val s = LocalUnitSettings.current
+    val context = LocalContext.current
     val uv = day.uvIndexMax ?: 0.0
     val uvColor = when {
         uv < 3 -> Color(0xFF4CAF50)
@@ -340,7 +343,7 @@ private fun DailyUvRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
+            WeatherFormatter.formatRelativeDayLabel(context, day.date, referenceDate),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
             modifier = Modifier.width(72.dp),
         )
@@ -385,6 +388,7 @@ private fun DailyPrecipRow(
     onClick: () -> Unit,
 ) {
     val s = LocalUnitSettings.current
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -398,7 +402,7 @@ private fun DailyPrecipRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
+            WeatherFormatter.formatRelativeDayLabel(context, day.date, referenceDate),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
             modifier = Modifier.width(72.dp),
         )
@@ -454,6 +458,7 @@ private fun DailyOverviewRow(
     onDetailClick: () -> Unit,
 ) {
     val s = LocalUnitSettings.current
+    val context = LocalContext.current
     val rowShape = RoundedCornerShape(10.dp)
 
     Row(
@@ -470,11 +475,11 @@ private fun DailyOverviewRow(
     ) {
         Column(modifier = Modifier.width(92.dp)) {
             Text(
-                WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
+                WeatherFormatter.formatRelativeDayLabel(context, day.date, referenceDate),
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
             )
             Text(
-                text = day.weatherCode.description,
+                text = stringResource(day.weatherCode.descriptionRes()),
                 style = MaterialTheme.typography.labelSmall,
                 color = NimbusTextTertiary,
                 maxLines = 1,
@@ -630,12 +635,12 @@ private fun dailyHeaderSummary(
 
     val warmest = daily.maxByOrNull { it.temperatureHigh }
     val wettest = daily.maxByOrNull { it.precipitationProbability }
-    val warmestLabel = warmest?.let { WeatherFormatter.formatRelativeDayLabel(it.date, referenceDate) }
+    val warmestLabel = warmest?.let { WeatherFormatter.formatRelativeDayLabel(context, it.date, referenceDate) }
         ?: context.getString(R.string.forecast_later)
     val warmestTemp = warmest?.let { WeatherFormatter.formatTemperature(it.temperatureHigh, settings) } ?: "--"
 
     return if ((wettest?.precipitationProbability ?: 0) >= 40) {
-        val wettestLabel = WeatherFormatter.formatRelativeDayLabel(wettest!!.date, referenceDate)
+        val wettestLabel = WeatherFormatter.formatRelativeDayLabel(context, wettest!!.date, referenceDate)
         context.getString(R.string.forecast_daily_warm_rain, warmestLabel, warmestTemp, wettestLabel)
     } else {
         context.getString(R.string.forecast_daily_warm_steady, warmestLabel, warmestTemp)

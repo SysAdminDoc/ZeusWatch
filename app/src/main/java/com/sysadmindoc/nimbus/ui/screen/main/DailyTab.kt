@@ -180,7 +180,7 @@ private fun DailyDetailRow(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    day.weatherCode.description,
+                    stringResource(day.weatherCode.descriptionRes()),
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                 )
@@ -219,7 +219,7 @@ private fun DailyDetailRow(
                 DetailChip(stringResource(R.string.forecast_detail_wind), WeatherFormatter.formatWindSpeed(it, s))
             }
             day.uvIndexMax?.let {
-                DetailChip(stringResource(R.string.forecast_tab_uv), WeatherFormatter.formatUvLevel(it))
+                DetailChip(stringResource(R.string.forecast_tab_uv), stringResource(WeatherFormatter.uvDescriptionRes(it)))
             }
         }
     }

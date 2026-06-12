@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -182,6 +183,7 @@ private fun HourlyRow(
     onClick: () -> Unit,
 ) {
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
+    val context = LocalContext.current
     val shape = RoundedCornerShape(12.dp)
     Row(
         modifier = Modifier
@@ -214,6 +216,7 @@ private fun HourlyRow(
         Column(modifier = Modifier.width(76.dp)) {
             Text(
                 WeatherFormatter.formatRelativeHourLabel(
+                    context = context,
                     time = hour.time,
                     referenceTime = if (isCurrent) referenceTime else null,
                     s = s,
@@ -247,7 +250,7 @@ private fun HourlyRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                hour.weatherCode.description,
+                stringResource(hour.weatherCode.descriptionRes()),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
             )

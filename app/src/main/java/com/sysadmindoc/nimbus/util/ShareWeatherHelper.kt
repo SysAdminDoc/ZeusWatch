@@ -51,7 +51,7 @@ object ShareWeatherHelper {
             context.getString(
                 R.string.share_text_now,
                 WeatherFormatter.formatTemperatureUnit(current.temperature, s),
-                current.weatherCode.description,
+                current.weatherCode.localizedDescription(context),
             ),
         )
         appendLine(
@@ -84,7 +84,7 @@ object ShareWeatherHelper {
             context.getString(
                 R.string.share_text_uv,
                 current.uvIndex.toInt(),
-                WeatherFormatter.uvDescription(current.uvIndex),
+                WeatherFormatter.uvDescription(context, current.uvIndex),
             ),
         )
         appendLine(
@@ -112,8 +112,8 @@ object ShareWeatherHelper {
         if (data.daily.isNotEmpty()) {
             appendLine(context.getString(R.string.share_text_forecast_header))
             data.daily.take(3).forEach { day ->
-                val label = WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate)
-                val desc = day.weatherCode.description
+                val label = WeatherFormatter.formatRelativeDayLabel(context, day.date, referenceDate)
+                val desc = day.weatherCode.localizedDescription(context)
                 val hi = WeatherFormatter.formatTemperature(day.temperatureHigh, s)
                 val lo = WeatherFormatter.formatTemperature(day.temperatureLow, s)
                 val precip = day.precipitationProbability
@@ -189,7 +189,7 @@ object ShareWeatherHelper {
         }
 
         canvas.drawText(WeatherFormatter.formatTemperature(current.temperature, s), 80f, 300f, textPaint(TEXT_PRIMARY, 120f, bold = true))
-        canvas.drawText(current.weatherCode.description, 80f, 350f, textPaint(TEXT_SECONDARY, 36f))
+        canvas.drawText(current.weatherCode.localizedDescription(context), 80f, 350f, textPaint(TEXT_SECONDARY, 36f))
         canvas.drawText(
             context.getString(
                 R.string.share_image_feels_like,
@@ -217,7 +217,7 @@ object ShareWeatherHelper {
             context.getString(R.string.uv_index) to context.getString(
                 R.string.share_image_uv_value,
                 current.uvIndex.toInt(),
-                WeatherFormatter.uvDescription(current.uvIndex),
+                WeatherFormatter.uvDescription(context, current.uvIndex),
             ),
             context.getString(R.string.pressure) to WeatherFormatter.formatPressure(current.pressure, s),
             context.getString(R.string.cloud_cover) to context.getString(R.string.percent, current.cloudCover),
@@ -236,12 +236,12 @@ object ShareWeatherHelper {
         data.daily.take(3).forEachIndexed { i, day ->
             val x = 80f + i * dayWidth
             canvas.drawText(
-                WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
+                WeatherFormatter.formatRelativeDayLabel(context, day.date, referenceDate),
                 x,
                 forecastY,
                 textPaint(TEXT_SECONDARY, 24f),
             )
-            canvas.drawText(day.weatherCode.description, x, forecastY + 30f, textPaint(TEXT_TERTIARY, 20f))
+            canvas.drawText(day.weatherCode.localizedDescription(context), x, forecastY + 30f, textPaint(TEXT_TERTIARY, 20f))
             canvas.drawText(
                 context.getString(
                     R.string.share_image_temperature_pair,
@@ -305,14 +305,21 @@ object ShareWeatherHelper {
                 val intent = Intent(Intent.ACTION_SEND).apply {
                     type = "image/png"
                     putExtra(Intent.EXTRA_STREAM, uri)
-                    putExtra(Intent.EXTRA_TEXT, "Weather for ${data.location.name} - ZeusWatch")
+                    putExtra(
+                        Intent.EXTRA_TEXT,
+                        appContext.getString(
+                            R.string.share_weather_image_text,
+                            data.location.name,
+                            appContext.getString(R.string.app_name),
+                        ),
+                    )
                     // ClipData carries the grant to the share-sheet itself so
                     // its preview can read the stream (EXTRA_STREAM alone only
                     // grants the eventually-chosen target).
                     clipData = ClipData.newRawUri(null, uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                val chooser = Intent.createChooser(intent, "Share weather image").apply {
+                val chooser = Intent.createChooser(intent, appContext.getString(R.string.share_weather_image_chooser)).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     clipData = ClipData.newRawUri(null, uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

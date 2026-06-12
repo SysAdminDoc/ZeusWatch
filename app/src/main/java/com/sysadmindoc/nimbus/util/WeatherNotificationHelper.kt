@@ -65,7 +65,7 @@ object WeatherNotificationHelper {
         )
 
         val temp = WeatherFormatter.formatTemperature(data.current.temperature, s)
-        val condition = data.current.weatherCode.description
+        val condition = data.current.weatherCode.localizedDescription(context)
         val high = WeatherFormatter.formatTemperature(data.current.dailyHigh, s)
         val low = WeatherFormatter.formatTemperature(data.current.dailyLow, s)
         val feelsLike = WeatherFormatter.formatTemperature(data.current.feelsLike, s)
@@ -122,7 +122,7 @@ object WeatherNotificationHelper {
             R.string.daily_briefing_notification_title,
             data.location.name,
             temp,
-            data.current.weatherCode.description,
+            data.current.weatherCode.localizedDescription(context),
         )
         val notification = NotificationCompat.Builder(context, DAILY_BRIEFING_CHANNEL_ID)
             .setSmallIcon(weatherNotificationIcon(data.current.weatherCode, data.current.isDay))

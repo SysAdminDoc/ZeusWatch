@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -69,10 +70,11 @@ fun HourlyForecastDetailSheet(
     onDismiss: () -> Unit,
 ) {
     val settings = LocalUnitSettings.current
-    val title = WeatherFormatter.formatRelativeHourLabel(hour.time, referenceTime, settings)
+    val context = LocalContext.current
+    val title = WeatherFormatter.formatRelativeHourLabel(context, hour.time, referenceTime, settings)
     ForecastDetailSheetFrame(
         title = stringResource(R.string.forecast_detail_hourly_title, title),
-        subtitle = hour.weatherCode.description,
+        subtitle = stringResource(hour.weatherCode.descriptionRes()),
         weatherCode = hour.weatherCode,
         isDay = hour.isDay,
         heroValue = WeatherFormatter.formatTemperature(hour.temperature, settings),
@@ -90,10 +92,11 @@ fun DailyForecastDetailSheet(
     onDismiss: () -> Unit,
 ) {
     val settings = LocalUnitSettings.current
-    val dayLabel = WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate)
+    val context = LocalContext.current
+    val dayLabel = WeatherFormatter.formatRelativeDayLabel(context, day.date, referenceDate)
     ForecastDetailSheetFrame(
         title = stringResource(R.string.forecast_detail_daily_title, dayLabel),
-        subtitle = day.weatherCode.description,
+        subtitle = stringResource(day.weatherCode.descriptionRes()),
         weatherCode = day.weatherCode,
         isDay = true,
         heroValue = stringResource(
@@ -300,7 +303,7 @@ private fun hourlyMetrics(hour: HourlyConditions, settings: NimbusSettings): Lis
             DetailMetric(
                 Icons.Outlined.WbSunny,
                 stringResource(R.string.uv_index),
-                "${WeatherFormatter.formatUvIndex(it)} ${WeatherFormatter.formatUvLevel(it)}",
+                "${WeatherFormatter.formatUvIndex(it)} ${stringResource(WeatherFormatter.uvDescriptionRes(it))}",
                 NimbusBlueAccent,
             )
         )
@@ -378,7 +381,7 @@ private fun dailyMetrics(day: DailyConditions, settings: NimbusSettings): List<D
             DetailMetric(
                 Icons.Outlined.WbSunny,
                 stringResource(R.string.forecast_detail_uv_max),
-                "${WeatherFormatter.formatUvIndex(it)} ${WeatherFormatter.formatUvLevel(it)}",
+                "${WeatherFormatter.formatUvIndex(it)} ${stringResource(WeatherFormatter.uvDescriptionRes(it))}",
                 NimbusBlueAccent,
             )
         )

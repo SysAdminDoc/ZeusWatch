@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -42,14 +43,15 @@ fun UvIndexBar(
     referenceTime: java.time.LocalDateTime? = hourly.firstOrNull()?.time,
 ) {
     val s = LocalUnitSettings.current
+    val context = LocalContext.current
     val level = stringResource(uvLevelRes(uvIndex))
 
     // Find peak UV hour from hourly data
     val peakHour = hourly.take(12).maxByOrNull { it.uvIndex ?: 0.0 }
     val peakTimeRaw = if (peakHour != null) {
-        WeatherFormatter.formatRelativeHourLabel(peakHour.time, referenceTime, s)
+        WeatherFormatter.formatRelativeHourLabel(context, peakHour.time, referenceTime, s)
     } else null
-    val peakTimeLabel = if (peakTimeRaw == "Now") stringResource(R.string.common_now) else peakTimeRaw
+    val peakTimeLabel = peakTimeRaw
     val peakUvNote = if (hourly.isNotEmpty()) {
         if (peakHour != null && (peakHour.uvIndex ?: 0.0) > uvIndex) {
             stringResource(R.string.uv_peak_at, peakTimeLabel ?: "")

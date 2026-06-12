@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.widget
 
 import android.content.Context
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.data.model.WeatherCode
 import java.util.Locale
 
 internal data class WidgetStrings(
@@ -29,6 +30,7 @@ internal data class WidgetStrings(
     val updatedLiveContentDescription: String,
     val updatedStaleContentDescriptionFormat: String,
     val weatherIconContentDescription: String,
+    val weatherDescriptions: Map<Int, String>,
     val savedCityUnavailableTemp: String,
     val savedCityContentDescriptionFormat: String,
 ) {
@@ -55,7 +57,7 @@ internal data class WidgetStrings(
         }
 
     fun weatherDescription(code: Int, isDay: Boolean): String =
-        WidgetUtils.weatherDescription(code, isDay, weatherIconContentDescription)
+        weatherDescriptions[code] ?: weatherIconContentDescription
 
     fun savedCityContentDescription(cityName: String, tempLabel: String): String =
         String.format(Locale.getDefault(), savedCityContentDescriptionFormat, cityName, tempLabel)
@@ -87,6 +89,7 @@ internal fun widgetStrings(context: Context): WidgetStrings = with(context) {
         updatedLiveContentDescription = getString(R.string.widget_updated_live_cd),
         updatedStaleContentDescriptionFormat = getString(R.string.widget_updated_stale_cd),
         weatherIconContentDescription = getString(R.string.widget_weather_icon_cd),
+        weatherDescriptions = WeatherCode.entries.associate { it.code to getString(it.descriptionRes()) },
         savedCityUnavailableTemp = getString(R.string.widget_saved_city_unavailable_temp),
         savedCityContentDescriptionFormat = getString(R.string.widget_saved_city_cd),
     )

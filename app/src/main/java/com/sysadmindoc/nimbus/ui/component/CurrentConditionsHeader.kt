@@ -106,12 +106,12 @@ private fun currentHeaderCopy(
     yesterdayHigh: Double?,
     settings: NimbusSettings,
 ): CurrentHeaderCopy {
-    val feelsLikeReason = WeatherFormatter.feelsLikeReason(
+    val feelsLikeReason = WeatherFormatter.feelsLikeReasonRes(
         current.temperature,
         current.feelsLike,
         current.windSpeed,
         current.humidity,
-    )
+    )?.let { stringResource(it) }
     val formattedFeelsLike = WeatherFormatter.formatTemperature(current.feelsLike, settings)
     val feelsLikeText = if (feelsLikeReason != null) {
         stringResource(R.string.current_feels_like_with_reason, formattedFeelsLike, feelsLikeReason)
@@ -244,7 +244,7 @@ private fun CurrentHeaderTextBlock(
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = current.weatherCode.description,
+            text = stringResource(current.weatherCode.descriptionRes()),
             style = MaterialTheme.typography.titleLarge,
             color = NimbusTextPrimary.copy(alpha = 0.94f),
             maxLines = 2,
