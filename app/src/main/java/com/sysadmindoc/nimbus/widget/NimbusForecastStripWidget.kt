@@ -80,7 +80,7 @@ private fun ForecastStripContent(
             ) {
                 Text(
                     strings.nextEyebrow,
-                    style = WidgetTheme.eyebrowStyle,
+                    style = widgetEyebrowStyle(),
                     maxLines = 1,
                 )
                 Text(data.locationName, style = WidgetTheme.captionStyle, maxLines = 1)
@@ -136,7 +136,7 @@ private fun ForecastStripContent(
                         if (hour.precipChance > 20) {
                             Text(
                                 "${hour.precipChance}%",
-                                style = WidgetTheme.precipStyle,
+                                style = widgetPrecipStyle(),
                             )
                         }
                     }

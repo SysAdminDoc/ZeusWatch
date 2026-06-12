@@ -81,7 +81,7 @@ private fun SmallWidgetContent(
                 Column(modifier = GlanceModifier.defaultWeight()) {
                     Text(
                         text = strings.currentEyebrow,
-                        style = WidgetTheme.eyebrowStyle,
+                        style = widgetEyebrowStyle(),
                     )
                     Spacer(modifier = GlanceModifier.height(3.dp))
                     Text(

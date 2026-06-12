@@ -9,8 +9,6 @@
         android:shortcutLongLabel="@string/shortcut_search_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.sysadmindoc.nimbus"
-            android:targetClass="com.sysadmindoc.nimbus.MainActivity"
             android:data="zeuswatch://locations" />
     </shortcut>
 
@@ -22,8 +20,6 @@
         android:shortcutLongLabel="@string/shortcut_radar_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.sysadmindoc.nimbus"
-            android:targetClass="com.sysadmindoc.nimbus.MainActivity"
             android:data="zeuswatch://radar" />
     </shortcut>
 
@@ -35,8 +31,6 @@
         android:shortcutLongLabel="@string/shortcut_settings_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.sysadmindoc.nimbus"
-            android:targetClass="com.sysadmindoc.nimbus.MainActivity"
             android:data="zeuswatch://settings" />
     </shortcut>
 
@@ -48,8 +42,6 @@
         android:shortcutLongLabel="@string/shortcut_compare_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.sysadmindoc.nimbus"
-            android:targetClass="com.sysadmindoc.nimbus.MainActivity"
             android:data="zeuswatch://compare" />
     </shortcut>
 

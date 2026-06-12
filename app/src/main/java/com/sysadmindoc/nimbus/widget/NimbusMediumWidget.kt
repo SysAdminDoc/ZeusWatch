@@ -82,7 +82,7 @@ private fun MediumWidgetContent(
             Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(
                     strings.overviewEyebrow,
-                    style = WidgetTheme.eyebrowStyle,
+                    style = widgetEyebrowStyle(),
                 )
                 Spacer(modifier = GlanceModifier.height(3.dp))
                 Text(
@@ -146,7 +146,7 @@ private fun MediumWidgetContent(
             modifier = GlanceModifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(strings.next3Days, style = WidgetTheme.eyebrowStyle)
+            Text(strings.next3Days, style = widgetEyebrowStyle())
             Spacer(modifier = GlanceModifier.defaultWeight())
             Text(strings.tapToOpen, style = WidgetTheme.captionStyle)
         }
