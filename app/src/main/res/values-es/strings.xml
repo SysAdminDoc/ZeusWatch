@@ -131,6 +131,9 @@
     <string name="current_weather_channel_desc">Notificacion persistente con las condiciones meteorologicas actuales</string>
     <string name="current_weather_notification_title">%1$s %2$s • %3$s</string>
     <string name="current_weather_notification_body">Sensacion %1$s • Max:%2$s Min:%3$s</string>
+    <string name="daily_briefing_channel_name">Resumen diario</string>
+    <string name="daily_briefing_channel_desc">Resumen matutino opcional del pronostico.</string>
+    <string name="daily_briefing_notification_title">Hoy en %1$s: %2$s, %3$s</string>
     <string name="crash_dialog_title">ZeusWatch se cerro inesperadamente</string>
     <string name="crash_dialog_text">Enviar un registro de fallo depurado por correo? No se incluyen claves API ni coordenadas.</string>
     <string name="crash_dialog_send">Enviar</string>
@@ -738,6 +741,11 @@
     <string name="settings_alert_source">Fuente de alertas</string>
     <string name="settings_persistent_notification">Notificacion meteorologica persistente</string>
     <string name="settings_persistent_notification_desc">Notificacion siempre activa con condiciones actuales</string>
+    <string name="settings_daily_briefing">Resumen diario</string>
+    <string name="settings_daily_briefing_desc">Enviar un resumen tranquilo del pronostico cada manana</string>
+    <string name="settings_daily_briefing_time">Hora del resumen</string>
+    <string name="settings_daily_briefing_time_desc">Programado con la hora local de este dispositivo</string>
+    <string name="settings_daily_briefing_picker_title">Elegir hora del resumen</string>
     <string name="settings_nowcasting_alerts">Alertas de lluvia cercana</string>
     <string name="settings_nowcasting_alerts_desc">Avisar cuando se acerque lluvia</string>
     <string name="settings_custom_alert_rules">Reglas de alerta personalizadas</string>

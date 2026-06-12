@@ -24,7 +24,9 @@ import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 object WeatherNotificationHelper {
 
     private const val CHANNEL_ID = "nimbus_current_weather"
+    private const val DAILY_BRIEFING_CHANNEL_ID = "nimbus_daily_briefing"
     private const val NOTIFICATION_ID = 9000
+    private const val DAILY_BRIEFING_NOTIFICATION_ID = 9001
 
     fun createChannel(context: Context) {
         val channel = NotificationChannel(
@@ -35,8 +37,17 @@ object WeatherNotificationHelper {
             description = context.getString(R.string.current_weather_channel_desc)
             setShowBadge(false)
         }
+        val dailyBriefingChannel = NotificationChannel(
+            DAILY_BRIEFING_CHANNEL_ID,
+            context.getString(R.string.daily_briefing_channel_name),
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply {
+            description = context.getString(R.string.daily_briefing_channel_desc)
+            setShowBadge(false)
+        }
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(channel)
+        nm.createNotificationChannel(dailyBriefingChannel)
     }
 
     fun showOrUpdate(context: Context, data: WeatherData, s: NimbusSettings) {
@@ -87,6 +98,54 @@ object WeatherNotificationHelper {
 
     fun dismiss(context: Context) {
         NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
+    }
+
+    fun showDailyBriefing(
+        context: Context,
+        data: WeatherData,
+        settings: NimbusSettings,
+        summary: String,
+    ): Boolean {
+        if (!hasNotificationPermission(context)) return false
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            DAILY_BRIEFING_NOTIFICATION_ID,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val temp = WeatherFormatter.formatTemperature(data.current.temperature, settings)
+        val title = context.getString(
+            R.string.daily_briefing_notification_title,
+            data.location.name,
+            temp,
+            data.current.weatherCode.description,
+        )
+        val notification = NotificationCompat.Builder(context, DAILY_BRIEFING_CHANNEL_ID)
+            .setSmallIcon(weatherNotificationIcon(data.current.weatherCode, data.current.isDay))
+            .setContentTitle(title)
+            .setContentText(summary)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(summary))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .build()
+
+        return try {
+            NotificationManagerCompat.from(context).notify(DAILY_BRIEFING_NOTIFICATION_ID, notification)
+            true
+        } catch (_: SecurityException) {
+            false
+        }
+    }
+
+    fun dismissDailyBriefing(context: Context) {
+        NotificationManagerCompat.from(context).cancel(DAILY_BRIEFING_NOTIFICATION_ID)
     }
 
     private fun weatherNotificationIcon(code: WeatherCode, isDay: Boolean): Int = when {

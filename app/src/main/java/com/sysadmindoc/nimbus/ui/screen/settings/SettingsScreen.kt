@@ -193,6 +193,14 @@ fun SettingsScreen(
                     viewModel.setNowcastingAlerts(false)
                 }
             },
+            onDailyBriefingEnabled = { enabled ->
+                if (enabled) {
+                    enableNotificationsIfPermitted { viewModel.setDailyBriefingEnabled(true) }
+                } else {
+                    viewModel.setDailyBriefingEnabled(false)
+                }
+            },
+            onDailyBriefingMinutes = viewModel::setDailyBriefingMinutes,
             onDrivingAlerts = viewModel::setDrivingAlerts,
             onHealthAlertsEnabled = viewModel::setHealthAlertsEnabled,
             onShowSnowfall = viewModel::setShowSnowfall,

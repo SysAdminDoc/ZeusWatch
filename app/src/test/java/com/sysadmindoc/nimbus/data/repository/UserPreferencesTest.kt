@@ -64,6 +64,8 @@ class UserPreferencesTest {
 
         assertTrue(settings.persistentWeatherNotif)
         assertTrue(settings.nowcastingAlerts)
+        assertFalse(settings.dailyBriefingEnabled)
+        assertEquals(DEFAULT_DAILY_BRIEFING_MINUTES, settings.dailyBriefingMinutes)
         assertFalse(settings.drivingAlerts)
         assertFalse(settings.healthAlertsEnabled)
         assertFalse(settings.migraineAlerts)
@@ -483,5 +485,12 @@ class UserPreferencesTest {
         assertEquals(PressureUnit.HPA, preferredPressureUnitFor(TempUnit.CELSIUS))
         assertEquals(PrecipUnit.MM, preferredPrecipUnitFor(TempUnit.CELSIUS))
         assertEquals(VisibilityUnit.KM, preferredVisibilityUnitFor(TempUnit.CELSIUS))
+    }
+
+    @Test
+    fun dailyBriefingMinutesClampToOneDay() {
+        assertEquals(0, normalizeDailyBriefingMinutes(-12))
+        assertEquals(8 * 60, normalizeDailyBriefingMinutes(8 * 60))
+        assertEquals(23 * 60 + 59, normalizeDailyBriefingMinutes(24 * 60 + 15))
     }
 }

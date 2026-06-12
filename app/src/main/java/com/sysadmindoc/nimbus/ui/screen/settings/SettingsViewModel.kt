@@ -7,6 +7,7 @@ import com.sysadmindoc.nimbus.data.model.IconPack
 import com.sysadmindoc.nimbus.data.repository.*
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
+import com.sysadmindoc.nimbus.util.DailyBriefingWorker
 import com.sysadmindoc.nimbus.util.HealthAlertWorker
 import com.sysadmindoc.nimbus.util.NowcastAlertWorker
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
@@ -19,6 +20,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -99,6 +101,23 @@ class SettingsViewModel @Inject constructor(
             NowcastAlertWorker.schedule(appContext)
         } else {
             NowcastAlertWorker.cancel(appContext)
+        }
+    }
+    fun setDailyBriefingEnabled(enabled: Boolean) = viewModelScope.launch {
+        prefs.setDailyBriefingEnabled(enabled)
+        val settings = prefs.settings.first()
+        if (enabled) {
+            DailyBriefingWorker.schedule(appContext, settings.dailyBriefingMinutes)
+        } else {
+            DailyBriefingWorker.cancel(appContext)
+            WeatherNotificationHelper.dismissDailyBriefing(appContext)
+        }
+    }
+    fun setDailyBriefingMinutes(minutes: Int) = viewModelScope.launch {
+        prefs.setDailyBriefingMinutes(minutes)
+        val settings = prefs.settings.first()
+        if (settings.dailyBriefingEnabled) {
+            DailyBriefingWorker.schedule(appContext, settings.dailyBriefingMinutes)
         }
     }
     fun setDrivingAlerts(enabled: Boolean) = viewModelScope.launch { prefs.setDrivingAlerts(enabled) }
