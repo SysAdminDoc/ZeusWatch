@@ -336,11 +336,15 @@ class AlertRepositoryTest {
         response = null,
     )
 
-    private fun fakeGlobalAdapter(alerts: List<WeatherAlert> = emptyList()): AlertSourceAdapter {
+    private fun fakeGlobalAdapter(
+        alerts: List<WeatherAlert> = emptyList(),
+        isMetered: Boolean = false,
+    ): AlertSourceAdapter {
         val adapter = mockk<AlertSourceAdapter>()
         every { adapter.sourceId } returns "global_fake"
         every { adapter.displayName } returns "Global Fake"
         every { adapter.supportedRegions } returns setOf("GLOBAL")
+        every { adapter.isMetered } returns isMetered
         coEvery { adapter.getAlerts(any(), any()) } returns Result.success(alerts)
         return adapter
     }
@@ -399,6 +403,31 @@ class AlertRepositoryTest {
         assertEquals(2, result.getOrThrow().size)
         coVerify(exactly = 1) { globalAdapter.getAlerts(any(), any()) }
         coVerify(exactly = 1) { api.getActiveAlerts(any(), any(), any()) }
+    }
+
+    @Test
+    fun `background-safe fetch excludes metered global adapters`() = runTest {
+        val brAddress = mockk<Address>()
+        every { brAddress.countryCode } returns "BR"
+        every { anyConstructed<Geocoder>().getFromLocation(any(), any(), any()) } returns listOf(brAddress)
+
+        val freeGlobalAdapter = fakeGlobalAdapter(listOf(makeGlobalAlert(id = "free-global")))
+        val meteredGlobalAdapter = fakeGlobalAdapter(
+            alerts = listOf(makeGlobalAlert(id = "metered-global")),
+            isMetered = true,
+        )
+
+        val repo = AlertRepository(context, setOf(nwsAdapter, freeGlobalAdapter, meteredGlobalAdapter), prefs)
+        val result = repo.getAlerts(
+            latitude = -23.55,
+            longitude = -46.63,
+            includeMeteredSources = false,
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(listOf("free-global"), result.getOrThrow().map { it.id })
+        coVerify(exactly = 1) { freeGlobalAdapter.getAlerts(any(), any()) }
+        coVerify(exactly = 0) { meteredGlobalAdapter.getAlerts(any(), any()) }
     }
 
     @Test

@@ -21,6 +21,14 @@ interface AlertSourceAdapter {
     val supportedRegions: Set<String>
 
     /**
+     * True when each alert fetch consumes a user-owned forecast/API quota.
+     * Periodic background checks can exclude these sources to avoid silently
+     * burning the user's limited forecast budget.
+     */
+    val isMetered: Boolean
+        get() = false
+
+    /**
      * Fetch active weather alerts near the given coordinates.
      * Implementations must map source-specific data to [WeatherAlert].
      */

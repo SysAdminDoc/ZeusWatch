@@ -29,6 +29,7 @@ class PirateWeatherAlertAdapter @Inject constructor(
     override val sourceId = "pirate_weather"
     override val displayName = "Pirate Weather"
     override val supportedRegions = setOf("GLOBAL")
+    override val isMetered = true
 
     override suspend fun getAlerts(lat: Double, lon: Double): Result<List<WeatherAlert>> {
         return try {

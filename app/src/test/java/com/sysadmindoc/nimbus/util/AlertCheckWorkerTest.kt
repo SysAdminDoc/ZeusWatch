@@ -59,7 +59,7 @@ class AlertCheckWorkerTest {
         )
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
         coEvery { prefs.getSeenAlertIds() } returns emptySet()
-        coEvery { weatherSourceManager.getAlerts(any(), any(), any()) } returns Result.success(listOf(lowSeverityAlert))
+        coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any()) } returns Result.success(listOf(lowSeverityAlert))
 
         val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
         worker.doWork()
@@ -82,7 +82,7 @@ class AlertCheckWorkerTest {
         )
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
         coEvery { prefs.getSeenAlertIds() } returns emptySet()
-        coEvery { weatherSourceManager.getAlerts(any(), any(), any()) } returns Result.success(listOf(unknownAlert))
+        coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any()) } returns Result.success(listOf(unknownAlert))
 
         val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
         worker.doWork()
@@ -118,7 +118,7 @@ class AlertCheckWorkerTest {
                 sortOrder = 1,
             ),
         )
-        coEvery { weatherSourceManager.getAlerts(any(), any(), any()) } returns Result.success(listOf(severeAlert))
+        coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any()) } returns Result.success(listOf(severeAlert))
 
         val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
         worker.doWork()
@@ -139,7 +139,7 @@ class AlertCheckWorkerTest {
         )
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
         coEvery { prefs.getSeenAlertIds() } returns emptySet()
-        coEvery { weatherSourceManager.getAlerts(any(), any(), any()) } returns Result.success(listOf(severeAlert))
+        coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any()) } returns Result.success(listOf(severeAlert))
         every { AlertNotificationHelper.showAlertNotification(any(), any(), any()) } returns false
 
         val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
@@ -182,14 +182,18 @@ class AlertCheckWorkerTest {
                 sortOrder = 1,
             ),
         )
-        coEvery { weatherSourceManager.getAlerts(any(), any(), any()) } returns Result.success(emptyList())
+        coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any()) } returns Result.success(emptyList())
 
         val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
         worker.doWork()
 
-        coVerify(exactly = 2) { weatherSourceManager.getAlerts(any(), any(), any()) }
-        coVerify(exactly = 1) { weatherSourceManager.getAlerts(39.73921, -104.99031, any()) }
-        coVerify(exactly = 1) { weatherSourceManager.getAlerts(40.01499, -105.27050, any()) }
+        coVerify(exactly = 2) { weatherSourceManager.getAlerts(any(), any(), any(), includeMeteredSources = false) }
+        coVerify(exactly = 1) {
+            weatherSourceManager.getAlerts(39.73921, -104.99031, any(), includeMeteredSources = false)
+        }
+        coVerify(exactly = 1) {
+            weatherSourceManager.getAlerts(40.01499, -105.27050, any(), includeMeteredSources = false)
+        }
     }
 
     @Test
