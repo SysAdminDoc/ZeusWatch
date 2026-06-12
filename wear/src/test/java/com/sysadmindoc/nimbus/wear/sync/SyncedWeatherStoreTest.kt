@@ -286,6 +286,26 @@ class SyncedWeatherStoreTest {
     }
 
     @Test
+    fun `temperature override takes precedence over synced phone unit`() {
+        savePayload(
+            timestamp = System.currentTimeMillis(),
+            tempUnit = "FAHRENHEIT",
+        )
+
+        val next = store.cycleTempUnitOverride()
+
+        assertEquals("CELSIUS", next)
+        assertEquals("CELSIUS", store.lastTempUnit())
+        assertEquals("CELSIUS", store.getFreshData()!!.tempUnit)
+    }
+
+    @Test
+    fun `temperature override cycles between celsius and fahrenheit`() {
+        assertEquals("FAHRENHEIT", store.cycleTempUnitOverride())
+        assertEquals("CELSIUS", store.cycleTempUnitOverride())
+    }
+
+    @Test
     fun `save round-trips hourly isDay flags`() {
         store.save(
             SyncedWeatherPayload(
