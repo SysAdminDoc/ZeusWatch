@@ -35,6 +35,7 @@ object WidgetDataProvider {
     private val KEY_HOURLY_JSON = stringPreferencesKey("w_hourly")
     private val KEY_DAILY_JSON = stringPreferencesKey("w_daily")
     private val KEY_UPDATED_AT = longPreferencesKey("w_updated")
+    private val KEY_SAVED_CITIES_JSON = stringPreferencesKey("w_saved_cities")
 
     suspend fun save(context: Context, data: WidgetWeatherData) {
         context.widgetDataStore.edit { prefs ->
@@ -93,6 +94,31 @@ object WidgetDataProvider {
             prefs.remove(KEY_HOURLY_JSON)
             prefs.remove(KEY_DAILY_JSON)
             prefs.remove(KEY_UPDATED_AT)
+        }
+    }
+
+    suspend fun saveSavedCities(context: Context, cities: List<WidgetSavedCity>) {
+        context.widgetDataStore.edit { prefs ->
+            prefs[KEY_SAVED_CITIES_JSON] = json.encodeToString(
+                WidgetSavedCityList.serializer(),
+                WidgetSavedCityList(cities),
+            )
+        }
+    }
+
+    suspend fun loadSavedCities(context: Context): List<WidgetSavedCity> {
+        val prefs = context.widgetDataStore.data.first()
+        val cityJson = prefs[KEY_SAVED_CITIES_JSON] ?: return emptyList()
+        return try {
+            json.decodeFromString(WidgetSavedCityList.serializer(), cityJson).items
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun clearSavedCities(context: Context) {
+        context.widgetDataStore.edit { prefs ->
+            prefs.remove(KEY_SAVED_CITIES_JSON)
         }
     }
 
@@ -199,7 +225,22 @@ data class WidgetDaily(
 )
 
 @Serializable
+data class WidgetSavedCity(
+    val locationId: Long,
+    val locationName: String,
+    val temperature: Int? = null,
+    val high: Int? = null,
+    val low: Int? = null,
+    val weatherCode: Int? = null,
+    val isDay: Boolean = true,
+    val updatedAt: Long = 0L,
+)
+
+@Serializable
 private data class WidgetHourlyList(val items: List<WidgetHourly>)
 
 @Serializable
 private data class WidgetDailyList(val items: List<WidgetDaily>)
+
+@Serializable
+private data class WidgetSavedCityList(val items: List<WidgetSavedCity>)

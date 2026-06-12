@@ -114,7 +114,9 @@ internal fun resolveZeusWatchDeepLinkRoute(
     host: String?,
     target: String? = null,
     card: String? = null,
+    locationId: String? = null,
 ): String? {
+    val parsedLocationId = locationId?.toLongOrNull()?.takeIf { it > 0L }
     return when (host?.lowercase()) {
         "locations" -> Routes.LOCATIONS
         "settings" -> Routes.SETTINGS
@@ -124,7 +126,8 @@ internal fun resolveZeusWatchDeepLinkRoute(
         "alerts", "weather_alerts" -> Routes.mainTarget(MainDeepLinkTarget.WEATHER_ALERTS)
         "nowcast" -> Routes.mainTarget(MainDeepLinkTarget.NOWCAST)
         "health", "health_alerts" -> Routes.mainTarget(MainDeepLinkTarget.HEALTH)
-        "main" -> MainDeepLinkTarget.fromRouteValue(target ?: card)?.let(Routes::mainTarget)
+        "main" -> parsedLocationId?.let(Routes::mainWithLocation)
+            ?: MainDeepLinkTarget.fromRouteValue(target ?: card)?.let(Routes::mainTarget)
         else -> null
     }
 }

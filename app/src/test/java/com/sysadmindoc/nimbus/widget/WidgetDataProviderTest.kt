@@ -193,6 +193,29 @@ class WidgetDataProviderTest {
         assertFalse(data.isDay)
     }
 
+    @Test
+    fun widgetSavedCityStoresOptionalWeatherFields() {
+        val city = WidgetSavedCity(
+            locationId = 42L,
+            locationName = "Denver",
+            temperature = 72,
+            high = 80,
+            low = 55,
+            weatherCode = 1,
+            isDay = true,
+            updatedAt = 1000L,
+        )
+
+        assertEquals(42L, city.locationId)
+        assertEquals("Denver", city.locationName)
+        assertEquals(72, city.temperature)
+        assertEquals(80, city.high)
+        assertEquals(55, city.low)
+        assertEquals(1, city.weatherCode)
+        assertTrue(city.isDay)
+        assertEquals(1000L, city.updatedAt)
+    }
+
     // --- Temperature conversion simulation ---
 
     @Test

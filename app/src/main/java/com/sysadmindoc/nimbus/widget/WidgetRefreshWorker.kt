@@ -69,6 +69,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
         val widgetMappings = purgeDeletedWidgetMappings(
             WidgetLocationPrefs.getAllMappings(applicationContext),
         )
+        val savedLocations = runCatching { locationRepository.getAll() }.getOrElse { emptyList() }
 
         // A user-initiated refresh (widget tap) must run even on low battery.
         val forceRefresh = inputData.getBoolean(KEY_FORCE_REFRESH, false)
@@ -79,7 +80,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
             return Result.success()
         }
 
-        if (lastLoc == null && widgetMappings.isEmpty()) {
+        if (lastLoc == null && widgetMappings.isEmpty() && savedCityLocationsForWidget(savedLocations).isEmpty()) {
             clearWidgetState(settings.persistentWeatherNotif)
             return Result.success()
         }
@@ -87,13 +88,13 @@ class WidgetRefreshWorker @AssistedInject constructor(
         return try {
             val state = WidgetRefreshState()
             val convertTemp = tempConverter(settings)
-            val savedLocations = runCatching { locationRepository.getAll() }.getOrElse { emptyList() }
 
             refreshPrimaryLocation(lastLoc, convertTemp, state)
             refreshMappedWidgets(widgetMappings, savedLocations, lastLoc, convertTemp, state)
-            updateWidgetsIfNeeded(state.refreshedAnyLocation, lastLoc)
             updatePersistentNotification(settings, state.primaryWeather, lastLoc)
-            cacheRemainingSavedLocations(savedLocations, state.refreshedLocationKeys)
+            cacheRemainingSavedLocations(savedLocations, state)
+            saveSavedCitySummaries(savedLocations, convertTemp, state)
+            updateWidgetsIfNeeded(state.refreshedAnyLocation, lastLoc)
 
             state.toWorkResult()
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
@@ -113,6 +114,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
         var refreshedAnyLocation: Boolean = false,
         var attemptedNetworkRefresh: Boolean = false,
         val refreshedLocationKeys: MutableSet<String> = mutableSetOf(),
+        val weatherByLocationKey: MutableMap<String, WeatherData> = mutableMapOf(),
     ) {
         fun toWorkResult(): Result = when {
             refreshedAnyLocation -> Result.success()
@@ -197,6 +199,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
             WeatherNotificationHelper.dismiss(applicationContext)
         }
         WidgetDataProvider.clearDefault(applicationContext)
+        WidgetDataProvider.clearSavedCities(applicationContext)
     }
 
     private fun tempConverter(settings: NimbusSettings): (Double) -> Double =
@@ -224,6 +227,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
 
         val primaryWeather = state.primaryWeather ?: return
         state.refreshedLocationKeys += locationKey(lastLoc.latitude, lastLoc.longitude)
+        state.weatherByLocationKey[locationKey(lastLoc.latitude, lastLoc.longitude)] = primaryWeather
         WidgetDataProvider.save(applicationContext, buildWidgetData(primaryWeather, convertTemp))
         state.refreshedAnyLocation = true
         try {
@@ -269,6 +273,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
     ) {
         val locWeather = weatherForMappedWidget(request, primaryLocationKey, state) ?: return
         state.refreshedLocationKeys += request.key
+        state.weatherByLocationKey[request.key] = locWeather
 
         for (assignment in request.assignments) {
             WidgetDataProvider.save(
@@ -322,6 +327,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
         NimbusMediumWidget().updateAll(applicationContext)
         NimbusLargeWidget().updateAll(applicationContext)
         NimbusForecastStripWidget().updateAll(applicationContext)
+        NimbusSavedCitiesWidget().updateAll(applicationContext)
     }
 
     private fun updatePersistentNotification(
@@ -346,19 +352,42 @@ class WidgetRefreshWorker @AssistedInject constructor(
 
     private suspend fun cacheRemainingSavedLocations(
         savedLocations: List<SavedLocationEntity>,
-        refreshedLocationKeys: MutableSet<String>,
+        state: WidgetRefreshState,
     ) {
         try {
             for (loc in savedLocations) {
-                if (!refreshedLocationKeys.add(locationKey(loc.latitude, loc.longitude))) continue
+                val key = locationKey(loc.latitude, loc.longitude)
+                if (!state.refreshedLocationKeys.add(key)) continue
                 try {
-                    weatherRepository.getWeather(loc)
+                    weatherRepository.getWeather(loc).getOrNull()?.let { weather ->
+                        state.weatherByLocationKey[key] = weather
+                        state.refreshedAnyLocation = true
+                    }
                 } catch (_: Exception) {
                     // Individual location failure is non-fatal.
                 }
             }
         } catch (_: Exception) {
             // Non-fatal; widget update already succeeded.
+        }
+    }
+
+    private suspend fun saveSavedCitySummaries(
+        savedLocations: List<SavedLocationEntity>,
+        convertTemp: (Double) -> Double,
+        state: WidgetRefreshState,
+    ) {
+        val cities = savedCityLocationsForWidget(savedLocations).map { location ->
+            val key = locationKey(location.latitude, location.longitude)
+            val weather = state.weatherByLocationKey[key]
+                ?: weatherRepository.getCachedWeather(location.latitude, location.longitude)
+            buildWidgetSavedCity(location, weather, convertTemp)
+        }
+        if (cities.isEmpty()) {
+            WidgetDataProvider.clearSavedCities(applicationContext)
+        } else {
+            WidgetDataProvider.saveSavedCities(applicationContext, cities)
+            state.refreshedAnyLocation = true
         }
     }
 
@@ -474,6 +503,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
                 NimbusMediumWidgetReceiver::class.java,
                 NimbusLargeWidgetReceiver::class.java,
                 NimbusForecastStripWidgetReceiver::class.java,
+                NimbusSavedCitiesWidgetReceiver::class.java,
             ).any { receiver ->
                 manager.getAppWidgetIds(ComponentName(context, receiver)).isNotEmpty()
             }
@@ -547,6 +577,42 @@ internal fun buildWidgetRefreshPlan(
 
 internal fun widgetLocationKey(latitude: Double, longitude: Double): String {
     return "${latitude.formatWidgetLocationKey()}:${longitude.formatWidgetLocationKey()}"
+}
+
+internal fun savedCityLocationsForWidget(
+    savedLocations: List<SavedLocationEntity>,
+    limit: Int = 5,
+): List<SavedLocationEntity> {
+    return savedLocations
+        .asSequence()
+        .filterNot { it.isCurrentLocation }
+        .sortedWith(
+            compareBy<SavedLocationEntity> { it.sortOrder }
+                .thenBy { it.name.lowercase(Locale.getDefault()) },
+        )
+        .take(limit)
+        .toList()
+}
+
+internal fun buildWidgetSavedCity(
+    location: SavedLocationEntity,
+    weatherData: WeatherData?,
+    convertTemp: (Double) -> Double,
+): WidgetSavedCity {
+    return WidgetSavedCity(
+        locationId = location.id,
+        locationName = location.name,
+        temperature = weatherData?.current?.temperature?.let(convertTemp)?.toInt(),
+        high = weatherData?.current?.dailyHigh?.let(convertTemp)?.toInt(),
+        low = weatherData?.current?.dailyLow?.let(convertTemp)?.toInt(),
+        weatherCode = weatherData?.current?.weatherCode?.code,
+        isDay = weatherData?.current?.isDay ?: true,
+        updatedAt = weatherData?.lastUpdated
+            ?.atZone(java.time.ZoneId.systemDefault())
+            ?.toInstant()
+            ?.toEpochMilli()
+            ?: 0L,
+    )
 }
 
 /**
