@@ -74,6 +74,12 @@ jobs:
       - name: Build wear release APK
         run: ./gradlew :wear:assembleRelease --no-daemon
 
+      - name: Verify release APK 16 KB alignment
+        run: >
+          python3 tools/check_apk_alignment.py
+          'app/build/outputs/apk/*/release/*.apk'
+          'wear/build/outputs/apk/release/*.apk'
+
       - name: Resolve release tag
         id: tag
         run: |

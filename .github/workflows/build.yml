@@ -80,6 +80,13 @@ jobs:
       - name: Build wear debug APK
         run: ./gradlew :wear:assembleDebug --no-daemon
 
+      - name: Verify debug APK 16 KB alignment
+        run: >
+          python3 tools/check_apk_alignment.py
+          'app/build/outputs/apk/standard/debug/*.apk'
+          'app/build/outputs/apk/freenet/debug/*.apk'
+          'wear/build/outputs/apk/debug/*.apk'
+
       - name: Upload phone standard APK
         uses: actions/upload-artifact@v4
         with:
@@ -241,6 +248,12 @@ jobs:
 
       - name: Build wear release APK
         run: ./gradlew :wear:assembleRelease --no-daemon
+
+      - name: Verify release APK 16 KB alignment
+        run: >
+          python3 tools/check_apk_alignment.py
+          'app/build/outputs/apk/*/release/*.apk'
+          'wear/build/outputs/apk/release/*.apk'
 
       - name: Upload phone release APKs
         uses: actions/upload-artifact@v4
