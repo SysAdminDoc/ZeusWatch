@@ -9,6 +9,7 @@ import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
+import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,6 +31,7 @@ import javax.inject.Inject
 class LocationsViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
     private val weatherRepository: WeatherRepository,
+    private val userPreferences: UserPreferences,
 ) : ViewModel() {
 
     val savedLocations: StateFlow<List<SavedLocationEntity>> =
@@ -39,6 +41,9 @@ class LocationsViewModel @Inject constructor(
 
     private val _searchState = MutableStateFlow(SearchState())
     val searchState: StateFlow<SearchState> = _searchState.asStateFlow()
+
+    private val _recentSearches = MutableStateFlow<List<GeocodingResult>>(emptyList())
+    val recentSearches: StateFlow<List<GeocodingResult>> = _recentSearches.asStateFlow()
 
     /** Cached temperatures keyed by location ID. */
     private val _locationTemps = MutableStateFlow<Map<Long, Double>>(emptyMap())
@@ -59,6 +64,11 @@ class LocationsViewModel @Inject constructor(
         viewModelScope.launch {
             savedLocations.collect { locations ->
                 loadCachedTemps(locations)
+            }
+        }
+        viewModelScope.launch {
+            userPreferences.recentLocationSearches.collect { searches ->
+                _recentSearches.value = searches
             }
         }
     }
@@ -129,6 +139,7 @@ class LocationsViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             val locationId = locationRepository.addLocation(result)
+            userPreferences.addRecentLocationSearch(result)
             _searchState.update { it.copy(query = "", results = emptyList()) }
             onAdded(locationId)
         }

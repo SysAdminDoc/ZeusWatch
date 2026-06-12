@@ -21,7 +21,10 @@ import com.google.crypto.tink.RegistryConfiguration
 import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.aead.PredefinedAeadParameters
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
+import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -227,6 +230,7 @@ class UserPreferences @Inject constructor(
         val LAST_LAT = stringPreferencesKey("last_lat")
         val LAST_LON = stringPreferencesKey("last_lon")
         val LAST_LOCATION_NAME = stringPreferencesKey("last_location_name")
+        val RECENT_LOCATION_SEARCHES = stringPreferencesKey("recent_location_searches")
         val BACKGROUND_ALERT_LAT = stringPreferencesKey("background_alert_lat")
         val BACKGROUND_ALERT_LON = stringPreferencesKey("background_alert_lon")
         val BACKGROUND_ALERT_LOCATION_NAME = stringPreferencesKey("background_alert_location_name")
@@ -241,6 +245,12 @@ class UserPreferences @Inject constructor(
             prefs[Keys.OWM_API_KEY] != null ||
             prefs[Keys.PIRATE_WEATHER_API_KEY] != null
     }
+
+    private val preferencesJson = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+    private val recentLocationListSerializer = ListSerializer(GeocodingResult.serializer())
 
     // A corrupted preferences file makes DataStore throw an IOException
     // (CorruptionException) on read — without .catch that propagates into
@@ -339,6 +349,27 @@ class UserPreferences @Inject constructor(
             SavedLocation(lat, lon, name)
         }
 
+    val recentLocationSearches: Flow<List<GeocodingResult>> = store.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { prefs -> decodeRecentLocationSearches(prefs[Keys.RECENT_LOCATION_SEARCHES]) }
+
+    private fun decodeRecentLocationSearches(raw: String?): List<GeocodingResult> {
+        if (raw.isNullOrBlank()) return emptyList()
+        return runCatching {
+            preferencesJson.decodeFromString(recentLocationListSerializer, raw)
+        }.getOrDefault(emptyList())
+    }
+
+    suspend fun addRecentLocationSearch(result: GeocodingResult) {
+        store.edit { prefs ->
+            val updated = mergeRecentLocationSearches(
+                current = decodeRecentLocationSearches(prefs[Keys.RECENT_LOCATION_SEARCHES]),
+                result = result,
+            )
+            prefs[Keys.RECENT_LOCATION_SEARCHES] = preferencesJson.encodeToString(recentLocationListSerializer, updated)
+        }
+    }
+
     suspend fun setTempUnit(unit: TempUnit) = store.edit { it[Keys.TEMP_UNIT] = unit.name }
     suspend fun setWindUnit(unit: WindUnit) = store.edit { it[Keys.WIND_UNIT] = unit.name }
     suspend fun setPressureUnit(unit: PressureUnit) = store.edit { it[Keys.PRESSURE_UNIT] = unit.name }
@@ -406,20 +437,15 @@ class UserPreferences @Inject constructor(
     // Stored as a JSON-serialized list under a single preferences key to
     // avoid a DataStore-per-rule model. The rule set is small (user-authored)
     // so an O(n) read is fine.
-    private val customAlertJson = kotlinx.serialization.json.Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
-
     private val customAlertListSerializer =
-        kotlinx.serialization.builtins.ListSerializer(
+        ListSerializer(
             com.sysadmindoc.nimbus.data.model.CustomAlertRule.serializer()
         )
 
     private fun decodeCustomAlertRules(raw: String?): List<com.sysadmindoc.nimbus.data.model.CustomAlertRule> {
         if (raw == null) return emptyList()
         return runCatching {
-            customAlertJson.decodeFromString(customAlertListSerializer, raw)
+            preferencesJson.decodeFromString(customAlertListSerializer, raw)
         }.getOrDefault(emptyList())
     }
 
@@ -429,7 +455,7 @@ class UserPreferences @Inject constructor(
             .map { prefs -> decodeCustomAlertRules(prefs[customAlertRulesKey]) }
 
     suspend fun setCustomAlertRules(rules: List<com.sysadmindoc.nimbus.data.model.CustomAlertRule>) {
-        val serialized = customAlertJson.encodeToString(customAlertListSerializer, rules)
+        val serialized = preferencesJson.encodeToString(customAlertListSerializer, rules)
         store.edit { it[customAlertRulesKey] = serialized }
     }
 
@@ -447,7 +473,7 @@ class UserPreferences @Inject constructor(
         var updated: List<com.sysadmindoc.nimbus.data.model.CustomAlertRule> = emptyList()
         store.edit { prefs ->
             updated = transform(decodeCustomAlertRules(prefs[customAlertRulesKey]))
-            prefs[customAlertRulesKey] = customAlertJson.encodeToString(customAlertListSerializer, updated)
+            prefs[customAlertRulesKey] = preferencesJson.encodeToString(customAlertListSerializer, updated)
         }
         return updated
     }
@@ -751,6 +777,20 @@ internal fun moveCardInList(order: List<CardType>, card: CardType, delta: Int): 
     val to = (from + delta).coerceIn(0, order.lastIndex)
     if (to == from) return order
     return order.toMutableList().apply { add(to, removeAt(from)) }
+}
+
+internal fun mergeRecentLocationSearches(
+    current: List<GeocodingResult>,
+    result: GeocodingResult,
+    limit: Int = 10,
+): List<GeocodingResult> {
+    val safeLimit = limit.coerceAtLeast(1)
+    val withoutDuplicate = current.filterNot { existing ->
+        existing.id == result.id ||
+            kotlin.math.abs(existing.latitude - result.latitude) < 0.0001 &&
+            kotlin.math.abs(existing.longitude - result.longitude) < 0.0001
+    }
+    return (listOf(result) + withoutDuplicate).take(safeLimit)
 }
 
 internal fun disabledCardsForStarterSet(set: StarterCardSet): Set<String> {
