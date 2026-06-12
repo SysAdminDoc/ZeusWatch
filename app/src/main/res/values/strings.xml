@@ -118,6 +118,15 @@
     <string name="onboarding_cards_everything_count">29 cards</string>
     <string name="onboarding_continue">Continue</string>
     <string name="onboarding_finish">Start ZeusWatch</string>
+    <string name="whats_new_title">What\'s new in ZeusWatch</string>
+    <string name="whats_new_body">A few recent upgrades are ready the next time you check the forecast.</string>
+    <string name="whats_new_version">Version %1$s</string>
+    <string name="whats_new_done">Got it</string>
+    <string-array name="whats_new_items">
+        <item>Forecast detail sheets now open from hourly and daily rows.</item>
+        <item>Locations remembers recent searches and keeps My Location one tap away.</item>
+        <item>EXTREME weather alerts now use a stronger safety takeover.</item>
+    </string-array>
     <string name="custom_alerts_rule_center">Rule center</string>
     <string name="custom_alerts_rule_count_singular">1 custom alert ready to watch the forecast.</string>
     <string name="custom_alerts_rule_count_plural">%1$d custom alerts ready to watch the forecast.</string>

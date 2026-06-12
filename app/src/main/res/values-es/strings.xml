@@ -89,6 +89,15 @@
     <string name="common_today">Hoy</string>
     <string name="common_tomorrow">Manana</string>
     <string name="common_now">Ahora</string>
+    <string name="whats_new_title">Novedades de ZeusWatch</string>
+    <string name="whats_new_body">Algunas mejoras recientes estan listas para tu proxima revision del pronostico.</string>
+    <string name="whats_new_version">Version %1$s</string>
+    <string name="whats_new_done">Entendido</string>
+    <string-array name="whats_new_items">
+        <item>Las filas horarias y diarias ahora abren hojas con mas detalle.</item>
+        <item>Ubicaciones recuerda busquedas recientes y mantiene Mi ubicacion a un toque.</item>
+        <item>Las alertas meteorologicas EXTREMAS ahora usan una vista de seguridad mas fuerte.</item>
+    </string-array>
     <string name="custom_alerts_rule_center">Centro de reglas</string>
     <string name="custom_alerts_rule_count_singular">1 alerta personalizada lista para vigilar el pronostico.</string>
     <string name="custom_alerts_rule_count_plural">%1$d alertas personalizadas listas para vigilar el pronostico.</string>

@@ -235,6 +235,7 @@ class UserPreferences @Inject constructor(
         val BACKGROUND_ALERT_LON = stringPreferencesKey("background_alert_lon")
         val BACKGROUND_ALERT_LOCATION_NAME = stringPreferencesKey("background_alert_location_name")
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
+        val LAST_SEEN_VERSION_CODE = stringPreferencesKey("last_seen_version_code")
     }
 
     private fun hasExistingUserFootprint(prefs: Preferences): Boolean {
@@ -368,6 +369,14 @@ class UserPreferences @Inject constructor(
             )
             prefs[Keys.RECENT_LOCATION_SEARCHES] = preferencesJson.encodeToString(recentLocationListSerializer, updated)
         }
+    }
+
+    val lastSeenVersionCode: Flow<Int> = store.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { prefs -> prefs[Keys.LAST_SEEN_VERSION_CODE]?.toIntOrNull() ?: 0 }
+
+    suspend fun setLastSeenVersionCode(versionCode: Int) = store.edit {
+        it[Keys.LAST_SEEN_VERSION_CODE] = versionCode.coerceAtLeast(0).toString()
     }
 
     suspend fun setTempUnit(unit: TempUnit) = store.edit { it[Keys.TEMP_UNIT] = unit.name }
