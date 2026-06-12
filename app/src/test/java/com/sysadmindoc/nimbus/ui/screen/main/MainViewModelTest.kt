@@ -40,6 +40,7 @@ class MainViewModelTest {
     private lateinit var summaryEngine: SummaryEngine
     private lateinit var wearSyncManager: WearSyncManager
     private lateinit var onThisDayRepository: OnThisDayRepository
+    private lateinit var forecastEvolutionRepository: ForecastEvolutionRepository
 
     private lateinit var viewModel: MainViewModel
 
@@ -110,6 +111,7 @@ class MainViewModelTest {
         summaryEngine = mockk()
         wearSyncManager = mockk(relaxed = true)
         onThisDayRepository = mockk(relaxed = true)
+        forecastEvolutionRepository = mockk(relaxed = true)
         every { connectivityObserver.isOnline } returns flowOf(true)
         every { summaryEngine.isAvailable() } returns false
         every { summaryEngine.close() } just Runs
@@ -129,6 +131,9 @@ class MainViewModelTest {
         coEvery { weatherSourceManager.getMinutelyPrecipitation(any(), any()) } coAnswers { Result.success(emptyList()) }
         every { airQualityRepository.getAstronomy(any(), any(), any(), any(), any(), any()) } returns testAstronomy
         coEvery { onThisDayRepository.getOnThisDay(any(), any(), any()) } returns null
+        coEvery { forecastEvolutionRepository.getForecastEvolution(any(), any(), any()) } returns Result.failure(
+            IllegalStateException("disabled in default tests"),
+        )
         coEvery { weatherRepository.getWeather(any(), any(), any()) } coAnswers {
             val latitude = firstArg<Double>()
             val longitude = secondArg<Double>()
@@ -181,6 +186,7 @@ class MainViewModelTest {
                 summaryEngine = summaryEngine,
                 connectivityObserver = connectivityObserver,
                 onThisDayRepository = onThisDayRepository,
+                forecastEvolutionRepository = forecastEvolutionRepository,
                 wearSyncManager = wearSyncManager,
                 defaultDispatcher = testDispatcher,
             ),
