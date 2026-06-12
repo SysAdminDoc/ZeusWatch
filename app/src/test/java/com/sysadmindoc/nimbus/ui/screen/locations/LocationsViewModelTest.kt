@@ -5,6 +5,7 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
+import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +25,7 @@ class LocationsViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher(TestCoroutineScheduler())
     private lateinit var locationRepository: LocationRepository
     private lateinit var weatherRepository: WeatherRepository
+    private lateinit var userPreferences: UserPreferences
     private lateinit var savedLocationsFlow: MutableStateFlow<List<SavedLocationEntity>>
     private lateinit var viewModel: LocationsViewModel
 
@@ -58,9 +60,12 @@ class LocationsViewModelTest {
         Dispatchers.setMain(testDispatcher)
         locationRepository = mockk(relaxed = true)
         weatherRepository = mockk(relaxed = true)
+        userPreferences = mockk(relaxed = true)
         savedLocationsFlow = MutableStateFlow(savedLocations)
         coEvery { weatherRepository.getCachedWeather(any(), any()) } returns null
         every { locationRepository.savedLocations } returns savedLocationsFlow
+        every { userPreferences.recentLocationSearches } returns flowOf(emptyList())
+        coEvery { userPreferences.addRecentLocationSearch(any()) } returns Unit
         coEvery { locationRepository.search(any()) } returns Result.success(testResults)
     }
 
@@ -70,7 +75,7 @@ class LocationsViewModelTest {
     }
 
     private fun createViewModel(): LocationsViewModel {
-        return LocationsViewModel(locationRepository, weatherRepository)
+        return LocationsViewModel(locationRepository, weatherRepository, userPreferences)
     }
 
     @Test
@@ -164,11 +169,25 @@ class LocationsViewModelTest {
         advanceUntilIdle() // Let addLocation complete (clears search)
 
         coVerify { locationRepository.addLocation(testResults[0]) }
+        coVerify { userPreferences.addRecentLocationSearch(testResults[0]) }
 
         viewModel.searchState.test {
             val state = expectMostRecentItem()
             assertEquals("", state.query)
             assertTrue(state.results.isEmpty())
+        }
+    }
+
+    @Test
+    fun `recentSearches emits from preferences flow`() = runTest {
+        every { userPreferences.recentLocationSearches } returns flowOf(listOf(testResults[1]))
+
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.recentSearches.test {
+            val items = expectMostRecentItem()
+            assertEquals(listOf(testResults[1]), items)
         }
     }
 

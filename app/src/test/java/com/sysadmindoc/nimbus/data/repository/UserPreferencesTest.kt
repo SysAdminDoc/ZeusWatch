@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.data.repository
 
 import androidx.datastore.preferences.core.preferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -104,6 +105,31 @@ class UserPreferencesTest {
     fun cacheTtlMsDefaultIs30Minutes() {
         val settings = NimbusSettings()
         assertEquals(30 * 60 * 1000L, settings.cacheTtlMs)
+    }
+
+    @Test
+    fun mergeRecentLocationSearchesMovesDuplicateToFront() {
+        val denver = recentResult(1, "Denver", 39.7, -104.9)
+        val chicago = recentResult(2, "Chicago", 41.8, -87.6)
+
+        val result = mergeRecentLocationSearches(
+            current = listOf(denver, chicago),
+            result = denver.copy(name = "Denver, CO"),
+        )
+
+        assertEquals(listOf("Denver, CO", "Chicago"), result.map { it.name })
+    }
+
+    @Test
+    fun mergeRecentLocationSearchesCapsNewestFirst() {
+        val current = (1L..12L).map { id -> recentResult(id, "City $id", id.toDouble(), -id.toDouble()) }
+        val newest = recentResult(100, "New City", 1.0, 2.0)
+
+        val result = mergeRecentLocationSearches(current, newest, limit = 10)
+
+        assertEquals(10, result.size)
+        assertEquals("New City", result.first().name)
+        assertFalse(result.any { it.name == "City 10" })
     }
 
     // --- SourceConfig defaults ---
@@ -494,3 +520,16 @@ class UserPreferencesTest {
         assertEquals(23 * 60 + 59, normalizeDailyBriefingMinutes(24 * 60 + 15))
     }
 }
+
+private fun recentResult(
+    id: Long,
+    name: String,
+    latitude: Double,
+    longitude: Double,
+): GeocodingResult = GeocodingResult(
+    id = id,
+    name = name,
+    latitude = latitude,
+    longitude = longitude,
+    country = "United States",
+)

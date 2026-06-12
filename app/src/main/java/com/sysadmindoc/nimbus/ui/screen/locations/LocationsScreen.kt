@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -102,12 +103,14 @@ fun LocationsScreen(
 ) {
     val saved by viewModel.savedLocations.collectAsStateWithLifecycle()
     val search by viewModel.searchState.collectAsStateWithLifecycle()
+    val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
     val locationTemps by viewModel.locationTemps.collectAsStateWithLifecycle()
     val locationConditions by viewModel.locationConditions.collectAsStateWithLifecycle()
 
     LocationsContent(
         saved = saved,
         search = search,
+        recentSearches = recentSearches,
         locationTemps = locationTemps,
         locationConditions = locationConditions,
         onBack = onBack,
@@ -134,6 +137,7 @@ fun LocationsScreen(
 internal fun LocationsContent(
     saved: List<SavedLocationEntity>,
     search: SearchState,
+    recentSearches: List<GeocodingResult> = emptyList(),
     locationTemps: Map<Long, Double> = emptyMap(),
     locationConditions: Map<Long, Pair<com.sysadmindoc.nimbus.data.model.WeatherCode, Boolean>> = emptyMap(),
     onBack: () -> Unit,
@@ -183,6 +187,7 @@ internal fun LocationsContent(
             LocationsList(
                 saved = saved,
                 search = search,
+                recentSearches = recentSearches,
                 locationTemps = locationTemps,
                 locationConditions = locationConditions,
                 onLocationSelected = onLocationSelected,
@@ -200,6 +205,7 @@ internal fun LocationsContent(
 private fun LocationsList(
     saved: List<SavedLocationEntity>,
     search: SearchState,
+    recentSearches: List<GeocodingResult> = emptyList(),
     locationTemps: Map<Long, Double> = emptyMap(),
     locationConditions: Map<Long, Pair<com.sysadmindoc.nimbus.data.model.WeatherCode, Boolean>> = emptyMap(),
     onLocationSelected: (Long) -> Unit,
@@ -214,6 +220,8 @@ private fun LocationsList(
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
     val itemHeightPx = with(LocalDensity.current) { 62.dp.toPx() }
     val visibleSearchResults = filterDuplicateSearchResults(search.results, saved)
+    val visibleRecentSearches = filterDuplicateSearchResults(recentSearches, saved)
+    val currentLocation = saved.firstOrNull { it.isCurrentLocation }
     val searchEmptyMessage = locationsSearchEmptyMessage(
         search = search,
         visibleResults = visibleSearchResults,
@@ -229,6 +237,15 @@ private fun LocationsList(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        if (search.query.length < 2) {
+            locationDiscoveryItems(
+                currentLocation = currentLocation,
+                recentSearches = visibleRecentSearches,
+                onLocationSelected = onLocationSelected,
+                onAddLocation = onAddLocation,
+            )
+        }
+
         // Search results (shown when query active)
         if (search.query.length >= 2) {
             if (visibleSearchResults.isNotEmpty()) {
@@ -347,6 +364,48 @@ private fun LocationsList(
     }
 }
 
+private fun LazyListScope.locationDiscoveryItems(
+    currentLocation: SavedLocationEntity?,
+    recentSearches: List<GeocodingResult>,
+    onLocationSelected: (Long) -> Unit,
+    onAddLocation: (GeocodingResult) -> Unit,
+) {
+    if (currentLocation != null) {
+        item(key = "current_location_quick_action") {
+            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                Text(
+                    stringResource(R.string.locations_quick_start),
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = NimbusTextTertiary,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                CurrentLocationQuickAction(
+                    location = currentLocation,
+                    onClick = { onLocationSelected(currentLocation.id) },
+                )
+            }
+        }
+    }
+
+    if (recentSearches.isNotEmpty()) {
+        item(key = "recent_searches_header") {
+            Text(
+                stringResource(R.string.locations_recent_searches),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = NimbusTextTertiary,
+                modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+            )
+        }
+        items(recentSearches, key = { "recent_${it.id}" }) { result ->
+            SearchResultItem(
+                result = result,
+                onAdd = { onAddLocation(result) },
+            )
+        }
+        item(key = "recent_searches_spacer") { Spacer(modifier = Modifier.height(12.dp)) }
+    }
+}
+
 @Composable
 private fun SearchBar(
     query: String,
@@ -429,6 +488,64 @@ private fun SearchBar(
                 unfocusedPlaceholderColor = NimbusTextTertiary,
             ),
         )
+    }
+}
+
+@Composable
+private fun CurrentLocationQuickAction(
+    location: SavedLocationEntity,
+    onClick: () -> Unit,
+) {
+    val contentDescription = stringResource(R.string.locations_use_current_location_cd, location.name)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusBlueAccent.copy(alpha = 0.16f),
+                        NimbusCardBg,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusBlueAccent.copy(alpha = 0.32f), RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick, role = Role.Button)
+            .semantics(mergeDescendants = true) {
+                this.contentDescription = contentDescription
+            }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(NimbusBlueAccent.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Filled.MyLocation,
+                contentDescription = null,
+                tint = NimbusBlueAccent,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                stringResource(R.string.locations_use_current_location),
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                color = NimbusTextPrimary,
+            )
+            Text(
+                location.name,
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

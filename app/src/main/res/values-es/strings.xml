@@ -628,6 +628,10 @@
     <string name="locations_already_saved_message">Ubicacion ya guardada</string>
     <string name="locations_no_results_message">No se encontraron resultados</string>
     <string name="locations_search_failed">La busqueda fallo. Revisa tu conexion e intenta de nuevo.</string>
+    <string name="locations_quick_start">Inicio rapido</string>
+    <string name="locations_use_current_location">Usar mi ubicacion</string>
+    <string name="locations_use_current_location_cd">Usar ubicacion actual, %1$s</string>
+    <string name="locations_recent_searches">Busquedas recientes</string>
 
     <!-- Compare -->
     <string name="compare_preparing_title">Preparando comparacion</string>
