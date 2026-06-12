@@ -6,6 +6,7 @@ enum class CardType(val label: String, val defaultEnabled: Boolean = true) {
     NOWCAST("Rain Next Hour", true),
     HOURLY_FORECAST("Hourly Forecast", true),
     TEMPERATURE_GRAPH("Temperature Trend", true),
+    FORECAST_EVOLUTION("Forecast Evolution", false),
     DAILY_FORECAST("Daily Forecast", true),
     UV_INDEX("UV Index", true),
     WIND_COMPASS("Wind", true),
