@@ -31,6 +31,7 @@ private const val KEY_ALERT_COUNT = "alertCount"
 private const val KEY_AQI = "aqi"
 private const val KEY_AQI_LABEL = "aqiLabel"
 private const val KEY_TEMP_UNIT = "tempUnit"
+private const val KEY_TEMP_UNIT_OVERRIDE = "tempUnitOverride"
 private const val KEY_WIND_UNIT = "windUnit"
 private const val MAX_STALENESS_MS = 30 * 60 * 1000L // 30 minutes
 
@@ -218,7 +219,19 @@ class SyncedWeatherStore @Inject constructor(
      * stale so the watch's direct-API fallback renders in the user's units.
      */
     fun lastTempUnit(): String =
-        prefs.getString(KEY_TEMP_UNIT, null) ?: WearUnitFormatter.TEMP_CELSIUS
+        prefs.getString(KEY_TEMP_UNIT_OVERRIDE, null)
+            ?: prefs.getString(KEY_TEMP_UNIT, null)
+            ?: WearUnitFormatter.TEMP_CELSIUS
+
+    fun cycleTempUnitOverride(): String {
+        val next = if (lastTempUnit() == WearUnitFormatter.TEMP_FAHRENHEIT) {
+            WearUnitFormatter.TEMP_CELSIUS
+        } else {
+            WearUnitFormatter.TEMP_FAHRENHEIT
+        }
+        prefs.edit().putString(KEY_TEMP_UNIT_OVERRIDE, next).commit()
+        return next
+    }
 
     fun lastWindUnit(): String =
         prefs.getString(KEY_WIND_UNIT, null) ?: WearUnitFormatter.WIND_KMH
