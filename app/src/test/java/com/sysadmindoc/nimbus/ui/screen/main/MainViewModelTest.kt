@@ -279,6 +279,22 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `loadWeather uses retained cached location without prompting for permission`() = runTest {
+        every { locationProvider.hasLocationPermission } returns false
+        every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        coEvery { weatherRepository.getCachedWeather(39.7, -104.9) } returns testWeatherData
+
+        viewModel = createAndAdvance()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.needsLocationPermission)
+        assertFalse(state.isLoading)
+        assertTrue(state.isCached)
+        assertEquals("Denver", state.weatherData?.location?.name)
+        coVerify(exactly = 0) { locationProvider.getCurrentLocation() }
+    }
+
+    @Test
     fun `onPermissionGranted reloads weather`() = runTest {
         every { locationProvider.hasLocationPermission } returnsMany listOf(false, true)
         val mockLocation = mockk<Location>()
