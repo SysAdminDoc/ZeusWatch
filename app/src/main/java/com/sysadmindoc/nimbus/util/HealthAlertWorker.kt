@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit
  *
  * Silently skips if:
  *  - user toggled `healthAlertsEnabled` off
- *  - no last location known
+ *  - no GPS-derived background alert location known
  *  - POST_NOTIFICATIONS permission not granted
  *  - weather fetch fails
  *  - already notified for this alert type today
@@ -53,8 +53,8 @@ class HealthAlertWorker @AssistedInject constructor(
             return Result.success()
         }
 
-        val loc = prefs.lastLocation.first() ?: run {
-            Log.d(TAG, "No last location; skipping")
+        val loc = prefs.backgroundAlertLocation.first() ?: run {
+            Log.d(TAG, "No background alert location; skipping")
             return Result.success()
         }
 
