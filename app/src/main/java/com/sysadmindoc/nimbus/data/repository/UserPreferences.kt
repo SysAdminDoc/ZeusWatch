@@ -227,6 +227,9 @@ class UserPreferences @Inject constructor(
         val LAST_LAT = stringPreferencesKey("last_lat")
         val LAST_LON = stringPreferencesKey("last_lon")
         val LAST_LOCATION_NAME = stringPreferencesKey("last_location_name")
+        val BACKGROUND_ALERT_LAT = stringPreferencesKey("background_alert_lat")
+        val BACKGROUND_ALERT_LON = stringPreferencesKey("background_alert_lon")
+        val BACKGROUND_ALERT_LOCATION_NAME = stringPreferencesKey("background_alert_location_name")
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
     }
 
@@ -324,6 +327,15 @@ class UserPreferences @Inject constructor(
             val lat = prefs[Keys.LAST_LAT]?.toDoubleOrNull() ?: return@map null
             val lon = prefs[Keys.LAST_LON]?.toDoubleOrNull() ?: return@map null
             val name = prefs[Keys.LAST_LOCATION_NAME] ?: return@map null
+            SavedLocation(lat, lon, name)
+        }
+
+    val backgroundAlertLocation: Flow<SavedLocation?> = store.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .map { prefs ->
+            val lat = prefs[Keys.BACKGROUND_ALERT_LAT]?.toDoubleOrNull() ?: return@map null
+            val lon = prefs[Keys.BACKGROUND_ALERT_LON]?.toDoubleOrNull() ?: return@map null
+            val name = prefs[Keys.BACKGROUND_ALERT_LOCATION_NAME] ?: return@map null
             SavedLocation(lat, lon, name)
         }
 
@@ -535,6 +547,12 @@ class UserPreferences @Inject constructor(
         it[Keys.LAST_LAT] = lat.toString()
         it[Keys.LAST_LON] = lon.toString()
         it[Keys.LAST_LOCATION_NAME] = name
+    }
+
+    suspend fun saveBackgroundAlertLocation(lat: Double, lon: Double, name: String) = store.edit {
+        it[Keys.BACKGROUND_ALERT_LAT] = lat.toString()
+        it[Keys.BACKGROUND_ALERT_LON] = lon.toString()
+        it[Keys.BACKGROUND_ALERT_LOCATION_NAME] = name
     }
 }
 

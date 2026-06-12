@@ -57,7 +57,7 @@ class AlertCheckWorkerTest {
                 alertCheckAllLocations = false,
             )
         )
-        every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
         coEvery { prefs.getSeenAlertIds() } returns emptySet()
         coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any()) } returns Result.success(listOf(lowSeverityAlert))
 
@@ -80,7 +80,7 @@ class AlertCheckWorkerTest {
                 alertCheckAllLocations = false,
             )
         )
-        every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
         coEvery { prefs.getSeenAlertIds() } returns emptySet()
         coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any()) } returns Result.success(listOf(unknownAlert))
 
@@ -137,7 +137,7 @@ class AlertCheckWorkerTest {
                 alertCheckAllLocations = false,
             )
         )
-        every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
         coEvery { prefs.getSeenAlertIds() } returns emptySet()
         coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any()) } returns Result.success(listOf(severeAlert))
         every { AlertNotificationHelper.showAlertNotification(any(), any(), any()) } returns false

@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Periodic worker that evaluates user-defined custom alert rules against
- * the latest forecast for the user's last-known location, and notifies
+ * the latest forecast for the user's GPS-derived background alert location, and notifies
  * whenever a rule's threshold is crossed.
  *
  * Each (rule-id, threshold, yyyy-MM-dd) triple is deduped against a
@@ -45,7 +45,7 @@ class CustomAlertWorker @AssistedInject constructor(
         if (rules.none { it.enabled }) return Result.success()
 
         val settings = prefs.settings.first()
-        val loc = prefs.lastLocation.first() ?: return Result.success()
+        val loc = prefs.backgroundAlertLocation.first() ?: return Result.success()
 
         val weatherResult = weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
         val weather = weatherResult.getOrNull()
