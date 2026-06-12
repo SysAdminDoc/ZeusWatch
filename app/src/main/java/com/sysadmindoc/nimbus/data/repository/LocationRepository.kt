@@ -73,6 +73,18 @@ class LocationRepository @Inject constructor(
 
     suspend fun getAll(): List<SavedLocationEntity> = dao.getAll()
 
+    suspend fun replaceAll(locations: List<SavedLocationEntity>) {
+        var nextOrder = 0
+        dao.replaceAll(
+            locations
+                .sortedWith(compareBy<SavedLocationEntity> { it.sortOrder }.thenBy { it.addedAt })
+                .map { location ->
+                    val normalizedOrder = if (location.isCurrentLocation) -1 else nextOrder++
+                    location.copy(id = 0, sortOrder = normalizedOrder)
+                }
+        )
+    }
+
     suspend fun reorderLocations(orderedIds: List<Long>) {
         val currentLocationId = dao.getCurrentLocation()?.id
         val normalizedIds = orderedIds.filterNot { it == currentLocationId }

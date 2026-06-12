@@ -856,6 +856,15 @@
     <string name="settings_advanced_title">Advanced</string>
     <string name="settings_advanced_desc">Power-user controls for cache behavior and provider troubleshooting.</string>
     <string name="settings_cache_duration">Cache Duration</string>
+    <string name="settings_transfer_title">Settings backup</string>
+    <string name="settings_transfer_desc">Export preferences, card layout, custom alerts, and saved locations. API keys are not included.</string>
+    <string name="settings_transfer_export">Export</string>
+    <string name="settings_transfer_import">Import</string>
+    <string name="settings_transfer_status_title">Settings transfer</string>
+    <string name="settings_transfer_export_success">Settings exported.</string>
+    <string name="settings_transfer_export_error">Export failed: %1$s</string>
+    <string name="settings_transfer_import_success">Settings restored with %1$d saved locations and %2$d custom alerts.</string>
+    <string name="settings_transfer_import_error">Import failed: %1$s</string>
     <string name="settings_minutes">%1$d minutes</string>
     <string name="settings_hours">%1$d hours</string>
     <string name="settings_hour">%1$d hour</string>

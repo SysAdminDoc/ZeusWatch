@@ -1,8 +1,10 @@
 package com.sysadmindoc.nimbus.ui.screen.settings
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.IconPack
 import com.sysadmindoc.nimbus.data.repository.*
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
@@ -30,6 +32,7 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val prefs: UserPreferences,
     private val iconPackManager: IconPackManager,
+    private val settingsTransferManager: SettingsTransferManager,
 ) : ViewModel() {
 
     val settings = prefs.settings
@@ -44,6 +47,9 @@ class SettingsViewModel @Inject constructor(
      */
     private val _availableIconPacks = MutableStateFlow<List<IconPack>>(emptyList())
     val availableIconPacks: StateFlow<List<IconPack>> = _availableIconPacks.asStateFlow()
+
+    private val _transferStatus = MutableStateFlow<String?>(null)
+    val transferStatus: StateFlow<String?> = _transferStatus.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -163,4 +169,52 @@ class SettingsViewModel @Inject constructor(
     // API keys
     fun setOwmApiKey(key: String) = viewModelScope.launch { prefs.setOwmApiKey(key) }
     fun setPirateWeatherApiKey(key: String) = viewModelScope.launch { prefs.setPirateWeatherApiKey(key) }
+
+    fun exportSettings(uri: Uri) = viewModelScope.launch {
+        runCatching {
+            val json = withContext(Dispatchers.IO) { settingsTransferManager.exportJson() }
+            withContext(Dispatchers.IO) {
+                appContext.contentResolver.openOutputStream(uri, "wt")?.bufferedWriter()?.use { writer ->
+                    writer.write(json)
+                } ?: error("Could not open export file.")
+            }
+        }.fold(
+            onSuccess = { _transferStatus.value = appContext.getString(R.string.settings_transfer_export_success) },
+            onFailure = {
+                _transferStatus.value = appContext.getString(
+                    R.string.settings_transfer_export_error,
+                    it.message ?: appContext.getString(R.string.common_something_went_wrong),
+                )
+            },
+        )
+    }
+
+    fun importSettings(uri: Uri) = viewModelScope.launch {
+        runCatching {
+            val raw = withContext(Dispatchers.IO) {
+                appContext.contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
+                    reader.readText()
+                } ?: error("Could not open import file.")
+            }
+            withContext(Dispatchers.IO) { settingsTransferManager.importJson(raw) }
+        }.fold(
+            onSuccess = { result ->
+                _transferStatus.value = appContext.getString(
+                    R.string.settings_transfer_import_success,
+                    result.savedLocationCount,
+                    result.customAlertCount,
+                )
+            },
+            onFailure = {
+                _transferStatus.value = appContext.getString(
+                    R.string.settings_transfer_import_error,
+                    it.message ?: appContext.getString(R.string.common_something_went_wrong),
+                )
+            },
+        )
+    }
+
+    fun clearTransferStatus() {
+        _transferStatus.value = null
+    }
 }

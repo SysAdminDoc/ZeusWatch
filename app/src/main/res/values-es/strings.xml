@@ -802,6 +802,15 @@
     <string name="settings_advanced_title">Avanzado</string>
     <string name="settings_advanced_desc">Controles avanzados para cache y resolucion de problemas de proveedores.</string>
     <string name="settings_cache_duration">Duracion del cache</string>
+    <string name="settings_transfer_title">Copia de ajustes</string>
+    <string name="settings_transfer_desc">Exporta preferencias, orden de tarjetas, alertas personalizadas y ubicaciones guardadas. No se incluyen claves API.</string>
+    <string name="settings_transfer_export">Exportar</string>
+    <string name="settings_transfer_import">Importar</string>
+    <string name="settings_transfer_status_title">Transferencia de ajustes</string>
+    <string name="settings_transfer_export_success">Ajustes exportados.</string>
+    <string name="settings_transfer_export_error">Error al exportar: %1$s</string>
+    <string name="settings_transfer_import_success">Ajustes restaurados con %1$d ubicaciones guardadas y %2$d alertas personalizadas.</string>
+    <string name="settings_transfer_import_error">Error al importar: %1$s</string>
     <string name="settings_minutes">%1$d minutos</string>
     <string name="settings_hours">%1$d horas</string>
     <string name="settings_hour">%1$d hora</string>

@@ -37,6 +37,9 @@ interface SavedLocationDao {
     @Query("DELETE FROM saved_locations WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    @Query("DELETE FROM saved_locations")
+    suspend fun deleteAll()
+
     @Query("DELETE FROM saved_locations WHERE isCurrentLocation = 1")
     suspend fun deleteCurrentLocation()
 
@@ -72,5 +75,11 @@ interface SavedLocationDao {
         orderedIds.forEachIndexed { index, id ->
             updateSortOrder(id, index)
         }
+    }
+
+    @Transaction
+    suspend fun replaceAll(locations: List<SavedLocationEntity>) {
+        deleteAll()
+        locations.forEach { insert(it.copy(id = 0)) }
     }
 }
