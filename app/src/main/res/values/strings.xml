@@ -90,6 +90,8 @@
     <string name="common_today">Today</string>
     <string name="common_tomorrow">Tomorrow</string>
     <string name="common_now">Now</string>
+    <string name="common_yes">Yes</string>
+    <string name="common_no">No</string>
 
     <!-- First-run onboarding -->
     <string name="onboarding_progress">Step %1$d of %2$d</string>
@@ -893,6 +895,13 @@
     <string name="settings_transfer_export">Export</string>
     <string name="settings_transfer_import">Import</string>
     <string name="settings_transfer_status_title">Settings transfer</string>
+    <string name="settings_transfer_preview_title">Review import</string>
+    <string name="settings_transfer_preview_message">Backup v%1$d will replace %2$d saved locations with %3$d, restore %4$d custom alerts, apply %5$d card settings, and restore last location: %6$s.</string>
+    <string name="settings_transfer_preview_warnings">Warnings</string>
+    <string name="settings_transfer_preview_cancel">Cancel</string>
+    <string name="settings_transfer_preview_confirm">Restore</string>
+    <string name="settings_transfer_warning_blank_locations">%1$d saved locations have blank names and will be skipped.</string>
+    <string name="settings_transfer_warning_duplicate_locations">%1$d duplicate saved locations will be skipped.</string>
     <string name="settings_transfer_export_success">Settings exported.</string>
     <string name="settings_transfer_export_error">Export failed: %1$s</string>
     <string name="settings_transfer_import_success">Settings restored with %1$d saved locations and %2$d custom alerts.</string>

@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
@@ -125,6 +126,7 @@ internal fun SettingsContent(
     notificationsPermissionGranted: Boolean = true,
     availableIconPacks: List<IconPack> = emptyList(),
     transferStatus: String? = null,
+    pendingImportPreview: SettingsImportPreview? = null,
     actions: SettingsActions = SettingsActions(),
 ) {
     PredictiveBackScaffold(onBack = onBack) {
@@ -175,6 +177,7 @@ internal fun SettingsContent(
                 availableIconPacks = availableIconPacks,
                 onNavigateToCustomAlerts = onNavigateToCustomAlerts,
                 transferStatus = transferStatus,
+                pendingImportPreview = pendingImportPreview,
                 actions = actions,
             )
 
@@ -231,6 +234,8 @@ internal data class SettingsActions(
     val onPirateWeatherApiKey: (String) -> Unit = {},
     val onExportSettings: () -> Unit = {},
     val onImportSettings: () -> Unit = {},
+    val onConfirmSettingsImport: () -> Unit = {},
+    val onCancelSettingsImport: () -> Unit = {},
     val onClearTransferStatus: () -> Unit = {},
 )
 
@@ -242,6 +247,7 @@ private fun SettingsCategoryContent(
     availableIconPacks: List<IconPack>,
     onNavigateToCustomAlerts: () -> Unit,
     transferStatus: String?,
+    pendingImportPreview: SettingsImportPreview?,
     actions: SettingsActions,
 ) {
     when (selectedCategory) {
@@ -263,7 +269,7 @@ private fun SettingsCategoryContent(
         }
         SettingsCategory.ADVANCED -> {
             SettingsDataSourcesSection(settings, actions)
-            SettingsAdvancedSection(settings, transferStatus, actions)
+            SettingsAdvancedSection(settings, transferStatus, pendingImportPreview, actions)
             SettingsAboutSection()
         }
     }
@@ -830,6 +836,7 @@ private fun SettingsApiKeyFields(
 private fun SettingsAdvancedSection(
     settings: NimbusSettings,
     transferStatus: String?,
+    pendingImportPreview: SettingsImportPreview?,
     actions: SettingsActions,
 ) {
     SettingSection(
@@ -875,6 +882,9 @@ private fun SettingsAdvancedSection(
                 onClick = actions.onImportSettings,
             )
         }
+        pendingImportPreview?.let { preview ->
+            SettingsImportPreviewCard(preview, actions)
+        }
         transferStatus?.let { status ->
             Spacer(modifier = Modifier.height(10.dp))
             InlineNoticeCard(
@@ -888,6 +898,95 @@ private fun SettingsAdvancedSection(
             )
         }
     }
+}
+
+@Composable
+private fun SettingsImportPreviewCard(
+    preview: SettingsImportPreview,
+    actions: SettingsActions,
+) {
+    Spacer(modifier = Modifier.height(10.dp))
+    InlineNoticeCard(
+        title = stringResource(R.string.settings_transfer_preview_title),
+        message = settingsImportPreviewMessage(preview),
+        icon = Icons.Filled.FileDownload,
+    )
+    if (preview.warnings.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(NimbusCardBg.copy(alpha = 0.72f))
+                .border(1.dp, NimbusCardBorder.copy(alpha = 0.62f), RoundedCornerShape(10.dp))
+                .padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                stringResource(R.string.settings_transfer_preview_warnings),
+                style = MaterialTheme.typography.labelMedium,
+                color = NimbusTextSecondary,
+            )
+            preview.warnings.forEach { warning ->
+                Text(
+                    text = "- ${settingsImportWarningText(warning, preview)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextTertiary,
+                )
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        SettingsTransferButton(
+            label = stringResource(R.string.settings_transfer_preview_cancel),
+            icon = Icons.Filled.Close,
+            modifier = Modifier.weight(1f),
+            onClick = actions.onCancelSettingsImport,
+        )
+        SettingsTransferButton(
+            label = stringResource(R.string.settings_transfer_preview_confirm),
+            icon = Icons.Filled.FileDownload,
+            modifier = Modifier.weight(1f),
+            onClick = actions.onConfirmSettingsImport,
+        )
+    }
+}
+
+@Composable
+private fun settingsImportPreviewMessage(preview: SettingsImportPreview): String {
+    val lastLocation = if (preview.hasLastLocation) {
+        stringResource(R.string.common_yes)
+    } else {
+        stringResource(R.string.common_no)
+    }
+    return stringResource(
+        R.string.settings_transfer_preview_message,
+        preview.schemaVersion,
+        preview.currentSavedLocationCount,
+        preview.savedLocationCount,
+        preview.customAlertCount,
+        preview.cardCount,
+        lastLocation,
+    )
+}
+
+@Composable
+private fun settingsImportWarningText(
+    warning: SettingsImportWarning,
+    preview: SettingsImportPreview,
+): String = when (warning) {
+    SettingsImportWarning.BLANK_LOCATION_NAMES -> stringResource(
+        R.string.settings_transfer_warning_blank_locations,
+        preview.skippedLocationCount,
+    )
+    SettingsImportWarning.DUPLICATE_LOCATIONS -> stringResource(
+        R.string.settings_transfer_warning_duplicate_locations,
+        preview.duplicateLocationCount,
+    )
 }
 
 @Composable
