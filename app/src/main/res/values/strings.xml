@@ -689,6 +689,10 @@
     <string name="locations_already_saved_message">Location already saved</string>
     <string name="locations_no_results_message">No results found</string>
     <string name="locations_search_failed">Search failed. Check your connection and try again.</string>
+    <string name="locations_quick_start">Quick Start</string>
+    <string name="locations_use_current_location">Use My Location</string>
+    <string name="locations_use_current_location_cd">Use current location, %1$s</string>
+    <string name="locations_recent_searches">Recent Searches</string>
 
     <!-- Compare -->
     <string name="compare_preparing_title">Preparing comparison</string>
