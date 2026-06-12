@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.wear.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -17,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -190,7 +192,9 @@ private fun TempUnitChip(
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
             .background(WearBlueAccent.copy(alpha = 0.14f), RoundedCornerShape(8.dp))
+            .border(1.dp, WearBlueAccent.copy(alpha = 0.22f), RoundedCornerShape(8.dp))
             .combinedClickable(
                 role = Role.Button,
                 onClickLabel = stringResource(R.string.wear_temp_unit_toggle_cd, label),
@@ -253,7 +257,9 @@ private fun AlertBanner(count: Int, topEvent: String, onTap: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
             .background(WearAlertAccent.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
+            .border(1.dp, WearAlertAccent.copy(alpha = 0.22f), RoundedCornerShape(12.dp))
             .clickable(
                 onClick = onTap,
                 role = Role.Button,
