@@ -1,6 +1,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function validReportCondition(condition) {
+      return condition in [
+        'SUNNY',
+        'PARTLY_CLOUDY',
+        'CLOUDY',
+        'RAIN',
+        'HEAVY_RAIN',
+        'SNOW',
+        'FOG',
+        'WIND',
+        'HAIL',
+        'TORNADO'
+      ];
+    }
+
+    function validAnonymousDeviceId(deviceId) {
+      return deviceId is string
+        && deviceId.size() == 64
+        && deviceId.matches('^[a-f0-9]{64}$');
+    }
+
     // Default: deny all
     match /{document=**} {
       allow read, write: if false;
@@ -23,20 +44,18 @@ service cloud.firestore {
         && request.resource.data.longitude >= -180
         && request.resource.data.longitude <= 180
         && request.resource.data.condition is string
-        && request.resource.data.condition.size() <= 50
+        && validReportCondition(request.resource.data.condition)
         && request.resource.data.timestamp is int
         && request.resource.data.timestamp <= request.time.toMillis() + 120000
         && request.resource.data.timestamp >= request.time.toMillis() - 600000
         && (!request.resource.data.keys().hasAny(['note'])
           || (request.resource.data.note is string && request.resource.data.note.size() <= 100))
-        && request.resource.data.deviceId is string
-        && request.resource.data.deviceId.size() <= 128;
+        && validAnonymousDeviceId(request.resource.data.deviceId);
 
-      // Delete: disabled until ownership model is resolved (N-11).
-      // request.resource is null on delete — the previous rule always denied.
+      // Anonymous append-only model: reports are not editable or deletable.
       allow delete: if false;
 
-      // No updates allowed
+      // No updates allowed.
       allow update: if false;
     }
   }
