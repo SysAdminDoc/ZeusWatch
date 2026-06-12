@@ -6,22 +6,19 @@ import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
+import java.text.Normalizer
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 /**
  * [AlertSourceAdapter] for the WMO Severe Weather Information Centre.
- * Provides global CAP-standard weather alerts from 130+ national services.
- * Used as a fallback for countries without a dedicated adapter.
  *
- * NOTE (2026-06-11): the v2 `json/warnings.json` endpoint is dead (404) — the
- * live feed is `json/wmo_all.json` with a different schema and no per-item geo
- * coordinates, so this adapter currently always returns empty. A rewrite with
- * a proximity design is roadmapped.
+ * The live SWIC feed is country/member scoped, not coordinate scoped:
+ * `json/wmo_all.json` has alert items with WMO member IDs and no geometry.
+ * [getAlertsForCountry] joins those IDs against `json/wmo_member.json` and is
+ * used by [com.sysadmindoc.nimbus.data.repository.AlertRepository] after
+ * country detection.
  */
 @Singleton
 class WmoAlertAdapter @Inject constructor(
@@ -32,20 +29,41 @@ class WmoAlertAdapter @Inject constructor(
     override val displayName = "WMO Severe Weather"
     override val supportedRegions = setOf("GLOBAL")
 
+    @Volatile
+    private var memberCache: List<WmoMember>? = null
+
     override suspend fun getAlerts(lat: Double, lon: Double): Result<List<WeatherAlert>> {
+        // SWIC no longer publishes per-alert geometry in the JSON feed. A raw
+        // coordinate query would either miss everything or show global noise.
+        return Result.success(emptyList())
+    }
+
+    suspend fun getAlertsForCountry(countryCode: String): Result<List<WeatherAlert>> {
         return try {
-            val response = api.getWarnings()
-            val nearby = response.warnings
-                .filter { it.status?.equals("Actual", ignoreCase = true) != false }
-                .filter { isNearby(it, lat, lon) }
-                .mapNotNull { warning -> mapToAlert(warning) }
-            Result.success(nearby)
+            val members = getMembers()
+            val membersById = members
+                .filter { it.mid.isNotBlank() }
+                .associateBy { it.mid.orEmpty() }
+            val memberIds = members
+                .filter { it.matchesCountry(countryCode) }
+                .mapNotNull { it.mid }
+                .toSet()
+
+            if (memberIds.isEmpty()) {
+                return Result.success(emptyList())
+            }
+
+            val alerts = api.getWarnings().items
+                .asSequence()
+                .filter { it.mid in memberIds }
+                .mapNotNull { warning -> mapToAlert(warning, membersById[warning.mid]) }
+                .distinctBy { it.id }
+                .toList()
+
+            Result.success(alerts)
         } catch (e: CancellationException) {
             throw e
         } catch (e: HttpException) {
-            // 404/400 means "no alerts here" — same contract as NwsAlertAdapter.
-            // This also keeps the dead v2 endpoint's 404 from triggering the
-            // caller's failure/fallback path on every fetch.
             if (e.code() == 404 || e.code() == 400) {
                 Result.success(emptyList())
             } else {
@@ -58,64 +76,133 @@ class WmoAlertAdapter @Inject constructor(
         }
     }
 
-    private fun isNearby(warning: WmoWarning, lat: Double, lon: Double): Boolean {
-        if (warning.minLat != null && warning.maxLat != null &&
-            warning.minLon != null && warning.maxLon != null
-        ) {
-            val latPad = BBOX_PAD_DEG
-            if (lat < warning.minLat - latPad || lat > warning.maxLat + latPad) return false
+    private suspend fun getMembers(): List<WmoMember> {
+        memberCache?.let { return it }
 
-            // Longitude degrees shrink with latitude — widen the lon pad so the
-            // padding stays roughly constant in ground distance (clamped so it
-            // doesn't blow up near the poles).
-            val lonPad = latPad / cos(Math.toRadians(lat)).coerceAtLeast(0.1)
-            val minLon = warning.minLon - lonPad
-            val maxLon = warning.maxLon + lonPad
-            // minLon > maxLon means the bbox wraps the antimeridian (±180°).
-            return if (warning.minLon > warning.maxLon) {
-                lon >= minLon || lon <= maxLon
-            } else {
-                lon in minLon..maxLon
-            }
-        }
-
-        val wLat = warning.lat ?: return false
-        val wLon = warning.lon ?: return false
-        return haversineKm(lat, lon, wLat, wLon) <= RADIUS_KM
+        val members = api.getMembers().flatMap { it.members }
+        memberCache = members
+        return members
     }
 
-    private fun mapToAlert(w: WmoWarning): WeatherAlert? {
-        val event = w.event ?: return null
+    private fun mapToAlert(warning: WmoWarning, member: WmoMember?): WeatherAlert? {
+        val event = warning.event.takeUnlessBlank() ?: return null
+        val id = warning.id.takeUnlessBlank() ?: warning.capURL.takeUnlessBlank() ?: return null
+        val headline = warning.headline.takeUnlessBlank() ?: event
+
         return WeatherAlert(
-            id = w.capId ?: w.id ?: return null,
+            id = id,
             event = event,
-            headline = w.headline ?: event,
-            description = w.description ?: "",
-            instruction = w.instruction,
-            severity = AlertSeverity.from(w.severity),
-            urgency = AlertUrgency.from(w.urgency),
-            certainty = w.certainty ?: "Unknown",
-            senderName = w.senderName ?: w.sender ?: "WMO SWIC",
-            areaDescription = w.areaDesc ?: "",
-            effective = w.effective ?: w.onset,
-            expires = w.expires,
+            headline = headline,
+            description = headline,
+            instruction = null,
+            severity = severityFromCode(warning.s),
+            urgency = urgencyFromCode(warning.u),
+            certainty = certaintyFromCode(warning.c),
+            senderName = member?.dept.takeUnlessBlank() ?: member?.name.takeUnlessBlank() ?: "WMO SWIC",
+            areaDescription = warning.areaDesc.takeUnlessBlank() ?: "",
+            effective = warning.effective.takeUnlessBlank() ?: warning.sent,
+            expires = warning.expires,
             response = null,
         )
     }
 
+    private fun WmoMember.matchesCountry(countryCode: String): Boolean {
+        val memberName = name.normalizeForMatch()
+        if (memberName.isBlank()) return false
+
+        val candidates = countryNameCandidates(countryCode)
+            .map { it.normalizeForMatch() }
+            .filter { it.isNotBlank() }
+
+        return candidates.any { candidate ->
+            memberName == candidate ||
+                memberName.contains(candidate) ||
+                candidate.contains(memberName)
+        }
+    }
+
+    private fun countryNameCandidates(countryCode: String): Set<String> {
+        val normalizedCode = countryCode.uppercase(Locale.ROOT)
+        val locale = Locale.Builder().setRegion(normalizedCode).build()
+        return buildSet {
+            add(locale.displayCountry)
+            COUNTRY_ALIASES[normalizedCode]?.let(::addAll)
+        }
+    }
+
+    private fun severityFromCode(code: Int?): AlertSeverity {
+        return when (code) {
+            4 -> AlertSeverity.EXTREME
+            3 -> AlertSeverity.SEVERE
+            2 -> AlertSeverity.MODERATE
+            1 -> AlertSeverity.MINOR
+            else -> AlertSeverity.UNKNOWN
+        }
+    }
+
+    private fun urgencyFromCode(code: Int?): AlertUrgency {
+        return when (code) {
+            4 -> AlertUrgency.IMMEDIATE
+            3 -> AlertUrgency.EXPECTED
+            2 -> AlertUrgency.FUTURE
+            1 -> AlertUrgency.PAST
+            else -> AlertUrgency.UNKNOWN
+        }
+    }
+
+    private fun certaintyFromCode(code: Int?): String {
+        return when (code) {
+            4 -> "Observed"
+            3 -> "Likely"
+            2 -> "Possible"
+            1 -> "Unlikely"
+            else -> "Unknown"
+        }
+    }
+
     companion object {
         private const val TAG = "WmoAlertAdapter"
-        private const val RADIUS_KM = 150.0
-        private const val BBOX_PAD_DEG = 0.5
+        private val COMBINING_MARKS = "\\p{Mn}+".toRegex()
+        private val NON_WORDS = "[^a-z0-9]+".toRegex()
 
-        private fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-            val r = 6371.0
-            val dLat = Math.toRadians(lat2 - lat1)
-            val dLon = Math.toRadians(lon2 - lon1)
-            val a = sin(dLat / 2) * sin(dLat / 2) +
-                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
-                sin(dLon / 2) * sin(dLon / 2)
-            return r * 2 * atan2(sqrt(a), sqrt(1 - a))
+        private val COUNTRY_ALIASES = mapOf(
+            "AE" to setOf("United Arab Emirates"),
+            "BO" to setOf("Bolivia", "Plurinational State of Bolivia"),
+            "BN" to setOf("Brunei", "Brunei Darussalam"),
+            "CD" to setOf("Democratic Republic of the Congo"),
+            "CG" to setOf("Congo", "Republic of the Congo"),
+            "CI" to setOf("Cote d'Ivoire", "Côte d'Ivoire", "Ivory Coast"),
+            "CV" to setOf("Cabo Verde", "Cape Verde"),
+            "CZ" to setOf("Czechia", "Czech Republic"),
+            "GB" to setOf("United Kingdom", "Great Britain", "Northern Ireland"),
+            "IR" to setOf("Iran", "Islamic Republic of Iran"),
+            "KR" to setOf("Republic of Korea", "South Korea", "Korea"),
+            "LA" to setOf("Lao People's Democratic Republic", "Laos"),
+            "MD" to setOf("Moldova", "Republic of Moldova"),
+            "MK" to setOf("North Macedonia", "Macedonia"),
+            "MM" to setOf("Myanmar", "Burma"),
+            "RU" to setOf("Russian Federation", "Russia"),
+            "SY" to setOf("Syrian Arab Republic", "Syria"),
+            "SZ" to setOf("Eswatini", "Swaziland"),
+            "TL" to setOf("Timor-Leste", "Timor Leste"),
+            "TR" to setOf("Türkiye", "Turkiye", "Turkey"),
+            "TZ" to setOf("Tanzania", "United Republic of Tanzania"),
+            "US" to setOf("United States", "United States of America", "USA"),
+            "VE" to setOf("Venezuela", "Bolivarian Republic of Venezuela"),
+            "VN" to setOf("Viet Nam", "Vietnam"),
+        )
+
+        private fun String?.isNotBlank(): Boolean = !this.isNullOrBlank()
+
+        private fun String?.takeUnlessBlank(): String? = this?.takeUnless { it.isBlank() }
+
+        private fun String?.normalizeForMatch(): String {
+            if (this.isNullOrBlank()) return ""
+            return Normalizer.normalize(this, Normalizer.Form.NFD)
+                .replace(COMBINING_MARKS, "")
+                .lowercase(Locale.ROOT)
+                .replace(NON_WORDS, " ")
+                .trim()
         }
     }
 }
