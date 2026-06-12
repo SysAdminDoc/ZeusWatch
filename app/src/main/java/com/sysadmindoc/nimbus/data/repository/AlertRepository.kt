@@ -55,6 +55,7 @@ class AlertRepository @Inject constructor(
         latitude: Double,
         longitude: Double,
         preferenceOverride: AlertSourcePreference? = null,
+        includeMeteredSources: Boolean = true,
     ): Result<List<WeatherAlert>> =
         withContext(Dispatchers.IO) {
             try {
@@ -65,6 +66,9 @@ class AlertRepository @Inject constructor(
                 Log.d(TAG, "Detected country: $countryCode, alertSourcePref: $pref")
 
                 val selectedAdapters = resolveAdapters(pref, countryCode)
+                    .let { adapters ->
+                        if (includeMeteredSources) adapters else adapters.filterNot { it.isMetered }
+                    }
 
                 if (selectedAdapters.isEmpty()) {
                     Log.d(TAG, "No alert adapters matched for country=$countryCode pref=$pref")
