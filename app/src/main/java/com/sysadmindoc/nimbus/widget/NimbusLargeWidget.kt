@@ -82,7 +82,7 @@ private fun LargeWidgetContent(
             Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(
                     strings.detailedOutlookEyebrow,
-                    style = WidgetTheme.eyebrowStyle,
+                    style = widgetEyebrowStyle(),
                 )
                 Spacer(modifier = GlanceModifier.height(3.dp))
                 Text(
@@ -136,7 +136,7 @@ private fun LargeWidgetContent(
 
         Spacer(modifier = GlanceModifier.height(10.dp))
 
-        Text(strings.next6Hours, style = WidgetTheme.eyebrowStyle)
+        Text(strings.next6Hours, style = widgetEyebrowStyle())
         Spacer(modifier = GlanceModifier.height(6.dp))
 
         Row(
@@ -155,7 +155,7 @@ private fun LargeWidgetContent(
 
         Spacer(modifier = GlanceModifier.height(10.dp))
 
-        Text(strings.fiveDayOutlook, style = WidgetTheme.eyebrowStyle)
+        Text(strings.fiveDayOutlook, style = widgetEyebrowStyle())
         Spacer(modifier = GlanceModifier.height(6.dp))
 
         Column(
@@ -196,7 +196,7 @@ private fun HourColumn(
         if (hour.precipChance > 20) {
             Text(
                 "${hour.precipChance}%",
-                style = WidgetTheme.precipStyle,
+                style = widgetPrecipStyle(),
             )
         }
     }
@@ -233,7 +233,7 @@ private fun DayRow(
         if (day.precipChance > 0) {
             Text(
                 "${day.precipChance}%",
-                style = WidgetTheme.precipStyle,
+                style = widgetPrecipStyle(),
                 modifier = GlanceModifier.width(28.dp),
             )
         } else {

@@ -968,8 +968,8 @@
     <string name="wind_sw">SO</string>
     <string name="wind_w">O</string>
     <string name="wind_nw">NO</string>
-    <string name="shortcut_search">Buscar</string>
-    <string name="shortcut_search_long">Buscar ubicacion</string>
+    <string name="shortcut_search">Agregar</string>
+    <string name="shortcut_search_long">Agregar ubicacion</string>
     <string name="shortcut_radar">Radar</string>
     <string name="shortcut_radar_long">Radar meteorologico</string>
     <string name="shortcut_settings">Ajustes</string>

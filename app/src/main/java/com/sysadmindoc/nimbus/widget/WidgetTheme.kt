@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.glance.color.ColorProvider
 import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
@@ -124,6 +125,24 @@ object WidgetTheme {
     )
 }
 
+@Composable
+fun widgetAccentColor() = GlanceTheme.colors.primary
+
+@Composable
+fun widgetAccentContainerColor() = GlanceTheme.colors.primaryContainer
+
+@Composable
+fun widgetOnAccentContainerColor() = GlanceTheme.colors.onPrimaryContainer
+
+@Composable
+fun widgetEyebrowStyle(): TextStyle = WidgetTheme.eyebrowStyle.copy(color = widgetAccentColor())
+
+@Composable
+fun widgetPrecipStyle(): TextStyle = WidgetTheme.precipStyle.copy(color = widgetAccentColor())
+
+@Composable
+fun widgetStatusStyle(): TextStyle = WidgetTheme.statusStyle.copy(color = widgetOnAccentContainerColor())
+
 fun widgetUpdatedLabel(
     updatedAt: Long,
     liveLabel: String = "Live",
@@ -148,7 +167,7 @@ fun WidgetStatusBadge(
 ) {
     val base = modifier
         .cornerRadius(8.dp)
-        .background(WidgetTheme.statusColor)
+        .background(widgetAccentContainerColor())
         .padding(horizontal = 8.dp, vertical = 4.dp)
     val withSemantics = if (contentDescription != null) {
         base.semantics { this.contentDescription = contentDescription }
@@ -162,7 +181,7 @@ fun WidgetStatusBadge(
     ) {
         Text(
             text = text,
-            style = WidgetTheme.statusStyle,
+            style = widgetStatusStyle(),
             maxLines = 1,
         )
     }
