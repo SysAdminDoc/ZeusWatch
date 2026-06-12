@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.data.repository
 
+import androidx.datastore.preferences.core.preferencesOf
+import androidx.datastore.preferences.core.stringPreferencesKey
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -370,6 +372,62 @@ class UserPreferencesTest {
             null
         }
         assertEquals(WeatherSourceProvider.OPEN_METEO, result)
+    }
+
+    // --- API key migration ---
+
+    @Test
+    fun migrateApiKeyPreferencesCopiesLegacyKeysIntoEncryptedStore() {
+        val owmKey = stringPreferencesKey("owm_api_key")
+        val pirateWeatherKey = stringPreferencesKey("pirate_weather_api_key")
+
+        val migrated = migrateApiKeyPreferences(
+            currentData = preferencesOf(),
+            legacyData = preferencesOf(
+                owmKey to "owm-secret",
+                pirateWeatherKey to "pirate-secret",
+            ),
+        )
+
+        assertEquals("owm-secret", migrated[owmKey])
+        assertEquals("pirate-secret", migrated[pirateWeatherKey])
+    }
+
+    @Test
+    fun migrateApiKeyPreferencesDoesNotOverwriteExistingEncryptedKeys() {
+        val owmKey = stringPreferencesKey("owm_api_key")
+        val pirateWeatherKey = stringPreferencesKey("pirate_weather_api_key")
+
+        val migrated = migrateApiKeyPreferences(
+            currentData = preferencesOf(
+                owmKey to "encrypted-owm",
+                pirateWeatherKey to "encrypted-pirate",
+            ),
+            legacyData = preferencesOf(
+                owmKey to "legacy-owm",
+                pirateWeatherKey to "legacy-pirate",
+            ),
+        )
+
+        assertEquals("encrypted-owm", migrated[owmKey])
+        assertEquals("encrypted-pirate", migrated[pirateWeatherKey])
+    }
+
+    @Test
+    fun migrateApiKeyPreferencesIgnoresBlankLegacyKeys() {
+        val owmKey = stringPreferencesKey("owm_api_key")
+        val pirateWeatherKey = stringPreferencesKey("pirate_weather_api_key")
+
+        val migrated = migrateApiKeyPreferences(
+            currentData = preferencesOf(),
+            legacyData = preferencesOf(
+                owmKey to "",
+                pirateWeatherKey to "   ",
+            ),
+        )
+
+        assertNull(migrated[owmKey])
+        assertNull(migrated[pirateWeatherKey])
     }
 
     // --- SavedLocation ---
