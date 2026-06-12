@@ -298,10 +298,10 @@ class WidgetRefreshWorker @AssistedInject constructor(
         state.attemptedNetworkRefresh = true
         return weatherRepository
             .getWeather(
-                request.latitude,
-                request.longitude,
-                request.representativeName,
-                request.sourceOverrides,
+                latitude = request.latitude,
+                longitude = request.longitude,
+                locationName = request.representativeName,
+                sourceOverrides = request.sourceOverrides,
             )
             .getOrNull()
     }

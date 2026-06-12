@@ -20,4 +20,5 @@ data class SavedLocationEntity(
     val addedAt: Long = System.currentTimeMillis(),
     val forecastSource: String? = null,
     val alertSource: String? = null,
+    val timeZone: String? = null,
 )

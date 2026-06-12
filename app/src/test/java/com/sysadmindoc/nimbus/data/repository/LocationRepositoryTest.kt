@@ -64,6 +64,7 @@ class LocationRepositoryTest {
             longitude = -87.6298,
             country = "United States",
             admin1 = "Illinois",
+            timezone = "America/Chicago",
         )
 
         coEvery { dao.getAll() } returns emptyList()
@@ -77,7 +78,8 @@ class LocationRepositoryTest {
             entity.name == "Chicago" &&
                 entity.region == "Illinois" &&
                 entity.country == "United States" &&
-                entity.sortOrder == 3
+                entity.sortOrder == 3 &&
+                entity.timeZone == "America/Chicago"
         }) }
     }
 

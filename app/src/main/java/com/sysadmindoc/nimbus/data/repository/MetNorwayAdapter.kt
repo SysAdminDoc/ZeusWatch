@@ -42,9 +42,10 @@ class MetNorwayForecastAdapter @Inject constructor(
         latitude: Double,
         longitude: Double,
         locationName: String? = null,
+        locationZone: ZoneId? = null,
     ): Result<WeatherData> = runCatching {
         val response = api.getForecast(latitude, longitude)
-        mapToWeatherData(response, latitude, longitude, locationName, ZoneId.systemDefault())
+        mapToWeatherData(response, latitude, longitude, locationName, locationZone ?: ZoneId.systemDefault())
     }.onFailure {
         if (it is kotlinx.coroutines.CancellationException) throw it
         Log.w(TAG, "MET Norway forecast failed", it)
@@ -89,6 +90,7 @@ class MetNorwayForecastAdapter @Inject constructor(
                 name = locationName ?: "Unknown",
                 latitude = lat,
                 longitude = lon,
+                timeZone = zone.id,
             ),
             current = CurrentConditions(
                 temperature = currentInstant?.airTemperature ?: 0.0,
