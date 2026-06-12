@@ -107,6 +107,50 @@ class NowcastAlertLogicTest {
     }
 
     @Test
+    fun `progress timeline maps next hour into intensity segments and change points`() {
+        val timeline = buildNowcastProgressTimeline(
+            series = listOf(
+                bucket(0, 0.0),
+                bucket(15, 0.4),
+                bucket(30, 1.2),
+                bucket(45, 3.0),
+                bucket(60, 0.0),
+            ),
+            referenceTime = now,
+        )
+
+        requireNotNull(timeline)
+        assertEquals(
+            listOf(
+                NowcastProgressIntensity.DRY,
+                NowcastProgressIntensity.LIGHT,
+                NowcastProgressIntensity.STEADY,
+                NowcastProgressIntensity.HEAVY,
+            ),
+            timeline.segments.map { it.intensity },
+        )
+        assertEquals(listOf(15, 30, 45), timeline.points.map { it.minute })
+    }
+
+    @Test
+    fun `progress timeline starts from current bucket when reference is inside series`() {
+        val timeline = buildNowcastProgressTimeline(
+            series = listOf(
+                bucket(-15, 0.0),
+                bucket(0, 0.0),
+                bucket(15, 0.2),
+                bucket(30, 0.0),
+            ),
+            referenceTime = now.plusMinutes(1),
+        )
+
+        requireNotNull(timeline)
+        assertEquals(3, timeline.segments.size)
+        assertEquals(NowcastProgressIntensity.DRY, timeline.segments.first().intensity)
+        assertEquals(listOf(14, 29), timeline.points.map { it.minute })
+    }
+
+    @Test
     fun `nowcastReferenceTime falls back to earliest bucket when wall clock is far away`() {
         // Series timestamps are pinned to 2026-04-12 (well in the past for
         // the device clock running this test) — so the wall clock is not

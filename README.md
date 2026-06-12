@@ -92,6 +92,7 @@ Download from [GitHub Releases](https://github.com/SysAdminDoc/zeuswatch/release
 | **4 Notification Channels** | Extreme (alarm sound, bypass DND), Severe (high), Moderate (default), Minor (low) |
 | **Alert Deduplication** | Tracks seen alert IDs so the same warning is never re-notified |
 | **Multi-Location Alerts** | Monitors all saved locations by default, not just current GPS |
+| **Progress Nowcast Notifications** | Android 16+ nowcast alerts use ProgressStyle segments for dry/light/steady/heavy rain timelines, with BigText fallback on older devices |
 | **Driving Condition Alerts** | Black ice, fog, low visibility, hydroplaning, high wind, snow/ice — derived from forecast data |
 | **Health Alerts** | Migraine triggers (pressure/temp swings, configurable threshold), respiratory (humidity extremes), arthritis (temp swing) |
 | **Haptic Feedback** | Severity-appropriate vibration patterns when alerts display |
@@ -158,7 +159,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Visibility** | miles / km |
 | **Time Format** | 12-hour / 24-hour |
 | **Hourly Range** | 72 hours (default) / 48 hours |
-| **Notifications** | Alert notifications, persistent weather notification (default on), nowcasting alerts (default on), driving alerts, health alerts |
+| **Notifications** | Alert notifications, persistent weather notification (default on), nowcasting alerts with Android 16 progress timelines, driving alerts, health alerts |
 | **Alert Severity** | Extreme only / Severe+ / Moderate+ / All |
 | **Alert Source** | Auto-detect / NWS / MeteoAlarm / JMA / Environment Canada / All |
 | **Data Toggles** | Snowfall, CAPE, sunshine duration, golden hour, Beaufort colors, outdoor score, yesterday comparison |
@@ -375,7 +376,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 │   ├── PetSafetyEvaluator      # Pet weather hazard detection
 │   ├── MeteoconMapper           # WMO code to Lottie filename mapping
 │   ├── HapticHelper             # Severity-based vibration patterns
-│   ├── AlertNotificationHelper  # 4-channel alert notifications
+│   ├── AlertNotificationHelper  # Alert + nowcast progress notifications
 │   ├── WeatherNotificationHelper# Persistent current-weather notification
 │   ├── AlertCheckWorker         # Background alert monitoring
 │   ├── AccessibilityHelper      # TalkBack descriptions
@@ -406,7 +407,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | **Display** | Radar provider, icon style (Meteocons/Material/Custom), theme mode, summary style (AI/template) |
 | **Cards** | Toggle + reorder each of 29 card types with move up/down arrows |
 | **Units** | Temperature, wind, pressure, precipitation, visibility, time format |
-| **Notifications** | Alert notifications (severity threshold, multi-location, source preference), persistent weather, nowcasting, driving, health |
+| **Notifications** | Alert notifications (severity threshold, multi-location, source preference), persistent weather, nowcasting timelines, driving, health |
 | **Data Display** | Hourly range (48/72h), snowfall, CAPE, sunshine, golden hour, Beaufort colors, outdoor score, yesterday comparison |
 | **Health** | Migraine alerts with pressure threshold (3.0/5.0/7.0/10.0 hPa/3h) |
 | **Accessibility** | Haptic feedback for alerts |

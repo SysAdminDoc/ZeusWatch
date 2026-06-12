@@ -5,9 +5,11 @@ import android.app.NotificationChannel
 import android.app.NotificationChannelGroup
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.Notification
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color as AndroidColor
 import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Build
@@ -19,7 +21,10 @@ import androidx.compose.ui.graphics.toArgb
 import com.sysadmindoc.nimbus.MainActivity
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
+import com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import java.time.Duration
+import java.time.LocalDateTime
 
 object AlertNotificationHelper {
 
@@ -186,6 +191,7 @@ object AlertNotificationHelper {
         context: Context,
         title: String,
         body: String,
+        series: List<MinutelyPrecipitation> = emptyList(),
     ): Boolean {
         if (!hasNotificationPermission(context)) return false
 
@@ -193,17 +199,12 @@ object AlertNotificationHelper {
             context, requestCode = NOTIFICATION_ID_NOWCAST, uri = URI_NOWCAST,
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_NOWCAST)
-            .setSmallIcon(R.drawable.ic_alert)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .setCategory(NotificationCompat.CATEGORY_STATUS)
-            .setGroup(AMBIENT_GROUP_ID)
-            .build()
+        val timeline = buildNowcastProgressTimeline(series)
+        val notification = if (Build.VERSION.SDK_INT >= 36 && timeline != null) {
+            progressStyleNowcastNotification(context, title, body, pendingIntent, timeline)
+        } else {
+            bigTextNowcastNotification(context, title, body, pendingIntent)
+        }
 
         try {
             val nm = NotificationManagerCompat.from(context)
@@ -214,6 +215,61 @@ object AlertNotificationHelper {
             // Permission revoked after check
             return false
         }
+    }
+
+    private fun bigTextNowcastNotification(
+        context: Context,
+        title: String,
+        body: String,
+        pendingIntent: PendingIntent,
+    ): Notification {
+        return NotificationCompat.Builder(context, CHANNEL_NOWCAST)
+            .setSmallIcon(R.drawable.ic_alert)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setGroup(AMBIENT_GROUP_ID)
+            .build()
+    }
+
+    @androidx.annotation.RequiresApi(36)
+    private fun progressStyleNowcastNotification(
+        context: Context,
+        title: String,
+        body: String,
+        pendingIntent: PendingIntent,
+        timeline: NowcastProgressTimeline,
+    ): Notification {
+        val style = Notification.ProgressStyle()
+            .setStyledByProgress(false)
+            .setProgress(timeline.progressMinutes)
+            .setProgressSegments(
+                timeline.segments.map { segment ->
+                    Notification.ProgressStyle.Segment(segment.minutes)
+                        .setColor(segment.intensity.color)
+                }
+            )
+            .setProgressPoints(
+                timeline.points.map { point ->
+                    Notification.ProgressStyle.Point(point.minute)
+                        .setColor(point.color)
+                }
+            )
+
+        return Notification.Builder(context, CHANNEL_NOWCAST)
+            .setSmallIcon(R.drawable.ic_alert)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(style)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setCategory(Notification.CATEGORY_STATUS)
+            .setGroup(AMBIENT_GROUP_ID)
+            .build()
     }
 
     /**
@@ -464,4 +520,86 @@ object AlertNotificationHelper {
             }
             .forEach { nm.cancel(it.id) }
     }
+}
+
+internal data class NowcastProgressTimeline(
+    val segments: List<NowcastProgressSegment>,
+    val points: List<NowcastProgressPoint>,
+    val progressMinutes: Int = 1,
+)
+
+internal data class NowcastProgressSegment(
+    val minutes: Int,
+    val intensity: NowcastProgressIntensity,
+)
+
+internal data class NowcastProgressPoint(
+    val minute: Int,
+    val color: Int,
+)
+
+internal enum class NowcastProgressIntensity(val color: Int) {
+    DRY(AndroidColor.rgb(82, 93, 112)),
+    LIGHT(AndroidColor.rgb(95, 180, 255)),
+    STEADY(AndroidColor.rgb(33, 150, 243)),
+    HEAVY(AndroidColor.rgb(126, 87, 194)),
+}
+
+internal fun buildNowcastProgressTimeline(
+    series: List<MinutelyPrecipitation>,
+    referenceTime: LocalDateTime = nowcastReferenceTime(series),
+): NowcastProgressTimeline? {
+    if (series.size < 2) return null
+    val sorted = series.sortedBy { it.time }
+    val currentIndex = sorted.indexOfLast { !it.time.isAfter(referenceTime) }
+        .takeIf { it >= 0 }
+        ?: 0
+    val cutoff = referenceTime.plusMinutes(NOWCAST_LOOK_AHEAD_MIN.toLong())
+    val buckets = sorted
+        .drop(currentIndex)
+        .takeWhile { !it.time.isAfter(cutoff) }
+        .take(4)
+    if (buckets.size < 2) return null
+
+    val segments = buckets.mapIndexed { index, bucket ->
+        val segmentStart = if (index == 0 && referenceTime.isAfter(bucket.time)) {
+            referenceTime
+        } else {
+            bucket.time
+        }
+        val nextTime = buckets.getOrNull(index + 1)?.time ?: bucket.time.plusMinutes(15)
+        val minutes = Duration.between(segmentStart, nextTime).toMinutes().toInt()
+            .coerceIn(1, 15)
+        NowcastProgressSegment(
+            minutes = minutes,
+            intensity = nowcastProgressIntensity(bucket.precipitation),
+        )
+    }
+    val points = segments
+        .zipWithNext()
+        .runningFold(0) { total, (segment, _) -> total + segment.minutes }
+        .drop(1)
+        .mapIndexedNotNull { index, minute ->
+            val before = segments[index].intensity
+            val after = segments[index + 1].intensity
+            if (before == after) {
+                null
+            } else {
+                NowcastProgressPoint(
+                    minute = minute.coerceAtLeast(1),
+                    color = after.color,
+                )
+            }
+        }
+    return NowcastProgressTimeline(
+        segments = segments,
+        points = points,
+    )
+}
+
+private fun nowcastProgressIntensity(precipitationMm: Double): NowcastProgressIntensity = when {
+    precipitationMm < NOWCAST_WET_THRESHOLD_MM -> NowcastProgressIntensity.DRY
+    precipitationMm >= 2.5 -> NowcastProgressIntensity.HEAVY
+    precipitationMm >= 1.0 -> NowcastProgressIntensity.STEADY
+    else -> NowcastProgressIntensity.LIGHT
 }

@@ -104,7 +104,7 @@ class NowcastAlertWorker @AssistedInject constructor(
         }
 
         val (title, body) = formatNowcastNotification(applicationContext, transition, loc.name)
-        val delivered = AlertNotificationHelper.showNowcastNotification(applicationContext, title, body)
+        val delivered = AlertNotificationHelper.showNowcastNotification(applicationContext, title, body, series)
         if (delivered) {
             store.record(signature, nowEpoch)
         }
