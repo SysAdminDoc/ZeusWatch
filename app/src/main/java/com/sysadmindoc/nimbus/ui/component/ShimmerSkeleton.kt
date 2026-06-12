@@ -11,6 +11,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -80,89 +82,101 @@ fun ShimmerLoadingSkeleton(modifier: Modifier = Modifier) {
         )
     }
 
-    Column(
+    val contentPadding = LocalAdaptiveLayout.current.contentPadding
+    LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(NimbusBackgroundGradient)
-            .padding(horizontal = LocalAdaptiveLayout.current.contentPadding),
+            .background(NimbusBackgroundGradient),
+        contentPadding = PaddingValues(
+            start = contentPadding,
+            end = contentPadding,
+            top = 60.dp,
+            bottom = 96.dp,
+        ),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Spacer(modifier = Modifier.height(60.dp))
-
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(NimbusBlueAccent.copy(alpha = 0.12f))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.loading_refreshing_forecast),
-                style = MaterialTheme.typography.labelMedium,
-                color = NimbusTextSecondary,
-            )
-        }
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NimbusGlassTop.copy(alpha = 0.86f),
-                            NimbusCardBg,
-                            NimbusGlassBottom,
-                        ),
-                    ),
+        item(key = "loading-label") {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(NimbusBlueAccent.copy(alpha = 0.12f))
+                    .border(1.dp, NimbusBlueAccent.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.loading_refreshing_forecast),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = NimbusTextSecondary,
                 )
-                .padding(horizontal = 22.dp, vertical = 22.dp),
-        ) {
-            Column(horizontalAlignment = Alignment.Start) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    ShimmerBox(width = 132.dp, height = 28.dp, brush = shimmerBrush)
-                    ShimmerBox(width = 88.dp, height = 28.dp, brush = shimmerBrush)
-                }
-                Spacer(modifier = Modifier.height(20.dp))
-                ShimmerBox(width = 168.dp, height = 16.dp, brush = shimmerBrush)
-                Spacer(modifier = Modifier.height(10.dp))
-                ShimmerBox(width = 142.dp, height = 72.dp, brush = shimmerBrush)
-                Spacer(modifier = Modifier.height(10.dp))
-                ShimmerBox(width = 180.dp, height = 18.dp, brush = shimmerBrush)
-                Spacer(modifier = Modifier.height(8.dp))
-                ShimmerBox(width = 224.dp, height = 14.dp, brush = shimmerBrush)
-                Spacer(modifier = Modifier.height(20.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ShimmerBox(width = 92.dp, height = 52.dp, brush = shimmerBrush)
-                    ShimmerBox(width = 92.dp, height = 52.dp, brush = shimmerBrush)
-                    ShimmerBox(width = 92.dp, height = 52.dp, brush = shimmerBrush)
-                }
             }
         }
+        item(key = "hero") {
+            HeroSkeleton(brush = shimmerBrush)
+        }
+        item(key = "hourly") {
+            ShimmerCard(height = 130.dp, brush = shimmerBrush)
+        }
+        item(key = "summary") {
+            ShimmerCard(height = 72.dp, brush = shimmerBrush)
+        }
+        item(key = "graph") {
+            ShimmerCard(height = 180.dp, brush = shimmerBrush)
+        }
+        item(key = "daily") {
+            ShimmerCard(height = 280.dp, brush = shimmerBrush)
+        }
+        item(key = "details") {
+            ShimmerCard(height = 180.dp, brush = shimmerBrush)
+        }
+    }
+}
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Hourly card placeholder
-        ShimmerCard(height = 130.dp, brush = shimmerBrush)
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Summary card placeholder
-        ShimmerCard(height = 60.dp, brush = shimmerBrush)
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Temp graph placeholder
-        ShimmerCard(height = 180.dp, brush = shimmerBrush)
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Daily card placeholder
-        ShimmerCard(height = 280.dp, brush = shimmerBrush)
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Details card placeholder
-        ShimmerCard(height = 180.dp, brush = shimmerBrush)
+@Composable
+private fun HeroSkeleton(
+    brush: Brush,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.86f),
+                        NimbusCardBg,
+                        NimbusGlassBottom,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 22.dp, vertical = 22.dp),
+    ) {
+        Column(horizontalAlignment = Alignment.Start) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ShimmerBox(width = 132.dp, height = 28.dp, brush = brush)
+                ShimmerBox(width = 88.dp, height = 28.dp, brush = brush)
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            ShimmerBox(width = 168.dp, height = 16.dp, brush = brush)
+            Spacer(modifier = Modifier.height(10.dp))
+            ShimmerBox(width = 142.dp, height = 72.dp, brush = brush)
+            Spacer(modifier = Modifier.height(10.dp))
+            ShimmerBox(width = 180.dp, height = 18.dp, brush = brush)
+            Spacer(modifier = Modifier.height(8.dp))
+            ShimmerBox(width = 224.dp, height = 14.dp, brush = brush)
+            Spacer(modifier = Modifier.height(20.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ShimmerBox(width = 92.dp, height = 52.dp, brush = brush)
+                ShimmerBox(width = 92.dp, height = 52.dp, brush = brush)
+                ShimmerBox(width = 92.dp, height = 52.dp, brush = brush)
+            }
+        }
     }
 }
 

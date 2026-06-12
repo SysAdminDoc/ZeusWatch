@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.ui.screen.customalerts
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,10 +34,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -44,7 +48,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -702,23 +705,43 @@ private fun RuleEditorActions(
     val thresholdValid = isThresholdValid(metric, parsedThreshold)
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        TextButton(onClick = onCancel) {
-            Text(stringResource(R.string.common_cancel), color = NimbusTextSecondary)
+        OutlinedButton(
+            onClick = onCancel,
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 50.dp),
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(1.dp, NimbusCardBorder),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = NimbusTextSecondary,
+            ),
+        ) {
+            Text(stringResource(R.string.common_cancel), maxLines = 1)
         }
-        Spacer(modifier = Modifier.width(8.dp))
-        TextButton(
+        Button(
             enabled = thresholdValid,
+            modifier = Modifier
+                .weight(1.25f)
+                .heightIn(min = 50.dp),
+            shape = RoundedCornerShape(10.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = NimbusBlueAccent,
+                contentColor = NimbusTextPrimary,
+                disabledContainerColor = NimbusCardBorder.copy(alpha = 0.72f),
+                disabledContentColor = NimbusTextTertiary,
+            ),
             onClick = {
-                val parsed = parsedThreshold?.takeIf { thresholdValid } ?: return@TextButton
-                onSave(metric, operator, parsed, enabled)
+                parsedThreshold?.takeIf { thresholdValid }?.let { parsed ->
+                    onSave(metric, operator, parsed, enabled)
+                }
             },
         ) {
             Text(
                 stringResource(R.string.common_save),
-                color = if (thresholdValid) NimbusBlueAccent else NimbusTextTertiary,
                 fontWeight = FontWeight.Bold,
+                maxLines = 1,
             )
         }
     }
