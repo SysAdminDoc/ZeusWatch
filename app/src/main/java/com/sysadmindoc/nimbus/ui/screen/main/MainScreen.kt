@@ -70,7 +70,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -224,9 +223,8 @@ fun MainScreen(
         }
     }
 
-    // Detect tablet: screen width >= 840dp
-    val configuration = LocalConfiguration.current
-    val isTablet = configuration.screenWidthDp >= 840
+    val adaptiveLayout = LocalAdaptiveLayout.current
+    val isTablet = adaptiveLayout.supportsTwoPaneWeather || adaptiveLayout.isTabletop
     val visibleTabs = remember(isTablet) { visibleMainTabs(isTablet) }
     val activeSelectedTab = normalizeSelectedMainTab(isTablet, selectedTab)
 

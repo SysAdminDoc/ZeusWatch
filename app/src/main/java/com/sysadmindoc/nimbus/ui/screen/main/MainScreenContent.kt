@@ -49,6 +49,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -292,7 +293,15 @@ private fun WeatherTabHost(
     val referenceTime = data.current.observationTime
     val referenceDate = referenceTime?.toLocalDate() ?: data.daily.firstOrNull()?.date
 
-    if (isTablet) {
+    val layout = LocalAdaptiveLayout.current
+    if (layout.isTabletop) {
+        TabletopWeatherTabs(
+            state = state,
+            selectedTab = selectedTab,
+            referenceDate = referenceDate,
+            actions = actions,
+        )
+    } else if (isTablet) {
         TabletWeatherTabs(
             state = state,
             selectedTab = selectedTab,
@@ -306,6 +315,50 @@ private fun WeatherTabHost(
             referenceDate = referenceDate,
             actions = actions,
         )
+    }
+}
+
+@Composable
+private fun TabletopWeatherTabs(
+    state: MainUiState,
+    selectedTab: Int,
+    referenceDate: java.time.LocalDate?,
+    actions: MainScreenActions,
+) {
+    val data = state.weatherData ?: return
+    val referenceTime = data.current.observationTime
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.weight(0.4f)) {
+            RadarTab(
+                latitude = data.location.latitude,
+                longitude = data.location.longitude,
+            )
+        }
+        HorizontalDivider(
+            thickness = 1.dp,
+            color = NimbusCardBg,
+        )
+        Box(modifier = Modifier.weight(0.6f)) {
+            Crossfade(targetState = selectedTab, animationSpec = tween(300), label = "tabletopTab") { tab ->
+                when (tab) {
+                    BottomTab.TODAY.ordinal -> TodayContent(state = state, actions = actions)
+                    BottomTab.HOURLY.ordinal -> HourlyTab(
+                        hourly = data.hourly,
+                        locationName = data.location.name,
+                        referenceTime = referenceTime,
+                        isRefreshing = state.isRefreshing,
+                        onRefresh = actions.content.onRefresh,
+                    )
+                    BottomTab.DAILY.ordinal -> DailyTab(
+                        daily = data.daily,
+                        locationName = data.location.name,
+                        referenceDate = referenceDate,
+                        isRefreshing = state.isRefreshing,
+                        onRefresh = actions.content.onRefresh,
+                    )
+                }
+            }
+        }
     }
 }
 

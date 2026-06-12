@@ -20,6 +20,7 @@ import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.ThemeMode
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.ui.component.AdaptiveLayoutInfo
+import com.sysadmindoc.nimbus.ui.component.FoldPosture
 import com.sysadmindoc.nimbus.ui.component.LocalAdaptiveLayout
 import com.sysadmindoc.nimbus.ui.component.LocalIconPackManager
 import com.sysadmindoc.nimbus.ui.navigation.DeepLinkRequest
@@ -31,6 +32,9 @@ import com.sysadmindoc.nimbus.ui.theme.WeatherThemeBus
 import com.sysadmindoc.nimbus.util.IconPackManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import androidx.window.layout.FoldingFeature
+import androidx.window.layout.WindowInfoTracker
+import androidx.window.layout.WindowLayoutInfo
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -56,7 +60,14 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
-            val adaptiveInfo = AdaptiveLayoutInfo.from(windowSizeClass.widthSizeClass)
+            val windowLayoutInfo by WindowInfoTracker
+                .getOrCreate(this)
+                .windowLayoutInfo(this)
+                .collectAsStateWithLifecycle(initialValue = WindowLayoutInfo(emptyList()))
+            val adaptiveInfo = AdaptiveLayoutInfo.from(
+                widthClass = windowSizeClass.widthSizeClass,
+                foldPosture = windowLayoutInfo.foldPosture(),
+            )
             val settings by prefs.settings.collectAsStateWithLifecycle(initialValue = NimbusSettings())
             // Hoisted above NimbusTheme: the weather-adaptive scheme reads
             // LocalWeatherThemeState inside the theme, so the provider must be
@@ -107,6 +118,25 @@ class MainActivity : ComponentActivity() {
             target = uri.getQueryParameter("target"),
             card = uri.getQueryParameter("card"),
         )
+    }
+
+    private fun WindowLayoutInfo.foldPosture(): FoldPosture {
+        val foldingFeature = displayFeatures
+            .filterIsInstance<FoldingFeature>()
+            .firstOrNull { it.state == FoldingFeature.State.HALF_OPENED || it.isSeparating }
+            ?: return FoldPosture.FLAT
+
+        return when (foldingFeature.orientation) {
+            FoldingFeature.Orientation.HORIZONTAL -> {
+                if (foldingFeature.state == FoldingFeature.State.HALF_OPENED) {
+                    FoldPosture.TABLETOP
+                } else {
+                    FoldPosture.FLAT
+                }
+            }
+            FoldingFeature.Orientation.VERTICAL -> FoldPosture.BOOK
+            else -> FoldPosture.FLAT
+        }
     }
 
     @Suppress("DEPRECATION")
