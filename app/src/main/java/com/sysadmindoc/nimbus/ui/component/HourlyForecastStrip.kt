@@ -213,6 +213,7 @@ private fun HourlyItemShell(
     content: @Composable () -> Unit,
 ) {
     val s = LocalUnitSettings.current
+    val context = LocalContext.current
     val shape = RoundedCornerShape(10.dp)
     val cardBrush = if (highlighted) {
         Brush.verticalGradient(
@@ -244,7 +245,7 @@ private fun HourlyItemShell(
             .padding(horizontal = 10.dp, vertical = 14.dp),
     ) {
         Text(
-            text = WeatherFormatter.formatRelativeHourLabel(hour.time, referenceTime, s),
+            text = WeatherFormatter.formatRelativeHourLabel(context, hour.time, referenceTime, s),
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
             color = if (highlighted) NimbusBlueAccent else NimbusTextSecondary,
         )

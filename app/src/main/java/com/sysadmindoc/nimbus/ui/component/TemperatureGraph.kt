@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.ui.component
 
+import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -66,6 +68,7 @@ fun TemperatureGraph(
     normalLow: Double? = null,
 ) {
     val s = LocalUnitSettings.current
+    val context = LocalContext.current
     val data = remember(hourly) { hourly.take(24) }
     if (data.size < 2) return
 
@@ -134,17 +137,21 @@ fun TemperatureGraph(
                 drawTemperatureCurve(paths, metrics)
                 drawFeelsLikeOverlay(data, metrics)
                 drawHighLowMarkers(data, points, textMeasurer, labelStyle, s)
-                drawTimeLabels(data, points, referenceTime, s, textMeasurer, labelStyle, metrics)
+                drawTimeLabels(data, points, referenceTime, s, textMeasurer, labelStyle, metrics, context)
+                val inspectionText = TemperatureInspectionText(
+                    textMeasurer = textMeasurer,
+                    tooltipStyle = tooltipStyle,
+                    settings = s,
+                    referenceTime = referenceTime,
+                    context = context,
+                )
                 drawInspectionOverlay(
                     data = data,
                     points = points,
                     inspectX = inspectX,
                     isInspecting = isInspecting,
                     metrics = metrics,
-                    textMeasurer = textMeasurer,
-                    tooltipStyle = tooltipStyle,
-                    settings = s,
-                    referenceTime = referenceTime,
+                    inspectionText = inspectionText,
                 )
             }
         }
@@ -164,6 +171,14 @@ private data class TemperatureGraphMetrics(
 ) {
     val baselineY: Float = height - paddingBottom
 }
+
+private data class TemperatureInspectionText(
+    val textMeasurer: TextMeasurer,
+    val tooltipStyle: TextStyle,
+    val settings: NimbusSettings,
+    val referenceTime: LocalDateTime?,
+    val context: Context,
+)
 
 private data class TemperatureGraphPaths(
     val line: Path,
@@ -394,10 +409,11 @@ private fun DrawScope.drawTimeLabels(
     textMeasurer: TextMeasurer,
     labelStyle: TextStyle,
     metrics: TemperatureGraphMetrics,
+    context: Context,
 ) {
     for (index in data.indices step 6) {
         if (index < points.size) {
-            val label = WeatherFormatter.formatRelativeHourLabel(data[index].time, referenceTime, settings)
+            val label = WeatherFormatter.formatRelativeHourLabel(context, data[index].time, referenceTime, settings)
             val measured = textMeasurer.measure(label, labelStyle)
             drawText(
                 measured,
@@ -413,10 +429,7 @@ private fun DrawScope.drawInspectionOverlay(
     inspectX: Float,
     isInspecting: Boolean,
     metrics: TemperatureGraphMetrics,
-    textMeasurer: TextMeasurer,
-    tooltipStyle: TextStyle,
-    settings: NimbusSettings,
-    referenceTime: LocalDateTime?,
+    inspectionText: TemperatureInspectionText,
 ) {
     if (!isInspecting || inspectX < 0f || metrics.stepX <= 0f) return
 
@@ -426,7 +439,7 @@ private fun DrawScope.drawInspectionOverlay(
     drawInspectionGuide(nearPoint, metrics)
     drawCircle(NimbusBlueAccent, radius = 6f, center = nearPoint)
     drawCircle(Color.White, radius = 3f, center = nearPoint)
-    drawInspectionTooltip(nearHour, nearPoint, metrics, textMeasurer, tooltipStyle, settings, referenceTime)
+    drawInspectionTooltip(nearHour, nearPoint, metrics, inspectionText)
 }
 
 private fun DrawScope.drawInspectionGuide(
@@ -446,13 +459,15 @@ private fun DrawScope.drawInspectionTooltip(
     hour: HourlyConditions,
     point: Offset,
     metrics: TemperatureGraphMetrics,
-    textMeasurer: TextMeasurer,
-    tooltipStyle: TextStyle,
-    settings: NimbusSettings,
-    referenceTime: LocalDateTime?,
+    inspectionText: TemperatureInspectionText,
 ) {
-    val tooltipText = inspectionTooltipText(hour, settings, referenceTime)
-    val measured = textMeasurer.measure(tooltipText, tooltipStyle)
+    val tooltipText = inspectionTooltipText(
+        hour = hour,
+        settings = inspectionText.settings,
+        referenceTime = inspectionText.referenceTime,
+        context = inspectionText.context,
+    )
+    val measured = inspectionText.textMeasurer.measure(tooltipText, inspectionText.tooltipStyle)
     val tooltipX = (point.x - measured.size.width / 2f).coerceIn(0f, metrics.width - measured.size.width)
     val tooltipY = 2f
     drawRoundRect(
@@ -468,9 +483,10 @@ private fun inspectionTooltipText(
     hour: HourlyConditions,
     settings: NimbusSettings,
     referenceTime: LocalDateTime?,
+    context: Context,
 ): String {
     val tempText = WeatherFormatter.formatTemperature(hour.temperature, settings)
-    val timeText = WeatherFormatter.formatRelativeHourLabel(hour.time, referenceTime, settings)
+    val timeText = WeatherFormatter.formatRelativeHourLabel(context, hour.time, referenceTime, settings)
     val precipText = if (hour.precipitationProbability > 0) " ${hour.precipitationProbability}%" else ""
     return "$tempText \u2022 $timeText$precipText"
 }

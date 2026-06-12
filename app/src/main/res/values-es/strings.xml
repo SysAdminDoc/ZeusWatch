@@ -3,6 +3,11 @@
     <string name="app_name">ZeusWatch</string>
 
     <!-- Widgets -->
+    <string name="widget_small_label">ZeusWatch actual</string>
+    <string name="widget_medium_label">ZeusWatch 3 dias</string>
+    <string name="widget_large_label">ZeusWatch pronostico</string>
+    <string name="widget_forecast_strip_label">ZeusWatch por hora</string>
+    <string name="widget_saved_cities_label">ZeusWatch ciudades</string>
     <string name="widget_small_desc">Temperatura y condiciones actuales</string>
     <string name="widget_medium_desc">Condiciones actuales con pronostico de 3 dias</string>
     <string name="widget_large_desc">Pronostico por hora con vista de 5 dias</string>
@@ -722,6 +727,7 @@
     <string name="main_pollen_unavailable_message">El pronostico esta actualizado, pero los datos de polen no se actualizaron para esta ubicacion.</string>
     <string name="main_no_health_trigger_title">Sin activador de salud activo</string>
     <string name="main_no_health_trigger_message">El pronostico mas reciente ya no cumple tus umbrales de alerta de salud.</string>
+    <string name="current_conditions_semantics">%1$s. Actualmente %2$s, %3$s. Sensacion %4$s. Maxima %5$s, minima %6$s.</string>
 
     <!-- Existing shared labels used by the localized surfaces -->
     <string name="humidity">Humedad</string>
@@ -983,6 +989,8 @@
     <string name="share_text_shared_via">Compartido via %1$s</string>
     <string name="share_weather_subject">Clima para %1$s</string>
     <string name="share_weather_chooser">Compartir clima</string>
+    <string name="share_weather_image_text">Clima para %1$s - %2$s</string>
+    <string name="share_weather_image_chooser">Compartir imagen del clima</string>
     <string name="app_version">1.3.0</string>
     <string name="feels_like">Sensacion %1$s</string>
     <string name="day_night_temp">Dia %1$s \u2022 Noche %2$s</string>
@@ -1058,4 +1066,94 @@
     <string name="nowcast_notif_body_starting_named">Se espera lluvia %1$s cerca de %2$s en unos %3$d minutos.</string>
     <string name="nowcast_notif_body_starting">Se espera lluvia %1$s en unos %2$d minutos.</string>
     <string name="nowcast_notif_body_stopping">Parece que la lluvia actual amainara en unos %1$d minutos.</string>
+
+    <!-- Localized weather labels -->
+    <string name="weather_code_clear_sky">Despejado</string>
+    <string name="weather_code_mainly_clear">Mayormente despejado</string>
+    <string name="weather_code_partly_cloudy">Parcialmente nublado</string>
+    <string name="weather_code_overcast">Cubierto</string>
+    <string name="weather_code_fog">Niebla</string>
+    <string name="weather_code_depositing_rime_fog">Niebla helada</string>
+    <string name="weather_code_drizzle_light">Llovizna ligera</string>
+    <string name="weather_code_drizzle_moderate">Llovizna</string>
+    <string name="weather_code_drizzle_dense">Llovizna intensa</string>
+    <string name="weather_code_freezing_drizzle_light">Llovizna helada ligera</string>
+    <string name="weather_code_freezing_drizzle_dense">Llovizna helada</string>
+    <string name="weather_code_rain_slight">Lluvia ligera</string>
+    <string name="weather_code_rain_moderate">Lluvia</string>
+    <string name="weather_code_rain_heavy">Lluvia intensa</string>
+    <string name="weather_code_freezing_rain_light">Lluvia helada ligera</string>
+    <string name="weather_code_freezing_rain_heavy">Lluvia helada</string>
+    <string name="weather_code_snow_slight">Nieve ligera</string>
+    <string name="weather_code_snow_moderate">Nieve</string>
+    <string name="weather_code_snow_heavy">Nieve intensa</string>
+    <string name="weather_code_snow_grains">Granos de nieve</string>
+    <string name="weather_code_rain_showers_slight">Chubascos ligeros</string>
+    <string name="weather_code_rain_showers_moderate">Chubascos</string>
+    <string name="weather_code_rain_showers_violent">Chubascos intensos</string>
+    <string name="weather_code_snow_showers_slight">Chubascos de nieve ligeros</string>
+    <string name="weather_code_snow_showers_heavy">Chubascos de nieve intensos</string>
+    <string name="weather_code_thunderstorm">Tormenta</string>
+    <string name="weather_code_thunderstorm_hail_slight">Tormenta con granizo</string>
+    <string name="weather_code_thunderstorm_hail_heavy">Tormenta severa</string>
+    <string name="weather_code_unknown">Desconocido</string>
+    <string name="weather_code_icon_cd">Icono de clima: %1$s</string>
+
+    <!-- Main errors -->
+    <string name="main_error_location_permission_required">Se requiere permiso de ubicacion para mostrar el clima.</string>
+    <string name="main_error_location_permission_short">Se requiere permiso de ubicacion.</string>
+    <string name="main_error_location_services_off">Activa los servicios de ubicacion para cargar el clima local.</string>
+    <string name="main_error_location_unavailable">No se pudo determinar la ubicacion. Sal al exterior o revisa los servicios de ubicacion e intenta de nuevo.</string>
+    <string name="main_error_no_internet">Sin conexion a internet</string>
+    <string name="main_error_timeout">El servidor tardo demasiado en responder</string>
+    <string name="main_error_connect_weather_service">No se pudo conectar con el servicio meteorologico</string>
+    <string name="main_error_weather_service">Error del servicio meteorologico (%1$d)</string>
+    <string name="main_error_generic_retry">Algo salio mal. Intenta de nuevo.</string>
+    <string name="main_error_choose_location">Elige una ubicacion para empezar.</string>
+
+    <!-- Localized formatter fragments -->
+    <string name="current_feels_like_reason_wind_chill">Sensacion por viento</string>
+    <string name="current_feels_like_reason_cold_exposure">Exposicion al frio</string>
+    <string name="current_feels_like_reason_heat_index">Indice de calor</string>
+    <string name="current_feels_like_reason_solar_heating">Calentamiento solar</string>
+
+    <!-- Clothing suggestions -->
+    <string name="clothing_heavy_winter_coat">Abrigo pesado, capas aislantes y ropa termica</string>
+    <string name="clothing_winter_coat">Abrigo de invierno con capas abrigadas debajo</string>
+    <string name="clothing_warm_jacket">Chaqueta abrigada o forro polar con capa base</string>
+    <string name="clothing_light_jacket">Chaqueta ligera o sueter</string>
+    <string name="clothing_tshirt_light_sleeve">Camiseta o manga larga ligera</string>
+    <string name="clothing_light_breathable">Ropa ligera y transpirable</string>
+    <string name="clothing_warm_hat_gloves">Gorro y guantes abrigados</string>
+    <string name="clothing_scarf_face_covering">Bufanda o cobertura facial</string>
+    <string name="clothing_rain_jacket_umbrella">Impermeable o paraguas</string>
+    <string name="clothing_waterproof_shoes">Zapatos o botas impermeables</string>
+    <string name="clothing_waterproof_boots_socks">Botas impermeables y calcetines abrigados</string>
+    <string name="clothing_sunglasses">Gafas de sol</string>
+    <string name="clothing_hat_sunscreen">Sombrero y protector solar (SPF 30+)</string>
+    <string name="clothing_windbreaker">Cortavientos</string>
+
+    <!-- Weather summary template -->
+    <string name="summary_time_tonight">esta noche</string>
+    <string name="summary_time_morning">esta manana</string>
+    <string name="summary_time_afternoon">esta tarde</string>
+    <string name="summary_time_evening">esta noche</string>
+    <string name="summary_condition_time">%1$s %2$s</string>
+    <string name="summary_wind_gale_force">vientos con fuerza de temporal</string>
+    <string name="summary_wind_strong">vientos fuertes</string>
+    <string name="summary_wind_moderate">vientos moderados</string>
+    <string name="summary_with_wind">con %1$s</string>
+    <string name="summary_uv_very_high">el indice UV es muy alto</string>
+    <string name="summary_uv_high">el indice UV es alto</string>
+    <string name="summary_muggy">y se sentira bochornoso</string>
+    <string name="summary_highs_near">Maximas cerca de %1$s.</string>
+    <string name="summary_lows_near">Minimas cerca de %1$s.</string>
+    <string name="summary_warmer_than_yesterday"> %1$d\u00B0 mas calido que ayer.</string>
+    <string name="summary_cooler_than_yesterday"> %1$d\u00B0 mas fresco que ayer.</string>
+    <string name="summary_rain_likely_throughout_day">con lluvia probable durante el dia</string>
+    <string name="summary_rain_expected_soon">con lluvia pronto</string>
+    <string name="summary_rain_developing_later">con lluvia formandose mas tarde</string>
+    <string name="summary_rain_likely_later_today">con lluvia probable mas tarde hoy</string>
+    <string name="summary_chance_showers">con posibilidad de chubascos</string>
+    <string name="summary_slight_chance_rain">con ligera posibilidad de lluvia</string>
 </resources>

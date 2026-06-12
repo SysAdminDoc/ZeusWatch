@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.util
 
+import android.content.Context
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.AstronomyData
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
@@ -124,6 +126,24 @@ object AccessibilityHelper {
                 append("at ${WeatherFormatter.formatRelativeHourLabel(peak.time, referenceTime, s)}.")
             }
         }
+    }
+
+    /** Localized full current conditions description for the hero header area. */
+    fun currentConditions(
+        context: Context,
+        current: CurrentConditions,
+        locationName: String,
+        s: NimbusSettings = NimbusSettings(),
+    ): String {
+        return context.getString(
+            R.string.current_conditions_semantics,
+            locationName,
+            WeatherFormatter.formatTemperature(current.temperature, s),
+            current.weatherCode.localizedDescription(context),
+            WeatherFormatter.formatTemperature(current.feelsLike, s),
+            WeatherFormatter.formatTemperature(current.dailyHigh, s),
+            WeatherFormatter.formatTemperature(current.dailyLow, s),
+        )
     }
 
     /** Outdoor score gauge and factor breakdown description. */

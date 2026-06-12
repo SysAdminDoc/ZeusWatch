@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -48,6 +49,7 @@ fun WindTrendCard(
     modifier: Modifier = Modifier,
 ) {
     val s = LocalUnitSettings.current
+    val context = LocalContext.current
     val data = remember(hourly) { hourly.take(24) }
     if (data.size < 3) return
 
@@ -58,8 +60,7 @@ fun WindTrendCard(
 
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
-    val peakTimeRaw = WeatherFormatter.formatRelativeHourLabel(peakHour.time, referenceTime, s)
-    val peakTimeLabel = if (peakTimeRaw == "Now") stringResource(R.string.common_now) else peakTimeRaw
+    val peakTimeLabel = WeatherFormatter.formatRelativeHourLabel(context, peakHour.time, referenceTime, s)
     val semanticSummary = if (maxGust > maxWind * 1.2) {
         stringResource(
             R.string.wind_trend_semantics_gusts,
@@ -195,7 +196,7 @@ fun WindTrendCard(
             // Time labels every 6h
             for (i in data.indices step 6) {
                 if (i < points.size) {
-                    val label = WeatherFormatter.formatRelativeHourLabel(data[i].time, referenceTime, s)
+                    val label = WeatherFormatter.formatRelativeHourLabel(context, data[i].time, referenceTime, s)
                     val m = textMeasurer.measure(label, labelStyle)
                     drawText(m, topLeft = Offset(
                         (points[i].x - m.size.width / 2f).coerceIn(0f, w - m.size.width),

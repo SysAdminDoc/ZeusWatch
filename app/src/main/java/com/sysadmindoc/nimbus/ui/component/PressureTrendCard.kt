@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -47,6 +48,7 @@ fun PressureTrendCard(
     modifier: Modifier = Modifier,
 ) {
     val s = LocalUnitSettings.current
+    val context = LocalContext.current
     val data = remember(hourly) {
         hourly.take(24).mapNotNull { h ->
             h.surfacePressure?.let { p -> h.time to p }
@@ -172,7 +174,7 @@ fun PressureTrendCard(
             // Time labels every 6h
             for (i in data.indices step 6) {
                 if (i < points.size) {
-                    val label = WeatherFormatter.formatRelativeHourLabel(data[i].first, referenceTime, s)
+                    val label = WeatherFormatter.formatRelativeHourLabel(context, data[i].first, referenceTime, s)
                     val m = textMeasurer.measure(label, labelStyle)
                     drawText(m, topLeft = Offset(
                         (points[i].x - m.size.width / 2f).coerceIn(0f, w - m.size.width),

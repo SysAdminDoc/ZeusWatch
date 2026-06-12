@@ -16,6 +16,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -43,6 +44,7 @@ fun PrecipitationChartCard(
     modifier: Modifier = Modifier,
 ) {
     val s = LocalUnitSettings.current
+    val context = LocalContext.current
     val data = remember(hourly) { hourly.take(24) }
     if (data.isEmpty()) return
 
@@ -56,9 +58,9 @@ fun PrecipitationChartCard(
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
     val peakTimeRaw = if (peakHour != null) {
-        WeatherFormatter.formatRelativeHourLabel(peakHour.time, referenceTime, s)
+        WeatherFormatter.formatRelativeHourLabel(context, peakHour.time, referenceTime, s)
     } else null
-    val peakTimeLabel = if (peakTimeRaw == "Now") stringResource(R.string.common_now) else peakTimeRaw
+    val peakTimeLabel = peakTimeRaw
     val semanticBase = when {
         maxProb == 0 -> stringResource(R.string.precip_semantics_no_rain)
         peakTimeLabel != null -> stringResource(R.string.precip_semantics_chance_peak, maxProb, peakTimeLabel)
@@ -163,7 +165,7 @@ fun PrecipitationChartCard(
 
                     // Time labels every 6 hours
                     if (i % 6 == 0) {
-                        val label = WeatherFormatter.formatRelativeHourLabel(hour.time, referenceTime, s)
+                        val label = WeatherFormatter.formatRelativeHourLabel(context, hour.time, referenceTime, s)
                         val measured = textMeasurer.measure(label, labelStyle)
                         drawText(
                             measured,

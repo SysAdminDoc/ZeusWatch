@@ -60,6 +60,7 @@ class DailyBriefingWorker @AssistedInject constructor(
             today = data.daily.firstOrNull(),
             hourly = data.hourly,
             s = settings,
+            context = applicationContext,
         )
         val delivered = WeatherNotificationHelper.showDailyBriefing(
             context = applicationContext,

@@ -105,7 +105,7 @@
         <receiver
             android:name=".widget.NimbusSmallWidgetReceiver"
             android:exported="true"
-            android:label="ZeusWatch Current">
+            android:label="@string/widget_small_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -118,7 +118,7 @@
         <receiver
             android:name=".widget.NimbusMediumWidgetReceiver"
             android:exported="true"
-            android:label="ZeusWatch 3-Day">
+            android:label="@string/widget_medium_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -131,7 +131,7 @@
         <receiver
             android:name=".widget.NimbusLargeWidgetReceiver"
             android:exported="true"
-            android:label="ZeusWatch Forecast">
+            android:label="@string/widget_large_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -144,7 +144,7 @@
         <receiver
             android:name=".widget.NimbusForecastStripWidgetReceiver"
             android:exported="true"
-            android:label="ZeusWatch Hourly Strip">
+            android:label="@string/widget_forecast_strip_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -157,7 +157,7 @@
         <receiver
             android:name=".widget.NimbusSavedCitiesWidgetReceiver"
             android:exported="true"
-            android:label="ZeusWatch Cities">
+            android:label="@string/widget_saved_cities_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

@@ -1,6 +1,8 @@
 package com.sysadmindoc.nimbus.util
 
+import android.content.Context
 import android.util.Log
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
@@ -19,6 +21,38 @@ private const val TAG = "WeatherSummaryEngine"
  * with automatic fallback to the template engine if AI is unavailable.
  */
 object WeatherSummaryEngine {
+    private val daytimeConditionPhrases = mapOf(
+        WeatherCode.CLEAR_SKY to "Clear skies",
+        WeatherCode.MAINLY_CLEAR to "Mostly sunny",
+        WeatherCode.PARTLY_CLOUDY to "Partly cloudy",
+        WeatherCode.OVERCAST to "Overcast skies",
+        WeatherCode.FOG to "Foggy conditions",
+        WeatherCode.DEPOSITING_RIME_FOG to "Foggy conditions",
+        WeatherCode.DRIZZLE_LIGHT to "Light drizzle",
+        WeatherCode.DRIZZLE_MODERATE to "Drizzle",
+        WeatherCode.DRIZZLE_DENSE to "Steady drizzle",
+        WeatherCode.FREEZING_DRIZZLE_LIGHT to "Freezing drizzle",
+        WeatherCode.FREEZING_DRIZZLE_DENSE to "Freezing drizzle",
+        WeatherCode.RAIN_SLIGHT to "Light rain",
+        WeatherCode.RAIN_MODERATE to "Rainy",
+        WeatherCode.RAIN_HEAVY to "Heavy rain",
+        WeatherCode.FREEZING_RAIN_LIGHT to "Freezing rain",
+        WeatherCode.FREEZING_RAIN_HEAVY to "Freezing rain",
+        WeatherCode.SNOW_SLIGHT to "Light snow",
+        WeatherCode.SNOW_MODERATE to "Snowy",
+        WeatherCode.SNOW_HEAVY to "Heavy snow",
+        WeatherCode.SNOW_GRAINS to "Snow grains",
+        WeatherCode.RAIN_SHOWERS_SLIGHT to "Passing showers",
+        WeatherCode.RAIN_SHOWERS_MODERATE to "Scattered showers",
+        WeatherCode.RAIN_SHOWERS_VIOLENT to "Heavy downpours",
+        WeatherCode.SNOW_SHOWERS_SLIGHT to "Light snow showers",
+        WeatherCode.SNOW_SHOWERS_HEAVY to "Heavy snow showers",
+        WeatherCode.THUNDERSTORM to "Thunderstorms",
+        WeatherCode.THUNDERSTORM_HAIL_SLIGHT to "Thunderstorms with hail",
+        WeatherCode.THUNDERSTORM_HAIL_HEAVY to "Severe thunderstorms with hail",
+    )
+
+    private val nighttimeConditionPhrases = daytimeConditionPhrases + (WeatherCode.MAINLY_CLEAR to "Mostly clear")
 
     /**
      * Generate a template-based weather summary (synchronous).
@@ -30,6 +64,7 @@ object WeatherSummaryEngine {
         hourly: List<HourlyConditions>,
         yesterdayHigh: Double? = null,
         s: NimbusSettings = NimbusSettings(),
+        context: Context? = null,
     ): String {
         val parts = mutableListOf<String>()
 
@@ -37,16 +72,24 @@ object WeatherSummaryEngine {
         // Use location-local observation time when available; fall back to device time
         val hour = current.observationTime?.hour ?: java.time.LocalTime.now().hour
         val timeOfDay = when {
-            !current.isDay -> "tonight"
-            hour < 12 -> "this morning"
-            hour < 17 -> "this afternoon"
-            else -> "this evening"
+            !current.isDay -> summaryString(context, R.string.summary_time_tonight, "tonight")
+            hour < 12 -> summaryString(context, R.string.summary_time_morning, "this morning")
+            hour < 17 -> summaryString(context, R.string.summary_time_afternoon, "this afternoon")
+            else -> summaryString(context, R.string.summary_time_evening, "this evening")
         }
-        val conditionPhrase = conditionPhrase(current.weatherCode, current.isDay)
-        parts.add("$conditionPhrase $timeOfDay")
+        val conditionPhrase = conditionPhrase(current.weatherCode, current.isDay, context)
+        parts.add(
+            summaryString(
+                context,
+                R.string.summary_condition_time,
+                "$conditionPhrase $timeOfDay",
+                conditionPhrase,
+                timeOfDay,
+            )
+        )
 
         // Precipitation outlook from hourly
-        val precipOutlook = precipitationOutlook(hourly)
+        val precipOutlook = precipitationOutlook(hourly, context)
         if (precipOutlook != null) {
             parts.add(precipOutlook)
         }
@@ -54,23 +97,23 @@ object WeatherSummaryEngine {
         // Wind note for significant wind (km/h, Beaufort-aligned phrasing)
         if (current.windSpeed > 30) {
             val windDesc = when {
-                current.windSpeed > 60 -> "gale-force winds"
-                current.windSpeed > 40 -> "strong winds"
-                else -> "moderate winds"
+                current.windSpeed > 60 -> summaryString(context, R.string.summary_wind_gale_force, "gale-force winds")
+                current.windSpeed > 40 -> summaryString(context, R.string.summary_wind_strong, "strong winds")
+                else -> summaryString(context, R.string.summary_wind_moderate, "moderate winds")
             }
-            parts.add("with $windDesc")
+            parts.add(summaryString(context, R.string.summary_with_wind, "with $windDesc", windDesc))
         }
 
         // UV warning
         if (current.isDay && current.uvIndex >= 8) {
-            parts.add("UV index is very high")
+            parts.add(summaryString(context, R.string.summary_uv_very_high, "UV index is very high"))
         } else if (current.isDay && current.uvIndex >= 6) {
-            parts.add("UV index is high")
+            parts.add(summaryString(context, R.string.summary_uv_high, "UV index is high"))
         }
 
         // Humidity warning
         if (current.humidity >= 80 && current.temperature > 25) {
-            parts.add("and it will feel muggy")
+            parts.add(summaryString(context, R.string.summary_muggy, "and it will feel muggy"))
         }
 
         // Temperature sentence
@@ -78,8 +121,11 @@ object WeatherSummaryEngine {
             if (current.isDay) (today?.temperatureHigh ?: current.temperature) else (today?.temperatureLow ?: current.temperature),
             s,
         )
-        val tempLabel = if (current.isDay) "Highs" else "Lows"
-        val tempSentence = "$tempLabel near $tempStr."
+        val tempSentence = if (current.isDay) {
+            summaryString(context, R.string.summary_highs_near, "Highs near $tempStr.", tempStr)
+        } else {
+            summaryString(context, R.string.summary_lows_near, "Lows near $tempStr.", tempStr)
+        }
 
         // Yesterday comparison (convert to user's unit for correct degree diff)
         val comparisonStr = if (yesterdayHigh != null && today != null) {
@@ -87,8 +133,18 @@ object WeatherSummaryEngine {
             val yesterdayConverted = WeatherFormatter.convertedTemp(yesterdayHigh, s)
             val diff = (todayConverted - yesterdayConverted).toInt()
             when {
-                diff > 2 -> " ${diff}\u00B0 warmer than yesterday."
-                diff < -2 -> " ${-diff}\u00B0 cooler than yesterday."
+                diff > 2 -> summaryString(
+                    context,
+                    R.string.summary_warmer_than_yesterday,
+                    " ${diff}\u00B0 warmer than yesterday.",
+                    diff,
+                )
+                diff < -2 -> summaryString(
+                    context,
+                    R.string.summary_cooler_than_yesterday,
+                    " ${-diff}\u00B0 cooler than yesterday.",
+                    -diff,
+                )
                 else -> ""
             }
         } else ""
@@ -96,36 +152,13 @@ object WeatherSummaryEngine {
         return parts.joinToString(" ").replaceFirstChar { it.uppercase() } + ". " + tempSentence + comparisonStr
     }
 
-    private fun conditionPhrase(code: WeatherCode, isDay: Boolean): String = when (code) {
-        WeatherCode.CLEAR_SKY -> if (isDay) "Clear skies" else "Clear skies"
-        WeatherCode.MAINLY_CLEAR -> if (isDay) "Mostly sunny" else "Mostly clear"
-        WeatherCode.PARTLY_CLOUDY -> "Partly cloudy"
-        WeatherCode.OVERCAST -> "Overcast skies"
-        WeatherCode.FOG, WeatherCode.DEPOSITING_RIME_FOG -> "Foggy conditions"
-        WeatherCode.DRIZZLE_LIGHT -> "Light drizzle"
-        WeatherCode.DRIZZLE_MODERATE -> "Drizzle"
-        WeatherCode.DRIZZLE_DENSE -> "Steady drizzle"
-        WeatherCode.FREEZING_DRIZZLE_LIGHT, WeatherCode.FREEZING_DRIZZLE_DENSE -> "Freezing drizzle"
-        WeatherCode.RAIN_SLIGHT -> "Light rain"
-        WeatherCode.RAIN_MODERATE -> "Rainy"
-        WeatherCode.RAIN_HEAVY -> "Heavy rain"
-        WeatherCode.FREEZING_RAIN_LIGHT, WeatherCode.FREEZING_RAIN_HEAVY -> "Freezing rain"
-        WeatherCode.SNOW_SLIGHT -> "Light snow"
-        WeatherCode.SNOW_MODERATE -> "Snowy"
-        WeatherCode.SNOW_HEAVY -> "Heavy snow"
-        WeatherCode.SNOW_GRAINS -> "Snow grains"
-        WeatherCode.RAIN_SHOWERS_SLIGHT -> "Passing showers"
-        WeatherCode.RAIN_SHOWERS_MODERATE -> "Scattered showers"
-        WeatherCode.RAIN_SHOWERS_VIOLENT -> "Heavy downpours"
-        WeatherCode.SNOW_SHOWERS_SLIGHT -> "Light snow showers"
-        WeatherCode.SNOW_SHOWERS_HEAVY -> "Heavy snow showers"
-        WeatherCode.THUNDERSTORM -> "Thunderstorms"
-        WeatherCode.THUNDERSTORM_HAIL_SLIGHT -> "Thunderstorms with hail"
-        WeatherCode.THUNDERSTORM_HAIL_HEAVY -> "Severe thunderstorms with hail"
-        WeatherCode.UNKNOWN -> "Variable conditions"
+    private fun conditionPhrase(code: WeatherCode, isDay: Boolean, context: Context? = null): String {
+        if (context != null) return code.localizedDescription(context)
+        val phrases = if (isDay) daytimeConditionPhrases else nighttimeConditionPhrases
+        return phrases[code] ?: "Variable conditions"
     }
 
-    private fun precipitationOutlook(hourly: List<HourlyConditions>): String? {
+    private fun precipitationOutlook(hourly: List<HourlyConditions>, context: Context?): String? {
         val next12 = hourly.take(12)
         if (next12.isEmpty()) return null
 
@@ -137,14 +170,25 @@ object WeatherSummaryEngine {
 
         return when {
             maxProb < 20 -> null // No rain expected
-            rainyHours >= 8 -> "with rain likely throughout the day"
-            rainyHours >= 4 && firstRainIdx <= 2 -> "with rain expected soon"
-            rainyHours >= 4 && firstRainIdx > 6 -> "with rain developing later"
-            rainyHours >= 4 -> "with rain likely later today"
-            rainyHours >= 1 && maxProb > 60 -> "with a chance of showers"
-            rainyHours >= 1 -> "with a slight chance of rain"
+            rainyHours >= 8 -> summaryString(context, R.string.summary_rain_likely_throughout_day, "with rain likely throughout the day")
+            rainyHours >= 4 && firstRainIdx <= 2 -> summaryString(context, R.string.summary_rain_expected_soon, "with rain expected soon")
+            rainyHours >= 4 && firstRainIdx > 6 -> summaryString(context, R.string.summary_rain_developing_later, "with rain developing later")
+            rainyHours >= 4 -> summaryString(context, R.string.summary_rain_likely_later_today, "with rain likely later today")
+            rainyHours >= 1 && maxProb > 60 -> summaryString(context, R.string.summary_chance_showers, "with a chance of showers")
+            rainyHours >= 1 -> summaryString(context, R.string.summary_slight_chance_rain, "with a slight chance of rain")
             else -> null
         }
+    }
+
+    private fun summaryString(
+        context: Context?,
+        resId: Int,
+        fallback: String,
+        vararg args: Any,
+    ): String = if (context != null) {
+        context.getString(resId, *args)
+    } else {
+        fallback
     }
 
     /**
@@ -161,9 +205,10 @@ object WeatherSummaryEngine {
         yesterdayHigh: Double? = null,
         s: NimbusSettings = NimbusSettings(),
         aiEngine: SummaryEngine? = null,
+        context: Context? = null,
     ): String {
         // Always compute the template fallback first (cheap)
-        val templateSummary = generate(current, today, hourly, yesterdayHigh, s)
+        val templateSummary = generate(current, today, hourly, yesterdayHigh, s, context)
 
         if (s.summaryStyle != SummaryStyle.AI_GENERATED || aiEngine == null) {
             return templateSummary
@@ -172,7 +217,7 @@ object WeatherSummaryEngine {
         // Attempt AI generation with formatted display values
         return try {
             val currentTemp = WeatherFormatter.formatTemperatureUnit(current.temperature, s)
-            val condition = conditionPhrase(current.weatherCode, current.isDay)
+            val condition = conditionPhrase(current.weatherCode, current.isDay, context)
             val high = WeatherFormatter.formatTemperatureUnit(
                 today?.temperatureHigh ?: current.dailyHigh, s,
             )

@@ -74,6 +74,25 @@ import java.util.concurrent.atomic.AtomicLong
 
 private const val TAG = "MainViewModel"
 
+enum class MainUiErrorKind {
+    LOCATION_PERMISSION_REQUIRED,
+    LOCATION_PERMISSION_DENIED,
+    LOCATION_SERVICES_OFF,
+    LOCATION_UNAVAILABLE,
+    NO_INTERNET,
+    TIMEOUT,
+    CONNECTION,
+    WEATHER_SERVICE,
+    GENERIC,
+    CHOOSE_LOCATION,
+}
+
+@Stable
+data class MainUiError(
+    val kind: MainUiErrorKind,
+    val serviceCode: Int? = null,
+)
+
 data class MainViewModelDependencies @Inject constructor(
     @ApplicationContext val appContext: Context,
     val repository: WeatherRepository,
@@ -336,7 +355,11 @@ class MainViewModel @Inject constructor(
                             isLoading = false,
                             isRefreshing = false,
                             needsLocationPermission = !hasCached,
-                            error = if (!hasCached) "Location permission required to show weather." else null,
+                            error = if (!hasCached) {
+                                MainUiError(MainUiErrorKind.LOCATION_PERMISSION_REQUIRED)
+                            } else {
+                                null
+                            },
                         )
                     }
                     return@launch
@@ -762,6 +785,7 @@ class MainViewModel @Inject constructor(
                 hourly = data.hourly,
                 yesterdayHigh = currentState.yesterdayHigh,
                 s = settings,
+                context = appContext,
             )
 
             val score = WeatherFormatter.outdoorActivityScore(
@@ -833,6 +857,7 @@ class MainViewModel @Inject constructor(
                         yesterdayHigh = _uiState.value.yesterdayHigh,
                         s = settings,
                         aiEngine = summaryEngine,
+                        context = appContext,
                     )
                 }
                 if (isLatestWeatherRequest(requestId)) {
@@ -847,19 +872,19 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun userFriendlyError(error: Throwable?): String {
+    private fun userFriendlyError(error: Throwable?): MainUiError {
         val message = error?.message?.trim()
         return when {
-            error is SecurityException -> "Location permission required to show weather."
+            error is SecurityException -> MainUiError(MainUiErrorKind.LOCATION_PERMISSION_REQUIRED)
             message.equals("Location services are turned off.", ignoreCase = true) ->
-                "Turn on location services to load local weather."
+                MainUiError(MainUiErrorKind.LOCATION_SERVICES_OFF)
             message?.contains("Unable to determine location", ignoreCase = true) == true ->
-                "Unable to determine location. Move outdoors or check location services, then try again."
-            error is java.net.UnknownHostException -> "No internet connection"
-            error is java.net.SocketTimeoutException -> "Server took too long to respond"
-            error is java.net.ConnectException -> "Could not connect to weather service"
-            error is retrofit2.HttpException -> "Weather service error (${error.code()})"
-            else -> "Something went wrong. Please try again."
+                MainUiError(MainUiErrorKind.LOCATION_UNAVAILABLE)
+            error is java.net.UnknownHostException -> MainUiError(MainUiErrorKind.NO_INTERNET)
+            error is java.net.SocketTimeoutException -> MainUiError(MainUiErrorKind.TIMEOUT)
+            error is java.net.ConnectException -> MainUiError(MainUiErrorKind.CONNECTION)
+            error is retrofit2.HttpException -> MainUiError(MainUiErrorKind.WEATHER_SERVICE, error.code())
+            else -> MainUiError(MainUiErrorKind.GENERIC)
         }
     }
 
@@ -953,7 +978,7 @@ class MainViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "Choose a location to get started.",
+                        error = MainUiError(MainUiErrorKind.CHOOSE_LOCATION),
                     )
                 }
                 return@launch
@@ -1029,7 +1054,7 @@ class MainViewModel @Inject constructor(
                 needsLocationPermission = true,
                 isLoading = false,
                 isRefreshing = false,
-                error = "Location permission required.",
+                error = MainUiError(MainUiErrorKind.LOCATION_PERMISSION_DENIED),
             )
         }
     }
@@ -1071,7 +1096,7 @@ data class MainUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val weatherData: WeatherData? = null,
-    val error: String? = null,
+    val error: MainUiError? = null,
     val needsLocationPermission: Boolean = false,
     val particlesEnabled: Boolean = true,
     val isCached: Boolean = false,

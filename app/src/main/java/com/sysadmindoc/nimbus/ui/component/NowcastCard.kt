@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -73,11 +74,15 @@ fun NowcastCard(
     }
 
     val settings = LocalUnitSettings.current
+    val context = LocalContext.current
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
     val peak = filtered.maxByOrNull { it.precipitation }
-    val peakTimeRaw = if (peak != null) WeatherFormatter.formatRelativeHourLabel(peak.time, referenceTime, settings) else null
-    val peakTimeLabel = if (peakTimeRaw == "Now") stringResource(R.string.common_now) else peakTimeRaw
+    val peakTimeLabel = if (peak != null) {
+        WeatherFormatter.formatRelativeHourLabel(context, peak.time, referenceTime, settings)
+    } else {
+        null
+    }
     val semanticSummary = if (peak != null && peak.precipitation > 0.0) {
         stringResource(
             R.string.nowcast_semantics_with_peak,

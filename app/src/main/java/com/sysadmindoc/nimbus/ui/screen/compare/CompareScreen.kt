@@ -434,7 +434,7 @@ private fun CompareConditionColumn(
             color = NimbusTextPrimary,
         )
         Text(
-            weather.current.weatherCode.description,
+            stringResource(weather.current.weatherCode.descriptionRes()),
             style = MaterialTheme.typography.labelSmall,
             color = NimbusTextSecondary,
         )
