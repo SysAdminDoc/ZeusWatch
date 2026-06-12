@@ -26,6 +26,7 @@ class UserPreferencesTest {
         assertEquals(PrecipUnit.INCHES, settings.precipUnit)
         assertEquals(VisibilityUnit.MILES, settings.visibilityUnit)
         assertEquals(TimeFormat.TWELVE_HOUR, settings.timeFormat)
+        assertFalse(settings.onboardingComplete)
     }
 
     @Test
@@ -457,5 +458,30 @@ class UserPreferencesTest {
         assertEquals(2, settings.disabledCards.size)
         assertTrue(settings.disabledCards.contains("POLLEN"))
         assertTrue(settings.disabledCards.contains("MOON_PHASE"))
+    }
+
+    @Test
+    fun starterCardSetsMapToExpectedDisabledCards() {
+        val minimal = disabledCardsForStarterSet(StarterCardSet.MINIMAL)
+
+        assertFalse(minimal.contains(CardType.WEATHER_SUMMARY.name))
+        assertFalse(minimal.contains(CardType.HOURLY_FORECAST.name))
+        assertFalse(minimal.contains(CardType.DAILY_FORECAST.name))
+        assertTrue(minimal.contains(CardType.POLLEN.name))
+        assertEquals(DEFAULT_DISABLED_CARDS, disabledCardsForStarterSet(StarterCardSet.STANDARD))
+        assertTrue(disabledCardsForStarterSet(StarterCardSet.EVERYTHING).isEmpty())
+    }
+
+    @Test
+    fun onboardingUnitBundlesFollowSelectedTemperatureSystem() {
+        assertEquals(WindUnit.MPH, preferredWindUnitFor(TempUnit.FAHRENHEIT))
+        assertEquals(PressureUnit.INHG, preferredPressureUnitFor(TempUnit.FAHRENHEIT))
+        assertEquals(PrecipUnit.INCHES, preferredPrecipUnitFor(TempUnit.FAHRENHEIT))
+        assertEquals(VisibilityUnit.MILES, preferredVisibilityUnitFor(TempUnit.FAHRENHEIT))
+
+        assertEquals(WindUnit.KMH, preferredWindUnitFor(TempUnit.CELSIUS))
+        assertEquals(PressureUnit.HPA, preferredPressureUnitFor(TempUnit.CELSIUS))
+        assertEquals(PrecipUnit.MM, preferredPrecipUnitFor(TempUnit.CELSIUS))
+        assertEquals(VisibilityUnit.KM, preferredVisibilityUnitFor(TempUnit.CELSIUS))
     }
 }
