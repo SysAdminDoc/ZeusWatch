@@ -30,6 +30,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.repository.TimeFormat
@@ -69,6 +71,12 @@ fun RadarPlaybackControls(
     val unavailableLabel = stringResource(R.string.radar_playback_unavailable)
     val playLabel = stringResource(R.string.radar_playback_play)
     val pauseLabel = stringResource(R.string.radar_playback_pause)
+    val normalizedFrame = if (totalFrames > 0) currentFrame.coerceIn(0, totalFrames - 1) else 0
+    val framePositionLabel = when {
+        !playbackEnabled -> staticLabel
+        totalFrames <= 0 -> noFramesLabel
+        else -> "${normalizedFrame + 1}/$totalFrames"
+    }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -97,13 +105,11 @@ fun RadarPlaybackControls(
                 color = NimbusTextSecondary,
             )
 
-            if (!playbackEnabled) {
-                Text(
-                    text = staticLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = NimbusTextTertiary,
-                )
-            }
+            Text(
+                text = framePositionLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (playbackEnabled && totalFrames > 0) NimbusTextSecondary else NimbusTextTertiary,
+            )
         }
 
         Spacer(modifier = Modifier.size(4.dp))
@@ -122,7 +128,20 @@ fun RadarPlaybackControls(
                     .background(
                         if (playbackEnabled) NimbusBlueAccent.copy(alpha = 0.95f)
                         else Color.White.copy(alpha = 0.08f),
-                    ),
+                    )
+                    .border(
+                        1.dp,
+                        if (playbackEnabled) NimbusBlueAccent.copy(alpha = 0.38f)
+                        else NimbusCardBorder.copy(alpha = 0.72f),
+                        RoundedCornerShape(10.dp),
+                    )
+                    .semantics {
+                        stateDescription = if (playbackEnabled) {
+                            if (isPlaying) pauseLabel else playLabel
+                        } else {
+                            unavailableLabel
+                        }
+                    },
             ) {
                 Icon(
                     if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
@@ -148,6 +167,9 @@ fun RadarPlaybackControls(
                         thumbColor = NimbusBlueAccent,
                         activeTrackColor = NimbusBlueAccent,
                         inactiveTrackColor = NimbusTextTertiary.copy(alpha = 0.3f),
+                        disabledThumbColor = NimbusTextTertiary.copy(alpha = 0.38f),
+                        disabledActiveTrackColor = NimbusTextTertiary.copy(alpha = 0.24f),
+                        disabledInactiveTrackColor = NimbusTextTertiary.copy(alpha = 0.16f),
                     ),
                 )
 

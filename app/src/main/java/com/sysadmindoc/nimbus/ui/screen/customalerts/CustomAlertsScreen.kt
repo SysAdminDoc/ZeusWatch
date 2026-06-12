@@ -156,6 +156,7 @@ fun CustomAlertsScreen(
                         onClick = startNewAlert,
                         containerColor = NimbusBlueAccent,
                         contentColor = NimbusTextPrimary,
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .navigationBarsPadding()
                             .semantics { contentDescription = addCustomAlertDescription },
