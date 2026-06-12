@@ -14,8 +14,10 @@ import androidx.work.WorkerParameters
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
+import com.sysadmindoc.nimbus.data.repository.SourceOverrides
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
+import com.sysadmindoc.nimbus.data.repository.sourceOverrides
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -59,11 +61,26 @@ class AlertCheckWorker @AssistedInject constructor(
         // Determine locations to check
         val locations = if (settings.alertCheckAllLocations) {
             distinctAlertCheckLocations(
-                locationRepository.getAll().map { Triple(it.latitude, it.longitude, it.name) }
+                locationRepository.getAll().map {
+                    AlertCheckLocation(
+                        latitude = it.latitude,
+                        longitude = it.longitude,
+                        name = it.name,
+                        sourceOverrides = it.sourceOverrides(),
+                    )
+                }
             )
         } else {
             val lastLoc = prefs.lastLocation.first()
-            if (lastLoc != null) listOf(Triple(lastLoc.latitude, lastLoc.longitude, lastLoc.name))
+            if (lastLoc != null) {
+                listOf(
+                    AlertCheckLocation(
+                        latitude = lastLoc.latitude,
+                        longitude = lastLoc.longitude,
+                        name = lastLoc.name,
+                    )
+                )
+            }
             else emptyList()
         }
 
@@ -74,8 +91,12 @@ class AlertCheckWorker @AssistedInject constructor(
 
         var anyFetchFailed = false
         var anyFetchSucceeded = false
-        for ((lat, lon, locationName) in locations) {
-            val result = weatherSourceManager.getAlerts(lat, lon)
+        for (location in locations) {
+            val result = weatherSourceManager.getAlerts(
+                location.latitude,
+                location.longitude,
+                location.sourceOverrides,
+            )
             val alerts = result.getOrNull()
             if (alerts == null) {
                 anyFetchFailed = true
@@ -94,14 +115,14 @@ class AlertCheckWorker @AssistedInject constructor(
                     !isExpired(alert)
             }
 
-            Log.d(TAG, "Location=$locationName: ${alerts.size} total, ${filtered.size} new matching alerts")
+            Log.d(TAG, "Location=${location.name}: ${alerts.size} total, ${filtered.size} new matching alerts")
 
             val showLocation = settings.alertCheckAllLocations && locations.size > 1
             for (alert in filtered) {
                 val delivered = AlertNotificationHelper.showAlertNotification(
                     context = applicationContext,
                     alert = alert,
-                    locationName = if (showLocation) locationName else null,
+                    locationName = if (showLocation) location.name else null,
                 )
                 if (delivered) {
                     newSeenIds.add(alert.id)
@@ -170,12 +191,19 @@ class AlertCheckWorker @AssistedInject constructor(
 }
 
 internal fun distinctAlertCheckLocations(
-    locations: List<Triple<Double, Double, String>>,
-): List<Triple<Double, Double, String>> {
+    locations: List<AlertCheckLocation>,
+): List<AlertCheckLocation> {
     val seen = linkedSetOf<String>()
-    return locations.filter { (lat, lon, _) ->
-        seen.add("${lat.alertLocationKey()}:${lon.alertLocationKey()}")
+    return locations.filter { location ->
+        seen.add("${location.latitude.alertLocationKey()}:${location.longitude.alertLocationKey()}")
     }
 }
+
+internal data class AlertCheckLocation(
+    val latitude: Double,
+    val longitude: Double,
+    val name: String,
+    val sourceOverrides: SourceOverrides = SourceOverrides(),
+)
 
 private fun Double.alertLocationKey(): String = "%.4f".format(Locale.US, this)

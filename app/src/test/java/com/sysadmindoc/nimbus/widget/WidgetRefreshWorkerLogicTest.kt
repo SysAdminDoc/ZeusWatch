@@ -4,6 +4,7 @@ import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherCode
+import com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -64,6 +65,8 @@ class WidgetRefreshWorkerLogicTest {
                 latitude = 40.01499,
                 longitude = -105.27050,
                 sortOrder = 1,
+                forecastSource = WeatherSourceProvider.OPEN_METEO_BOM.name,
+                alertSource = WeatherSourceProvider.METEOALARM.name,
             ),
         )
 
@@ -91,6 +94,8 @@ class WidgetRefreshWorkerLogicTest {
 
         val boulderRequest = plan.requests.first { it.assignments.size == 1 }
         assertEquals(widgetLocationKey(40.01499, -105.27050), boulderRequest.key)
+        assertEquals(WeatherSourceProvider.OPEN_METEO_BOM, boulderRequest.sourceOverrides.forecast)
+        assertEquals(WeatherSourceProvider.METEOALARM, boulderRequest.sourceOverrides.alerts)
         assertEquals(
             listOf(WidgetRefreshAssignment(appWidgetId = 103, displayName = "Boulder")),
             boulderRequest.assignments,

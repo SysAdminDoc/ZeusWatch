@@ -43,9 +43,18 @@ class WeatherRepository @Inject constructor(
         latitude: Double,
         longitude: Double,
         locationName: String? = null,
+        sourceOverrides: SourceOverrides = SourceOverrides(),
     ): Result<WeatherData> {
-        return sourceManager.get().getWeather(latitude, longitude, locationName)
+        return sourceManager.get().getWeather(latitude, longitude, locationName, sourceOverrides)
     }
+
+    suspend fun getWeather(location: SavedLocationEntity): Result<WeatherData> =
+        getWeather(
+            latitude = location.latitude,
+            longitude = location.longitude,
+            locationName = location.name,
+            sourceOverrides = location.sourceOverrides(),
+        )
 
     /**
      * Direct Open-Meteo forecast fetch — used by the [OpenMeteoForecastAdapter].
