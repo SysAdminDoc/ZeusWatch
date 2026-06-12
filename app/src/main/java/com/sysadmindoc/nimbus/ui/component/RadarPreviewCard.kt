@@ -56,6 +56,8 @@ fun RadarPreviewCard(
     modifier: Modifier = Modifier,
     radarTileUrl: String? = null,
     baseMapTileUrl: String? = null,
+    statusLabel: String? = null,
+    statusTint: Color? = null,
 ) {
     val shape = RoundedCornerShape(12.dp)
     Column(
@@ -77,6 +79,8 @@ fun RadarPreviewCard(
         RadarPreviewMap(
             radarTileUrl = radarTileUrl,
             baseMapTileUrl = baseMapTileUrl,
+            statusLabel = statusLabel,
+            statusTint = statusTint,
         )
         RadarPreviewFooter()
     }
@@ -86,6 +90,8 @@ fun RadarPreviewCard(
 private fun RadarPreviewMap(
     radarTileUrl: String?,
     baseMapTileUrl: String?,
+    statusLabel: String?,
+    statusTint: Color?,
 ) {
     Box(
         modifier = Modifier
@@ -104,6 +110,8 @@ private fun RadarPreviewMap(
         }
         RadarPreviewStatusBadge(
             hasRadarTile = radarTileUrl != null,
+            statusLabel = statusLabel,
+            statusTint = statusTint,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(14.dp),
@@ -193,17 +201,19 @@ private fun RadarPreviewEmptyState(modifier: Modifier = Modifier) {
 @Composable
 private fun RadarPreviewStatusBadge(
     hasRadarTile: Boolean,
+    statusLabel: String?,
+    statusTint: Color?,
     modifier: Modifier = Modifier,
 ) {
     NimbusStatusBadge(
-        text = if (hasRadarTile) {
+        text = statusLabel ?: if (hasRadarTile) {
             stringResource(R.string.radar_preview_live)
         } else {
             stringResource(R.string.radar_preview_map_preview)
         },
-        tint = NimbusTextPrimary,
+        tint = statusTint ?: NimbusTextPrimary,
         modifier = modifier,
-        emphasized = true,
+        emphasized = statusLabel == null,
         maxLines = 1,
     )
 }

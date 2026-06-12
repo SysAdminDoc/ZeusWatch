@@ -243,6 +243,9 @@
     <string name="card_type_wind_compass">Wind</string>
     <string name="card_type_air_quality">Air Quality</string>
     <string name="card_type_pollen">Pollen</string>
+    <string name="card_status_update_failed">Update failed</string>
+    <string name="card_status_stale_minutes">%1$dm old</string>
+    <string name="card_status_stale_hours">%1$dh old</string>
     <string name="card_type_outdoor_score">Outdoor Activity Score</string>
     <string name="card_type_snowfall">Snowfall</string>
     <string name="card_type_severe_weather">Severe Weather Potential</string>
@@ -767,6 +770,10 @@
     <string name="main_footer">ZeusWatch v%1$s \u2022 Forecast data from Open-Meteo</string>
     <string name="main_nowcast_unavailable_title">Rain nowcast unavailable</string>
     <string name="main_nowcast_unavailable_message">Minute-by-minute precipitation data is not available for this location right now.</string>
+    <string name="main_air_quality_unavailable_title">Air quality unavailable</string>
+    <string name="main_air_quality_unavailable_message">The forecast is current, but air quality did not update for this location.</string>
+    <string name="main_pollen_unavailable_title">Pollen unavailable</string>
+    <string name="main_pollen_unavailable_message">The forecast is current, but pollen data did not update for this location.</string>
     <string name="main_no_health_trigger_title">No active health trigger</string>
     <string name="main_no_health_trigger_message">The latest forecast no longer meets your health alert thresholds.</string>
 

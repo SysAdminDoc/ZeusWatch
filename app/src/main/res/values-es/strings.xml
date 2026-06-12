@@ -214,6 +214,9 @@
     <string name="card_type_wind_compass">Viento</string>
     <string name="card_type_air_quality">Calidad del aire</string>
     <string name="card_type_pollen">Polen</string>
+    <string name="card_status_update_failed">Error al actualizar</string>
+    <string name="card_status_stale_minutes">%1$dm antiguo</string>
+    <string name="card_status_stale_hours">%1$dh antiguo</string>
     <string name="card_type_outdoor_score">Puntuacion de actividad exterior</string>
     <string name="card_type_snowfall">Nieve</string>
     <string name="card_type_severe_weather">Potencial de clima severo</string>
@@ -706,6 +709,10 @@
     <string name="main_footer">ZeusWatch v%1$s \u2022 Datos de pronostico de Open-Meteo</string>
     <string name="main_nowcast_unavailable_title">Lluvia inmediata no disponible</string>
     <string name="main_nowcast_unavailable_message">Los datos de precipitacion minuto a minuto no estan disponibles para esta ubicacion ahora.</string>
+    <string name="main_air_quality_unavailable_title">Calidad del aire no disponible</string>
+    <string name="main_air_quality_unavailable_message">El pronostico esta actualizado, pero la calidad del aire no se actualizo para esta ubicacion.</string>
+    <string name="main_pollen_unavailable_title">Polen no disponible</string>
+    <string name="main_pollen_unavailable_message">El pronostico esta actualizado, pero los datos de polen no se actualizaron para esta ubicacion.</string>
     <string name="main_no_health_trigger_title">Sin activador de salud activo</string>
     <string name="main_no_health_trigger_message">El pronostico mas reciente ya no cumple tus umbrales de alerta de salud.</string>
 

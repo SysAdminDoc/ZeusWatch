@@ -8,6 +8,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDateTime
 
 class MainScreenLogicTest {
 
@@ -114,5 +115,33 @@ class MainScreenLogicTest {
         )
 
         assertEquals(0, result)
+    }
+
+    @Test
+    fun `subFetchStatus is quiet for fresh or unknown data`() {
+        val now = LocalDateTime.of(2026, 6, 11, 12, 0)
+
+        assertNull(subFetchStatus(now, updatedAt = null, fetchFailed = false))
+        assertNull(subFetchStatus(now, updatedAt = now.minusMinutes(30), fetchFailed = false))
+    }
+
+    @Test
+    fun `subFetchStatus marks stale data at threshold`() {
+        val now = LocalDateTime.of(2026, 6, 11, 12, 0)
+
+        val result = subFetchStatus(now, updatedAt = now.minusMinutes(60), fetchFailed = false)
+
+        assertEquals(SubFetchStatusKind.STALE, result?.kind)
+        assertEquals(60L, result?.ageMinutes)
+    }
+
+    @Test
+    fun `subFetchStatus prefers failed state over stale age`() {
+        val now = LocalDateTime.of(2026, 6, 11, 12, 0)
+
+        val result = subFetchStatus(now, updatedAt = now.minusHours(4), fetchFailed = true)
+
+        assertEquals(SubFetchStatusKind.FAILED, result?.kind)
+        assertNull(result?.ageMinutes)
     }
 }

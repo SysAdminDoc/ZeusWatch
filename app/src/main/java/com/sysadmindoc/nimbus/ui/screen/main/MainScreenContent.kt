@@ -871,6 +871,65 @@ private fun WeatherUpdatedRow(
     }
 }
 
+internal enum class SubFetchStatusKind {
+    FAILED,
+    STALE,
+}
+
+internal data class SubFetchStatus(
+    val kind: SubFetchStatusKind,
+    val ageMinutes: Long? = null,
+)
+
+private data class CardStatusBadge(
+    val text: String,
+    val tint: Color,
+)
+
+internal fun subFetchStatus(
+    now: LocalDateTime,
+    updatedAt: LocalDateTime?,
+    fetchFailed: Boolean,
+    staleAfterMinutes: Long = 60,
+): SubFetchStatus? {
+    if (fetchFailed) return SubFetchStatus(SubFetchStatusKind.FAILED)
+    val lastUpdated = updatedAt ?: return null
+    val ageMinutes = Duration.between(lastUpdated, now).toMinutes().coerceAtLeast(0)
+    return if (ageMinutes >= staleAfterMinutes) {
+        SubFetchStatus(SubFetchStatusKind.STALE, ageMinutes)
+    } else {
+        null
+    }
+}
+
+@Composable
+private fun subFetchStatusBadge(
+    updatedAt: LocalDateTime?,
+    fetchFailed: Boolean,
+): CardStatusBadge? {
+    return when (val status = subFetchStatus(LocalDateTime.now(), updatedAt, fetchFailed)) {
+        null -> null
+        else -> when (status.kind) {
+            SubFetchStatusKind.FAILED -> CardStatusBadge(
+                text = stringResource(R.string.card_status_update_failed),
+                tint = NimbusWarning,
+            )
+            SubFetchStatusKind.STALE -> {
+                val ageMinutes = status.ageMinutes ?: 0L
+                val label = if (ageMinutes >= 120) {
+                    stringResource(R.string.card_status_stale_hours, ageMinutes / 60)
+                } else {
+                    stringResource(R.string.card_status_stale_minutes, ageMinutes)
+                }
+                CardStatusBadge(
+                    text = label,
+                    tint = NimbusWarning.copy(alpha = if (ageMinutes >= 120) 1f else 0.72f),
+                )
+            }
+        }
+    }
+}
+
 private fun LazyListScope.weatherCardItems(
     visibleCards: List<CardType>,
     cardPad: Modifier,
@@ -994,12 +1053,20 @@ private fun RenderForecastCard(
                 WeatherSummaryCard(summary = context.state.weatherSummary, modifier = modifier)
             }
         }
-        CardType.RADAR_PREVIEW -> RadarPreviewCard(
-            onOpenRadar = { context.onNavigateToRadar(data.location.latitude, data.location.longitude) },
-            modifier = modifier,
-            radarTileUrl = context.radarPreviewTileUrl,
-            baseMapTileUrl = context.radarBaseMapUrl,
-        )
+        CardType.RADAR_PREVIEW -> {
+            val radarBadge = subFetchStatusBadge(
+                updatedAt = context.state.radarPreviewUpdatedAt,
+                fetchFailed = context.state.radarPreviewFetchFailed,
+            )
+            RadarPreviewCard(
+                onOpenRadar = { context.onNavigateToRadar(data.location.latitude, data.location.longitude) },
+                modifier = modifier,
+                radarTileUrl = context.radarPreviewTileUrl,
+                baseMapTileUrl = context.radarBaseMapUrl,
+                statusLabel = radarBadge?.text,
+                statusTint = radarBadge?.tint,
+            )
+        }
         CardType.NOWCAST -> {
             if (context.state.nowcastData.isNotEmpty()) {
                 NowcastCard(
@@ -1074,6 +1141,10 @@ private fun RenderAtmosphereCard(
 ) {
     val data = context.data
     val referenceTime = data.current.observationTime
+    val airQualityBadge = subFetchStatusBadge(
+        updatedAt = context.state.airQualityUpdatedAt,
+        fetchFailed = context.state.airQualityFetchFailed,
+    )
     when (cardType) {
         CardType.UV_INDEX -> UvIndexBar(
             uvIndex = data.current.uvIndex,
@@ -1087,11 +1158,45 @@ private fun RenderAtmosphereCard(
             windGusts = data.current.windGusts,
             modifier = modifier,
         )
-        CardType.AIR_QUALITY -> context.airQuality?.let { aq ->
-            AqiCard(data = aq, modifier = modifier)
+        CardType.AIR_QUALITY -> {
+            context.airQuality?.let { aq ->
+                AqiCard(
+                    data = aq,
+                    modifier = modifier,
+                    statusLabel = airQualityBadge?.text,
+                    statusTint = airQualityBadge?.tint ?: NimbusTextSecondary,
+                )
+            } ?: if (context.state.airQualityFetchFailed) {
+                InlineNoticeCard(
+                    title = stringResource(R.string.main_air_quality_unavailable_title),
+                    message = stringResource(R.string.main_air_quality_unavailable_message),
+                    icon = Icons.Filled.CloudOff,
+                    tint = NimbusWarning,
+                    modifier = modifier,
+                )
+            } else {
+                Unit
+            }
         }
-        CardType.POLLEN -> context.airQuality?.let { aq ->
-            PollenCard(pollen = aq.pollen, modifier = modifier)
+        CardType.POLLEN -> {
+            context.airQuality?.let { aq ->
+                PollenCard(
+                    pollen = aq.pollen,
+                    modifier = modifier,
+                    statusLabel = airQualityBadge?.text,
+                    statusTint = airQualityBadge?.tint ?: NimbusTextSecondary,
+                )
+            } ?: if (context.state.airQualityFetchFailed) {
+                InlineNoticeCard(
+                    title = stringResource(R.string.main_pollen_unavailable_title),
+                    message = stringResource(R.string.main_pollen_unavailable_message),
+                    icon = Icons.Filled.CloudOff,
+                    tint = NimbusWarning,
+                    modifier = modifier,
+                )
+            } else {
+                Unit
+            }
         }
         CardType.OUTDOOR_SCORE -> {
             if (context.state.outdoorScore > 0) {

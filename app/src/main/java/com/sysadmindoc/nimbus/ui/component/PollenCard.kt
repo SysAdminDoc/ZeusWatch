@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -35,6 +36,8 @@ import com.sysadmindoc.nimbus.util.labelRes
 fun PollenCard(
     pollen: PollenData,
     modifier: Modifier = Modifier,
+    statusLabel: String? = null,
+    statusTint: Color = NimbusTextSecondary,
 ) {
     val readings = listOf(
         PollenRowText(
@@ -88,6 +91,8 @@ fun PollenCard(
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = semanticSummary
         },
+        statusLabel = statusLabel,
+        statusTint = statusTint,
     ) {
         if (!pollen.hasData) {
             Text(

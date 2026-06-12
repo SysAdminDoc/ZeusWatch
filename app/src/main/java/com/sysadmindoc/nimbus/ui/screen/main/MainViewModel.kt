@@ -64,6 +64,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import java.time.LocalDate
+import java.time.LocalDateTime
 import javax.inject.Inject
 import kotlin.math.abs
 import kotlin.math.ln
@@ -522,19 +523,35 @@ class MainViewModel @Inject constructor(
             weatherSourceManager.getAlerts(lat, lon, sourceOverrides).fold(
                 onSuccess = {
                     if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { s -> s.copy(alerts = it.toImmutableList()) }
+                        _uiState.update { s ->
+                            s.copy(
+                                alerts = it.toImmutableList(),
+                                alertsUpdatedAt = LocalDateTime.now(),
+                                alertsFetchFailed = false,
+                            )
+                        }
                     }
                 },
                 onFailure = {
                     if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { s -> s.copy(alerts = persistentListOf()) }
+                        _uiState.update { s ->
+                            s.copy(
+                                alerts = persistentListOf(),
+                                alertsFetchFailed = true,
+                            )
+                        }
                     }
                 }
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             if (isLatestWeatherRequest(requestId)) {
-                _uiState.update { it.copy(alerts = persistentListOf()) }
+                _uiState.update {
+                    it.copy(
+                        alerts = persistentListOf(),
+                        alertsFetchFailed = true,
+                    )
+                }
             }
         }
     }
@@ -544,12 +561,23 @@ class MainViewModel @Inject constructor(
             weatherSourceManager.getAirQuality(lat, lon).fold(
                 onSuccess = {
                     if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { s -> s.copy(airQuality = it) }
+                        _uiState.update { s ->
+                            s.copy(
+                                airQuality = it,
+                                airQualityUpdatedAt = LocalDateTime.now(),
+                                airQualityFetchFailed = false,
+                            )
+                        }
                     }
                 },
                 onFailure = {
                     if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { s -> s.copy(airQuality = null) }
+                        _uiState.update { s ->
+                            s.copy(
+                                airQuality = null,
+                                airQualityFetchFailed = true,
+                            )
+                        }
                     }
                 }
             )
@@ -557,7 +585,12 @@ class MainViewModel @Inject constructor(
             if (e is CancellationException) throw e
             Log.w(TAG, "fetchAirQuality failed", e)
             if (isLatestWeatherRequest(requestId)) {
-                _uiState.update { it.copy(airQuality = null) }
+                _uiState.update {
+                    it.copy(
+                        airQuality = null,
+                        airQualityFetchFailed = true,
+                    )
+                }
             }
         }
     }
@@ -581,7 +614,13 @@ class MainViewModel @Inject constructor(
         try {
             radarRepository.getRadarFrames().fold(
                 onSuccess = { frameSet ->
-                    val latestFrame = frameSet.past.lastOrNull() ?: return@fold
+                    val latestFrame = frameSet.past.lastOrNull()
+                    if (latestFrame == null) {
+                        if (isLatestWeatherRequest(requestId)) {
+                            _uiState.update { it.copy(radarPreviewFetchFailed = true) }
+                        }
+                        return@fold
+                    }
                     val zoom = 6
                     val (tileX, tileY) = latLonToTile(lat, lon, zoom)
                     val radarUrl = latestFrame.tileUrl
@@ -591,15 +630,27 @@ class MainViewModel @Inject constructor(
                     val baseUrl = "https://basemaps.cartocdn.com/dark_all/$zoom/$tileX/$tileY@2x.png"
                     if (isLatestWeatherRequest(requestId)) {
                         _uiState.update {
-                            it.copy(radarPreviewTileUrl = radarUrl, radarBaseMapUrl = baseUrl)
+                            it.copy(
+                                radarPreviewTileUrl = radarUrl,
+                                radarBaseMapUrl = baseUrl,
+                                radarPreviewUpdatedAt = LocalDateTime.now(),
+                                radarPreviewFetchFailed = false,
+                            )
                         }
                     }
                 },
-                onFailure = { /* keep placeholder */ }
+                onFailure = {
+                    if (isLatestWeatherRequest(requestId)) {
+                        _uiState.update { it.copy(radarPreviewFetchFailed = true) }
+                    }
+                }
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w(TAG, "fetchRadarPreview failed", e)
+            if (isLatestWeatherRequest(requestId)) {
+                _uiState.update { it.copy(radarPreviewFetchFailed = true) }
+            }
         }
     }
 
@@ -1025,7 +1076,11 @@ data class MainUiState(
     val particlesEnabled: Boolean = true,
     val isCached: Boolean = false,
     val alerts: ImmutableList<WeatherAlert> = persistentListOf(),
+    val alertsUpdatedAt: LocalDateTime? = null,
+    val alertsFetchFailed: Boolean = false,
     val airQuality: AirQualityData? = null,
+    val airQualityUpdatedAt: LocalDateTime? = null,
+    val airQualityFetchFailed: Boolean = false,
     val astronomy: AstronomyData? = null,
     val settings: NimbusSettings = NimbusSettings(),
     val savedLocations: ImmutableList<SavedLocationEntity> = persistentListOf(),
@@ -1033,6 +1088,8 @@ data class MainUiState(
     val lastLocationName: String? = null,
     val radarPreviewTileUrl: String? = null,
     val radarBaseMapUrl: String? = null,
+    val radarPreviewUpdatedAt: LocalDateTime? = null,
+    val radarPreviewFetchFailed: Boolean = false,
     // Phase 1-2 additions
     val weatherSummary: String = "",
     val yesterdayHigh: Double? = null,
@@ -1064,11 +1121,17 @@ private data class DerivedWeatherState(
 private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
     weatherData = null,
     alerts = persistentListOf(),
+    alertsUpdatedAt = null,
+    alertsFetchFailed = false,
     airQuality = null,
+    airQualityUpdatedAt = null,
+    airQualityFetchFailed = false,
     astronomy = null,
     isCached = false,
     radarPreviewTileUrl = null,
     radarBaseMapUrl = null,
+    radarPreviewUpdatedAt = null,
+    radarPreviewFetchFailed = false,
     weatherSummary = "",
     yesterdayHigh = null,
     nowcastData = persistentListOf(),

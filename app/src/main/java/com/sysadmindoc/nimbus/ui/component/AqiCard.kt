@@ -37,11 +37,18 @@ import com.sysadmindoc.nimbus.util.labelRes
 fun AqiCard(
     data: AirQualityData,
     modifier: Modifier = Modifier,
+    statusLabel: String? = null,
+    statusTint: Color = NimbusTextSecondary,
 ) {
     val aqiLevelLabel = stringResource(data.aqiLevel.labelRes)
     val aqiAdvice = stringResource(data.aqiLevel.adviceRes)
 
-    WeatherCard(titleRes = R.string.card_type_air_quality, modifier = modifier) {
+    WeatherCard(
+        titleRes = R.string.card_type_air_quality,
+        modifier = modifier,
+        statusLabel = statusLabel,
+        statusTint = statusTint,
+    ) {
 
         // Gauge + info row
         Row(

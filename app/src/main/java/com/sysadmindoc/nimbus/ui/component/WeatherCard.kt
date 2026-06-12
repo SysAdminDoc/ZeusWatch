@@ -17,6 +17,7 @@ import androidx.annotation.StringRes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -40,11 +42,15 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 fun WeatherCard(
     modifier: Modifier = Modifier,
     @StringRes titleRes: Int,
+    statusLabel: String? = null,
+    statusTint: Color = NimbusTextSecondary,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     WeatherCard(
         modifier = modifier,
         title = stringResource(titleRes),
+        statusLabel = statusLabel,
+        statusTint = statusTint,
         content = content,
     )
 }
@@ -53,6 +59,8 @@ fun WeatherCard(
 fun WeatherCard(
     modifier: Modifier = Modifier,
     title: String? = null,
+    statusLabel: String? = null,
+    statusTint: Color = NimbusTextSecondary,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(12.dp)
@@ -102,24 +110,41 @@ fun WeatherCard(
                 .padding(horizontal = 22.dp, vertical = 22.dp),
         ) {
             if (title != null) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Box(
-                        modifier = Modifier
-                            .padding(top = 4.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(NimbusBlueAccent.copy(alpha = 0.82f))
-                            .width(8.dp)
-                            .height(8.dp),
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = title.uppercase(),
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 0.sp,
-                        ),
-                        color = NimbusTextSecondary,
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(NimbusBlueAccent.copy(alpha = 0.82f))
+                                .width(8.dp)
+                                .height(8.dp),
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = title.uppercase(),
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.sp,
+                            ),
+                            color = NimbusTextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (!statusLabel.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.width(10.dp))
+                        NimbusStatusBadge(
+                            text = statusLabel,
+                            tint = statusTint,
+                            maxLines = 1,
+                        )
+                    }
                 }
                 Box(
                     modifier = Modifier
