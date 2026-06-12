@@ -90,6 +90,34 @@
     <string name="common_today">Today</string>
     <string name="common_tomorrow">Tomorrow</string>
     <string name="common_now">Now</string>
+
+    <!-- First-run onboarding -->
+    <string name="onboarding_progress">Step %1$d of %2$d</string>
+    <string name="onboarding_title">Set up ZeusWatch</string>
+    <string name="onboarding_subtitle">Choose the basics once, then tune everything later in Settings.</string>
+    <string name="onboarding_location_title">Start with the right forecast</string>
+    <string name="onboarding_location_body">ZeusWatch uses location permission to find your forecast, local alerts, radar position, and saved-place defaults.</string>
+    <string name="onboarding_location_notice_title">You stay in control</string>
+    <string name="onboarding_location_notice_body">The permission prompt appears on the main screen. You can allow once, allow while using the app, or search for a place manually.</string>
+    <string name="onboarding_units_title">Pick your units</string>
+    <string name="onboarding_units_body">This sets the full measurement bundle so wind, pressure, precipitation, and visibility match your temperature choice.</string>
+    <string name="onboarding_units_fahrenheit">Fahrenheit</string>
+    <string name="onboarding_units_celsius">Celsius</string>
+    <string name="onboarding_units_fahrenheit_desc">Uses °F, mph, inHg, inches, and miles.</string>
+    <string name="onboarding_units_celsius_desc">Uses °C, km/h, hPa, millimeters, and kilometers.</string>
+    <string name="onboarding_cards_title">Choose your starting density</string>
+    <string name="onboarding_cards_body">Start focused or turn everything on. Card visibility and order remain fully editable.</string>
+    <string name="onboarding_cards_minimal">Minimal</string>
+    <string name="onboarding_cards_minimal_desc">Current summary, rain next hour, hourly, daily, radar, and details.</string>
+    <string name="onboarding_cards_minimal_count">6 cards</string>
+    <string name="onboarding_cards_standard">Standard</string>
+    <string name="onboarding_cards_standard_desc">The balanced ZeusWatch default with core weather, air quality, pollen, astronomy, and trends.</string>
+    <string name="onboarding_cards_standard_count">Default</string>
+    <string name="onboarding_cards_everything">Everything</string>
+    <string name="onboarding_cards_everything_desc">Enable every available card for a dense power-user dashboard.</string>
+    <string name="onboarding_cards_everything_count">29 cards</string>
+    <string name="onboarding_continue">Continue</string>
+    <string name="onboarding_finish">Start ZeusWatch</string>
     <string name="custom_alerts_rule_center">Rule center</string>
     <string name="custom_alerts_rule_count_singular">1 custom alert ready to watch the forecast.</string>
     <string name="custom_alerts_rule_count_plural">%1$d custom alerts ready to watch the forecast.</string>

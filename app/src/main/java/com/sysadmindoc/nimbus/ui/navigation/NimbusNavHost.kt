@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Map
@@ -27,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,13 +53,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.screen.compare.CompareScreen
 import com.sysadmindoc.nimbus.ui.screen.customalerts.CustomAlertsScreen
 import com.sysadmindoc.nimbus.ui.screen.locations.LocationsScreen
 import com.sysadmindoc.nimbus.ui.screen.main.MainScreen
+import com.sysadmindoc.nimbus.ui.screen.onboarding.OnboardingScreen
+import com.sysadmindoc.nimbus.ui.screen.onboarding.OnboardingViewModel
 import com.sysadmindoc.nimbus.ui.screen.radar.RadarScreen
 import com.sysadmindoc.nimbus.ui.screen.settings.SettingsScreen
+import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
@@ -65,6 +73,8 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 
 object Routes {
+    const val ONBOARDING_GATE = "onboarding_gate"
+    const val ONBOARDING = "onboarding"
     const val MAIN = "main"
     const val MAIN_LOCATION = "main/{locationId}"
     const val MAIN_TARGET = "main/target/{target}"
@@ -141,12 +151,29 @@ data class DeepLinkRequest(val route: String, val id: Long)
 fun NimbusNavHost(
     deepLink: DeepLinkRequest? = null,
     onDeepLinkConsumed: () -> Unit = {},
+    onboardingViewModel: OnboardingViewModel = hiltViewModel(),
 ) {
     val navController = rememberNavController()
+    val onboardingComplete by onboardingViewModel.onboardingComplete.collectAsStateWithLifecycle(initialValue = null)
 
-    // Navigate to deep-linked route on startup or re-intent. Keyed on the
-    // delivery id (not the route) so repeat taps re-fire.
-    LaunchedEffect(deepLink?.id) {
+    LaunchedEffect(onboardingComplete) {
+        when (onboardingComplete) {
+            true -> navController.navigate(Routes.MAIN) {
+                popUpTo(Routes.ONBOARDING_GATE) { inclusive = true }
+                launchSingleTop = true
+            }
+            false -> navController.navigate(Routes.ONBOARDING) {
+                popUpTo(Routes.ONBOARDING_GATE)
+                launchSingleTop = true
+            }
+            null -> Unit
+        }
+    }
+
+    // Navigate to deep-linked route on startup or re-intent after onboarding is
+    // resolved. Keyed on the delivery id (not the route) so repeat taps re-fire.
+    LaunchedEffect(deepLink?.id, onboardingComplete) {
+        if (onboardingComplete != true) return@LaunchedEffect
         val route = deepLink?.route
         if (route != null && route != Routes.MAIN) {
             navController.navigate(route) {
@@ -156,7 +183,20 @@ fun NimbusNavHost(
         if (deepLink != null) onDeepLinkConsumed()
     }
 
-    NavHost(navController = navController, startDestination = Routes.MAIN) {
+    NavHost(navController = navController, startDestination = Routes.ONBOARDING_GATE) {
+        composable(Routes.ONBOARDING_GATE) {
+            OnboardingGateScreen()
+        }
+        composable(Routes.ONBOARDING) {
+            OnboardingScreen(
+                onComplete = {
+                    navController.navigate(Routes.MAIN) {
+                        popUpTo(Routes.ONBOARDING_GATE) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
         composable(Routes.MAIN) {
             MainScreen(
                 onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
@@ -244,6 +284,22 @@ fun NimbusNavHost(
                 onNavigateToLocations = { navController.navigate(Routes.LOCATIONS) },
             )
         }
+    }
+}
+
+@Composable
+private fun OnboardingGateScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NimbusBackgroundGradient),
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(28.dp),
+            color = NimbusBlueAccent,
+            strokeWidth = 2.dp,
+        )
     }
 }
 
