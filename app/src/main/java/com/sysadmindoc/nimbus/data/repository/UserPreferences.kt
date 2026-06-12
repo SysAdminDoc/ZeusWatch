@@ -225,6 +225,16 @@ class UserPreferences @Inject constructor(
         val LAST_LAT = stringPreferencesKey("last_lat")
         val LAST_LON = stringPreferencesKey("last_lon")
         val LAST_LOCATION_NAME = stringPreferencesKey("last_location_name")
+        val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
+    }
+
+    private fun hasExistingUserFootprint(prefs: Preferences): Boolean {
+        return prefs[Keys.LAST_LOCATION_NAME] != null ||
+            prefs[Keys.CARD_ORDER] != null ||
+            prefs[Keys.TEMP_UNIT] != null ||
+            prefs[Keys.SOURCE_FORECAST] != null ||
+            prefs[Keys.OWM_API_KEY] != null ||
+            prefs[Keys.PIRATE_WEATHER_API_KEY] != null
     }
 
     // A corrupted preferences file makes DataStore throw an IOException
@@ -297,6 +307,7 @@ class UserPreferences @Inject constructor(
             ).normalized(),
             owmApiKey = apiKeyPrefs[Keys.OWM_API_KEY] ?: prefs[Keys.OWM_API_KEY] ?: "",
             pirateWeatherApiKey = apiKeyPrefs[Keys.PIRATE_WEATHER_API_KEY] ?: prefs[Keys.PIRATE_WEATHER_API_KEY] ?: "",
+            onboardingComplete = prefs[Keys.ONBOARDING_COMPLETE] ?: hasExistingUserFootprint(prefs),
         )
     }
 
@@ -351,6 +362,17 @@ class UserPreferences @Inject constructor(
     suspend fun resetCardPreferences() = store.edit {
         it[Keys.CARD_ORDER] = DEFAULT_CARD_ORDER.joinToString(",") { card -> card.name }
         it[Keys.DISABLED_CARDS] = DEFAULT_DISABLED_CARDS
+    }
+
+    suspend fun completeOnboarding(tempUnit: TempUnit, starterCardSet: StarterCardSet) = store.edit { prefs ->
+        prefs[Keys.TEMP_UNIT] = tempUnit.name
+        prefs[Keys.WIND_UNIT] = preferredWindUnitFor(tempUnit).name
+        prefs[Keys.PRESSURE_UNIT] = preferredPressureUnitFor(tempUnit).name
+        prefs[Keys.PRECIP_UNIT] = preferredPrecipUnitFor(tempUnit).name
+        prefs[Keys.VISIBILITY_UNIT] = preferredVisibilityUnitFor(tempUnit).name
+        prefs[Keys.CARD_ORDER] = DEFAULT_CARD_ORDER.joinToString(",") { card -> card.name }
+        prefs[Keys.DISABLED_CARDS] = disabledCardsForStarterSet(starterCardSet)
+        prefs[Keys.ONBOARDING_COMPLETE] = true
     }
 
     // Notifications
@@ -553,6 +575,7 @@ data class NimbusSettings(
     val sourceConfig: SourceConfig = SourceConfig(),
     val owmApiKey: String = "",
     val pirateWeatherApiKey: String = "",
+    val onboardingComplete: Boolean = false,
 ) {
     /** Cache TTL in milliseconds. */
     val cacheTtlMs: Long get() = cacheTtlMinutes * 60 * 1000L
@@ -589,6 +612,12 @@ enum class VisibilityUnit(val label: String, val symbol: String) {
 enum class TimeFormat(val label: String) {
     TWELVE_HOUR("12-hour"),
     TWENTY_FOUR_HOUR("24-hour"),
+}
+
+enum class StarterCardSet(val label: String) {
+    MINIMAL("Minimal"),
+    STANDARD("Standard"),
+    EVERYTHING("Everything"),
 }
 
 enum class AlertMinSeverity(val label: String, val maxSortOrder: Int) {
@@ -684,4 +713,40 @@ internal fun moveCardInList(order: List<CardType>, card: CardType, delta: Int): 
     val to = (from + delta).coerceIn(0, order.lastIndex)
     if (to == from) return order
     return order.toMutableList().apply { add(to, removeAt(from)) }
+}
+
+internal fun disabledCardsForStarterSet(set: StarterCardSet): Set<String> {
+    return when (set) {
+        StarterCardSet.MINIMAL -> CardType.entries
+            .filterNot { it in MINIMAL_STARTER_CARDS }
+            .map { it.name }
+            .toSet()
+        StarterCardSet.STANDARD -> DEFAULT_DISABLED_CARDS
+        StarterCardSet.EVERYTHING -> emptySet()
+    }
+}
+
+private val MINIMAL_STARTER_CARDS = setOf(
+    CardType.WEATHER_SUMMARY,
+    CardType.NOWCAST,
+    CardType.HOURLY_FORECAST,
+    CardType.DAILY_FORECAST,
+    CardType.RADAR_PREVIEW,
+    CardType.DETAILS_GRID,
+)
+
+internal fun preferredWindUnitFor(tempUnit: TempUnit): WindUnit {
+    return if (tempUnit == TempUnit.CELSIUS) WindUnit.KMH else WindUnit.MPH
+}
+
+internal fun preferredPressureUnitFor(tempUnit: TempUnit): PressureUnit {
+    return if (tempUnit == TempUnit.CELSIUS) PressureUnit.HPA else PressureUnit.INHG
+}
+
+internal fun preferredPrecipUnitFor(tempUnit: TempUnit): PrecipUnit {
+    return if (tempUnit == TempUnit.CELSIUS) PrecipUnit.MM else PrecipUnit.INCHES
+}
+
+internal fun preferredVisibilityUnitFor(tempUnit: TempUnit): VisibilityUnit {
+    return if (tempUnit == TempUnit.CELSIUS) VisibilityUnit.KM else VisibilityUnit.MILES
 }
