@@ -85,6 +85,10 @@ class LocationRepository @Inject constructor(
         )
     }
 
+    suspend fun restoreAll(locations: List<SavedLocationEntity>) {
+        dao.restoreAll(locations)
+    }
+
     suspend fun reorderLocations(orderedIds: List<Long>) {
         val currentLocationId = dao.getCurrentLocation()?.id
         val normalizedIds = orderedIds.filterNot { it == currentLocationId }

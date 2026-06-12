@@ -89,6 +89,8 @@
     <string name="common_today">Hoy</string>
     <string name="common_tomorrow">Manana</string>
     <string name="common_now">Ahora</string>
+    <string name="common_yes">Si</string>
+    <string name="common_no">No</string>
     <string name="whats_new_title">Novedades de ZeusWatch</string>
     <string name="whats_new_body">Algunas mejoras recientes estan listas para tu proxima revision del pronostico.</string>
     <string name="whats_new_version">Version %1$s</string>
@@ -839,6 +841,13 @@
     <string name="settings_transfer_export">Exportar</string>
     <string name="settings_transfer_import">Importar</string>
     <string name="settings_transfer_status_title">Transferencia de ajustes</string>
+    <string name="settings_transfer_preview_title">Revisar importacion</string>
+    <string name="settings_transfer_preview_message">La copia v%1$d reemplazara %2$d ubicaciones guardadas con %3$d, restaurara %4$d alertas personalizadas, aplicara %5$d ajustes de tarjetas y restaurara ultima ubicacion: %6$s.</string>
+    <string name="settings_transfer_preview_warnings">Advertencias</string>
+    <string name="settings_transfer_preview_cancel">Cancelar</string>
+    <string name="settings_transfer_preview_confirm">Restaurar</string>
+    <string name="settings_transfer_warning_blank_locations">%1$d ubicaciones guardadas tienen nombres vacios y se omitiran.</string>
+    <string name="settings_transfer_warning_duplicate_locations">%1$d ubicaciones guardadas duplicadas se omitiran.</string>
     <string name="settings_transfer_export_success">Ajustes exportados.</string>
     <string name="settings_transfer_export_error">Error al exportar: %1$s</string>
     <string name="settings_transfer_import_success">Ajustes restaurados con %1$d ubicaciones guardadas y %2$d alertas personalizadas.</string>

@@ -2,11 +2,14 @@ package com.sysadmindoc.nimbus.data.repository
 
 import com.sysadmindoc.nimbus.data.model.CustomAlertRule
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToLong
 
 private const val SETTINGS_BACKUP_SCHEMA_VERSION = 1
 
@@ -35,22 +38,46 @@ class SettingsTransferManager @Inject constructor(
         return settingsTransferJson.encodeToString(SettingsBackup.serializer(), backup)
     }
 
+    suspend fun previewImportJson(rawJson: String): SettingsImportPreview {
+        val currentLocationCount = locationRepository.getAll().size
+        return previewSettingsImport(rawJson, currentLocationCount)
+    }
+
     suspend fun importJson(rawJson: String): SettingsTransferResult {
-        val backup = settingsTransferJson.decodeFromString(SettingsBackup.serializer(), rawJson)
-        require(backup.schemaVersion == SETTINGS_BACKUP_SCHEMA_VERSION) {
-            "Unsupported settings backup version ${backup.schemaVersion}."
+        val snapshot = currentSnapshot()
+        val plan = parseSettingsBackup(rawJson).toImportPlan(snapshot.savedLocations.size)
+        return try {
+            applyImportPlan(plan)
+        } catch (failure: Exception) {
+            if (failure is CancellationException) throw failure
+            runCatching { restoreSnapshot(snapshot) }
+                .onFailure { rollbackFailure -> failure.addSuppressed(rollbackFailure) }
+            throw failure
         }
-        val settings = backup.settings.toSettings()
-        prefs.applyImportedSettings(settings)
-        prefs.setCustomAlertRules(backup.customAlerts)
-        backup.lastLocation?.let { prefs.saveLastLocation(it.latitude, it.longitude, it.name) }
-        val importedLocations = backup.savedLocations
-            .filter { it.name.isNotBlank() }
-            .map { it.toEntity() }
-        locationRepository.replaceAll(importedLocations)
+    }
+
+    private suspend fun currentSnapshot(): SettingsImportSnapshot = SettingsImportSnapshot(
+        settings = prefs.settings.first(),
+        customAlerts = prefs.customAlertRules.first(),
+        savedLocations = locationRepository.getAll(),
+        lastLocation = prefs.lastLocation.first(),
+    )
+
+    private suspend fun restoreSnapshot(snapshot: SettingsImportSnapshot) {
+        prefs.applyImportedSettings(snapshot.settings)
+        prefs.setCustomAlertRules(snapshot.customAlerts)
+        prefs.applyImportedLastLocation(snapshot.lastLocation)
+        locationRepository.restoreAll(snapshot.savedLocations)
+    }
+
+    private suspend fun applyImportPlan(plan: SettingsImportPlan): SettingsTransferResult {
+        prefs.applyImportedSettings(plan.settings)
+        prefs.setCustomAlertRules(plan.backup.customAlerts)
+        prefs.applyImportedLastLocation(plan.backup.lastLocation?.toSavedLocation())
+        locationRepository.replaceAll(plan.importedLocations)
         return SettingsTransferResult(
-            savedLocationCount = importedLocations.size,
-            customAlertCount = backup.customAlerts.size,
+            savedLocationCount = plan.importedLocations.size,
+            customAlertCount = plan.backup.customAlerts.size,
         )
     }
 }
@@ -58,6 +85,37 @@ class SettingsTransferManager @Inject constructor(
 data class SettingsTransferResult(
     val savedLocationCount: Int,
     val customAlertCount: Int,
+)
+
+data class SettingsImportPreview(
+    val schemaVersion: Int,
+    val currentSavedLocationCount: Int,
+    val savedLocationCount: Int,
+    val skippedLocationCount: Int,
+    val duplicateLocationCount: Int,
+    val customAlertCount: Int,
+    val cardCount: Int,
+    val hasLastLocation: Boolean,
+    val warnings: List<SettingsImportWarning>,
+)
+
+enum class SettingsImportWarning {
+    BLANK_LOCATION_NAMES,
+    DUPLICATE_LOCATIONS,
+}
+
+private data class SettingsImportSnapshot(
+    val settings: NimbusSettings,
+    val customAlerts: List<CustomAlertRule>,
+    val savedLocations: List<SavedLocationEntity>,
+    val lastLocation: SavedLocation?,
+)
+
+private data class SettingsImportPlan(
+    val backup: SettingsBackup,
+    val settings: NimbusSettings,
+    val importedLocations: List<SavedLocationEntity>,
+    val preview: SettingsImportPreview,
 )
 
 @Serializable
@@ -137,6 +195,80 @@ data class SettingsBackupLastLocation(
     val longitude: Double,
     val name: String,
 )
+
+fun previewSettingsImport(rawJson: String, currentSavedLocationCount: Int = 0): SettingsImportPreview =
+    parseSettingsBackup(rawJson).toImportPlan(currentSavedLocationCount).preview
+
+private fun parseSettingsBackup(rawJson: String): SettingsBackup {
+    val backup = settingsTransferJson.decodeFromString(SettingsBackup.serializer(), rawJson)
+    require(backup.schemaVersion == SETTINGS_BACKUP_SCHEMA_VERSION) {
+        "Unsupported settings backup version ${backup.schemaVersion}."
+    }
+    return backup
+}
+
+private fun SettingsBackup.toImportPlan(currentSavedLocationCount: Int): SettingsImportPlan {
+    val locationPlan = savedLocations.toImportLocationPlan()
+    val warnings = buildList {
+        if (locationPlan.skippedBlankCount > 0) add(SettingsImportWarning.BLANK_LOCATION_NAMES)
+        if (locationPlan.duplicateCount > 0) add(SettingsImportWarning.DUPLICATE_LOCATIONS)
+    }
+    val settings = settings.toSettings()
+    return SettingsImportPlan(
+        backup = this,
+        settings = settings,
+        importedLocations = locationPlan.locations,
+        preview = SettingsImportPreview(
+            schemaVersion = schemaVersion,
+            currentSavedLocationCount = currentSavedLocationCount.coerceAtLeast(0),
+            savedLocationCount = locationPlan.locations.size,
+            skippedLocationCount = locationPlan.skippedBlankCount,
+            duplicateLocationCount = locationPlan.duplicateCount,
+            customAlertCount = customAlerts.size,
+            cardCount = settings.cardOrder.size,
+            hasLastLocation = lastLocation != null,
+            warnings = warnings,
+        ),
+    )
+}
+
+private data class ImportLocationPlan(
+    val locations: List<SavedLocationEntity>,
+    val skippedBlankCount: Int,
+    val duplicateCount: Int,
+)
+
+private fun List<SettingsBackupLocation>.toImportLocationPlan(): ImportLocationPlan {
+    var skippedBlankCount = 0
+    var duplicateCount = 0
+    val seen = LinkedHashSet<String>()
+    val locations = mapNotNull { location ->
+        if (location.name.isBlank()) {
+            skippedBlankCount++
+            return@mapNotNull null
+        }
+        val entity = location.toEntity()
+        if (!seen.add(entity.importKey())) {
+            duplicateCount++
+            return@mapNotNull null
+        }
+        entity
+    }
+    return ImportLocationPlan(
+        locations = locations,
+        skippedBlankCount = skippedBlankCount,
+        duplicateCount = duplicateCount,
+    )
+}
+
+private fun SavedLocationEntity.importKey(): String = listOf(
+    name.trim().lowercase(Locale.ROOT),
+    region.trim().lowercase(Locale.ROOT),
+    country.trim().lowercase(Locale.ROOT),
+    (latitude * 10_000).roundToLong().toString(),
+    (longitude * 10_000).roundToLong().toString(),
+    isCurrentLocation.toString(),
+).joinToString("|")
 
 fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPreferences(
     tempUnit = tempUnit.name,
@@ -268,6 +400,12 @@ fun SavedLocation.toBackup(): SettingsBackupLastLocation = SettingsBackupLastLoc
     name = name,
 )
 
+fun SettingsBackupLastLocation.toSavedLocation(): SavedLocation = SavedLocation(
+    latitude = latitude,
+    longitude = longitude,
+    name = name,
+)
+
 suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setTempUnit(settings.tempUnit)
     setWindUnit(settings.windUnit)
@@ -318,6 +456,15 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setSourceAlertsFallback(settings.sourceConfig.alertsFallback)
     setSourceAirQuality(settings.sourceConfig.airQuality)
     setSourceMinutely(settings.sourceConfig.minutely)
+    setOnboardingComplete(settings.onboardingComplete)
+}
+
+private suspend fun UserPreferences.applyImportedLastLocation(location: SavedLocation?) {
+    if (location == null) {
+        clearLastLocation()
+    } else {
+        saveLastLocation(location.latitude, location.longitude, location.name)
+    }
 }
 
 private inline fun <reified T : Enum<T>> enumOrDefault(name: String, default: T): T =
