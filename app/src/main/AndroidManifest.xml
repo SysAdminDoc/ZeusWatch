@@ -18,6 +18,7 @@
 
     <!-- Notifications -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- Widgets -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />

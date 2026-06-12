@@ -82,6 +82,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AirQualityData
+import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AstronomyData
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
@@ -93,6 +94,7 @@ import com.sysadmindoc.nimbus.ui.component.AqiCard
 import com.sysadmindoc.nimbus.ui.component.ClothingSuggestionCard
 import com.sysadmindoc.nimbus.ui.component.CurrentConditionsHeader
 import com.sysadmindoc.nimbus.ui.component.DailyForecastList
+import com.sysadmindoc.nimbus.ui.component.ExtremeAlertTakeover
 import com.sysadmindoc.nimbus.ui.component.ForecastEvolutionCard
 import com.sysadmindoc.nimbus.ui.component.HourlyForecastStrip
 import com.sysadmindoc.nimbus.ui.component.LocalAdaptiveLayout
@@ -600,10 +602,10 @@ private fun WeatherContent(
 
             if (hasAlertBanner) {
                 item(key = "alert_banner") {
-                    AlertBanner(
+                    WeatherAlertSection(
                         alerts = alerts,
                         onAlertClick = { selectedAlert = it },
-                        modifier = Modifier.padding(horizontal = layout.contentPadding, vertical = 4.dp),
+                        bannerModifier = Modifier.padding(horizontal = layout.contentPadding, vertical = 4.dp),
                     )
                 }
             }
@@ -647,6 +649,35 @@ private fun WeatherContent(
             )
 
             weatherFooterItem()
+        }
+    }
+}
+
+@Composable
+private fun WeatherAlertSection(
+    alerts: List<WeatherAlert>,
+    onAlertClick: (WeatherAlert) -> Unit,
+    bannerModifier: Modifier = Modifier,
+) {
+    val extremeAlert = remember(alerts) { alerts.firstOrNull { it.severity == AlertSeverity.EXTREME } }
+    val bannerAlerts = remember(alerts, extremeAlert?.id) {
+        if (extremeAlert == null) alerts else alerts.filterNot { it.id == extremeAlert.id }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        extremeAlert?.let { alert ->
+            ExtremeAlertTakeover(
+                alert = alert,
+                onAlertClick = onAlertClick,
+                modifier = Modifier.padding(vertical = 4.dp),
+            )
+        }
+        if (bannerAlerts.isNotEmpty()) {
+            AlertBanner(
+                alerts = bannerAlerts,
+                onAlertClick = onAlertClick,
+                modifier = bannerModifier,
+            )
         }
     }
 }
