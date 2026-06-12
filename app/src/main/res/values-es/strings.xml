@@ -7,15 +7,18 @@
     <string name="widget_medium_desc">Condiciones actuales con pronostico de 3 dias</string>
     <string name="widget_large_desc">Pronostico por hora con vista de 5 dias</string>
     <string name="widget_forecast_strip_desc">Tira compacta de temperatura por hora</string>
+    <string name="widget_saved_cities_desc">Temperaturas de ciudades guardadas</string>
     <string name="widget_loading_message">Cargando...</string>
     <string name="widget_empty_title">ZeusWatch</string>
     <string name="widget_small_empty_message">Toca para abrir y cargar un pronostico en vivo.</string>
     <string name="widget_medium_empty_message">Toca para cargar el pronostico mas reciente y los proximos dias.</string>
     <string name="widget_large_empty_message">Toca para cargar condiciones actuales, cambios por hora y la vista de 5 dias.</string>
     <string name="widget_strip_empty_message">Toca para cargar las proximas horas.</string>
+    <string name="widget_saved_cities_empty_message">Guarda lugares favoritos y toca para actualizar esta lista.</string>
     <string name="widget_current_eyebrow">ACTUAL</string>
     <string name="widget_overview_eyebrow">RESUMEN</string>
     <string name="widget_detailed_outlook_eyebrow">PRONOSTICO DETALLADO</string>
+    <string name="widget_saved_cities_eyebrow">CIUDADES GUARDADAS</string>
     <string name="widget_next_eyebrow">SIG.</string>
     <string name="widget_next_3_days">PROXIMOS 3 DIAS</string>
     <string name="widget_next_6_hours">PROXIMAS 6 HORAS</string>
@@ -30,6 +33,8 @@
     <string name="widget_updated_live_cd">Pronostico en vivo. Toca para actualizar ahora.</string>
     <string name="widget_updated_stale_cd">Datos actualizados hace %1$s. Toca para actualizar ahora.</string>
     <string name="widget_weather_icon_cd">Icono del clima</string>
+    <string name="widget_saved_city_unavailable_temp">--</string>
+    <string name="widget_saved_city_cd">%1$s, %2$s</string>
     <string name="widget_tomorrow_short">Man.</string>
     <string name="widget_config_title">Elegir ubicacion del widget</string>
     <string name="widget_config_subtitle">Elige el pronostico que este widget debe mantener a la vista. Puedes agregar mas widgets para otros lugares despues.</string>
