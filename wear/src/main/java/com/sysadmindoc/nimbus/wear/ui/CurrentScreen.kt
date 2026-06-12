@@ -2,6 +2,8 @@ package com.sysadmindoc.nimbus.wear.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +40,7 @@ fun CurrentScreen(
     onDailyTap: () -> Unit = {},
     onAlertsTap: () -> Unit = {},
     onRefresh: () -> Unit = {},
+    onTempUnitToggle: () -> Unit = {},
 ) {
     Box(
         modifier = modifier
@@ -63,7 +66,7 @@ fun CurrentScreen(
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
         } else {
-            WeatherContent(state, onHourlyTap, onDailyTap, onAlertsTap, onRefresh)
+            WeatherContent(state, onHourlyTap, onDailyTap, onAlertsTap, onRefresh, onTempUnitToggle)
         }
     }
 }
@@ -75,6 +78,7 @@ private fun WeatherContent(
     onDailyTap: () -> Unit,
     onAlertsTap: () -> Unit,
     onRefresh: () -> Unit,
+    onTempUnitToggle: () -> Unit,
 ) {
     // Scrollable so the footer/link rows aren't clipped on small round
     // screens; when content fits, the centered arrangement keeps the old
@@ -134,6 +138,11 @@ private fun WeatherContent(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
+            TempUnitChip(
+                tempUnit = state.tempUnit,
+                onToggle = onTempUnitToggle,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
         }
 
         WearPanel(modifier = Modifier.fillMaxWidth()) {
@@ -160,6 +169,36 @@ private fun WeatherContent(
             onRefresh = onRefresh,
         )
     }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TempUnitChip(
+    tempUnit: String,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val label = when (tempUnit) {
+        WearUnitFormatter.TEMP_FAHRENHEIT -> "\u00B0F"
+        else -> "\u00B0C"
+    }
+    Text(
+        text = stringResource(R.string.wear_temp_unit_toggle, label),
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Medium,
+        color = WearBlueAccent,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+            .background(WearBlueAccent.copy(alpha = 0.14f), RoundedCornerShape(8.dp))
+            .combinedClickable(
+                role = Role.Button,
+                onClickLabel = stringResource(R.string.wear_temp_unit_toggle_cd, label),
+                onClick = onToggle,
+                onLongClick = onToggle,
+            )
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+    )
 }
 
 @Composable

@@ -10,6 +10,7 @@ import com.sysadmindoc.nimbus.wear.data.WearDailyEntry
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
 import com.sysadmindoc.nimbus.wear.data.WearUnitFormatter
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
+import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,7 @@ import javax.inject.Inject
 class WearWeatherViewModel @Inject constructor(
     private val repository: WearWeatherRepository,
     private val locationProvider: WearLocationProvider,
+    private val syncedWeatherStore: SyncedWeatherStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WearUiState())
@@ -77,6 +79,11 @@ class WearWeatherViewModel @Inject constructor(
     }
 
     fun hasLocationPermission(): Boolean = locationProvider.hasPermission()
+
+    fun cycleTempUnit() {
+        val nextUnit = syncedWeatherStore.cycleTempUnitOverride()
+        _uiState.update { it.copy(tempUnit = nextUnit) }
+    }
 }
 
 @Stable

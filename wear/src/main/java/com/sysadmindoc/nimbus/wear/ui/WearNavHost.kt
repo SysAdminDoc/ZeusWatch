@@ -34,6 +34,7 @@ fun WearNavHost(
                 onDailyTap = { navController.navigate(WearRoutes.DAILY) },
                 onAlertsTap = { navController.navigate(WearRoutes.ALERTS) },
                 onRefresh = { viewModel.loadWeather() },
+                onTempUnitToggle = { viewModel.cycleTempUnit() },
             )
         }
         composable(WearRoutes.HOURLY) {

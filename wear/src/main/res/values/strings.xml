@@ -20,6 +20,8 @@
     <string name="wear_daylight">Daylight</string>
     <string name="wear_overnight">Overnight</string>
     <string name="wear_high_low">High %1$d\u00B0 \u2022 Low %2$d\u00B0</string>
+    <string name="wear_temp_unit_toggle">%1$s units</string>
+    <string name="wear_temp_unit_toggle_cd">Switch temperature units from %1$s</string>
     <string name="wear_right_now">Right now</string>
     <string name="wear_data_source_phone">Phone</string>
     <string name="wear_data_source_watch">Watch</string>
