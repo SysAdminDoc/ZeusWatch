@@ -160,6 +160,9 @@
     <string name="current_weather_channel_desc">Persistent notification showing current weather conditions</string>
     <string name="current_weather_notification_title">%1$s %2$s • %3$s</string>
     <string name="current_weather_notification_body">Feels like %1$s • H:%2$s L:%3$s</string>
+    <string name="daily_briefing_channel_name">Daily Briefing</string>
+    <string name="daily_briefing_channel_desc">Opt-in morning forecast summary.</string>
+    <string name="daily_briefing_notification_title">Today in %1$s: %2$s, %3$s</string>
     <string name="crash_dialog_title">ZeusWatch crashed</string>
     <string name="crash_dialog_text">Send a sanitized crash log by email? No API keys or coordinates are included.</string>
     <string name="crash_dialog_send">Send</string>
@@ -792,6 +795,11 @@
     <string name="settings_alert_source">Alert source</string>
     <string name="settings_persistent_notification">Persistent Weather Notification</string>
     <string name="settings_persistent_notification_desc">Always-on notification showing current conditions</string>
+    <string name="settings_daily_briefing">Daily Briefing</string>
+    <string name="settings_daily_briefing_desc">Send one calm forecast summary each morning</string>
+    <string name="settings_daily_briefing_time">Briefing time</string>
+    <string name="settings_daily_briefing_time_desc">Scheduled from this device\'s local time</string>
+    <string name="settings_daily_briefing_picker_title">Choose briefing time</string>
     <string name="settings_nowcasting_alerts">Nowcasting Alerts</string>
     <string name="settings_nowcasting_alerts_desc">Alert when rain is approaching</string>
     <string name="settings_custom_alert_rules">Custom Alert Rules</string>

@@ -43,8 +43,10 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +55,9 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
@@ -98,6 +103,7 @@ import com.sysadmindoc.nimbus.ui.theme.*
 import com.sysadmindoc.nimbus.util.displayNameRes
 import com.sysadmindoc.nimbus.util.labelRes
 import com.sysadmindoc.nimbus.util.summaryRes
+import java.util.Locale
 
 private enum class SettingsCategory(
     @StringRes val labelRes: Int,
@@ -195,6 +201,8 @@ internal data class SettingsActions(
     val onResetCardPreferences: () -> Unit = {},
     val onPersistentWeatherNotif: (Boolean) -> Unit = {},
     val onNowcastingAlerts: (Boolean) -> Unit = {},
+    val onDailyBriefingEnabled: (Boolean) -> Unit = {},
+    val onDailyBriefingMinutes: (Int) -> Unit = {},
     val onDrivingAlerts: (Boolean) -> Unit = {},
     val onHealthAlertsEnabled: (Boolean) -> Unit = {},
     val onShowSnowfall: (Boolean) -> Unit = {},
@@ -565,6 +573,10 @@ private fun SettingsNotificationsSection(
         }
         Spacer(modifier = Modifier.height(4.dp))
         SettingToggle(stringResource(R.string.settings_persistent_notification), stringResource(R.string.settings_persistent_notification_desc), settings.persistentWeatherNotif, actions.onPersistentWeatherNotif)
+        SettingToggle(stringResource(R.string.settings_daily_briefing), stringResource(R.string.settings_daily_briefing_desc), settings.dailyBriefingEnabled, actions.onDailyBriefingEnabled)
+        if (settings.dailyBriefingEnabled) {
+            DailyBriefingTimeSetting(settings, actions.onDailyBriefingMinutes)
+        }
         SettingToggle(stringResource(R.string.settings_nowcasting_alerts), stringResource(R.string.settings_nowcasting_alerts_desc), settings.nowcastingAlerts, actions.onNowcastingAlerts)
         Spacer(modifier = Modifier.height(4.dp))
         CustomAlertRulesRow(onNavigateToCustomAlerts)
@@ -593,6 +605,53 @@ private fun SettingsAlertNotificationDetails(
         checked = settings.alertCheckAllLocations,
         onCheckedChange = actions.onAlertCheckAllLocations,
     )
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun DailyBriefingTimeSetting(
+    settings: NimbusSettings,
+    onTimeSelected: (Int) -> Unit,
+) {
+    var showPicker by rememberSaveable { mutableStateOf(false) }
+    val formattedTime = formatBriefingTime(settings.dailyBriefingMinutes, settings.timeFormat)
+    SettingValueButton(
+        label = stringResource(R.string.settings_daily_briefing_time),
+        sublabel = stringResource(R.string.settings_daily_briefing_time_desc),
+        value = formattedTime,
+        onClick = { showPicker = true },
+    )
+    if (showPicker) {
+        val pickerState = rememberTimePickerState(
+            initialHour = settings.dailyBriefingMinutes / 60,
+            initialMinute = settings.dailyBriefingMinutes % 60,
+            is24Hour = settings.timeFormat == TimeFormat.TWENTY_FOUR_HOUR,
+        )
+        AlertDialog(
+            onDismissRequest = { showPicker = false },
+            title = {
+                Text(stringResource(R.string.settings_daily_briefing_picker_title))
+            },
+            text = {
+                TimePicker(state = pickerState)
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onTimeSelected(pickerState.hour * 60 + pickerState.minute)
+                        showPicker = false
+                    },
+                ) {
+                    Text(stringResource(R.string.common_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPicker = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -1173,6 +1232,61 @@ private fun SettingToggle(
 }
 
 @Composable
+private fun SettingValueButton(
+    label: String,
+    sublabel: String,
+    value: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 62.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.42f),
+                        NimbusCardBg,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick, role = Role.Button)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "$label, $sublabel, $value"
+            }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = NimbusTextPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = sublabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelLarge,
+            color = NimbusBlueAccent,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
 private fun SettingInfo(label: String, value: String) {
     Row(
         modifier = Modifier
@@ -1531,6 +1645,22 @@ private fun IconPackSelector(
                 onClick = { onPackSelected(pack.id) },
             )
         }
+    }
+}
+
+private fun formatBriefingTime(minutesAfterMidnight: Int, timeFormat: TimeFormat): String {
+    val safeMinutes = minutesAfterMidnight.coerceIn(0, 24 * 60 - 1)
+    val hour = safeMinutes / 60
+    val minute = safeMinutes % 60
+    return if (timeFormat == TimeFormat.TWENTY_FOUR_HOUR) {
+        String.format(Locale.US, "%02d:%02d", hour, minute)
+    } else {
+        val displayHour = when (val twelveHour = hour % 12) {
+            0 -> 12
+            else -> twelveHour
+        }
+        val suffix = if (hour < 12) "AM" else "PM"
+        String.format(Locale.US, "%d:%02d %s", displayHour, minute, suffix)
     }
 }
 
