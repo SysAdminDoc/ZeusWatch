@@ -31,6 +31,16 @@ class DeepLinkRoutesTest {
     }
 
     @Test
+    fun `resolveZeusWatchDeepLinkRoute routes main location query to saved location`() {
+        assertEquals(
+            Routes.mainWithLocation(42L),
+            resolveZeusWatchDeepLinkRoute(host = "main", locationId = "42"),
+        )
+        assertNull(resolveZeusWatchDeepLinkRoute(host = "main", locationId = "0"))
+        assertNull(resolveZeusWatchDeepLinkRoute(host = "main", locationId = "not-a-number"))
+    }
+
+    @Test
     fun `resolveZeusWatchDeepLinkRoute accepts legacy card query names`() {
         assertEquals(
             Routes.mainTarget(MainDeepLinkTarget.NOWCAST),

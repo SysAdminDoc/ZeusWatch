@@ -1,8 +1,11 @@
 package com.sysadmindoc.nimbus.widget
 
+import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
+import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider
 import org.junit.Assert.assertEquals
@@ -129,6 +132,41 @@ class WidgetRefreshWorkerLogicTest {
     }
 
     @Test
+    fun `savedCityLocationsForWidget excludes current location and caps sorted cities`() {
+        val locations = listOf(
+            savedLocation(id = 1L, name = "My Location", sortOrder = -1, isCurrentLocation = true),
+            savedLocation(id = 2L, name = "Seattle", sortOrder = 3),
+            savedLocation(id = 3L, name = "Austin", sortOrder = 1),
+            savedLocation(id = 4L, name = "Boston", sortOrder = 1),
+            savedLocation(id = 5L, name = "Denver", sortOrder = 4),
+            savedLocation(id = 6L, name = "Chicago", sortOrder = 5),
+            savedLocation(id = 7L, name = "Miami", sortOrder = 6),
+        )
+
+        val cities = savedCityLocationsForWidget(locations)
+
+        assertEquals(listOf("Austin", "Boston", "Seattle", "Denver", "Chicago"), cities.map { it.name })
+        assertFalse(cities.any { it.isCurrentLocation })
+    }
+
+    @Test
+    fun `buildWidgetSavedCity converts weather into compact saved city row`() {
+        val location = savedLocation(id = 42L, name = "Denver", sortOrder = 0)
+        val weather = weatherDataFor(location)
+
+        val city = buildWidgetSavedCity(location, weather) { celsius -> celsius * 9.0 / 5.0 + 32.0 }
+
+        assertEquals(42L, city.locationId)
+        assertEquals("Denver", city.locationName)
+        assertEquals(68, city.temperature)
+        assertEquals(77, city.high)
+        assertEquals(50, city.low)
+        assertEquals(WeatherCode.CLEAR_SKY.code, city.weatherCode)
+        assertTrue(city.isDay)
+        assertTrue(city.updatedAt > 0L)
+    }
+
+    @Test
     fun `buildWidgetHourlyItems keeps first twelve forecast entries`() {
         val hourly = (0 until 14).map { hourOffset ->
             HourlyConditions(
@@ -208,5 +246,55 @@ class WidgetRefreshWorkerLogicTest {
         assertEquals("Tmrw", items[1].day)
         assertTrue(items[2].day.isNotBlank())
         assertEquals(16, items[2].high)
+    }
+
+    private fun savedLocation(
+        id: Long,
+        name: String,
+        sortOrder: Int,
+        isCurrentLocation: Boolean = false,
+    ): SavedLocationEntity {
+        return SavedLocationEntity(
+            id = id,
+            name = name,
+            latitude = 39.0 + id,
+            longitude = -104.0 - id,
+            sortOrder = sortOrder,
+            isCurrentLocation = isCurrentLocation,
+        )
+    }
+
+    private fun weatherDataFor(location: SavedLocationEntity): WeatherData {
+        return WeatherData(
+            location = LocationInfo(
+                name = location.name,
+                latitude = location.latitude,
+                longitude = location.longitude,
+            ),
+            current = CurrentConditions(
+                temperature = 20.0,
+                feelsLike = 19.0,
+                humidity = 40,
+                weatherCode = WeatherCode.CLEAR_SKY,
+                observationTime = LocalDateTime.of(2026, 4, 15, 12, 0),
+                isDay = true,
+                windSpeed = 8.0,
+                windDirection = 180,
+                windGusts = null,
+                pressure = 1013.0,
+                uvIndex = 4.0,
+                visibility = 10_000.0,
+                dewPoint = 8.0,
+                cloudCover = 5,
+                precipitation = 0.0,
+                dailyHigh = 25.0,
+                dailyLow = 10.0,
+                sunrise = null,
+                sunset = null,
+            ),
+            hourly = emptyList(),
+            daily = emptyList(),
+            lastUpdated = LocalDateTime.of(2026, 4, 15, 12, 0),
+        )
     }
 }

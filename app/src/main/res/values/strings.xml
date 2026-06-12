@@ -8,15 +8,18 @@
     <string name="widget_medium_desc">Current conditions with 3-day forecast</string>
     <string name="widget_large_desc">Hourly forecast with 5-day outlook</string>
     <string name="widget_forecast_strip_desc">Compact hourly temperature strip</string>
+    <string name="widget_saved_cities_desc">Saved-city temperatures</string>
     <string name="widget_loading_message">Loading...</string>
     <string name="widget_empty_title">ZeusWatch</string>
     <string name="widget_small_empty_message">Tap to open and load a live forecast.</string>
     <string name="widget_medium_empty_message">Tap to load the latest forecast and next few days.</string>
     <string name="widget_large_empty_message">Tap to load current conditions, hourly changes, and the 5-day outlook.</string>
     <string name="widget_strip_empty_message">Tap to load the next few hours.</string>
+    <string name="widget_saved_cities_empty_message">Save favorite places, then tap to refresh this list.</string>
     <string name="widget_current_eyebrow">CURRENT</string>
     <string name="widget_overview_eyebrow">OVERVIEW</string>
     <string name="widget_detailed_outlook_eyebrow">DETAILED OUTLOOK</string>
+    <string name="widget_saved_cities_eyebrow">SAVED CITIES</string>
     <string name="widget_next_eyebrow">NEXT</string>
     <string name="widget_next_3_days">NEXT 3 DAYS</string>
     <string name="widget_next_6_hours">NEXT 6 HOURS</string>
@@ -31,6 +34,8 @@
     <string name="widget_updated_live_cd">Live forecast. Tap to refresh now.</string>
     <string name="widget_updated_stale_cd">Data updated %1$s ago. Tap to refresh now.</string>
     <string name="widget_weather_icon_cd">Weather icon</string>
+    <string name="widget_saved_city_unavailable_temp">--</string>
+    <string name="widget_saved_city_cd">%1$s, %2$s</string>
     <string name="widget_tomorrow_short">Tmrw</string>
     <string name="widget_config_title">Choose Widget Location</string>
     <string name="widget_config_subtitle">Pick the forecast this widget should keep in view. You can always add more widgets for other places later.</string>

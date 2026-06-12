@@ -117,6 +117,7 @@ class MainActivity : ComponentActivity() {
             host = uri.host,
             target = uri.getQueryParameter("target"),
             card = uri.getQueryParameter("card"),
+            locationId = uri.getQueryParameter("locationId"),
         )
     }
 
