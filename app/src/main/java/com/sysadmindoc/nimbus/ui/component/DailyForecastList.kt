@@ -2,11 +2,6 @@ package com.sysadmindoc.nimbus.ui.component
 
 import android.content.Context
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.background
@@ -26,16 +21,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material.icons.outlined.AcUnit
-import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.material.icons.outlined.WbTwilight
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -49,7 +39,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -104,6 +93,15 @@ fun DailyForecastList(
     val weeklySummary = remember(daily, referenceDate, s, context) {
         dailyHeaderSummary(context, daily.take(7), referenceDate, s)
     }
+    var selectedDay by remember { mutableStateOf<DailyConditions?>(null) }
+
+    selectedDay?.let { day ->
+        DailyForecastDetailSheet(
+            day = day,
+            referenceDate = referenceDate,
+            onDismiss = { selectedDay = null },
+        )
+    }
 
     WeatherCard(titleRes = R.string.card_type_daily_forecast, modifier = modifier) {
         // Tab selector
@@ -134,22 +132,24 @@ fun DailyForecastList(
         Column {
             daily.forEachIndexed { index, day ->
                 when (tabs[selectedTab]) {
-                    DailyTrendTab.OVERVIEW -> ExpandableDailyRow(
+                    DailyTrendTab.OVERVIEW -> DailyOverviewRow(
                         day = day,
                         referenceDate = referenceDate,
                         isWarmest = index == warmestIndex && daily.size > 1,
                         weeklyMin = weeklyMin,
                         weeklyMax = weeklyMax,
+                        onDetailClick = { selectedDay = day },
                     )
                     DailyTrendTab.TEMPERATURE -> DailyTempRow(
                         day = day,
                         referenceDate = referenceDate,
                         weeklyMin = weeklyMin,
                         weeklyMax = weeklyMax,
+                        onClick = { selectedDay = day },
                     )
-                    DailyTrendTab.WIND -> DailyWindRow(day = day, referenceDate = referenceDate)
-                    DailyTrendTab.UV -> DailyUvRow(day = day, referenceDate = referenceDate)
-                    DailyTrendTab.PRECIPITATION -> DailyPrecipRow(day = day, referenceDate = referenceDate)
+                    DailyTrendTab.WIND -> DailyWindRow(day = day, referenceDate = referenceDate, onClick = { selectedDay = day })
+                    DailyTrendTab.UV -> DailyUvRow(day = day, referenceDate = referenceDate, onClick = { selectedDay = day })
+                    DailyTrendTab.PRECIPITATION -> DailyPrecipRow(day = day, referenceDate = referenceDate, onClick = { selectedDay = day })
                 }
                 if (index < daily.lastIndex) {
                     HorizontalDivider(color = NimbusCardBorder, modifier = Modifier.padding(vertical = 2.dp))
@@ -202,12 +202,18 @@ private fun DailyTempRow(
     referenceDate: java.time.LocalDate?,
     weeklyMin: Double,
     weeklyMax: Double,
+    onClick: () -> Unit,
 ) {
     val s = LocalUnitSettings.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(
+                onClick = onClick,
+                role = Role.Button,
+            )
             .padding(horizontal = 6.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -248,12 +254,21 @@ private fun DailyTempRow(
 }
 
 @Composable
-private fun DailyWindRow(day: DailyConditions, referenceDate: java.time.LocalDate?) {
+private fun DailyWindRow(
+    day: DailyConditions,
+    referenceDate: java.time.LocalDate?,
+    onClick: () -> Unit,
+) {
     val s = LocalUnitSettings.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(
+                onClick = onClick,
+                role = Role.Button,
+            )
             .padding(horizontal = 6.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -297,7 +312,11 @@ private fun DailyWindRow(day: DailyConditions, referenceDate: java.time.LocalDat
 }
 
 @Composable
-private fun DailyUvRow(day: DailyConditions, referenceDate: java.time.LocalDate?) {
+private fun DailyUvRow(
+    day: DailyConditions,
+    referenceDate: java.time.LocalDate?,
+    onClick: () -> Unit,
+) {
     val s = LocalUnitSettings.current
     val uv = day.uvIndexMax ?: 0.0
     val uvColor = when {
@@ -312,6 +331,11 @@ private fun DailyUvRow(day: DailyConditions, referenceDate: java.time.LocalDate?
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(
+                onClick = onClick,
+                role = Role.Button,
+            )
             .padding(horizontal = 6.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -355,12 +379,21 @@ private fun DailyUvRow(day: DailyConditions, referenceDate: java.time.LocalDate?
 }
 
 @Composable
-private fun DailyPrecipRow(day: DailyConditions, referenceDate: java.time.LocalDate?) {
+private fun DailyPrecipRow(
+    day: DailyConditions,
+    referenceDate: java.time.LocalDate?,
+    onClick: () -> Unit,
+) {
     val s = LocalUnitSettings.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(
+                onClick = onClick,
+                role = Role.Button,
+            )
             .padding(horizontal = 6.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -409,194 +442,117 @@ private fun DailyPrecipRow(day: DailyConditions, referenceDate: java.time.LocalD
     }
 }
 
-// ── Original expandable overview row (kept as default tab) ──────────────
+// ── Overview row (kept as default tab) ──────────────────────────────────
 
 @Composable
-private fun ExpandableDailyRow(
+private fun DailyOverviewRow(
     day: DailyConditions,
     referenceDate: java.time.LocalDate? = null,
     isWarmest: Boolean = false,
     weeklyMin: Double = 0.0,
     weeklyMax: Double = 0.0,
+    onDetailClick: () -> Unit,
 ) {
     val s = LocalUnitSettings.current
-    var expanded by remember { mutableStateOf(false) }
-    val rotation by animateFloatAsState(if (expanded) 180f else 0f, tween(200), label = "arrow")
     val rowShape = RoundedCornerShape(10.dp)
 
-    Column(
+    Row(
         modifier = Modifier
-            .clip(rowShape)
-            .background(if (expanded) Color.White.copy(alpha = 0.05f) else Color.Transparent),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 56.dp)
-                .clickable(
-                    onClick = { expanded = !expanded },
-                    role = Role.Button,
-                )
-                .padding(horizontal = 6.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.width(92.dp)) {
-                Text(
-                    WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                )
-                Text(
-                    text = day.weatherCode.description,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = NimbusTextTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (isWarmest) {
-                    Box(
-                        modifier = Modifier
-                            .padding(top = 4.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(NimbusWarning.copy(alpha = 0.14f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            stringResource(R.string.forecast_warmest_badge),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = NimbusWarning,
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.width(8.dp))
-            AnimatedWeatherIcon(weatherCode = day.weatherCode, isDay = true, iconStyle = s.iconStyle, modifier = Modifier.size(24.dp))
-            Spacer(Modifier.width(12.dp))
-            Row(Modifier.width(52.dp), horizontalArrangement = Arrangement.End) {
-                if (day.precipitationProbability > 0) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(NimbusRainBlue.copy(alpha = 0.14f))
-                            .padding(horizontal = 6.dp, vertical = 3.dp),
-                    ) {
-                        Text(
-                            "${day.precipitationProbability}%",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = NimbusRainBlue,
-                            textAlign = TextAlign.End,
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.width(8.dp))
-            Text(
-                WeatherFormatter.formatTemperature(day.temperatureLow, s),
-                style = MaterialTheme.typography.labelMedium,
-                color = NimbusTextTertiary,
-                modifier = Modifier.width(36.dp),
-                textAlign = TextAlign.End,
-            )
-            if (weeklyMax > weeklyMin) {
-                val range = weeklyMax - weeklyMin
-                val startFraction = ((day.temperatureLow - weeklyMin) / range).toFloat().coerceIn(0f, 1f)
-                val endFraction = ((day.temperatureHigh - weeklyMin) / range).toFloat().coerceIn(0f, 1f)
-                TempRangeBar(
-                    startFraction = startFraction,
-                    endFraction = endFraction,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 8.dp),
-                )
-            } else {
-                Spacer(Modifier.weight(1f))
-            }
-            Text(
-                WeatherFormatter.formatTemperature(day.temperatureHigh, s),
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                modifier = Modifier.width(38.dp),
-            )
-            Icon(
-                Icons.Filled.KeyboardArrowDown,
-                if (expanded) {
-                    stringResource(R.string.forecast_collapse)
-                } else {
-                    stringResource(R.string.forecast_expand)
-                },
-                tint = if (expanded) NimbusBlueAccent else NimbusTextTertiary,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (expanded) NimbusBlueAccent.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.04f))
-                    .padding(4.dp)
-                    .size(20.dp)
-                    .rotate(rotation)
-                    .padding(start = 4.dp),
-            )
-        }
-
-        AnimatedVisibility(expanded, enter = expandVertically(tween(200)), exit = shrinkVertically(tween(200))) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 6.dp, end = 6.dp, bottom = 8.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color.White.copy(alpha = 0.04f)),
-            ) {
-                DailyDetail(day, LocalUnitSettings.current)
-            }
-        }
-    }
-}
-
-@Composable
-private fun DailyDetail(day: DailyConditions, s: NimbusSettings) {
-    Column(
-        Modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .heightIn(min = 56.dp)
+            .clip(rowShape)
+            .clickable(
+                onClick = onDetailClick,
+                role = Role.Button,
+            )
+            .padding(horizontal = 6.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            stringResource(
-                R.string.forecast_daily_detail_summary,
-                day.weatherCode.description,
-                WeatherFormatter.formatTemperature(day.temperatureHigh, s),
-                WeatherFormatter.formatTemperature(day.temperatureLow, s),
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(modifier = Modifier.weight(1f)) {
-                DetailMini(Icons.Filled.WaterDrop, stringResource(R.string.forecast_detail_precip), if (day.precipitationSum != null) WeatherFormatter.formatPrecipitation(day.precipitationSum, s) else "0.0")
-                Spacer(Modifier.height(6.dp))
-                day.precipitationHours?.let {
-                    DetailMini(Icons.Filled.WaterDrop, stringResource(R.string.forecast_detail_rain_hours), WeatherFormatter.formatPrecipitationHours(it))
-                    Spacer(Modifier.height(6.dp))
-                }
-                DetailMini(Icons.Filled.Air, stringResource(R.string.forecast_detail_wind), if (day.windSpeedMax != null && day.windDirectionDominant != null) WeatherFormatter.formatWindSpeed(day.windSpeedMax, day.windDirectionDominant, s) else "--")
-                day.windGustsMax?.let {
-                    Spacer(Modifier.height(6.dp))
-                    DetailMini(Icons.Filled.Air, stringResource(R.string.forecast_detail_gusts), WeatherFormatter.formatWindSpeed(it, s))
-                }
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                DetailMini(Icons.Outlined.WbSunny, stringResource(R.string.forecast_detail_sunrise), WeatherFormatter.formatTime(day.sunrise, s))
-                Spacer(Modifier.height(6.dp))
-                DetailMini(Icons.Outlined.WbTwilight, stringResource(R.string.forecast_detail_sunset), WeatherFormatter.formatTime(day.sunset, s))
-                day.sunshineDuration?.let {
-                    Spacer(Modifier.height(6.dp))
-                    DetailMini(Icons.Outlined.WbSunny, stringResource(R.string.forecast_detail_sunshine), WeatherFormatter.formatSunshineDuration(it))
-                }
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                DetailMini(Icons.Outlined.WbSunny, stringResource(R.string.forecast_detail_uv_max), day.uvIndexMax?.let { WeatherFormatter.formatUvIndex(it) } ?: "--")
-                day.snowfallSum?.let {
-                    if (it > 0) {
-                        Spacer(Modifier.height(6.dp))
-                        DetailMini(Icons.Outlined.AcUnit, stringResource(R.string.forecast_detail_snow), WeatherFormatter.formatSnowfall(it, s))
-                    }
+        Column(modifier = Modifier.width(92.dp)) {
+            Text(
+                WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate),
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+            )
+            Text(
+                text = day.weatherCode.description,
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (isWarmest) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(NimbusWarning.copy(alpha = 0.14f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.forecast_warmest_badge),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NimbusWarning,
+                    )
                 }
             }
         }
+        Spacer(Modifier.width(8.dp))
+        AnimatedWeatherIcon(weatherCode = day.weatherCode, isDay = true, iconStyle = s.iconStyle, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.width(12.dp))
+        Row(Modifier.width(52.dp), horizontalArrangement = Arrangement.End) {
+            if (day.precipitationProbability > 0) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(NimbusRainBlue.copy(alpha = 0.14f))
+                        .padding(horizontal = 6.dp, vertical = 3.dp),
+                ) {
+                    Text(
+                        "${day.precipitationProbability}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NimbusRainBlue,
+                        textAlign = TextAlign.End,
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            WeatherFormatter.formatTemperature(day.temperatureLow, s),
+            style = MaterialTheme.typography.labelMedium,
+            color = NimbusTextTertiary,
+            modifier = Modifier.width(36.dp),
+            textAlign = TextAlign.End,
+        )
+        if (weeklyMax > weeklyMin) {
+            val range = weeklyMax - weeklyMin
+            val startFraction = ((day.temperatureLow - weeklyMin) / range).toFloat().coerceIn(0f, 1f)
+            val endFraction = ((day.temperatureHigh - weeklyMin) / range).toFloat().coerceIn(0f, 1f)
+            TempRangeBar(
+                startFraction = startFraction,
+                endFraction = endFraction,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp),
+            )
+        } else {
+            Spacer(Modifier.weight(1f))
+        }
+        Text(
+            WeatherFormatter.formatTemperature(day.temperatureHigh, s),
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.width(38.dp),
+        )
+        Icon(
+            Icons.Filled.KeyboardArrowDown,
+            stringResource(R.string.forecast_detail_open),
+            tint = NimbusTextTertiary,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.White.copy(alpha = 0.04f))
+                .padding(4.dp)
+                .size(20.dp),
+        )
     }
 }
 
@@ -647,24 +603,6 @@ private fun TempRangeBar(
                     Spacer(Modifier.weight(endSpace))
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun DetailMini(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color.White.copy(alpha = 0.06f))
-                .padding(4.dp),
-        ) {
-            Icon(icon, label, Modifier.size(14.dp), tint = NimbusTextTertiary)
-        }
-        Column(Modifier.padding(start = 4.dp)) {
-            Text(label, style = MaterialTheme.typography.labelSmall)
-            Text(value, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
