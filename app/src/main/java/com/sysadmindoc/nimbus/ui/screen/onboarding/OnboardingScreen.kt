@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.ui.screen.onboarding
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -183,8 +186,11 @@ private fun OnboardingHeader(step: Int) {
 
 @Composable
 private fun OnboardingProgress(step: Int) {
+    val progressLabel = stringResource(R.string.onboarding_progress, step + 1, ONBOARDING_STEP_COUNT)
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = progressLabel },
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         repeat(ONBOARDING_STEP_COUNT) { index ->
@@ -227,10 +233,18 @@ private fun OnboardingStepCard(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        when (step) {
-            0 -> LocationStep()
-            1 -> UnitsStep(tempUnit, onTempUnitSelected)
-            else -> CardSetStep(starterCardSet, onStarterCardSetSelected)
+        Crossfade(
+            targetState = step,
+            animationSpec = tween(durationMillis = 180),
+            label = "onboardingStep",
+        ) { activeStep ->
+            Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                when (activeStep) {
+                    0 -> LocationStep()
+                    1 -> UnitsStep(tempUnit, onTempUnitSelected)
+                    else -> CardSetStep(starterCardSet, onStarterCardSetSelected)
+                }
+            }
         }
     }
 }
@@ -354,6 +368,9 @@ private fun CardSetOption(
 ) {
     val selectedLabel = stringResource(R.string.common_selected)
     val notSelectedLabel = stringResource(R.string.common_not_selected)
+    val setLabel = stringResource(set.labelRes())
+    val setDescription = stringResource(set.descriptionRes())
+    val setCount = stringResource(set.countRes())
     val tint = when (set) {
         StarterCardSet.MINIMAL -> NimbusSuccess
         StarterCardSet.STANDARD -> NimbusBlueAccent
@@ -381,6 +398,7 @@ private fun CardSetOption(
                 role = Role.RadioButton,
             )
             .semantics(mergeDescendants = true) {
+                contentDescription = "$setLabel, $setDescription"
                 stateDescription = if (selected) selectedLabel else notSelectedLabel
             }
             .padding(horizontal = 14.dp, vertical = 12.dp),
@@ -392,25 +410,35 @@ private fun CardSetOption(
                 .size(18.dp)
                 .clip(RoundedCornerShape(5.dp))
                 .background(if (selected) tint else NimbusTextTertiary.copy(alpha = 0.30f)),
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            if (selected) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = NimbusTextPrimary,
+                    modifier = Modifier.size(13.dp),
+                )
+            }
+        }
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = stringResource(set.labelRes()),
+                text = setLabel,
                 style = MaterialTheme.typography.titleMedium,
                 color = NimbusTextPrimary,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = stringResource(set.descriptionRes()),
+                text = setDescription,
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
             )
         }
         Text(
-            text = stringResource(set.countRes()),
+            text = setCount,
             style = MaterialTheme.typography.labelLarge,
             color = if (selected) tint else NimbusTextTertiary,
             fontWeight = FontWeight.SemiBold,

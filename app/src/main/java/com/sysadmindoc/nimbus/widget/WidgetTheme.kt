@@ -201,7 +201,13 @@ fun WidgetEmptyState(
     message: String,
     modifier: GlanceModifier = GlanceModifier,
 ) {
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier
+            .cornerRadius(10.dp)
+            .background(WidgetTheme.statusColor)
+            .semantics { contentDescription = "$title. $message" }
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
         Text(
             text = title,
             style = WidgetTheme.titleStyle,

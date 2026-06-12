@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -74,12 +75,16 @@ fun GlassActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     highlighted: Boolean = false,
+    enabled: Boolean = true,
 ) {
     val shape = RoundedCornerShape(10.dp)
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
+    val focused by interactionSource.collectIsFocusedAsState()
     val borderColor by animateColorAsState(
         targetValue = when {
+            !enabled -> NimbusCardBorder.copy(alpha = 0.48f)
+            focused -> NimbusBlueAccent.copy(alpha = 0.72f)
             highlighted -> NimbusBlueAccent.copy(alpha = 0.52f)
             pressed -> NimbusBlueAccent.copy(alpha = 0.36f)
             else -> NimbusCardBorder
@@ -88,7 +93,11 @@ fun GlassActionButton(
         label = "glassActionBorder",
     )
     val iconTint by animateColorAsState(
-        targetValue = if (highlighted || pressed) NimbusTextPrimary else NimbusTextPrimary.copy(alpha = 0.88f),
+        targetValue = when {
+            !enabled -> NimbusTextTertiary.copy(alpha = 0.56f)
+            highlighted || pressed || focused -> NimbusTextPrimary
+            else -> NimbusTextPrimary.copy(alpha = 0.88f)
+        },
         animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing),
         label = "glassActionIcon",
     )
@@ -96,13 +105,18 @@ fun GlassActionButton(
         modifier = modifier
             .size(48.dp)
             .graphicsLayer {
-                scaleX = if (pressed) 0.97f else 1f
-                scaleY = if (pressed) 0.97f else 1f
+                scaleX = if (enabled && pressed) 0.97f else 1f
+                scaleY = if (enabled && pressed) 0.97f else 1f
             }
             .clip(shape)
             .background(
                 Brush.verticalGradient(
-                    colors = if (highlighted || pressed) {
+                    colors = if (!enabled) {
+                        listOf(
+                            NimbusGlassTop.copy(alpha = 0.38f),
+                            NimbusGlassBottom.copy(alpha = 0.66f),
+                        )
+                    } else if (highlighted || pressed || focused) {
                         listOf(
                             NimbusBlueAccent.copy(alpha = if (pressed) 0.24f else 0.18f),
                             NimbusGlassBottom,
@@ -126,6 +140,7 @@ fun GlassActionButton(
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
+                enabled = enabled,
                 onClick = onClick,
                 role = Role.Button,
             ),
@@ -300,7 +315,11 @@ fun PremiumMessageCard(
                     contentColor = NimbusTextPrimary,
                 ),
             ) {
-                Text(primaryActionLabel)
+                Text(
+                    text = primaryActionLabel,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
 
@@ -316,7 +335,11 @@ fun PremiumMessageCard(
                     contentColor = NimbusTextPrimary,
                 ),
             ) {
-                Text(secondaryActionLabel)
+                Text(
+                    text = secondaryActionLabel,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
 
@@ -326,10 +349,19 @@ fun PremiumMessageCard(
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                 color = tint,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.clickable(
-                    onClick = onTertiaryAction,
-                    role = Role.Button,
-                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 44.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(tint.copy(alpha = 0.08f))
+                    .border(1.dp, tint.copy(alpha = 0.16f), RoundedCornerShape(8.dp))
+                    .clickable(
+                        onClick = onTertiaryAction,
+                        role = Role.Button,
+                    )
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
             )
         }
     }
@@ -400,6 +432,9 @@ fun NimbusSelectableSegment(
     tint: Color = NimbusBlueAccent,
     maxLines: Int = 1,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val focused by interactionSource.collectIsFocusedAsState()
     val selectedLabel = stringResource(R.string.common_selected)
     val notSelectedLabel = stringResource(R.string.common_not_selected)
     val shape = RoundedCornerShape(if (compact) 8.dp else 10.dp)
@@ -407,7 +442,12 @@ fun NimbusSelectableSegment(
     val horizontalPadding = if (compact) 12.dp else 14.dp
     val verticalPadding = if (compact) 8.dp else 10.dp
     val containerTop by animateColorAsState(
-        targetValue = if (selected) tint.copy(alpha = 0.26f) else NimbusGlassTop.copy(alpha = 0.64f),
+        targetValue = when {
+            selected -> tint.copy(alpha = 0.26f)
+            pressed -> tint.copy(alpha = 0.18f)
+            focused -> tint.copy(alpha = 0.14f)
+            else -> NimbusGlassTop.copy(alpha = 0.64f)
+        },
         animationSpec = tween(durationMillis = 170, easing = FastOutSlowInEasing),
         label = "segmentTop",
     )
@@ -417,7 +457,12 @@ fun NimbusSelectableSegment(
         label = "segmentBottom",
     )
     val borderColor by animateColorAsState(
-        targetValue = if (selected) tint.copy(alpha = 0.56f) else NimbusCardBorder,
+        targetValue = when {
+            selected -> tint.copy(alpha = 0.56f)
+            focused -> tint.copy(alpha = 0.62f)
+            pressed -> tint.copy(alpha = 0.42f)
+            else -> NimbusCardBorder
+        },
         animationSpec = tween(durationMillis = 170, easing = FastOutSlowInEasing),
         label = "segmentBorder",
     )
@@ -445,6 +490,10 @@ fun NimbusSelectableSegment(
     Row(
         modifier = modifier
             .heightIn(min = minHeight)
+            .graphicsLayer {
+                scaleX = if (pressed) 0.99f else 1f
+                scaleY = if (pressed) 0.99f else 1f
+            }
             .clip(shape)
             .background(
                 Brush.verticalGradient(
@@ -454,6 +503,8 @@ fun NimbusSelectableSegment(
             .border(1.dp, borderColor, shape)
             .selectable(
                 selected = selected,
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = onClick,
                 role = role,
             )

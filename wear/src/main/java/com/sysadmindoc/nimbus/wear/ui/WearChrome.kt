@@ -8,13 +8,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -114,6 +111,7 @@ internal fun WearStateCard(
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
                 .size(38.dp)
+                .clip(RoundedCornerShape(8.dp))
                 .background(accent.copy(alpha = 0.14f), RoundedCornerShape(8.dp))
                 .border(1.dp, accent.copy(alpha = 0.22f), RoundedCornerShape(8.dp))
                 .semantics {
@@ -121,21 +119,12 @@ internal fun WearStateCard(
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier
-                        .width(20.dp)
-                        .height(3.dp)
-                        .background(accent, RoundedCornerShape(2.dp)),
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Box(
-                    modifier = Modifier
-                        .width(if (icon.isBlank()) 10.dp else 14.dp)
-                        .height(3.dp)
-                        .background(accent.copy(alpha = 0.58f), RoundedCornerShape(2.dp)),
-                )
-            }
+            Text(
+                text = icon.ifBlank { "!" },
+                fontSize = 18.sp,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+            )
         }
         Text(
             text = title,
@@ -162,6 +151,7 @@ internal fun WearStateCard(
                 modifier = Modifier
                     .heightIn(min = 32.dp)
                     .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
                     .background(accent.copy(alpha = 0.14f), RoundedCornerShape(8.dp))
                     .border(1.dp, accent.copy(alpha = 0.22f), RoundedCornerShape(8.dp))
                     .clickable(onClick = onAction, role = Role.Button)
@@ -181,6 +171,8 @@ internal fun WearMiniBadge(
         text = text,
         fontSize = 10.sp,
         color = accent,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier = modifier
             .background(accent.copy(alpha = 0.14f), RoundedCornerShape(6.dp))
             .border(1.dp, accent.copy(alpha = 0.18f), RoundedCornerShape(6.dp))
@@ -228,6 +220,7 @@ private fun WearLinkButton(
         textAlign = TextAlign.Center,
         modifier = modifier
             .heightIn(min = 32.dp)
+            .clip(RoundedCornerShape(8.dp))
             .background(WearBlueAccent.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
             .border(1.dp, WearBlueAccent.copy(alpha = 0.20f), RoundedCornerShape(8.dp))
             .clickable(onClick = onClick, role = Role.Button)

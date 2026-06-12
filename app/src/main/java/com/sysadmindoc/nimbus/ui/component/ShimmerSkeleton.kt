@@ -41,6 +41,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
+import com.sysadmindoc.nimbus.ui.theme.NimbusGlassHighlight
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
@@ -205,21 +206,85 @@ private fun ShimmerCard(
     brush: Brush,
     modifier: Modifier = Modifier,
 ) {
+    val shape = RoundedCornerShape(12.dp)
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
-            .clip(RoundedCornerShape(12.dp))
-            .background(NimbusCardBg)
-            .background(Color.White.copy(alpha = 0.02f))
+            .clip(shape)
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.03f),
-                        Color.Transparent,
+                        NimbusGlassTop.copy(alpha = 0.82f),
+                        NimbusCardBg,
+                        NimbusGlassBottom,
                     ),
                 ),
             )
-            .background(brush)
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassHighlight.copy(alpha = 0.72f),
+                        NimbusCardBorder.copy(alpha = 0.72f),
+                        Color.White.copy(alpha = 0.04f),
+                    ),
+                ),
+                shape = shape,
+            )
+            .background(brush),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            ShimmerLine(widthFraction = 0.34f, height = 12.dp, brush = brush)
+            ShimmerLine(widthFraction = 0.86f, height = 16.dp, brush = brush)
+            ShimmerLine(widthFraction = 0.62f, height = 12.dp, brush = brush)
+            if (height >= 120.dp) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    repeat(3) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp)
+                                .clip(RoundedCornerShape(9.dp))
+                                .background(NimbusCardBg.copy(alpha = 0.72f))
+                                .border(
+                                    1.dp,
+                                    NimbusCardBorder.copy(alpha = 0.44f),
+                                    RoundedCornerShape(9.dp),
+                                )
+                                .background(brush),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShimmerLine(
+    widthFraction: Float,
+    height: Dp,
+    brush: Brush,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth(widthFraction)
+            .height(height)
+            .clip(RoundedCornerShape(7.dp))
+            .background(NimbusCardBg.copy(alpha = 0.82f))
+            .border(1.dp, NimbusCardBorder.copy(alpha = 0.42f), RoundedCornerShape(7.dp))
+            .background(brush),
     )
 }
