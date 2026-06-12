@@ -41,6 +41,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
@@ -122,6 +124,7 @@ internal fun SettingsContent(
     onNavigateToCustomAlerts: () -> Unit = {},
     notificationsPermissionGranted: Boolean = true,
     availableIconPacks: List<IconPack> = emptyList(),
+    transferStatus: String? = null,
     actions: SettingsActions = SettingsActions(),
 ) {
     PredictiveBackScaffold(onBack = onBack) {
@@ -171,6 +174,7 @@ internal fun SettingsContent(
                 notificationsPermissionGranted = notificationsPermissionGranted,
                 availableIconPacks = availableIconPacks,
                 onNavigateToCustomAlerts = onNavigateToCustomAlerts,
+                transferStatus = transferStatus,
                 actions = actions,
             )
 
@@ -225,6 +229,9 @@ internal data class SettingsActions(
     val onSourceMinutely: (WeatherSourceProvider) -> Unit = {},
     val onOwmApiKey: (String) -> Unit = {},
     val onPirateWeatherApiKey: (String) -> Unit = {},
+    val onExportSettings: () -> Unit = {},
+    val onImportSettings: () -> Unit = {},
+    val onClearTransferStatus: () -> Unit = {},
 )
 
 @Composable
@@ -234,6 +241,7 @@ private fun SettingsCategoryContent(
     notificationsPermissionGranted: Boolean,
     availableIconPacks: List<IconPack>,
     onNavigateToCustomAlerts: () -> Unit,
+    transferStatus: String?,
     actions: SettingsActions,
 ) {
     when (selectedCategory) {
@@ -255,7 +263,7 @@ private fun SettingsCategoryContent(
         }
         SettingsCategory.ADVANCED -> {
             SettingsDataSourcesSection(settings, actions)
-            SettingsAdvancedSection(settings, actions)
+            SettingsAdvancedSection(settings, transferStatus, actions)
             SettingsAboutSection()
         }
     }
@@ -821,6 +829,7 @@ private fun SettingsApiKeyFields(
 @Composable
 private fun SettingsAdvancedSection(
     settings: NimbusSettings,
+    transferStatus: String?,
     actions: SettingsActions,
 ) {
     SettingSection(
@@ -836,6 +845,65 @@ private fun SettingsAdvancedSection(
                 onClick = { actions.onCacheTtlMinutes(minutes) },
             )
         }
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            stringResource(R.string.settings_transfer_title),
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+        )
+        Text(
+            stringResource(R.string.settings_transfer_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextTertiary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            SettingsTransferButton(
+                label = stringResource(R.string.settings_transfer_export),
+                icon = Icons.Filled.FileUpload,
+                modifier = Modifier.weight(1f),
+                onClick = actions.onExportSettings,
+            )
+            SettingsTransferButton(
+                label = stringResource(R.string.settings_transfer_import),
+                icon = Icons.Filled.FileDownload,
+                modifier = Modifier.weight(1f),
+                onClick = actions.onImportSettings,
+            )
+        }
+        transferStatus?.let { status ->
+            Spacer(modifier = Modifier.height(10.dp))
+            InlineNoticeCard(
+                title = stringResource(R.string.settings_transfer_status_title),
+                message = status,
+                icon = Icons.Filled.FileDownload,
+                modifier = Modifier.clickable(
+                    onClick = actions.onClearTransferStatus,
+                    role = Role.Button,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsTransferButton(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Button(
+        modifier = modifier.heightIn(min = 48.dp),
+        onClick = onClick,
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

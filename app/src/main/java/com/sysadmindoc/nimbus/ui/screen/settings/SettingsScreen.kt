@@ -147,12 +147,24 @@ fun SettingsScreen(
     }
 
     val availableIconPacks by viewModel.availableIconPacks.collectAsStateWithLifecycle()
+    val transferStatus by viewModel.transferStatus.collectAsStateWithLifecycle()
+    val exportSettingsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) viewModel.exportSettings(uri)
+    }
+    val importSettingsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) viewModel.importSettings(uri)
+    }
     SettingsContent(
         settings = settings,
         onBack = onBack,
         onNavigateToCustomAlerts = onNavigateToCustomAlerts,
         notificationsPermissionGranted = notificationsPermissionGranted,
         availableIconPacks = availableIconPacks,
+        transferStatus = transferStatus,
         actions = SettingsActions(
             onTempUnit = viewModel::setTempUnit,
             onWindUnit = viewModel::setWindUnit,
@@ -223,6 +235,9 @@ fun SettingsScreen(
             onSourceMinutely = viewModel::setSourceMinutely,
             onOwmApiKey = viewModel::setOwmApiKey,
             onPirateWeatherApiKey = viewModel::setPirateWeatherApiKey,
+            onExportSettings = { exportSettingsLauncher.launch("zeuswatch-settings.json") },
+            onImportSettings = { importSettingsLauncher.launch(arrayOf("application/json", "text/*")) },
+            onClearTransferStatus = viewModel::clearTransferStatus,
         ),
     )
 }
