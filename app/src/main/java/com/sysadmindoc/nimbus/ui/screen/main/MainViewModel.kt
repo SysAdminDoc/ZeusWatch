@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sysadmindoc.nimbus.BuildConfig
 import com.sysadmindoc.nimbus.data.location.LocationProvider
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.AstronomyData
@@ -129,6 +130,7 @@ class MainViewModel @Inject constructor(
         observeSettings()
         observeSavedLocations()
         observeLastLocation()
+        observeLastSeenVersionCode()
         viewModelScope.launch {
             connectivityObserver.isOnline.collect { online ->
                 _uiState.update { it.copy(isOffline = !online) }
@@ -263,6 +265,14 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             prefs.lastLocation.collect { lastLocation ->
                 _uiState.update { it.copy(lastLocationName = lastLocation?.name) }
+            }
+        }
+    }
+
+    private fun observeLastSeenVersionCode() {
+        viewModelScope.launch {
+            prefs.lastSeenVersionCode.collect { versionCode ->
+                _uiState.update { it.copy(lastSeenVersionCode = versionCode) }
             }
         }
     }
@@ -973,6 +983,13 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun dismissWhatsNew() {
+        _uiState.update { it.copy(lastSeenVersionCode = BuildConfig.VERSION_CODE) }
+        viewModelScope.launch {
+            prefs.setLastSeenVersionCode(BuildConfig.VERSION_CODE)
+        }
+    }
+
     private fun nextWeatherRequestId(): Long = weatherRequestCounter.incrementAndGet()
 
     private fun isLatestWeatherRequest(requestId: Long): Boolean = requestId == weatherRequestCounter.get()
@@ -1031,6 +1048,7 @@ data class MainUiState(
     val forecastEvolution: ForecastEvolutionData? = null,
     val isForecastEvolutionLoading: Boolean = false,
     val forecastEvolutionUnavailable: Boolean = false,
+    val lastSeenVersionCode: Int = BuildConfig.VERSION_CODE,
 )
 
 private data class DerivedWeatherState(

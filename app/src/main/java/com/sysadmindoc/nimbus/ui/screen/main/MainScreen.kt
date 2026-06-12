@@ -45,13 +45,17 @@ import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -72,6 +76,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -79,6 +84,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sysadmindoc.nimbus.BuildConfig
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.AstronomyData
@@ -164,6 +170,9 @@ fun MainScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val deepLinkTarget = LocalMainDeepLinkTarget.current
+    val whatsNewSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val showWhatsNewSheet = state.settings.onboardingComplete &&
+        state.lastSeenVersionCode < BuildConfig.VERSION_CODE
 
     // Track whether we've already prompted in this session
     var hasPromptedPermissions by rememberSaveable { mutableStateOf(false) }
@@ -272,6 +281,13 @@ fun MainScreen(
         LocalUnitSettings provides state.settings,
         com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState provides weatherThemeState,
     ) {
+        if (showWhatsNewSheet) {
+            WhatsNewSheet(
+                sheetState = whatsNewSheetState,
+                onDismiss = { viewModel.dismissWhatsNew() },
+            )
+        }
+
         MainScreenScaffold(
             state = state,
             selectedTab = activeSelectedTab,
@@ -280,5 +296,77 @@ fun MainScreen(
             actions = screenActions,
             onTabSelected = { selectedTab = it },
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WhatsNewSheet(
+    sheetState: SheetState,
+    onDismiss: () -> Unit,
+) {
+    val items = stringArrayResource(R.array.whats_new_items)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = NimbusNavyDark,
+        contentColor = NimbusTextPrimary,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            NimbusStatusBadge(
+                text = stringResource(R.string.whats_new_version, BuildConfig.VERSION_NAME),
+                tint = NimbusBlueAccent,
+                emphasized = true,
+            )
+            Text(
+                text = stringResource(R.string.whats_new_title),
+                style = MaterialTheme.typography.headlineSmall,
+                color = NimbusTextPrimary,
+            )
+            Text(
+                text = stringResource(R.string.whats_new_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = NimbusTextSecondary,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                items.forEach { item ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 7.dp)
+                                .size(7.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(NimbusBlueAccent),
+                        )
+                        Text(
+                            text = item,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = NimbusTextPrimary,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = NimbusBlueAccent,
+                    contentColor = NimbusTextPrimary,
+                ),
+            ) {
+                Text(stringResource(R.string.whats_new_done))
+            }
+        }
     }
 }
