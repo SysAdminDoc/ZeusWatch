@@ -324,6 +324,14 @@
     <string name="forecast_detail_uv_max">UV Max</string>
     <string name="forecast_detail_snow">Snow</string>
     <string name="forecast_detail_rain">Rain</string>
+    <string name="forecast_detail_hourly_title">%1$s forecast</string>
+    <string name="forecast_detail_daily_title">%1$s details</string>
+    <string name="forecast_detail_temperature">Temperature</string>
+    <string name="forecast_detail_feels_like">Feels like</string>
+    <string name="forecast_detail_rain_chance">Rain chance</string>
+    <string name="forecast_detail_high_low">High / low</string>
+    <string name="forecast_detail_temp_range">%1$s / %2$s</string>
+    <string name="forecast_detail_open">Open forecast details</string>
     <string name="forecast_high_abbrev">H: %1$s</string>
     <string name="forecast_low_abbrev">L: %1$s</string>
     <string name="forecast_daily_days_title">%1$d-Day Forecast</string>

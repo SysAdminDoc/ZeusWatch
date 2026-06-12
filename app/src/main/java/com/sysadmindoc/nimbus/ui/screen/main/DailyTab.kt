@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.ui.screen.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,16 +21,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.DailyConditions
+import com.sysadmindoc.nimbus.ui.component.DailyForecastDetailSheet
 import com.sysadmindoc.nimbus.ui.component.WeatherIcon
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
@@ -55,6 +61,15 @@ fun DailyTab(
 ) {
     val dayFormatter = remember { DateTimeFormatter.ofPattern("EEEE") }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("MMM d") }
+    var selectedDay by remember { mutableStateOf<DailyConditions?>(null) }
+
+    selectedDay?.let { day ->
+        DailyForecastDetailSheet(
+            day = day,
+            referenceDate = referenceDate,
+            onDismiss = { selectedDay = null },
+        )
+    }
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -100,6 +115,7 @@ fun DailyTab(
                     else -> day.date.format(dayFormatter)
                 },
                 dateLabel = day.date.format(dateFormatter),
+                onClick = { selectedDay = day },
             )
         }
 
@@ -113,6 +129,7 @@ private fun DailyDetailRow(
     day: DailyConditions,
     dayLabel: String,
     dateLabel: String,
+    onClick: () -> Unit,
 ) {
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
     val shape = RoundedCornerShape(12.dp)
@@ -130,6 +147,10 @@ private fun DailyDetailRow(
                 ),
             )
             .border(1.dp, NimbusCardBorder, shape)
+            .clickable(
+                onClick = onClick,
+                role = Role.Button,
+            )
             .padding(14.dp),
     ) {
         Row(
