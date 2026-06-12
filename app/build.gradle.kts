@@ -153,6 +153,7 @@ dependencies {
 
     // Adaptive Layout
     implementation(libs.compose.material3.windowsize)
+    implementation(libs.window)
 
     // Lifecycle
     implementation(libs.lifecycle.runtime)
