@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -43,8 +44,11 @@ fun ClothingSuggestionCard(
                 ) {
                     val icon = when (suggestion.category) {
                         ClothingCategory.RAIN -> Icons.Outlined.Umbrella
-                        ClothingCategory.ACCESSORIES -> if (suggestion.text.contains("Sun", ignoreCase = true))
-                            Icons.Outlined.WbSunny else Icons.Outlined.Checkroom
+                        ClothingCategory.ACCESSORIES -> if (suggestion.textRes in sunAccessorySuggestions) {
+                            Icons.Outlined.WbSunny
+                        } else {
+                            Icons.Outlined.Checkroom
+                        }
                         else -> Icons.Outlined.Checkroom
                     }
                     val tint = when (suggestion.category) {
@@ -55,7 +59,7 @@ fun ClothingSuggestionCard(
                     Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = tint)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = suggestion.text,
+                        text = stringResource(suggestion.textRes),
                         style = MaterialTheme.typography.bodySmall,
                         color = NimbusTextSecondary,
                     )
@@ -64,3 +68,8 @@ fun ClothingSuggestionCard(
         }
     }
 }
+
+private val sunAccessorySuggestions = setOf(
+    R.string.clothing_sunglasses,
+    R.string.clothing_hat_sunscreen,
+)

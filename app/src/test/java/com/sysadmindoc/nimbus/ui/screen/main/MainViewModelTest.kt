@@ -321,7 +321,7 @@ class MainViewModelTest {
         val state = viewModel.uiState.value
         assertTrue(state.needsLocationPermission)
         assertNotNull(state.error)
-        assertTrue(state.error!!.contains("permission", ignoreCase = true))
+        assertEquals(MainUiErrorKind.LOCATION_PERMISSION_DENIED, state.error?.kind)
         assertFalse(state.isRefreshing)
     }
 
@@ -434,7 +434,7 @@ class MainViewModelTest {
         val state = viewModel.uiState.value
 
         assertNull(state.weatherData)
-        assertEquals("Turn on location services to load local weather.", state.error)
+        assertEquals(MainUiErrorKind.LOCATION_SERVICES_OFF, state.error?.kind)
         assertFalse(state.isLoading)
     }
 

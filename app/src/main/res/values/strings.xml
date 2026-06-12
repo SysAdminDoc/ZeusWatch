@@ -4,6 +4,11 @@
     <string name="app_version">1.3.0</string>
 
     <!-- Widgets -->
+    <string name="widget_small_label">ZeusWatch Current</string>
+    <string name="widget_medium_label">ZeusWatch 3-Day</string>
+    <string name="widget_large_label">ZeusWatch Forecast</string>
+    <string name="widget_forecast_strip_label">ZeusWatch Hourly Strip</string>
+    <string name="widget_saved_cities_label">ZeusWatch Cities</string>
     <string name="widget_small_desc">Current temperature and conditions</string>
     <string name="widget_medium_desc">Current conditions with 3-day forecast</string>
     <string name="widget_large_desc">Hourly forecast with 5-day outlook</string>
@@ -783,6 +788,7 @@
     <string name="main_pollen_unavailable_message">The forecast is current, but pollen data did not update for this location.</string>
     <string name="main_no_health_trigger_title">No active health trigger</string>
     <string name="main_no_health_trigger_message">The latest forecast no longer meets your health alert thresholds.</string>
+    <string name="current_conditions_semantics">%1$s. Currently %2$s, %3$s. Feels like %4$s. High %5$s, low %6$s.</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
@@ -1092,6 +1098,8 @@
     <string name="share_text_shared_via">Shared via %1$s</string>
     <string name="share_weather_subject">Weather for %1$s</string>
     <string name="share_weather_chooser">Share weather</string>
+    <string name="share_weather_image_text">Weather for %1$s - %2$s</string>
+    <string name="share_weather_image_chooser">Share weather image</string>
 
     <!-- Live Wallpaper -->
     <string name="wallpaper_label">ZeusWatch Weather</string>
@@ -1108,4 +1116,94 @@
     <string name="nowcast_notif_body_starting_named">Expect %1$s rain near %2$s in about %3$d minutes.</string>
     <string name="nowcast_notif_body_starting">Expect %1$s rain starting in about %2$d minutes.</string>
     <string name="nowcast_notif_body_stopping">Current rain looks like it\'ll ease off in about %1$d minutes.</string>
+
+    <!-- Localized weather labels -->
+    <string name="weather_code_clear_sky">Clear</string>
+    <string name="weather_code_mainly_clear">Mainly Clear</string>
+    <string name="weather_code_partly_cloudy">Partly Cloudy</string>
+    <string name="weather_code_overcast">Overcast</string>
+    <string name="weather_code_fog">Fog</string>
+    <string name="weather_code_depositing_rime_fog">Freezing Fog</string>
+    <string name="weather_code_drizzle_light">Light Drizzle</string>
+    <string name="weather_code_drizzle_moderate">Drizzle</string>
+    <string name="weather_code_drizzle_dense">Heavy Drizzle</string>
+    <string name="weather_code_freezing_drizzle_light">Light Freezing Drizzle</string>
+    <string name="weather_code_freezing_drizzle_dense">Freezing Drizzle</string>
+    <string name="weather_code_rain_slight">Light Rain</string>
+    <string name="weather_code_rain_moderate">Rain</string>
+    <string name="weather_code_rain_heavy">Heavy Rain</string>
+    <string name="weather_code_freezing_rain_light">Light Freezing Rain</string>
+    <string name="weather_code_freezing_rain_heavy">Freezing Rain</string>
+    <string name="weather_code_snow_slight">Light Snow</string>
+    <string name="weather_code_snow_moderate">Snow</string>
+    <string name="weather_code_snow_heavy">Heavy Snow</string>
+    <string name="weather_code_snow_grains">Snow Grains</string>
+    <string name="weather_code_rain_showers_slight">Light Showers</string>
+    <string name="weather_code_rain_showers_moderate">Showers</string>
+    <string name="weather_code_rain_showers_violent">Heavy Showers</string>
+    <string name="weather_code_snow_showers_slight">Light Snow Showers</string>
+    <string name="weather_code_snow_showers_heavy">Heavy Snow Showers</string>
+    <string name="weather_code_thunderstorm">Thunderstorm</string>
+    <string name="weather_code_thunderstorm_hail_slight">Thunderstorm with Hail</string>
+    <string name="weather_code_thunderstorm_hail_heavy">Severe Thunderstorm</string>
+    <string name="weather_code_unknown">Unknown</string>
+    <string name="weather_code_icon_cd">%1$s weather icon</string>
+
+    <!-- Main errors -->
+    <string name="main_error_location_permission_required">Location permission required to show weather.</string>
+    <string name="main_error_location_permission_short">Location permission required.</string>
+    <string name="main_error_location_services_off">Turn on location services to load local weather.</string>
+    <string name="main_error_location_unavailable">Unable to determine location. Move outdoors or check location services, then try again.</string>
+    <string name="main_error_no_internet">No internet connection</string>
+    <string name="main_error_timeout">Server took too long to respond</string>
+    <string name="main_error_connect_weather_service">Could not connect to weather service</string>
+    <string name="main_error_weather_service">Weather service error (%1$d)</string>
+    <string name="main_error_generic_retry">Something went wrong. Please try again.</string>
+    <string name="main_error_choose_location">Choose a location to get started.</string>
+
+    <!-- Localized formatter fragments -->
+    <string name="current_feels_like_reason_wind_chill">Wind chill</string>
+    <string name="current_feels_like_reason_cold_exposure">Cold exposure</string>
+    <string name="current_feels_like_reason_heat_index">Heat index</string>
+    <string name="current_feels_like_reason_solar_heating">Solar heating</string>
+
+    <!-- Clothing suggestions -->
+    <string name="clothing_heavy_winter_coat">Heavy winter coat, insulated layers, thermal underwear</string>
+    <string name="clothing_winter_coat">Winter coat with warm layers underneath</string>
+    <string name="clothing_warm_jacket">Warm jacket or fleece with a base layer</string>
+    <string name="clothing_light_jacket">Light jacket or sweater</string>
+    <string name="clothing_tshirt_light_sleeve">T-shirt or light long sleeve</string>
+    <string name="clothing_light_breathable">Light, breathable clothing</string>
+    <string name="clothing_warm_hat_gloves">Warm hat and gloves</string>
+    <string name="clothing_scarf_face_covering">Scarf or face covering</string>
+    <string name="clothing_rain_jacket_umbrella">Rain jacket or umbrella</string>
+    <string name="clothing_waterproof_shoes">Waterproof shoes or boots</string>
+    <string name="clothing_waterproof_boots_socks">Waterproof boots and warm socks</string>
+    <string name="clothing_sunglasses">Sunglasses</string>
+    <string name="clothing_hat_sunscreen">Hat and sunscreen (SPF 30+)</string>
+    <string name="clothing_windbreaker">Windbreaker</string>
+
+    <!-- Weather summary template -->
+    <string name="summary_time_tonight">tonight</string>
+    <string name="summary_time_morning">this morning</string>
+    <string name="summary_time_afternoon">this afternoon</string>
+    <string name="summary_time_evening">this evening</string>
+    <string name="summary_condition_time">%1$s %2$s</string>
+    <string name="summary_wind_gale_force">gale-force winds</string>
+    <string name="summary_wind_strong">strong winds</string>
+    <string name="summary_wind_moderate">moderate winds</string>
+    <string name="summary_with_wind">with %1$s</string>
+    <string name="summary_uv_very_high">UV index is very high</string>
+    <string name="summary_uv_high">UV index is high</string>
+    <string name="summary_muggy">and it will feel muggy</string>
+    <string name="summary_highs_near">Highs near %1$s.</string>
+    <string name="summary_lows_near">Lows near %1$s.</string>
+    <string name="summary_warmer_than_yesterday"> %1$d\u00B0 warmer than yesterday.</string>
+    <string name="summary_cooler_than_yesterday"> %1$d\u00B0 cooler than yesterday.</string>
+    <string name="summary_rain_likely_throughout_day">with rain likely throughout the day</string>
+    <string name="summary_rain_expected_soon">with rain expected soon</string>
+    <string name="summary_rain_developing_later">with rain developing later</string>
+    <string name="summary_rain_likely_later_today">with rain likely later today</string>
+    <string name="summary_chance_showers">with a chance of showers</string>
+    <string name="summary_slight_chance_rain">with a slight chance of rain</string>
 </resources>

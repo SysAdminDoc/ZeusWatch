@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.repository.IconStyle
 import com.sysadmindoc.nimbus.ui.theme.*
@@ -54,6 +55,7 @@ fun WeatherIcon(
     iconPackManager: IconPackManager? = null,
 ) {
     val settings = LocalUnitSettings.current
+    val description = stringResource(weatherCode.descriptionRes())
     // Explicit param wins; otherwise fall back to the app-provided local.
     val packManager = iconPackManager ?: LocalIconPackManager.current
 
@@ -67,7 +69,7 @@ fun WeatherIcon(
         if (bitmap != null) {
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = weatherCode.description,
+                contentDescription = description,
                 modifier = modifier,
                 contentScale = ContentScale.Fit,
             )
@@ -129,7 +131,7 @@ fun WeatherIcon(
 
     Icon(
         imageVector = icon,
-        contentDescription = weatherCode.description,
+        contentDescription = description,
         modifier = modifier,
         tint = if (tint != Color.Unspecified) tint else defaultTint,
     )

@@ -1,5 +1,8 @@
 package com.sysadmindoc.nimbus.util
 
+import android.content.Context
+import androidx.annotation.StringRes
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.PrecipUnit
 import com.sysadmindoc.nimbus.data.repository.PressureUnit
@@ -130,6 +133,16 @@ object WeatherFormatter {
         else -> "Oppressive"
     }
 
+    @StringRes
+    fun dewPointComfortRes(dewPointCelsius: Double): Int = when {
+        dewPointCelsius < 10 -> R.string.dew_point_comfort_dry
+        dewPointCelsius < 16 -> R.string.dew_point_comfort_comfortable
+        dewPointCelsius < 18 -> R.string.dew_point_comfort_pleasant
+        dewPointCelsius < 21 -> R.string.dew_point_comfort_slightly_humid
+        dewPointCelsius < 24 -> R.string.dew_point_comfort_muggy
+        else -> R.string.dew_point_comfort_oppressive
+    }
+
     /** Explain why feels-like differs from actual temperature. */
     fun feelsLikeReason(tempCelsius: Double, feelsLikeCelsius: Double, windKmh: Double, humidity: Int): String? {
         val diff = feelsLikeCelsius - tempCelsius
@@ -139,6 +152,19 @@ object WeatherFormatter {
             diff < -2 -> "Cold exposure"
             diff > 2 && humidity > 50 -> "Heat index"
             diff > 2 -> "Solar heating"
+            else -> null
+        }
+    }
+
+    @StringRes
+    fun feelsLikeReasonRes(tempCelsius: Double, feelsLikeCelsius: Double, windKmh: Double, humidity: Int): Int? {
+        val diff = feelsLikeCelsius - tempCelsius
+        if (kotlin.math.abs(diff) < 2) return null
+        return when {
+            diff < -2 && windKmh > 10 -> R.string.current_feels_like_reason_wind_chill
+            diff < -2 -> R.string.current_feels_like_reason_cold_exposure
+            diff > 2 && humidity > 50 -> R.string.current_feels_like_reason_heat_index
+            diff > 2 -> R.string.current_feels_like_reason_solar_heating
             else -> null
         }
     }
@@ -157,6 +183,20 @@ object WeatherFormatter {
         }
     }
 
+    @StringRes
+    fun pressureTrendRes(hourly: List<com.sysadmindoc.nimbus.data.model.HourlyConditions>): Int? {
+        val pressures = hourly.take(6).mapNotNull { it.surfacePressure }
+        if (pressures.size < 3) return null
+        val delta = pressures.last() - pressures.first()
+        return when {
+            delta > 2.0 -> R.string.pressure_trend_rising
+            delta > 0.5 -> R.string.pressure_trend_slowly_rising
+            delta < -2.0 -> R.string.pressure_trend_falling
+            delta < -0.5 -> R.string.pressure_trend_slowly_falling
+            else -> R.string.pressure_trend_steady
+        }
+    }
+
     // ── Unit-independent formatters ──────────────────────────────────────
 
     fun formatUvLevel(uv: Double): String = uvDescription(uv)
@@ -171,6 +211,18 @@ object WeatherFormatter {
         uv < 11 -> "Very High"
         else -> "Extreme"
     }
+
+    @StringRes
+    fun uvDescriptionRes(uv: Double): Int = when {
+        uv < 3 -> R.string.forecast_uv_low
+        uv < 6 -> R.string.forecast_uv_moderate
+        uv < 8 -> R.string.forecast_uv_high
+        uv < 11 -> R.string.forecast_uv_very_high
+        else -> R.string.forecast_uv_extreme
+    }
+
+    fun uvDescription(context: Context, uv: Double): String =
+        context.getString(uvDescriptionRes(uv))
 
     // ── Time / Date ──────────────────────────────────────────────────────
 
@@ -206,6 +258,19 @@ object WeatherFormatter {
         }
     }
 
+    fun formatRelativeHourLabel(
+        context: Context,
+        time: LocalDateTime,
+        referenceTime: LocalDateTime?,
+        s: NimbusSettings = NimbusSettings(),
+    ): String {
+        return if (referenceTime != null && isSameForecastHour(time, referenceTime)) {
+            context.getString(R.string.common_now)
+        } else {
+            formatHourLabel(time, s)
+        }
+    }
+
     fun formatDayLabel(date: LocalDate, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): String {
         val today = LocalDate.now(zone)
         return when (date) {
@@ -215,11 +280,33 @@ object WeatherFormatter {
         }
     }
 
+    fun formatDayLabel(
+        context: Context,
+        date: LocalDate,
+        zone: java.time.ZoneId = java.time.ZoneId.systemDefault(),
+    ): String {
+        val today = LocalDate.now(zone)
+        return when (date) {
+            today -> context.getString(R.string.common_today)
+            today.plusDays(1) -> context.getString(R.string.common_tomorrow)
+            else -> shortDayLabel(date)
+        }
+    }
+
     fun formatRelativeDayLabel(date: LocalDate, referenceDate: LocalDate?): String {
         val today = referenceDate ?: return shortDayLabel(date)
         return when (date) {
             today -> "Today"
             today.plusDays(1) -> "Tomorrow"
+            else -> shortDayLabel(date)
+        }
+    }
+
+    fun formatRelativeDayLabel(context: Context, date: LocalDate, referenceDate: LocalDate?): String {
+        val today = referenceDate ?: return shortDayLabel(date)
+        return when (date) {
+            today -> context.getString(R.string.common_today)
+            today.plusDays(1) -> context.getString(R.string.common_tomorrow)
             else -> shortDayLabel(date)
         }
     }
@@ -391,6 +478,15 @@ object WeatherFormatter {
         score >= 40 -> "Fair"
         score >= 20 -> "Poor"
         else -> "Stay Inside"
+    }
+
+    @StringRes
+    fun outdoorScoreLabelRes(score: Int): Int = when {
+        score >= 80 -> R.string.outdoor_score_excellent
+        score >= 60 -> R.string.outdoor_score_good
+        score >= 40 -> R.string.outdoor_score_fair
+        score >= 20 -> R.string.outdoor_score_poor
+        else -> R.string.outdoor_score_stay_inside
     }
 
     private fun shortDayLabel(date: LocalDate): String {

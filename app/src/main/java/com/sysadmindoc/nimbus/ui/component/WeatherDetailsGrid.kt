@@ -69,18 +69,23 @@ fun WeatherDetailsGrid(
         )
         Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
-            left = DetailItem(Icons.Outlined.WbSunny, stringResource(R.string.card_type_uv_index), WeatherFormatter.formatUvIndex(current.uvIndex), WeatherFormatter.uvDescription(current.uvIndex)),
+            left = DetailItem(
+                Icons.Outlined.WbSunny,
+                stringResource(R.string.card_type_uv_index),
+                WeatherFormatter.formatUvIndex(current.uvIndex),
+                stringResource(WeatherFormatter.uvDescriptionRes(current.uvIndex)),
+            ),
             right = DetailItem(
                 Icons.Filled.Compress, stringResource(R.string.pressure),
                 WeatherFormatter.formatPressure(current.pressure, s),
-                subtitle = WeatherFormatter.pressureTrend(hourly),
+                subtitle = WeatherFormatter.pressureTrendRes(hourly)?.let { stringResource(it) },
             ),
         )
         Spacer(modifier = Modifier.height(16.dp))
         DetailRow(
             left = DetailItem(Icons.Filled.Visibility, stringResource(R.string.visibility), WeatherFormatter.formatVisibility(current.visibility, s)),
             right = run {
-                val dewComfort = current.dewPoint?.let { WeatherFormatter.dewPointComfort(it) }
+                val dewComfort = current.dewPoint?.let { stringResource(WeatherFormatter.dewPointComfortRes(it)) }
                 DetailItem(
                     Icons.Outlined.Thermostat, stringResource(R.string.dew_point),
                     if (current.dewPoint != null) WeatherFormatter.formatDewPoint(current.dewPoint, s) else "--",

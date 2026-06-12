@@ -409,9 +409,10 @@ class WidgetRefreshWorker @AssistedInject constructor(
             humidity = weatherData.current.humidity,
             windSpeed = weatherData.current.windSpeed,
             hourly = buildWidgetHourlyItems(
-                weatherData.hourly,
-                weatherData.current.observationTime,
-                convertTemp,
+                hourly = weatherData.hourly,
+                referenceTime = weatherData.current.observationTime,
+                nowLabel = applicationContext.getString(R.string.common_now),
+                convertTemp = convertTemp,
             ),
             daily = buildWidgetDailyItems(
                 daily = weatherData.daily,
@@ -628,11 +629,16 @@ internal fun shouldSkipWidgetRefreshForBattery(batteryLevel: Int?, isCharging: B
 internal fun buildWidgetHourlyItems(
     hourly: List<HourlyConditions>,
     referenceTime: java.time.LocalDateTime?,
+    nowLabel: String = "Now",
     convertTemp: (Double) -> Double,
 ): List<WidgetHourly> {
     return hourly.take(12).map { hour ->
         WidgetHourly(
-            hour = WeatherFormatter.formatRelativeHourLabel(hour.time, referenceTime),
+            hour = if (referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime)) {
+                nowLabel
+            } else {
+                WeatherFormatter.formatHourLabel(hour.time)
+            },
             temp = convertTemp(hour.temperature).toInt(),
             code = hour.weatherCode.code,
             isDay = hour.isDay,

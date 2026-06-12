@@ -255,11 +255,12 @@ private fun MainErrorState(
     state: MainUiState,
     actions: MainScreenActions,
 ) {
-    val hasLocationPermissionError = isLocationPermissionError(state.error)
+    val error = state.error ?: return
+    val hasLocationPermissionError = isLocationPermissionError(error)
     ErrorState(
-        message = state.error.orEmpty(),
+        message = mainErrorMessage(error),
         onRetry = if (hasLocationPermissionError) actions.onRequestLocationPermissions else actions.onLoadWeather,
-        icon = errorIconForMessage(state.error),
+        icon = errorIconForError(error),
         actionLabel = if (hasLocationPermissionError) {
             stringResource(R.string.main_grant_location)
         } else {
@@ -272,13 +273,28 @@ private fun MainErrorState(
     )
 }
 
-private fun errorIconForMessage(message: String?): ImageVector = when {
-    message.orEmpty().contains("permission", ignoreCase = true) ||
-        message.orEmpty().contains("location", ignoreCase = true) -> Icons.Filled.LocationOff
-    message.orEmpty().contains("network", ignoreCase = true) ||
-        message.orEmpty().contains("connect", ignoreCase = true) ||
-        message.orEmpty().contains("offline", ignoreCase = true) ||
-        message.orEmpty().contains("internet", ignoreCase = true) -> Icons.Filled.CloudOff
+@Composable
+private fun mainErrorMessage(error: MainUiError): String = when (error.kind) {
+    MainUiErrorKind.LOCATION_PERMISSION_REQUIRED -> stringResource(R.string.main_error_location_permission_required)
+    MainUiErrorKind.LOCATION_PERMISSION_DENIED -> stringResource(R.string.main_error_location_permission_short)
+    MainUiErrorKind.LOCATION_SERVICES_OFF -> stringResource(R.string.main_error_location_services_off)
+    MainUiErrorKind.LOCATION_UNAVAILABLE -> stringResource(R.string.main_error_location_unavailable)
+    MainUiErrorKind.NO_INTERNET -> stringResource(R.string.main_error_no_internet)
+    MainUiErrorKind.TIMEOUT -> stringResource(R.string.main_error_timeout)
+    MainUiErrorKind.CONNECTION -> stringResource(R.string.main_error_connect_weather_service)
+    MainUiErrorKind.WEATHER_SERVICE -> stringResource(R.string.main_error_weather_service, error.serviceCode ?: 0)
+    MainUiErrorKind.GENERIC -> stringResource(R.string.main_error_generic_retry)
+    MainUiErrorKind.CHOOSE_LOCATION -> stringResource(R.string.main_error_choose_location)
+}
+
+private fun errorIconForError(error: MainUiError): ImageVector = when (error.kind) {
+    MainUiErrorKind.LOCATION_PERMISSION_REQUIRED,
+    MainUiErrorKind.LOCATION_PERMISSION_DENIED,
+    MainUiErrorKind.LOCATION_SERVICES_OFF,
+    MainUiErrorKind.LOCATION_UNAVAILABLE -> Icons.Filled.LocationOff
+    MainUiErrorKind.NO_INTERNET,
+    MainUiErrorKind.TIMEOUT,
+    MainUiErrorKind.CONNECTION -> Icons.Filled.CloudOff
     else -> Icons.Filled.ErrorOutline
 }
 
@@ -501,24 +517,19 @@ internal fun TodayContent(
             tertiaryActionLabel = if (lastLocationName != null) retryGpsLabel else null,
             onTertiaryAction = if (lastLocationName != null) onRetry else null,
         )
-        state.error != null && state.weatherData == null -> ErrorState(
-            message = state.error!!,
-            onRetry = onRetry,
-            icon = when {
-                state.error!!.contains("permission", ignoreCase = true) ||
-                state.error!!.contains("location", ignoreCase = true) -> Icons.Filled.LocationOff
-                state.error!!.contains("network", ignoreCase = true) ||
-                state.error!!.contains("connect", ignoreCase = true) ||
-                state.error!!.contains("offline", ignoreCase = true) ||
-                state.error!!.contains("internet", ignoreCase = true) -> Icons.Filled.CloudOff
-                else -> Icons.Filled.ErrorOutline
-            },
-            actionLabel = if (isLocationPermissionError(state.error)) grantLocationLabel else retryLabel,
-            actionIcon = if (isLocationPermissionError(state.error)) Icons.Filled.LocationOn else Icons.Filled.Refresh,
-            secondaryActionLabel = chooseLocationLabel,
-            onSecondaryAction = onNavigateToLocations,
-            isLocationPermissionError = isLocationPermissionError(state.error),
-        )
+        state.error != null && state.weatherData == null -> {
+            val error = state.error
+            ErrorState(
+                message = mainErrorMessage(error),
+                onRetry = onRetry,
+                icon = errorIconForError(error),
+                actionLabel = if (isLocationPermissionError(error)) grantLocationLabel else retryLabel,
+                actionIcon = if (isLocationPermissionError(error)) Icons.Filled.LocationOn else Icons.Filled.Refresh,
+                secondaryActionLabel = chooseLocationLabel,
+                onSecondaryAction = onNavigateToLocations,
+                isLocationPermissionError = isLocationPermissionError(error),
+            )
+        }
         state.weatherData != null -> WeatherContent(
             state = state,
             actions = contentActions,
@@ -805,10 +816,11 @@ private fun WeatherHero(
     state: MainUiState,
     settings: NimbusSettings,
 ) {
+    val context = LocalContext.current
     Box(
         modifier = Modifier.semantics(mergeDescendants = true) {
             contentDescription = AccessibilityHelper.currentConditions(
-                data.current, data.location.name, settings,
+                context, data.current, data.location.name, settings,
             )
         },
     ) {
@@ -1506,11 +1518,9 @@ private fun ErrorState(
     }
 }
 
-private fun isLocationPermissionError(message: String?): Boolean {
-    if (message.isNullOrBlank()) return false
-    return message.contains("permission", ignoreCase = true) ||
-        message.contains("grant location", ignoreCase = true)
-}
+private fun isLocationPermissionError(error: MainUiError?): Boolean =
+    error?.kind == MainUiErrorKind.LOCATION_PERMISSION_REQUIRED ||
+        error?.kind == MainUiErrorKind.LOCATION_PERMISSION_DENIED
 
 internal fun mainDeepLinkCardTarget(target: MainDeepLinkTarget?): CardType? = when (target) {
     MainDeepLinkTarget.NOWCAST -> CardType.NOWCAST
