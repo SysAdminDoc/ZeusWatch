@@ -1,20 +1,35 @@
 package com.sysadmindoc.nimbus.data.repository
 
 import android.content.Context
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.PreferencesFileSerializer
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.tink.AeadSerializer
 import androidx.compose.runtime.Stable
+import com.google.crypto.tink.Aead
+import com.google.crypto.tink.KeyTemplate
+import com.google.crypto.tink.RegistryConfiguration
+import com.google.crypto.tink.aead.PredefinedAeadParameters
+import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.io.File
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,6 +38,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 private val customAlertRulesKey = stringPreferencesKey("custom_alert_rules")
 private val persistentWeatherNotifKey = booleanPreferencesKey("persistent_weather_notif")
+private val owmApiKeyPreferenceKey = stringPreferencesKey("owm_api_key")
+private val pirateWeatherApiKeyPreferenceKey = stringPreferencesKey("pirate_weather_api_key")
 
 internal suspend fun Context.readPersistentWeatherNotificationEnabled(): Boolean {
     return dataStore.data
@@ -31,11 +48,110 @@ internal suspend fun Context.readPersistentWeatherNotificationEnabled(): Boolean
         .first()
 }
 
+private const val ENCRYPTED_API_KEYS_FILE = "nimbus_api_keys.preferences_pb"
+private const val API_KEY_TINK_KEYSET_NAME = "nimbus_api_key_keyset"
+private const val API_KEY_TINK_KEYSET_PREFS = "nimbus_api_key_keyset_prefs"
+private const val API_KEY_MASTER_KEY_URI = "android-keystore://nimbus_api_key_master"
+
+private fun createEncryptedApiKeyStore(
+    context: Context,
+    legacyStore: DataStore<Preferences>,
+): DataStore<Preferences> {
+    val applicationContext = context.applicationContext
+    return DataStoreFactory.create(
+        serializer = AeadSerializer(
+            aead = createApiKeyAead(applicationContext),
+            wrappedSerializer = PreferencesFileSerializer,
+            associatedData = ENCRYPTED_API_KEYS_FILE.encodeToByteArray(),
+        ),
+        corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+        migrations = listOf(ApiKeyPreferencesMigration(legacyStore)),
+        scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+        produceFile = {
+            File(applicationContext.filesDir, "datastore/$ENCRYPTED_API_KEYS_FILE")
+        },
+    )
+}
+
+private fun createApiKeyAead(context: Context): Aead {
+    val keysetHandle = AndroidKeysetManager.Builder()
+        .withSharedPref(context, API_KEY_TINK_KEYSET_NAME, API_KEY_TINK_KEYSET_PREFS)
+        .withKeyTemplate(KeyTemplate.createFrom(PredefinedAeadParameters.AES256_GCM))
+        .withMasterKeyUri(API_KEY_MASTER_KEY_URI)
+        .build()
+        .keysetHandle
+
+    return keysetHandle.getPrimitive(
+        RegistryConfiguration.get(),
+        Aead::class.java,
+    )
+}
+
+private class ApiKeyPreferencesMigration(
+    private val legacyStore: DataStore<Preferences>,
+) : DataMigration<Preferences> {
+    private suspend fun legacyPreferences(): Preferences = legacyStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+        .first()
+
+    override suspend fun shouldMigrate(currentData: Preferences): Boolean {
+        return legacyPreferences().containsApiKey()
+    }
+
+    override suspend fun migrate(currentData: Preferences): Preferences {
+        return migrateApiKeyPreferences(
+            currentData = currentData,
+            legacyData = legacyPreferences(),
+        )
+    }
+
+    override suspend fun cleanUp() {
+        legacyStore.edit { prefs ->
+            prefs.remove(owmApiKeyPreferenceKey)
+            prefs.remove(pirateWeatherApiKeyPreferenceKey)
+        }
+    }
+}
+
+internal fun migrateApiKeyPreferences(
+    currentData: Preferences,
+    legacyData: Preferences,
+): Preferences {
+    val migrated = currentData.toMutablePreferences()
+    copyMissingApiKey(
+        target = migrated,
+        legacy = legacyData,
+        key = owmApiKeyPreferenceKey,
+    )
+    copyMissingApiKey(
+        target = migrated,
+        legacy = legacyData,
+        key = pirateWeatherApiKeyPreferenceKey,
+    )
+    return migrated
+}
+
+private fun copyMissingApiKey(
+    target: androidx.datastore.preferences.core.MutablePreferences,
+    legacy: Preferences,
+    key: Preferences.Key<String>,
+) {
+    if (!target[key].isNullOrBlank()) return
+    val legacyValue = legacy[key]?.takeIf { it.isNotBlank() } ?: return
+    target[key] = legacyValue
+}
+
+private fun Preferences.containsApiKey(): Boolean {
+    return !this[owmApiKeyPreferenceKey].isNullOrBlank() ||
+        !this[pirateWeatherApiKeyPreferenceKey].isNullOrBlank()
+}
+
 @Singleton
 class UserPreferences @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     private val store = context.dataStore
+    private val encryptedApiKeyStore = createEncryptedApiKeyStore(context, store)
 
     // Keys
     private object Keys {
@@ -100,8 +216,8 @@ class UserPreferences @Inject constructor(
         val SOURCE_MINUTELY = stringPreferencesKey("source_minutely")
 
         // API keys for third-party providers
-        val OWM_API_KEY = stringPreferencesKey("owm_api_key")
-        val PIRATE_WEATHER_API_KEY = stringPreferencesKey("pirate_weather_api_key")
+        val OWM_API_KEY = owmApiKeyPreferenceKey
+        val PIRATE_WEATHER_API_KEY = pirateWeatherApiKeyPreferenceKey
 
         val SEEN_ALERT_IDS = stringSetPreferencesKey("seen_alert_ids")
         val LAST_LAT = stringPreferencesKey("last_lat")
@@ -113,9 +229,10 @@ class UserPreferences @Inject constructor(
     // (CorruptionException) on read — without .catch that propagates into
     // every collector and crashes the app at startup. Recover with empty
     // preferences (defaults) instead.
-    val settings: Flow<NimbusSettings> = store.data
-        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-        .map { prefs ->
+    val settings: Flow<NimbusSettings> = combine(
+        store.data.catch { if (it is IOException) emit(emptyPreferences()) else throw it },
+        encryptedApiKeyStore.data.catch { if (it is IOException) emit(emptyPreferences()) else throw it },
+    ) { prefs, apiKeyPrefs ->
         NimbusSettings(
             tempUnit = safeValueOf<TempUnit>(prefs[Keys.TEMP_UNIT] ?: TempUnit.FAHRENHEIT.name) ?: TempUnit.FAHRENHEIT,
             windUnit = safeValueOf<WindUnit>(prefs[Keys.WIND_UNIT] ?: WindUnit.MPH.name) ?: WindUnit.MPH,
@@ -176,8 +293,8 @@ class UserPreferences @Inject constructor(
                 minutely = prefs[Keys.SOURCE_MINUTELY]?.let { safeValueOf<WeatherSourceProvider>(it) }
                     ?: WeatherSourceProvider.defaultFor(WeatherDataType.MINUTELY),
             ).normalized(),
-            owmApiKey = prefs[Keys.OWM_API_KEY] ?: "",
-            pirateWeatherApiKey = prefs[Keys.PIRATE_WEATHER_API_KEY] ?: "",
+            owmApiKey = apiKeyPrefs[Keys.OWM_API_KEY] ?: prefs[Keys.OWM_API_KEY] ?: "",
+            pirateWeatherApiKey = apiKeyPrefs[Keys.PIRATE_WEATHER_API_KEY] ?: prefs[Keys.PIRATE_WEATHER_API_KEY] ?: "",
         )
     }
 
@@ -343,8 +460,20 @@ class UserPreferences @Inject constructor(
     }
 
     // API keys
-    suspend fun setOwmApiKey(key: String) = store.edit { it[Keys.OWM_API_KEY] = key }
-    suspend fun setPirateWeatherApiKey(key: String) = store.edit { it[Keys.PIRATE_WEATHER_API_KEY] = key }
+    suspend fun setOwmApiKey(key: String) {
+        encryptedApiKeyStore.edit { it[Keys.OWM_API_KEY] = key }
+        scrubLegacyApiKeys()
+    }
+
+    suspend fun setPirateWeatherApiKey(key: String) {
+        encryptedApiKeyStore.edit { it[Keys.PIRATE_WEATHER_API_KEY] = key }
+        scrubLegacyApiKeys()
+    }
+
+    private suspend fun scrubLegacyApiKeys() = store.edit { prefs ->
+        prefs.remove(Keys.OWM_API_KEY)
+        prefs.remove(Keys.PIRATE_WEATHER_API_KEY)
+    }
 
     /** Returns the set of alert IDs the user has already been notified about. */
     suspend fun getSeenAlertIds(): Set<String> = store.data.map { it[Keys.SEEN_ALERT_IDS] ?: emptySet() }.first()

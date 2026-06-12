@@ -243,7 +243,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 │  │  Open-Meteo Forecast           │  │  weather_cache                │   │
 │  │  Open-Meteo Geocoding          │  │  saved_locations (+sources)   │   │
 │  │  Open-Meteo Air Quality        │  │                               │   │
-│  │  Open-Meteo minutely_15        │  │ DataStore Preferences         │   │
+│  │  Open-Meteo minutely_15        │  │ DataStore + encrypted keys    │   │
 │  │  Open-Meteo Historical         │  │  Units, display, cards,       │   │
 │  │  Open-Meteo Single Runs        │  │  notifications, health,       │   │
 │  │  RainViewer Radar Tiles        │  │  source defaults, haptics,    │   │
@@ -258,7 +258,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Stack:** Kotlin 2.1.0, Jetpack Compose (BOM 2025.04.01), Hilt 2.53.1, Retrofit 3.0.0, Room 2.6.1, DataStore 1.1.1, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore
+**Stack:** Kotlin 2.1.0, Jetpack Compose (BOM 2025.04.01), Hilt 2.53.1, Retrofit 3.0.0, Room 2.6.1, DataStore 1.3.0-alpha09 with Tink-encrypted API keys, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore
 
 ---
 
@@ -290,6 +290,8 @@ Optional fallback sources (require API keys configured in Settings):
 | [OpenWeatherMap](https://openweathermap.org/api) | Forecast fallback |
 | [Pirate Weather](https://pirateweather.net/) | Forecast fallback |
 | [Bright Sky](https://brightsky.dev/) | Germany forecast fallback |
+
+OpenWeatherMap and Pirate Weather keys are stored in an encrypted DataStore backed by Tink and Android Keystore. Existing plaintext keys migrate automatically on first launch.
 
 ### Open-Meteo Parameters Used
 
