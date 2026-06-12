@@ -25,10 +25,12 @@ import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.SavedLocation
+import com.sysadmindoc.nimbus.data.repository.SourceOverrides
 import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.readPersistentWeatherNotificationEnabled
+import com.sysadmindoc.nimbus.data.repository.sourceOverrides
 import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -290,7 +292,12 @@ class WidgetRefreshWorker @AssistedInject constructor(
 
         state.attemptedNetworkRefresh = true
         return weatherRepository
-            .getWeather(request.latitude, request.longitude, request.representativeName)
+            .getWeather(
+                request.latitude,
+                request.longitude,
+                request.representativeName,
+                request.sourceOverrides,
+            )
             .getOrNull()
     }
 
@@ -345,7 +352,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
             for (loc in savedLocations) {
                 if (!refreshedLocationKeys.add(locationKey(loc.latitude, loc.longitude))) continue
                 try {
-                    weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
+                    weatherRepository.getWeather(loc)
                 } catch (_: Exception) {
                     // Individual location failure is non-fatal.
                 }
@@ -484,6 +491,7 @@ internal data class WidgetRefreshRequest(
     val latitude: Double,
     val longitude: Double,
     val representativeName: String,
+    val sourceOverrides: SourceOverrides,
     val assignments: List<WidgetRefreshAssignment>,
 )
 
@@ -513,6 +521,7 @@ internal fun buildWidgetRefreshPlan(
                 latitude = location.latitude,
                 longitude = location.longitude,
                 representativeName = location.name,
+                sourceOverrides = location.sourceOverrides(),
             )
         }
         request.assignments += WidgetRefreshAssignment(
@@ -528,6 +537,7 @@ internal fun buildWidgetRefreshPlan(
                 latitude = request.latitude,
                 longitude = request.longitude,
                 representativeName = request.representativeName,
+                sourceOverrides = request.sourceOverrides,
                 assignments = request.assignments.toList(),
             )
         },
@@ -592,6 +602,7 @@ private data class MutableWidgetRefreshRequest(
     val latitude: Double,
     val longitude: Double,
     val representativeName: String,
+    val sourceOverrides: SourceOverrides,
     val assignments: MutableList<WidgetRefreshAssignment> = mutableListOf(),
 )
 

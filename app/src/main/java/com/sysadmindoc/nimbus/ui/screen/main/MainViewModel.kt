@@ -32,10 +32,12 @@ import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.OnThisDayRepository
 import com.sysadmindoc.nimbus.data.repository.SummaryStyle
+import com.sysadmindoc.nimbus.data.repository.SourceOverrides
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
+import com.sysadmindoc.nimbus.data.repository.sourceOverrides
 import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import com.sysadmindoc.nimbus.wallpaper.WeatherWallpaperService
@@ -113,6 +115,7 @@ class MainViewModel @Inject constructor(
     private var activeLongitude: Double? = null
     private var activeLocationId: Long? = null
     private var activeLocationName: String? = null
+    private var activeSourceOverrides: SourceOverrides = SourceOverrides()
     private var useGpsLocation: Boolean = true
     private val weatherRequestCounter = AtomicLong(0L)
 
@@ -193,6 +196,10 @@ class MainViewModel @Inject constructor(
                     useGpsLocation = fallback?.isCurrentLocation != false
                     activeLocationId = fallback?.takeUnless { it.isCurrentLocation }?.id
                     activeLocationName = fallback?.takeUnless { it.isCurrentLocation }?.name
+                    activeSourceOverrides = fallback
+                        ?.takeUnless { it.isCurrentLocation }
+                        ?.sourceOverrides()
+                        ?: SourceOverrides()
                 }
 
                 _uiState.update { state ->
@@ -213,6 +220,7 @@ class MainViewModel @Inject constructor(
                         recoveryLocation != null -> loadWeatherForCoords(
                             recoveryLocation.latitude, recoveryLocation.longitude,
                             recoveryLocation.id, recoveryLocation.name,
+                            sourceOverrides = recoveryLocation.sourceOverrides(),
                         )
                         useGpsLocation -> loadWeather(clearDisplayedWeather = true)
                     }
@@ -242,13 +250,21 @@ class MainViewModel @Inject constructor(
         if (loc.isCurrentLocation) {
             activeLocationId = null
             activeLocationName = null
+            activeSourceOverrides = SourceOverrides()
             useGpsLocation = true
             loadWeather(clearDisplayedWeather = true)
         } else {
             activeLocationId = loc.id
             activeLocationName = loc.name
+            activeSourceOverrides = loc.sourceOverrides()
             useGpsLocation = false
-            loadWeatherForCoords(loc.latitude, loc.longitude, loc.id, loc.name)
+            loadWeatherForCoords(
+                loc.latitude,
+                loc.longitude,
+                loc.id,
+                loc.name,
+                sourceOverrides = loc.sourceOverrides(),
+            )
         }
     }
 
@@ -327,6 +343,7 @@ class MainViewModel @Inject constructor(
         lon: Double,
         locationId: Long? = activeLocationId,
         locationName: String? = activeLocationName,
+        sourceOverrides: SourceOverrides = activeSourceOverrides,
         requestId: Long = nextWeatherRequestId(),
     ) {
         val clearDisplayedWeather = shouldClearDisplayedWeatherFor(lat, lon)
@@ -335,8 +352,9 @@ class MainViewModel @Inject constructor(
             useGpsLocation = false
             activeLocationId = locationId
             activeLocationName = locationName
+            activeSourceOverrides = sourceOverrides
             beginWeatherLoad(clearDisplayedWeather)
-            fetchWeather(lat, lon, locationName, requestId)
+            fetchWeather(lat, lon, locationName, sourceOverrides, requestId)
         }
     }
 
@@ -344,6 +362,7 @@ class MainViewModel @Inject constructor(
         lat: Double,
         lon: Double,
         locationName: String? = activeLocationName,
+        sourceOverrides: SourceOverrides = activeSourceOverrides,
         requestId: Long,
     ) {
         try {
@@ -351,7 +370,7 @@ class MainViewModel @Inject constructor(
             activeLatitude = lat
             activeLongitude = lon
 
-            val result = repository.getWeather(lat, lon, locationName)
+            val result = repository.getWeather(lat, lon, locationName, sourceOverrides)
             if (!isLatestWeatherRequest(requestId)) return
             result.fold(
                 onSuccess = { data ->
@@ -389,7 +408,7 @@ class MainViewModel @Inject constructor(
                     }
                     // Run independent sub-fetches in parallel
                     coroutineScope {
-                        launch { fetchAlerts(lat, lon, requestId) }
+                        launch { fetchAlerts(lat, lon, requestId, sourceOverrides) }
                         launch { fetchAirQuality(lat, lon, requestId) }
                         launch { fetchOnThisDay(lat, lon, data.current.observationTime?.toLocalDate(), requestId) }
                         launch { fetchAstronomy(data, lat, lon, requestId) }
@@ -440,9 +459,14 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private suspend fun fetchAlerts(lat: Double, lon: Double, requestId: Long) {
+    private suspend fun fetchAlerts(
+        lat: Double,
+        lon: Double,
+        requestId: Long,
+        sourceOverrides: SourceOverrides,
+    ) {
         try {
-            weatherSourceManager.getAlerts(lat, lon).fold(
+            weatherSourceManager.getAlerts(lat, lon, sourceOverrides).fold(
                 onSuccess = {
                     if (isLatestWeatherRequest(requestId)) {
                         _uiState.update { s -> s.copy(alerts = it.toImmutableList()) }
@@ -764,8 +788,15 @@ class MainViewModel @Inject constructor(
             // Allocate the id synchronously so a queued stale intent can't
             // out-id this refresh once the coroutine actually runs.
             val requestId = nextWeatherRequestId()
+            val sourceOverrides = activeSourceOverrides
             viewModelScope.launch {
-                fetchWeather(lat, lon, activeLocationName, requestId)
+                fetchWeather(
+                    lat = lat,
+                    lon = lon,
+                    locationName = activeLocationName,
+                    sourceOverrides = sourceOverrides,
+                    requestId = requestId,
+                )
             }
         } else {
             loadWeather()
@@ -788,9 +819,11 @@ class MainViewModel @Inject constructor(
 
             useGpsLocation = false
             activeLocationId = null
+            activeSourceOverrides = SourceOverrides()
             loadWeatherForCoords(
                 lastLoc.latitude, lastLoc.longitude,
                 locationId = null, locationName = lastLoc.name,
+                sourceOverrides = SourceOverrides(),
                 requestId = requestId,
             )
         }
@@ -816,14 +849,23 @@ class MainViewModel @Inject constructor(
                     if (loc.isCurrentLocation) {
                         activeLocationId = null
                         activeLocationName = null
+                        activeSourceOverrides = SourceOverrides()
                         useGpsLocation = true
                         loadWeather(clearDisplayedWeather = true, requestId = requestId)
                     } else {
-                        loadWeatherForCoords(loc.latitude, loc.longitude, loc.id, loc.name, requestId = requestId)
+                        loadWeatherForCoords(
+                            loc.latitude,
+                            loc.longitude,
+                            loc.id,
+                            loc.name,
+                            sourceOverrides = loc.sourceOverrides(),
+                            requestId = requestId,
+                        )
                     }
                 } else {
                     activeLocationId = null
                     activeLocationName = null
+                    activeSourceOverrides = SourceOverrides()
                     useGpsLocation = true
                     loadWeather(clearDisplayedWeather = true, requestId = requestId)
                 }

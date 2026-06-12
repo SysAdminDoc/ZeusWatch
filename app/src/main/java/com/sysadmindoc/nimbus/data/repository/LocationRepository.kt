@@ -80,6 +80,46 @@ class LocationRepository @Inject constructor(
         dao.reorderAll(normalizedIds)
     }
 
+    suspend fun updateSourceOverrides(
+        locationId: Long,
+        forecastSource: WeatherSourceProvider?,
+        alertSource: WeatherSourceProvider?,
+    ) {
+        dao.updateSourceOverrides(
+            id = locationId,
+            forecastSource = forecastSource
+                ?.takeIf { it.isSelectableFor(WeatherDataType.FORECAST) }
+                ?.name,
+            alertSource = alertSource
+                ?.takeIf { it.isSelectableFor(WeatherDataType.ALERTS) }
+                ?.name,
+        )
+    }
+
+    suspend fun updateForecastSource(
+        locationId: Long,
+        forecastSource: WeatherSourceProvider?,
+    ) {
+        val current = dao.getById(locationId) ?: return
+        updateSourceOverrides(
+            locationId = locationId,
+            forecastSource = forecastSource,
+            alertSource = WeatherSourceProvider.fromStoredName(current.alertSource, WeatherDataType.ALERTS),
+        )
+    }
+
+    suspend fun updateAlertSource(
+        locationId: Long,
+        alertSource: WeatherSourceProvider?,
+    ) {
+        val current = dao.getById(locationId) ?: return
+        updateSourceOverrides(
+            locationId = locationId,
+            forecastSource = WeatherSourceProvider.fromStoredName(current.forecastSource, WeatherDataType.FORECAST),
+            alertSource = alertSource,
+        )
+    }
+
     suspend fun ensureCurrentLocation(lat: Double, lon: Double, name: String) {
         val existing = dao.getCurrentLocation()
         if (existing == null) {

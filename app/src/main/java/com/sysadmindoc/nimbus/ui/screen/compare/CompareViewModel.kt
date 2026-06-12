@@ -112,11 +112,7 @@ class CompareViewModel @Inject constructor(
         viewModelScope.launch {
             incrementLoading()
             try {
-                weatherRepository.getWeather(
-                    location.latitude,
-                    location.longitude,
-                    location.name,
-                ).fold(
+                weatherRepository.getWeather(location).fold(
                     onSuccess = { data ->
                         _uiState.update { state ->
                             when (slot) {

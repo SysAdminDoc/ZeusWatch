@@ -592,6 +592,11 @@
     <string name="locations_open_weather_cd">Abrir clima de %1$s</string>
     <string name="locations_drag_reorder_cd">Arrastrar para reordenar</string>
     <string name="locations_remove_cd">Eliminar %1$s</string>
+    <string name="locations_source_settings_cd">Ajustes de fuente para %1$s</string>
+    <string name="locations_source_panel_title">Fuentes predeterminadas de ubicacion</string>
+    <string name="locations_forecast_source">Pronostico</string>
+    <string name="locations_alert_source">Alertas</string>
+    <string name="locations_use_default_source">Usar predeterminado de la app</string>
     <string name="locations_already_saved_message">Ubicacion ya guardada</string>
     <string name="locations_no_results_message">No se encontraron resultados</string>
     <string name="locations_search_failed">La busqueda fallo. Revisa tu conexion e intenta de nuevo.</string>

@@ -10,6 +10,7 @@ import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
+import com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -158,6 +159,18 @@ class LocationsViewModel @Inject constructor(
         searchJob?.cancel()
         searchRequestId += 1
         _searchState.value = SearchState()
+    }
+
+    fun setForecastSource(locationId: Long, provider: WeatherSourceProvider?) {
+        viewModelScope.launch {
+            locationRepository.updateForecastSource(locationId, provider)
+        }
+    }
+
+    fun setAlertSource(locationId: Long, provider: WeatherSourceProvider?) {
+        viewModelScope.launch {
+            locationRepository.updateAlertSource(locationId, provider)
+        }
     }
 }
 

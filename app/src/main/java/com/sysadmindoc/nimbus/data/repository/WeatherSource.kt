@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.data.repository
 
 import androidx.compose.runtime.Stable
+import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 
 /**
  * Defines the available weather data types and source providers
@@ -84,7 +85,22 @@ enum class WeatherSourceProvider(
             WeatherDataType.MINUTELY -> OPEN_METEO
             WeatherDataType.ALERTS -> NWS
         }
+
+        fun fromStoredName(
+            value: String?,
+            type: WeatherDataType,
+        ): WeatherSourceProvider? = value
+            ?.let { stored -> entries.firstOrNull { it.name == stored } }
+            ?.takeIf { it.isSelectableFor(type) }
     }
+}
+
+@Stable
+data class SourceOverrides(
+    val forecast: WeatherSourceProvider? = null,
+    val alerts: WeatherSourceProvider? = null,
+) {
+    val isEmpty: Boolean get() = forecast == null && alerts == null
 }
 
 @Stable
@@ -121,7 +137,21 @@ data class SourceConfig(
             minutely = normalizedMinutely,
         )
     }
+
+    fun withOverrides(overrides: SourceOverrides): SourceConfig {
+        if (overrides.isEmpty) return normalized()
+
+        return copy(
+            forecast = overrides.forecast ?: forecast,
+            alerts = overrides.alerts ?: alerts,
+        ).normalized()
+    }
 }
+
+fun SavedLocationEntity.sourceOverrides(): SourceOverrides = SourceOverrides(
+    forecast = WeatherSourceProvider.fromStoredName(forecastSource, WeatherDataType.FORECAST),
+    alerts = WeatherSourceProvider.fromStoredName(alertSource, WeatherDataType.ALERTS),
+)
 
 private fun WeatherSourceProvider.normalizedPrimary(type: WeatherDataType): WeatherSourceProvider =
     takeIf { it.isSelectableFor(type) } ?: WeatherSourceProvider.defaultFor(type)

@@ -79,18 +79,10 @@ class CompareViewModelTest {
         locationRepository = mockk()
         savedLocationsFlow = MutableStateFlow(listOf(currentLocation, seattle, chicago, miami))
 
-        coEvery {
-            weatherRepository.getWeather(currentLocation.latitude, currentLocation.longitude, currentLocation.name)
-        } returns Result.success(weatherFor(currentLocation.name))
-        coEvery {
-            weatherRepository.getWeather(seattle.latitude, seattle.longitude, seattle.name)
-        } returns Result.success(weatherFor(seattle.name))
-        coEvery {
-            weatherRepository.getWeather(chicago.latitude, chicago.longitude, chicago.name)
-        } returns Result.success(weatherFor(chicago.name))
-        coEvery {
-            weatherRepository.getWeather(miami.latitude, miami.longitude, miami.name)
-        } returns Result.success(weatherFor(miami.name))
+        coEvery { weatherRepository.getWeather(currentLocation) } returns Result.success(weatherFor(currentLocation.name))
+        coEvery { weatherRepository.getWeather(seattle) } returns Result.success(weatherFor(seattle.name))
+        coEvery { weatherRepository.getWeather(chicago) } returns Result.success(weatherFor(chicago.name))
+        coEvery { weatherRepository.getWeather(miami) } returns Result.success(weatherFor(miami.name))
 
         every { locationRepository.savedLocations } returns savedLocationsFlow
     }
@@ -104,12 +96,8 @@ class CompareViewModelTest {
     fun `latest selection wins when earlier request finishes last`() = runTest {
         val chicagoResult = CompletableDeferred<Result<WeatherData>>()
         val miamiResult = CompletableDeferred<Result<WeatherData>>()
-        coEvery {
-            weatherRepository.getWeather(chicago.latitude, chicago.longitude, chicago.name)
-        } coAnswers { chicagoResult.await() }
-        coEvery {
-            weatherRepository.getWeather(miami.latitude, miami.longitude, miami.name)
-        } coAnswers { miamiResult.await() }
+        coEvery { weatherRepository.getWeather(chicago) } coAnswers { chicagoResult.await() }
+        coEvery { weatherRepository.getWeather(miami) } coAnswers { miamiResult.await() }
 
         viewModel = CompareViewModel(weatherRepository, locationRepository)
         advanceUntilIdle()

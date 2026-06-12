@@ -44,8 +44,9 @@ class WeatherSourceManager @Inject constructor(
         latitude: Double,
         longitude: Double,
         locationName: String? = null,
+        sourceOverrides: SourceOverrides = SourceOverrides(),
     ): Result<WeatherData> {
-        val config = prefs.settings.first().sourceConfig
+        val config = prefs.settings.first().sourceConfig.withOverrides(sourceOverrides)
         val primary = config.forecast
         val fallback = config.forecastFallback
 
@@ -84,8 +85,9 @@ class WeatherSourceManager @Inject constructor(
     suspend fun getAlerts(
         latitude: Double,
         longitude: Double,
+        sourceOverrides: SourceOverrides = SourceOverrides(),
     ): Result<List<WeatherAlert>> {
-        val config = prefs.settings.first().sourceConfig
+        val config = prefs.settings.first().sourceConfig.withOverrides(sourceOverrides)
         val primary = config.alerts
         val fallback = config.alertsFallback
 
