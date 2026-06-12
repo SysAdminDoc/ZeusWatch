@@ -324,7 +324,7 @@ class MainViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             isRefreshing = false,
-                            needsLocationPermission = true,
+                            needsLocationPermission = !hasCached,
                             error = if (!hasCached) "Location permission required to show weather." else null,
                         )
                     }
@@ -839,6 +839,8 @@ class MainViewModel @Inject constructor(
             val cached = repository.getCachedWeather(cacheLat, cacheLon)
             if (cached != null) {
                 if (requestId == null || isLatestWeatherRequest(requestId)) {
+                    activeLatitude = cacheLat
+                    activeLongitude = cacheLon
                     _uiState.update { state ->
                         state.clearLocationScopedData().copy(
                             isLoading = false,
