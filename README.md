@@ -8,7 +8,7 @@
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 ![Build](https://github.com/SysAdminDoc/zeuswatch/actions/workflows/build.yml/badge.svg)
 
-> A free, open-source Android weather app with a premium dark UI, 28 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, and Environment Canada.
+> A free, open-source Android weather app with a premium dark UI, 28 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, Environment Canada, and WMO SWIC.
 
 ## Screenshots
 
@@ -119,6 +119,7 @@ Download from [GitHub Releases](https://github.com/SysAdminDoc/zeuswatch/release
 | **MeteoAlarm** | Alerts | 31 EU countries |
 | **JMA** | Alerts | Japan |
 | **Environment Canada** | Alerts | Canada |
+| **WMO SWIC** | Alerts | Global fallback by country |
 | **OpenWeatherMap** | Forecast (fallback) | Global (API key) |
 | **Pirate Weather** | Forecast (fallback) | Global (API key) |
 | **Bright Sky** | Forecast (fallback) | Germany |
@@ -273,6 +274,7 @@ All core APIs are free with no keys required:
 | [MeteoAlarm](https://www.meteoalarm.org/) | EU severe weather alerts (31 countries) | Fair use |
 | [JMA](https://www.jma.go.jp/) | Japan severe weather alerts | Fair use |
 | [Environment Canada](https://weather.gc.ca/) | Canadian severe weather alerts | Fair use |
+| [WMO SWIC](https://severeweather.wmo.int/) | Global severe weather alert fallback | Fair use |
 | [Blitzortung](https://www.blitzortung.org/) | Real-time lightning strike data (WebSocket) | Fair use |
 | [Firebase Firestore](https://firebase.google.com/) | Community weather reports | Free tier |
 
@@ -519,5 +521,5 @@ Weather data provided by [Open-Meteo.com](https://open-meteo.com/) under [CC BY 
 Radar tiles by [RainViewer](https://www.rainviewer.com/).
 Interactive radar by [Windy.com](https://www.windy.com/).
 Lightning data by [Blitzortung.org](https://www.blitzortung.org/).
-Alert data by [National Weather Service](https://www.weather.gov/), [MeteoAlarm](https://www.meteoalarm.org/), [JMA](https://www.jma.go.jp/), [Environment Canada](https://weather.gc.ca/).
+Alert data by [National Weather Service](https://www.weather.gov/), [MeteoAlarm](https://www.meteoalarm.org/), [JMA](https://www.jma.go.jp/), [Environment Canada](https://weather.gc.ca/), and [WMO SWIC](https://severeweather.wmo.int/).
 Animated icons by [Meteocons](https://github.com/basmilius/weather-icons) (MIT).
