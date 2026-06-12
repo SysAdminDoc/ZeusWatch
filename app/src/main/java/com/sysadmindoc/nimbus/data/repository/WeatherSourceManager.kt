@@ -6,6 +6,7 @@ import com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import kotlinx.coroutines.flow.first
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,6 +37,7 @@ class WeatherSourceManager @Inject constructor(
     private val brightSkyAlertAdapter: BrightSkyAlertAdapter,
     private val metNorwayForecastAdapter: MetNorwayForecastAdapter,
     private val ecccForecastAdapter: EnvironmentCanadaForecastAdapter,
+    private val timeZoneResolver: LocationTimeZoneResolver,
 ) {
 
     // ── Forecast ────────────────────────────────────────────────────────
@@ -44,19 +46,20 @@ class WeatherSourceManager @Inject constructor(
         latitude: Double,
         longitude: Double,
         locationName: String? = null,
+        locationTimeZone: String? = null,
         sourceOverrides: SourceOverrides = SourceOverrides(),
     ): Result<WeatherData> {
         val config = prefs.settings.first().sourceConfig.withOverrides(sourceOverrides)
         val primary = config.forecast
         val fallback = config.forecastFallback
 
-        val result = getForecastFrom(primary, latitude, longitude, locationName)
+        val result = getForecastFrom(primary, latitude, longitude, locationName, locationTimeZone)
         if (result.isSuccess) return result
 
         Log.w(TAG, "Primary forecast source ${primary.displayName} failed, trying fallback", result.exceptionOrNull())
 
         if (fallback != null && fallback != primary) {
-            val fallbackResult = getForecastFrom(fallback, latitude, longitude, locationName)
+            val fallbackResult = getForecastFrom(fallback, latitude, longitude, locationName, locationTimeZone)
             if (fallbackResult.isSuccess) return fallbackResult
             Log.w(TAG, "Fallback forecast source ${fallback.displayName} also failed", fallbackResult.exceptionOrNull())
         }
@@ -69,16 +72,38 @@ class WeatherSourceManager @Inject constructor(
         latitude: Double,
         longitude: Double,
         locationName: String?,
+        locationTimeZone: String?,
     ): Result<WeatherData> = when (provider) {
         WeatherSourceProvider.OPEN_METEO -> openMeteoAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.OPEN_METEO_BOM -> openMeteoBomAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.OPEN_WEATHER_MAP -> owmForecastAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.PIRATE_WEATHER -> pirateWeatherAdapter.getWeather(latitude, longitude, locationName)
-        WeatherSourceProvider.BRIGHT_SKY -> brightSkyForecastAdapter.getWeather(latitude, longitude, locationName)
-        WeatherSourceProvider.MET_NORWAY -> metNorwayForecastAdapter.getWeather(latitude, longitude, locationName)
-        WeatherSourceProvider.ENVIRONMENT_CANADA -> ecccForecastAdapter.getWeather(latitude, longitude, locationName)
+        WeatherSourceProvider.BRIGHT_SKY -> brightSkyForecastAdapter.getWeather(
+            latitude,
+            longitude,
+            locationName,
+            resolveForecastZone(latitude, longitude, locationTimeZone),
+        )
+        WeatherSourceProvider.MET_NORWAY -> metNorwayForecastAdapter.getWeather(
+            latitude,
+            longitude,
+            locationName,
+            resolveForecastZone(latitude, longitude, locationTimeZone),
+        )
+        WeatherSourceProvider.ENVIRONMENT_CANADA -> ecccForecastAdapter.getWeather(
+            latitude,
+            longitude,
+            locationName,
+            resolveForecastZone(latitude, longitude, locationTimeZone),
+        )
         else -> Result.failure(UnsupportedOperationException("${provider.displayName} does not support forecasts"))
     }
+
+    private suspend fun resolveForecastZone(
+        latitude: Double,
+        longitude: Double,
+        locationTimeZone: String?,
+    ): ZoneId = timeZoneResolver.resolveZone(latitude, longitude, locationTimeZone)
 
     // ── Alerts ──────────────────────────────────────────────────────────
 

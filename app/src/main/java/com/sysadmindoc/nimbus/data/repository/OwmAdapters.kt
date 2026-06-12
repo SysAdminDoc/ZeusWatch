@@ -66,6 +66,7 @@ class OwmForecastAdapter @Inject constructor(
                 name = locationName ?: "Unknown",
                 latitude = lat,
                 longitude = lon,
+                timeZone = r.timezone.takeIf { it.toZoneIdOrNull() != null },
             ),
             current = CurrentConditions(
                 temperature = current.temp,

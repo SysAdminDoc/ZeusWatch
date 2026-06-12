@@ -22,6 +22,7 @@ data class LocationInfo(
     val country: String = "",
     val latitude: Double,
     val longitude: Double,
+    val timeZone: String? = null,
 )
 
 @Stable

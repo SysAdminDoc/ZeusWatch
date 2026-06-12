@@ -61,10 +61,11 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         latitude: Double,
         longitude: Double,
         locationName: String? = null,
+        locationZone: ZoneId? = null,
     ): Result<WeatherData> = runCatching {
         val feature = findNearestFeature(latitude, longitude)
             ?: error("No ECCC city within 1.5° of ($latitude, $longitude)")
-        mapToWeatherData(feature, latitude, longitude, locationName, ZoneId.systemDefault())
+        mapToWeatherData(feature, latitude, longitude, locationName, locationZone ?: ZoneId.systemDefault())
     }.onFailure {
         if (it is kotlinx.coroutines.CancellationException) throw it
         Log.w(TAG, "ECCC forecast failed", it)
@@ -132,6 +133,7 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
                 country = "CA",
                 latitude = requestedLat,
                 longitude = requestedLon,
+                timeZone = zone.id,
             ),
             current = CurrentConditions(
                 temperature = cc?.temperatureValue ?: 0.0,

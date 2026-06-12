@@ -81,6 +81,7 @@ class SettingsTransferTest {
             sortOrder = 4,
             forecastSource = WeatherSourceProvider.OPEN_METEO.name,
             alertSource = WeatherSourceProvider.OPEN_METEO.name,
+            timeZone = "America/Los_Angeles",
         ).toEntity()
 
         assertEquals(0L, entity.id)
@@ -88,6 +89,7 @@ class SettingsTransferTest {
         assertEquals(4, entity.sortOrder)
         assertEquals(WeatherSourceProvider.OPEN_METEO.name, entity.forecastSource)
         assertNull(entity.alertSource)
+        assertEquals("America/Los_Angeles", entity.timeZone)
     }
 
     @Test
@@ -100,12 +102,14 @@ class SettingsTransferTest {
             sortOrder = -1,
             isCurrentLocation = true,
             forecastSource = WeatherSourceProvider.MET_NORWAY.name,
+            timeZone = "America/Denver",
         ).toBackup()
 
         assertEquals("My Location", backup.name)
         assertEquals(-1, backup.sortOrder)
         assertTrue(backup.isCurrentLocation)
         assertEquals(WeatherSourceProvider.MET_NORWAY.name, backup.forecastSource)
+        assertEquals("America/Denver", backup.timeZone)
     }
 
     @Test
