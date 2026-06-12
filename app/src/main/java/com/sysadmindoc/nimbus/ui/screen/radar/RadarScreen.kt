@@ -105,6 +105,11 @@ fun RadarScreen(
         isOffline = isOffline,
         selectedLayer = selectedLayer,
         canSubmitReport = canSubmitReport,
+        showReportFab = shouldShowRadarReportFab(
+            canSubmitReport = canSubmitReport,
+            provider = settings.radarProvider,
+            embedded = false,
+        ),
     )
     val actions = RadarActions(
         onBack = onBack,
@@ -178,6 +183,11 @@ fun RadarTab(
         isOffline = isOffline,
         selectedLayer = selectedLayer,
         canSubmitReport = canSubmitReport,
+        showReportFab = shouldShowRadarReportFab(
+            canSubmitReport = canSubmitReport,
+            provider = settings.radarProvider,
+            embedded = true,
+        ),
     )
     val actions = RadarActions(
         onBack = null,
@@ -233,6 +243,7 @@ private data class RadarRenderState(
     val isOffline: Boolean,
     val selectedLayer: RadarLayer,
     val canSubmitReport: Boolean,
+    val showReportFab: Boolean,
 )
 
 private data class RadarActions(
@@ -489,7 +500,7 @@ private fun BoxScope.RadarReportFab(
     state: RadarRenderState,
     actions: RadarActions,
 ) {
-    if (!state.canSubmitReport) return
+    if (!state.showReportFab) return
 
     val reportWeatherConditionsDescription = stringResource(R.string.report_weather_conditions_cd)
     val playbackVisible =
@@ -795,6 +806,14 @@ internal fun canOpenCommunityReport(
     latitude: Double,
     longitude: Double,
 ): Boolean = !isOffline && (latitude != 0.0 || longitude != 0.0)
+
+internal fun shouldShowRadarReportFab(
+    canSubmitReport: Boolean,
+    provider: RadarProvider,
+    embedded: Boolean,
+): Boolean {
+    return canSubmitReport && (!embedded || provider.supportsNativePlayback)
+}
 
 internal fun radarTopControlsSpacing(showBackButton: Boolean): Dp {
     return if (showBackButton) 10.dp else 8.dp
