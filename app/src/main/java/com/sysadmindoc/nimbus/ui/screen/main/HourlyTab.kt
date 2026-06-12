@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -21,18 +22,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import com.sysadmindoc.nimbus.ui.component.HourlyForecastDetailSheet
 import com.sysadmindoc.nimbus.ui.component.WeatherIcon
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
@@ -58,6 +64,15 @@ fun HourlyTab(
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
     val forecastHours = s.hourlyForecastHours
     val dayFormatter = DateTimeFormatter.ofPattern("EEEE, MMM d")
+    var selectedHour by remember { mutableStateOf<HourlyConditions?>(null) }
+
+    selectedHour?.let { hour ->
+        HourlyForecastDetailSheet(
+            hour = hour,
+            referenceTime = referenceTime,
+            onDismiss = { selectedHour = null },
+        )
+    }
 
     val groupedHourly = remember(hourly, forecastHours) {
         hourly.take(forecastHours).groupBy { it.time.toLocalDate() }
@@ -120,6 +135,7 @@ fun HourlyTab(
                     hour = hour,
                     isCurrent = index == currentHourIndex && currentHourIndex >= 0,
                     referenceTime = referenceTime,
+                    onClick = { selectedHour = hour },
                 )
             }
         }
@@ -163,6 +179,7 @@ private fun HourlyRow(
     hour: HourlyConditions,
     isCurrent: Boolean,
     referenceTime: java.time.LocalDateTime?,
+    onClick: () -> Unit,
 ) {
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
     val shape = RoundedCornerShape(12.dp)
@@ -187,6 +204,10 @@ private fun HourlyRow(
                 ),
             )
             .border(1.dp, if (isCurrent) NimbusBlueAccent.copy(alpha = 0.55f) else NimbusCardBorder, shape)
+            .clickable(
+                onClick = onClick,
+                role = Role.Button,
+            )
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

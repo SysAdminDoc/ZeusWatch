@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -28,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -91,6 +93,15 @@ fun HourlyForecastStrip(
     val headerSummary = remember(activeTab, forecastHours, referenceTime, s, context) {
         hourlyHeaderSummary(context, activeTab, forecastHours, referenceTime, s)
     }
+    var selectedHour by remember { mutableStateOf<HourlyConditions?>(null) }
+
+    selectedHour?.let { hour ->
+        HourlyForecastDetailSheet(
+            hour = hour,
+            referenceTime = referenceTime,
+            onDismiss = { selectedHour = null },
+        )
+    }
 
     WeatherCard(
         titleRes = R.string.card_type_hourly_forecast,
@@ -141,13 +152,15 @@ fun HourlyForecastStrip(
                 key = { _, item -> item.time },
                 contentType = { _, _ -> activeTab.name },
             ) { index, hour ->
+                val openDetail = { selectedHour = hour }
+                val highlighted = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime)
                 when (activeTab) {
-                    HourlyTrendTab.TEMPERATURE -> HourlyItemTemp(hour = hour, highlighted = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime), referenceTime = referenceTime)
-                    HourlyTrendTab.FEELS_LIKE -> HourlyItemFeelsLike(hour = hour, highlighted = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime), referenceTime = referenceTime)
-                    HourlyTrendTab.WIND -> HourlyItemWind(hour = hour, highlighted = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime), referenceTime = referenceTime)
-                    HourlyTrendTab.PRECIPITATION -> HourlyItemPrecip(hour = hour, highlighted = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime), referenceTime = referenceTime)
-                    HourlyTrendTab.CLOUD_COVER -> HourlyItemCloudCover(hour = hour, highlighted = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime), referenceTime = referenceTime)
-                    HourlyTrendTab.HUMIDITY -> HourlyItemHumidity(hour = hour, highlighted = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime), referenceTime = referenceTime)
+                    HourlyTrendTab.TEMPERATURE -> HourlyItemTemp(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
+                    HourlyTrendTab.FEELS_LIKE -> HourlyItemFeelsLike(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
+                    HourlyTrendTab.WIND -> HourlyItemWind(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
+                    HourlyTrendTab.PRECIPITATION -> HourlyItemPrecip(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
+                    HourlyTrendTab.CLOUD_COVER -> HourlyItemCloudCover(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
+                    HourlyTrendTab.HUMIDITY -> HourlyItemHumidity(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
                 }
             }
         }
@@ -196,6 +209,7 @@ private fun HourlyItemShell(
     hour: HourlyConditions,
     highlighted: Boolean,
     referenceTime: java.time.LocalDateTime?,
+    onClick: () -> Unit,
     content: @Composable () -> Unit,
 ) {
     val s = LocalUnitSettings.current
@@ -223,6 +237,10 @@ private fun HourlyItemShell(
             .clip(shape)
             .background(cardBrush)
             .border(1.dp, if (highlighted) NimbusBlueAccent.copy(alpha = 0.55f) else NimbusCardBorder, shape)
+            .clickable(
+                onClick = onClick,
+                role = Role.Button,
+            )
             .padding(horizontal = 10.dp, vertical = 14.dp),
     ) {
         Text(
@@ -238,9 +256,14 @@ private fun HourlyItemShell(
 // ── Tab-specific item renderers ─────────────────────────────────────────
 
 @Composable
-private fun HourlyItemTemp(hour: HourlyConditions, highlighted: Boolean, referenceTime: java.time.LocalDateTime?) {
+private fun HourlyItemTemp(
+    hour: HourlyConditions,
+    highlighted: Boolean,
+    referenceTime: java.time.LocalDateTime?,
+    onClick: () -> Unit,
+) {
     val s = LocalUnitSettings.current
-    HourlyItemShell(hour, highlighted, referenceTime) {
+    HourlyItemShell(hour, highlighted, referenceTime, onClick) {
         AnimatedWeatherIcon(
             weatherCode = hour.weatherCode,
             isDay = hour.isDay,
@@ -274,7 +297,12 @@ private fun HourlyItemTemp(hour: HourlyConditions, highlighted: Boolean, referen
 }
 
 @Composable
-private fun HourlyItemFeelsLike(hour: HourlyConditions, highlighted: Boolean, referenceTime: java.time.LocalDateTime?) {
+private fun HourlyItemFeelsLike(
+    hour: HourlyConditions,
+    highlighted: Boolean,
+    referenceTime: java.time.LocalDateTime?,
+    onClick: () -> Unit,
+) {
     val s = LocalUnitSettings.current
     val feelsLike = hour.feelsLike ?: hour.temperature
     val diff = feelsLike - hour.temperature
@@ -283,7 +311,7 @@ private fun HourlyItemFeelsLike(hour: HourlyConditions, highlighted: Boolean, re
         diff < -3 -> NimbusRainBlue   // cooler
         else -> NimbusTextSecondary
     }
-    HourlyItemShell(hour, highlighted, referenceTime) {
+    HourlyItemShell(hour, highlighted, referenceTime, onClick) {
         Text(
             text = WeatherFormatter.formatTemperature(feelsLike, s),
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
@@ -319,12 +347,13 @@ private fun HourlyItemWind(
     hour: HourlyConditions,
     highlighted: Boolean,
     referenceTime: java.time.LocalDateTime?,
+    onClick: () -> Unit,
 ) {
     val s = LocalUnitSettings.current
     val windSpeed = hour.windSpeed ?: 0.0
     val windDir = hour.windDirection
 
-    HourlyItemShell(hour, highlighted, referenceTime) {
+    HourlyItemShell(hour, highlighted, referenceTime, onClick) {
         Text(
             text = WeatherFormatter.formatWindSpeed(windSpeed, s),
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
@@ -356,9 +385,10 @@ private fun HourlyItemPrecip(
     hour: HourlyConditions,
     highlighted: Boolean,
     referenceTime: java.time.LocalDateTime?,
+    onClick: () -> Unit,
 ) {
     val s = LocalUnitSettings.current
-    HourlyItemShell(hour, highlighted, referenceTime) {
+    HourlyItemShell(hour, highlighted, referenceTime, onClick) {
         Text(
             text = "${hour.precipitationProbability}%",
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
@@ -395,6 +425,7 @@ private fun HourlyItemCloudCover(
     hour: HourlyConditions,
     highlighted: Boolean,
     referenceTime: java.time.LocalDateTime?,
+    onClick: () -> Unit,
 ) {
     val cloud = hour.cloudCover ?: 0
     val cloudColor = when {
@@ -403,7 +434,7 @@ private fun HourlyItemCloudCover(
         cloud <= 75 -> NimbusTextSecondary
         else -> NimbusTextTertiary
     }
-    HourlyItemShell(hour, highlighted, referenceTime) {
+    HourlyItemShell(hour, highlighted, referenceTime, onClick) {
         Text(
             text = "$cloud%",
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
@@ -445,6 +476,7 @@ private fun HourlyItemHumidity(
     hour: HourlyConditions,
     highlighted: Boolean,
     referenceTime: java.time.LocalDateTime?,
+    onClick: () -> Unit,
 ) {
     val humidity = hour.humidity ?: 0
     val humidColor = when {
@@ -452,7 +484,7 @@ private fun HourlyItemHumidity(
         humidity > 70 -> NimbusRainBlue     // humid
         else -> NimbusTextSecondary
     }
-    HourlyItemShell(hour, highlighted, referenceTime) {
+    HourlyItemShell(hour, highlighted, referenceTime, onClick) {
         Text(
             text = "$humidity%",
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
