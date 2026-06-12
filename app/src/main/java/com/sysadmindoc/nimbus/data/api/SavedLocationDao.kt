@@ -60,6 +60,13 @@ interface SavedLocationDao {
     @Query("UPDATE saved_locations SET sortOrder = :order WHERE id = :id")
     suspend fun updateSortOrder(id: Long, order: Int)
 
+    @Query("UPDATE saved_locations SET forecastSource = :forecastSource, alertSource = :alertSource WHERE id = :id")
+    suspend fun updateSourceOverrides(
+        id: Long,
+        forecastSource: String?,
+        alertSource: String?,
+    )
+
     @Transaction
     suspend fun reorderAll(orderedIds: List<Long>) {
         orderedIds.forEachIndexed { index, id ->

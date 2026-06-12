@@ -124,7 +124,7 @@ Download from [GitHub Releases](https://github.com/SysAdminDoc/zeuswatch/release
 | **Pirate Weather** | Forecast (fallback) | Global (API key) |
 | **Bright Sky** | Forecast (fallback) | Germany |
 
-The `WeatherSourceManager` supports primary + fallback source per data type with automatic failover. Sources are configurable in Settings with optional API key fields.
+The `WeatherSourceManager` supports primary + fallback source per data type with automatic failover. Sources are configurable globally in Settings, and saved locations can override forecast and alert providers from the Locations screen.
 
 ### Widgets (Jetpack Glance)
 
@@ -175,6 +175,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Multi-Location** | Room database with add/remove/auto-GPS saved locations |
 | **Drag-to-Reorder Locations** | Long-press drag handles to reorder saved locations with batch persistence |
 | **Location Temperature Preview** | Saved location list shows cached temperatures with weather condition icons |
+| **Per-Location Sources** | Saved locations can override forecast and alert providers while falling back to the app defaults when unset |
 | **Share as Text** | Formatted weather summary via system share sheet |
 | **Share as Image** | Rendered dark-themed weather card as PNG |
 | **Persistent Notification** | Always-on notification showing current conditions (toggleable) |
@@ -236,9 +237,9 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 ├──────────────────────────────────────────────────────────────────────────┤
 │  Data Layer                                                              │
 │  ┌───────────────────────────────┐  ┌───────────────────────────────┐   │
-│  │ Retrofit APIs                  │  │ Room Database (v2)             │   │
+│  │ Retrofit APIs                  │  │ Room Database (v3)             │   │
 │  │  Open-Meteo Forecast           │  │  weather_cache                │   │
-│  │  Open-Meteo Geocoding          │  │  saved_locations (sortOrder)  │   │
+│  │  Open-Meteo Geocoding          │  │  saved_locations (+sources)   │   │
 │  │  Open-Meteo Air Quality        │  │                               │   │
 │  │  Open-Meteo minutely_15        │  │ DataStore Preferences         │   │
 │  │  Open-Meteo Historical         │  │  Units, display, cards,       │   │
@@ -407,7 +408,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | **Health** | Migraine alerts with pressure threshold (3.0/5.0/7.0/10.0 hPa/3h) |
 | **Accessibility** | Haptic feedback for alerts |
 | **Visual Effects** | Weather particle animations |
-| **Data Sources** | Primary + fallback per data type, API keys (collapsed by default) |
+| **Data Sources** | App-wide primary + fallback defaults per data type, API keys (collapsed by default) |
 | **Advanced** | Cache TTL (15/30/60/120 min) (collapsed by default) |
 | **About** | Version, data source, license |
 

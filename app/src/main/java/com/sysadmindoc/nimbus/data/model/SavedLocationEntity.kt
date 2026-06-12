@@ -18,4 +18,6 @@ data class SavedLocationEntity(
     val sortOrder: Int = 0,
     val isCurrentLocation: Boolean = false, // GPS-based "My Location"
     val addedAt: Long = System.currentTimeMillis(),
+    val forecastSource: String? = null,
+    val alertSource: String? = null,
 )

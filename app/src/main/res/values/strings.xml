@@ -625,6 +625,11 @@
     <string name="locations_open_weather_cd">Open %1$s weather</string>
     <string name="locations_drag_reorder_cd">Drag to reorder</string>
     <string name="locations_remove_cd">Remove %1$s</string>
+    <string name="locations_source_settings_cd">Source settings for %1$s</string>
+    <string name="locations_source_panel_title">Location source defaults</string>
+    <string name="locations_forecast_source">Forecast</string>
+    <string name="locations_alert_source">Alerts</string>
+    <string name="locations_use_default_source">Use app default</string>
     <string name="locations_already_saved_message">Location already saved</string>
     <string name="locations_no_results_message">No results found</string>
     <string name="locations_search_failed">Search failed. Check your connection and try again.</string>

@@ -143,6 +143,26 @@ class WeatherSourceManagerTest {
         }
     }
 
+    @Test
+    fun getWeatherUsesPerLocationForecastOverrideOverGlobalDefault() = runTest {
+        coEvery { openMeteoBomAdapter.getWeather(any(), any(), any()) } returns Result.success(testWeatherData)
+
+        val result = manager.getWeather(
+            latitude = -33.86,
+            longitude = 151.21,
+            locationName = "Sydney",
+            sourceOverrides = SourceOverrides(forecast = WeatherSourceProvider.OPEN_METEO_BOM),
+        )
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            openMeteoBomAdapter.getWeather(-33.86, 151.21, "Sydney")
+        }
+        coVerify(exactly = 0) {
+            openMeteoAdapter.getWeather(any(), any(), any())
+        }
+    }
+
     // ── Alert Tests ──
 
     @Test
@@ -179,6 +199,22 @@ class WeatherSourceManagerTest {
         coEvery { alertAdapter.getAlerts(any(), any(), any()) } returns Result.success(emptyList())
 
         val result = manager.getAlerts(52.5, 13.4)
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            alertAdapter.getAlerts(52.5, 13.4, AlertSourcePreference.METEOALARM_ONLY)
+        }
+    }
+
+    @Test
+    fun getAlertsUsesPerLocationAlertOverrideOverGlobalDefault() = runTest {
+        coEvery { alertAdapter.getAlerts(any(), any(), any()) } returns Result.success(emptyList())
+
+        val result = manager.getAlerts(
+            latitude = 52.5,
+            longitude = 13.4,
+            sourceOverrides = SourceOverrides(alerts = WeatherSourceProvider.METEOALARM),
+        )
 
         assertTrue(result.isSuccess)
         coVerify(exactly = 1) {

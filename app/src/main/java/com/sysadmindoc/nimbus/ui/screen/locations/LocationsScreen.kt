@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,14 +30,19 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Text
@@ -69,6 +75,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
+import com.sysadmindoc.nimbus.data.repository.WeatherDataType
+import com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider
 import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.component.ScreenHeader
@@ -84,6 +92,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusSurfaceVariant
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.displayNameRes
 
 @Composable
 fun LocationsScreen(
@@ -112,6 +121,12 @@ fun LocationsScreen(
         },
         onRemoveLocation = { viewModel.removeLocation(it) },
         onMoveLocation = { from, to -> viewModel.moveLocation(from, to) },
+        onForecastSourceSelected = { locationId, provider ->
+            viewModel.setForecastSource(locationId, provider)
+        },
+        onAlertSourceSelected = { locationId, provider ->
+            viewModel.setAlertSource(locationId, provider)
+        },
     )
 }
 
@@ -128,6 +143,8 @@ internal fun LocationsContent(
     onAddLocation: (GeocodingResult) -> Unit = {},
     onRemoveLocation: (Long) -> Unit = {},
     onMoveLocation: (Int, Int) -> Unit = { _, _ -> },
+    onForecastSourceSelected: (Long, WeatherSourceProvider?) -> Unit = { _, _ -> },
+    onAlertSourceSelected: (Long, WeatherSourceProvider?) -> Unit = { _, _ -> },
 ) {
     PredictiveBackScaffold(onBack = onBack) {
         val emptySubtitle = stringResource(R.string.locations_empty_subtitle)
@@ -172,6 +189,8 @@ internal fun LocationsContent(
                 onAddLocation = onAddLocation,
                 onRemoveLocation = onRemoveLocation,
                 onMoveLocation = onMoveLocation,
+                onForecastSourceSelected = onForecastSourceSelected,
+                onAlertSourceSelected = onAlertSourceSelected,
             )
         }
     }
@@ -187,6 +206,8 @@ private fun LocationsList(
     onAddLocation: (GeocodingResult) -> Unit,
     onRemoveLocation: (Long) -> Unit,
     onMoveLocation: (Int, Int) -> Unit = { _, _ -> },
+    onForecastSourceSelected: (Long, WeatherSourceProvider?) -> Unit = { _, _ -> },
+    onAlertSourceSelected: (Long, WeatherSourceProvider?) -> Unit = { _, _ -> },
 ) {
     // Track drag state for reordering
     var draggedIndex by remember { mutableIntStateOf(-1) }
@@ -277,6 +298,12 @@ private fun LocationsList(
                     onClick = { onLocationSelected(loc.id) },
                     onRemove = {
                         if (!loc.isCurrentLocation) onRemoveLocation(loc.id)
+                    },
+                    onForecastSourceSelected = { provider ->
+                        onForecastSourceSelected(loc.id, provider)
+                    },
+                    onAlertSourceSelected = { provider ->
+                        onAlertSourceSelected(loc.id, provider)
                     },
                     showDragHandle = !loc.isCurrentLocation,
                     modifier = if (isDragged) {
@@ -486,12 +513,14 @@ private fun SavedLocationItem(
     isDay: Boolean = true,
     onClick: () -> Unit,
     onRemove: () -> Unit,
+    onForecastSourceSelected: (WeatherSourceProvider?) -> Unit = {},
+    onAlertSourceSelected: (WeatherSourceProvider?) -> Unit = {},
     showDragHandle: Boolean = false,
     onDragStart: () -> Unit = {},
     onDrag: (Float) -> Unit = {},
     onDragEnd: () -> Unit = {},
 ) {
-    val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
+    var sourcePanelExpanded by remember(location.id) { mutableStateOf(false) }
     val displayName = if (location.isCurrentLocation) {
         stringResource(R.string.common_my_location)
     } else {
@@ -500,136 +529,382 @@ private fun SavedLocationItem(
     val openWeatherDescription = stringResource(R.string.locations_open_weather_cd, displayName)
     val dragReorderDescription = stringResource(R.string.locations_drag_reorder_cd)
     val removeDescription = stringResource(R.string.locations_remove_cd, location.name)
+    val sourceSettingsDescription = stringResource(R.string.locations_source_settings_cd, location.name)
 
+    Column(modifier = modifier.fillMaxWidth()) {
+        SavedLocationRow(
+            location = location,
+            displayName = displayName,
+            preview = SavedLocationWeatherPreview(
+                temperature = temperature,
+                weatherCode = weatherCode,
+                isDay = isDay,
+            ),
+            sourcePanelExpanded = sourcePanelExpanded,
+            labels = SavedLocationRowLabels(
+                openWeatherDescription = openWeatherDescription,
+                dragReorderDescription = dragReorderDescription,
+                removeDescription = removeDescription,
+                sourceSettingsDescription = sourceSettingsDescription,
+            ),
+            showDragHandle = showDragHandle,
+            actions = SavedLocationRowActions(
+                onClick = onClick,
+                onRemove = onRemove,
+                onSourceToggle = { sourcePanelExpanded = !sourcePanelExpanded },
+                onDragStart = onDragStart,
+                onDrag = onDrag,
+                onDragEnd = onDragEnd,
+            ),
+        )
+
+        AnimatedVisibility(
+            visible = sourcePanelExpanded && !location.isCurrentLocation,
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            LocationSourcePanel(
+                location = location,
+                onForecastSourceSelected = onForecastSourceSelected,
+                onAlertSourceSelected = onAlertSourceSelected,
+            )
+        }
+    }
+}
+
+private data class SavedLocationWeatherPreview(
+    val temperature: Double?,
+    val weatherCode: com.sysadmindoc.nimbus.data.model.WeatherCode?,
+    val isDay: Boolean,
+)
+
+private data class SavedLocationRowLabels(
+    val openWeatherDescription: String,
+    val dragReorderDescription: String,
+    val removeDescription: String,
+    val sourceSettingsDescription: String,
+)
+
+private data class SavedLocationRowActions(
+    val onClick: () -> Unit,
+    val onRemove: () -> Unit,
+    val onSourceToggle: () -> Unit,
+    val onDragStart: () -> Unit,
+    val onDrag: (Float) -> Unit,
+    val onDragEnd: () -> Unit,
+)
+
+@Composable
+private fun SavedLocationRow(
+    location: SavedLocationEntity,
+    displayName: String,
+    preview: SavedLocationWeatherPreview,
+    sourcePanelExpanded: Boolean,
+    showDragHandle: Boolean,
+    labels: SavedLocationRowLabels,
+    actions: SavedLocationRowActions,
+) {
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = if (location.isCurrentLocation) {
-                        listOf(
-                            NimbusBlueAccent.copy(alpha = 0.16f),
-                            NimbusGlassBottom,
-                        )
-                    } else {
-                        listOf(
-                            NimbusGlassTop.copy(alpha = 0.78f),
-                            NimbusSurfaceVariant,
-                        )
-                    },
-                ),
-            )
+            .background(savedLocationBackground(location.isCurrentLocation))
             .border(
                 1.dp,
                 if (location.isCurrentLocation) NimbusBlueAccent.copy(alpha = 0.55f) else NimbusCardBorder,
                 RoundedCornerShape(10.dp),
             )
             .clickable(
-                onClick = onClick,
+                onClick = actions.onClick,
                 role = Role.Button,
             )
-            .semantics {
-                contentDescription = openWeatherDescription
-            }
+            .semantics { contentDescription = labels.openWeatherDescription }
             .padding(horizontal = 16.dp, vertical = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (showDragHandle) {
-            Icon(
-                Icons.Filled.DragHandle,
-                contentDescription = dragReorderDescription,
-                tint = NimbusTextTertiary,
-                modifier = Modifier
-                    .size(20.dp)
-                    .pointerInput(Unit) {
-                        detectDragGesturesAfterLongPress(
-                            onDragStart = { onDragStart() },
-                            onDrag = { change, offset ->
-                                change.consume()
-                                onDrag(offset.y)
-                            },
-                            onDragEnd = { onDragEnd() },
-                            onDragCancel = { onDragEnd() },
-                        )
-                    },
+        LocationLeadingControl(
+            showDragHandle = showDragHandle,
+            dragReorderDescription = labels.dragReorderDescription,
+            onDragStart = actions.onDragStart,
+            onDrag = actions.onDrag,
+            onDragEnd = actions.onDragEnd,
+        )
+        LocationNameBlock(location = location, displayName = displayName)
+        LocationWeatherPreview(
+            weatherCode = preview.weatherCode,
+            isDay = preview.isDay,
+            temperature = preview.temperature,
+        )
+        if (!location.isCurrentLocation) {
+            LocationRowActions(
+                sourcePanelExpanded = sourcePanelExpanded,
+                removeDescription = labels.removeDescription,
+                sourceSettingsDescription = labels.sourceSettingsDescription,
+                onRemove = actions.onRemove,
+                onSourceToggle = actions.onSourceToggle,
             )
-            Spacer(modifier = Modifier.width(8.dp))
-        } else {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(NimbusBlueAccent.copy(alpha = 0.16f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Filled.MyLocation,
-                    contentDescription = null,
-                    tint = NimbusBlueAccent,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-            Spacer(modifier = Modifier.width(10.dp))
         }
+    }
+}
+
+private fun savedLocationBackground(isCurrentLocation: Boolean): Brush {
+    return Brush.verticalGradient(
+        colors = if (isCurrentLocation) {
+            listOf(
+                NimbusBlueAccent.copy(alpha = 0.16f),
+                NimbusGlassBottom,
+            )
+        } else {
+            listOf(
+                NimbusGlassTop.copy(alpha = 0.78f),
+                NimbusSurfaceVariant,
+            )
+        },
+    )
+}
+
+@Composable
+private fun LocationLeadingControl(
+    showDragHandle: Boolean,
+    dragReorderDescription: String,
+    onDragStart: () -> Unit,
+    onDrag: (Float) -> Unit,
+    onDragEnd: () -> Unit,
+) {
+    if (showDragHandle) {
+        Icon(
+            Icons.Filled.DragHandle,
+            contentDescription = dragReorderDescription,
+            tint = NimbusTextTertiary,
+            modifier = Modifier
+                .size(20.dp)
+                .pointerInput(Unit) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { onDragStart() },
+                        onDrag = { change, offset ->
+                            change.consume()
+                            onDrag(offset.y)
+                        },
+                        onDragEnd = { onDragEnd() },
+                        onDragCancel = { onDragEnd() },
+                    )
+                },
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+    } else {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(NimbusBlueAccent.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Filled.MyLocation,
+                contentDescription = null,
+                tint = NimbusBlueAccent,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+    }
+}
+
+@Composable
+private fun RowScope.LocationNameBlock(
+    location: SavedLocationEntity,
+    displayName: String,
+) {
+    Column(modifier = Modifier.weight(1f)) {
+        Text(
+            displayName,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+            color = NimbusTextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        val sub = if (location.isCurrentLocation) {
+            location.name
+        } else {
+            listOfNotNull(
+                location.region.ifBlank { null },
+                location.country.ifBlank { null }
+            ).joinToString(", ")
+        }
+        if (sub.isNotEmpty()) {
+            Text(sub, style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary)
+        }
+    }
+}
+
+@Composable
+private fun LocationWeatherPreview(
+    weatherCode: com.sysadmindoc.nimbus.data.model.WeatherCode?,
+    isDay: Boolean,
+    temperature: Double?,
+) {
+    val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
+    if (weatherCode != null) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(NimbusCardBg)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            com.sysadmindoc.nimbus.ui.component.WeatherIcon(
+                weatherCode = weatherCode,
+                isDay = isDay,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Spacer(modifier = Modifier.width(6.dp))
+    }
+    if (temperature != null) {
+        Text(
+            text = com.sysadmindoc.nimbus.util.WeatherFormatter.formatTemperature(temperature, s),
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+            color = NimbusTextPrimary,
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+    }
+}
+
+@Composable
+private fun LocationRowActions(
+    sourcePanelExpanded: Boolean,
+    removeDescription: String,
+    sourceSettingsDescription: String,
+    onRemove: () -> Unit,
+    onSourceToggle: () -> Unit,
+) {
+    IconButton(
+        onClick = onSourceToggle,
+        modifier = Modifier.size(36.dp),
+    ) {
+        Icon(
+            Icons.Filled.Tune,
+            contentDescription = sourceSettingsDescription,
+            tint = if (sourcePanelExpanded) NimbusBlueAccent else NimbusTextTertiary,
+            modifier = Modifier.size(17.dp),
+        )
+    }
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(NimbusError.copy(alpha = 0.12f))
+            .clickable(
+                onClick = onRemove,
+                role = Role.Button,
+            )
+            .semantics { contentDescription = removeDescription },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Filled.Close, null, tint = NimbusError.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
+    }
+}
+
+@Composable
+private fun LocationSourcePanel(
+    location: SavedLocationEntity,
+    onForecastSourceSelected: (WeatherSourceProvider?) -> Unit,
+    onAlertSourceSelected: (WeatherSourceProvider?) -> Unit,
+) {
+    val forecastSource = WeatherSourceProvider.fromStoredName(
+        location.forecastSource,
+        WeatherDataType.FORECAST,
+    )
+    val alertSource = WeatherSourceProvider.fromStoredName(
+        location.alertSource,
+        WeatherDataType.ALERTS,
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(NimbusCardBg.copy(alpha = 0.82f))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.locations_source_panel_title),
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = NimbusTextSecondary,
+        )
+        LocationSourceDropdown(
+            label = stringResource(R.string.locations_forecast_source),
+            selected = forecastSource,
+            options = WeatherSourceProvider.forType(WeatherDataType.FORECAST),
+            onSelected = onForecastSourceSelected,
+        )
+        LocationSourceDropdown(
+            label = stringResource(R.string.locations_alert_source),
+            selected = alertSource,
+            options = WeatherSourceProvider.forType(WeatherDataType.ALERTS),
+            onSelected = onAlertSourceSelected,
+        )
+    }
+}
+
+@Composable
+private fun LocationSourceDropdown(
+    label: String,
+    selected: WeatherSourceProvider?,
+    options: List<WeatherSourceProvider>,
+    onSelected: (WeatherSourceProvider?) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = selected?.let { stringResource(it.displayNameRes) }
+        ?: stringResource(R.string.locations_use_default_source)
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                displayName,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextTertiary,
+            )
+            Text(
+                text = selectedLabel,
+                style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            val sub = if (location.isCurrentLocation) {
-                location.name
-            } else {
-                listOfNotNull(
-                    location.region.ifBlank { null },
-                    location.country.ifBlank { null }
-                ).joinToString(", ")
-            }
-            if (sub.isNotEmpty()) {
-                Text(sub, style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary)
-            }
         }
-        if (weatherCode != null) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(NimbusCardBg)
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center,
+        Box {
+            TextButton(onClick = { expanded = true }) {
+                Text(selectedLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null)
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
             ) {
-                com.sysadmindoc.nimbus.ui.component.WeatherIcon(
-                    weatherCode = weatherCode,
-                    isDay = isDay,
-                    modifier = Modifier.size(20.dp),
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.locations_use_default_source)) },
+                    onClick = {
+                        expanded = false
+                        onSelected(null)
+                    },
                 )
-            }
-            Spacer(modifier = Modifier.width(6.dp))
-        }
-        if (temperature != null) {
-            Text(
-                text = com.sysadmindoc.nimbus.util.WeatherFormatter.formatTemperature(temperature, s),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                color = NimbusTextPrimary,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-        if (!location.isCurrentLocation) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(NimbusError.copy(alpha = 0.12f))
-                    .clickable(
-                        onClick = onRemove,
-                        role = Role.Button,
+                options.forEach { provider ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(provider.displayNameRes)) },
+                        onClick = {
+                            expanded = false
+                            onSelected(provider)
+                        },
                     )
-                    .semantics { contentDescription = removeDescription },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Filled.Close, null, tint = NimbusError.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
+                }
             }
         }
     }
