@@ -96,6 +96,7 @@ class AlertCheckWorker @AssistedInject constructor(
                 location.latitude,
                 location.longitude,
                 location.sourceOverrides,
+                includeMeteredSources = false,
             )
             val alerts = result.getOrNull()
             if (alerts == null) {

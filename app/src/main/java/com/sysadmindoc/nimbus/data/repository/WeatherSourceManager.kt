@@ -86,18 +86,19 @@ class WeatherSourceManager @Inject constructor(
         latitude: Double,
         longitude: Double,
         sourceOverrides: SourceOverrides = SourceOverrides(),
+        includeMeteredSources: Boolean = true,
     ): Result<List<WeatherAlert>> {
         val config = prefs.settings.first().sourceConfig.withOverrides(sourceOverrides)
         val primary = config.alerts
         val fallback = config.alertsFallback
 
-        val result = getAlertsFrom(primary, latitude, longitude)
+        val result = getAlertsFrom(primary, latitude, longitude, includeMeteredSources)
         if (result.isSuccess) return result
 
         Log.w(TAG, "Primary alert source ${primary.displayName} failed, trying fallback", result.exceptionOrNull())
 
         if (fallback != null && fallback != primary) {
-            val fallbackResult = getAlertsFrom(fallback, latitude, longitude)
+            val fallbackResult = getAlertsFrom(fallback, latitude, longitude, includeMeteredSources)
             if (fallbackResult.isSuccess) return fallbackResult
             Log.w(TAG, "Fallback alert source ${fallback.displayName} also failed", fallbackResult.exceptionOrNull())
         }
@@ -109,6 +110,7 @@ class WeatherSourceManager @Inject constructor(
         provider: WeatherSourceProvider,
         latitude: Double,
         longitude: Double,
+        includeMeteredSources: Boolean,
     ): Result<List<WeatherAlert>> = when (provider) {
         WeatherSourceProvider.NWS,
         WeatherSourceProvider.METEOALARM,
@@ -127,6 +129,7 @@ class WeatherSourceManager @Inject constructor(
                 latitude = latitude,
                 longitude = longitude,
                 preferenceOverride = override,
+                includeMeteredSources = includeMeteredSources,
             )
         }
         WeatherSourceProvider.OPEN_WEATHER_MAP -> owmAlertAdapter.getAlerts(latitude, longitude)
@@ -244,7 +247,13 @@ class AlertSourceManagerAdapter @Inject constructor(
         latitude: Double,
         longitude: Double,
         preferenceOverride: AlertSourcePreference? = null,
-    ): Result<List<WeatherAlert>> = alertRepository.getAlerts(latitude, longitude, preferenceOverride)
+        includeMeteredSources: Boolean = true,
+    ): Result<List<WeatherAlert>> = alertRepository.getAlerts(
+        latitude = latitude,
+        longitude = longitude,
+        preferenceOverride = preferenceOverride,
+        includeMeteredSources = includeMeteredSources,
+    )
 }
 
 /**
