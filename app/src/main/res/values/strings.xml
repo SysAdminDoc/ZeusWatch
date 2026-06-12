@@ -193,6 +193,7 @@
     <string name="card_type_nowcast">Rain Next Hour</string>
     <string name="card_type_hourly_forecast">Hourly Forecast</string>
     <string name="card_type_temperature_graph">Temperature Trend</string>
+    <string name="card_type_forecast_evolution">Forecast Evolution</string>
     <string name="card_type_daily_forecast">Daily Forecast</string>
     <string name="card_type_uv_index">UV Index</string>
     <string name="card_type_wind_compass">Wind</string>
@@ -330,6 +331,18 @@
     <string name="forecast_hourly_cloud_elevated">Cloud cover stays elevated for a good part of the day.</string>
     <string name="forecast_hourly_cloud_overcast">Expect mostly overcast skies through this stretch.</string>
     <string name="forecast_hourly_humidity_range">Humidity runs between %1$d%% and %2$d%% over the next %3$d hours.</string>
+    <string name="forecast_evolution_loading_title">Checking forecast shifts</string>
+    <string name="forecast_evolution_loading_message">Comparing the latest Open-Meteo model runs.</string>
+    <string name="forecast_evolution_unavailable_title">Forecast evolution unavailable</string>
+    <string name="forecast_evolution_unavailable_message">Recent model runs are not ready for this location yet.</string>
+    <string name="forecast_evolution_model">Open-Meteo %1$s</string>
+    <string name="forecast_evolution_runs">Latest %1$s vs previous %2$s UTC</string>
+    <string name="forecast_evolution_temp_shift">Avg temp shift</string>
+    <string name="forecast_evolution_rain_shift">Avg rain risk shift</string>
+    <string name="forecast_evolution_temp_delta">%1$s</string>
+    <string name="forecast_evolution_rain_delta">%1$+d%%</string>
+    <string name="forecast_evolution_point">%1$s: %2$s, %3$s rain</string>
+    <string name="forecast_evolution_semantics">Forecast evolution. Latest run compared with previous run. Average temperature shift %1$s. Average rain risk shift %2$s.</string>
     <string name="details_intro">A fast read on moisture, light, pressure, and visibility so the rest of the forecast is easier to act on.</string>
     <string name="details_snow_depth">Snow Depth</string>
     <string name="summary_chip_live_conditions">Live conditions</string>

@@ -8,7 +8,7 @@
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 ![Build](https://github.com/SysAdminDoc/zeuswatch/actions/workflows/build.yml/badge.svg)
 
-> A free, open-source Android weather app with a premium dark UI, 28 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, Environment Canada, and WMO SWIC.
+> A free, open-source Android weather app with a premium dark UI, 29 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, Environment Canada, and WMO SWIC.
 
 ## Screenshots
 
@@ -79,6 +79,7 @@ Download from [GitHub Releases](https://github.com/SysAdminDoc/zeuswatch/release
 | **Precipitation Forecast** | 24-hour precipitation probability bars with peak callout and accumulation total |
 | **Pressure Trend** | 24-hour barometric pressure line graph with trend direction and delta |
 | **Wind Forecast** | 24-hour wind speed line graph with gust overlay bars and peak callout |
+| **Forecast Evolution** | Optional Open-Meteo Single Runs card compares recent model runs for temp/rain-risk deltas |
 | **Clothing Suggestions** | Rule-based outfit recommendations from feels-like temp, rain, snow, UV, wind |
 | **Pet Safety** | Pavement temperature estimates, heat stress, cold exposure, storm anxiety alerts |
 
@@ -114,7 +115,7 @@ Download from [GitHub Releases](https://github.com/SysAdminDoc/zeuswatch/release
 
 | Source | Data Types | Region |
 |--------|------------|--------|
-| **Open-Meteo** | Forecast, AQI, Pollen, Minutely, Historical | Global |
+| **Open-Meteo** | Forecast, AQI, Pollen, Minutely, Historical, Single Runs | Global |
 | **NWS** | Alerts | United States |
 | **MeteoAlarm** | Alerts | 31 EU countries |
 | **JMA** | Alerts | Japan |
@@ -148,7 +149,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Icon Style** | Meteocons Animated (Lottie, default) / Material Icons / Custom Icon Packs |
 | **Theme Mode** | Static Dark / Weather Adaptive (accent colors shift: amber for sun, blue for rain, purple for storms) |
 | **Weather Summary** | AI-Generated (Gemini Nano, default) / Standard template |
-| **Card Visibility** | Toggle each of the 25 card types on/off |
+| **Card Visibility** | Toggle each of the 29 card types on/off |
 | **Card Ordering** | Reorderable card list in Settings with move up/down arrows |
 | **Temperature** | Fahrenheit / Celsius |
 | **Wind Speed** | mph / km/h / m/s / knots |
@@ -211,7 +212,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 │  │+ViewModel│ │+ViewModel │ │ + VM     │ │+ VM      │ │+ ViewModel   │  │
 │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └──────┬───────┘  │
 │       │            │            │            │               │           │
-│  25 Card Types via LazyColumn items()                                    │
+│  29 Card Types via LazyColumn items()                                    │
 │  WeatherSummary | NowcastCard | RadarPreview | HourlyStrip | TempGraph  │
 │  DailyForecast | UvIndexBar | WindCompass | AqiCard | PollenCard | ...   │
 │  ClothingSuggestion | PetSafety | DrivingAlert | HealthAlert | ...      │
@@ -243,8 +244,9 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 │  │  Open-Meteo Air Quality        │  │                               │   │
 │  │  Open-Meteo minutely_15        │  │ DataStore Preferences         │   │
 │  │  Open-Meteo Historical         │  │  Units, display, cards,       │   │
-│  │  RainViewer Radar Tiles        │  │  notifications, health,       │   │
-│  │  NWS / MeteoAlarm / JMA / ECCC │  │  haptics, seen alert IDs,    │   │
+│  │  Open-Meteo Single Runs        │  │  notifications, health,       │   │
+│  │  RainViewer Radar Tiles        │  │  source defaults, haptics,    │   │
+│  │  NWS / MeteoAlarm / JMA / ECCC │  │  seen alert IDs, widgets      │   │
 │  │  Blitzortung WebSocket         │  │  widget location prefs       │   │
 │  │  Firebase Firestore             │  │                               │   │
 │  └───────────────────────────────┘  └───────────────────────────────┘   │
@@ -267,6 +269,7 @@ All core APIs are free with no keys required:
 |-----|---------|------------|
 | [Open-Meteo Forecast](https://open-meteo.com/) | Current, hourly (48-72h), daily (16d), minutely_15 nowcasting | 10,000/day |
 | [Open-Meteo Historical](https://open-meteo.com/en/docs/historical-weather-api) | Yesterday's weather for comparison | 10,000/day |
+| [Open-Meteo Single Runs](https://open-meteo.com/en/docs/single-runs-api) | Optional forecast-evolution model-run comparison | No key required |
 | [Open-Meteo Geocoding](https://open-meteo.com/en/docs/geocoding-api) | Location search + reverse geocode | 10,000/day |
 | [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api) | AQI, pollutants, pollen (6 species), 5-day daily forecast | 10,000/day |
 | [RainViewer](https://www.rainviewer.com/api/weather-maps-api.html) | Radar tile images (past 2h + 30min forecast) | Fair use |
@@ -325,7 +328,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 ├── data/
 │   ├── api/                     # Retrofit services (8), Room DAOs, database
 │   ├── model/                   # Domain models, Room entities, API DTOs
-│   ├── repository/              # Repositories (7), UserPreferences, CardConfig
+│   ├── repository/              # Repositories, UserPreferences, CardConfig
 │   │   ├── WeatherRepository    # Direct fetch + cache + history + minutely
 │   │   ├── WeatherSourceManager # Multi-source primary/fallback adapter system
 │   │   ├── AlertRepository      # Country-auto-detecting multi-source alerts
@@ -401,7 +404,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | Section | Options |
 |---------|---------|
 | **Display** | Radar provider, icon style (Meteocons/Material/Custom), theme mode, summary style (AI/template) |
-| **Cards** | Toggle + reorder each of 25 card types with move up/down arrows |
+| **Cards** | Toggle + reorder each of 29 card types with move up/down arrows |
 | **Units** | Temperature, wind, pressure, precipitation, visibility, time format |
 | **Notifications** | Alert notifications (severity threshold, multi-location, source preference), persistent weather, nowcasting, driving, health |
 | **Data Display** | Hourly range (48/72h), snowfall, CAPE, sunshine, golden hour, Beaufort colors, outdoor score, yesterday comparison |
@@ -412,11 +415,11 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | **Advanced** | Cache TTL (15/30/60/120 min) (collapsed by default) |
 | **About** | Version, data source, license |
 
-### Card Types (25)
+### Card Types (29)
 
 All cards can be independently shown/hidden and reordered:
 
-Weather Summary, Radar Preview, Rain Next Hour, Hourly Forecast, Temperature Graph, Daily Forecast, UV Index, Wind Compass, Air Quality, Pollen, Outdoor Activity Score, Snowfall, Severe Weather Potential, Golden Hour, Sunshine Duration, Driving Conditions, Health Alerts, Moon Phase, Humidity & Comfort, Precipitation Forecast, Pressure Trend, Wind Forecast, Today's Details, Clothing Suggestions, Pet Safety
+Weather Summary, Radar Preview, Rain Next Hour, Hourly Forecast, Temperature Graph, Forecast Evolution, Daily Forecast, UV Index, Wind Compass, Air Quality, Pollen, Outdoor Activity Score, Snowfall, Severe Weather Potential, Golden Hour, Sunshine Duration, Driving Conditions, Health Alerts, What to Wear, Pet Safety, Moon Phase, Humidity & Comfort, Precipitation Forecast, Pressure Trend, Wind Forecast, Today's Details, Cloud Cover, Visibility, On This Day
 
 ---
 
@@ -486,7 +489,7 @@ maintained locally in `RESEARCH.md`. Historical phase-1 research remains in
 [docs/research-archive.md](docs/research-archive.md).
 
 **Implemented through v1.5.0:**
-- 25 dynamic card types with user-configurable order and visibility
+- 29 dynamic card types with user-configurable order and visibility
 - Gemini Nano AI weather summaries enabled by default (with template fallback)
 - Animated Meteocons Lottie icons enabled by default
 - Sequential permission flow: Location -> Notifications -> Background Location

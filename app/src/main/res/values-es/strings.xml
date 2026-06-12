@@ -192,6 +192,7 @@
     <string name="card_type_nowcast">Lluvia en la proxima hora</string>
     <string name="card_type_hourly_forecast">Pronostico por hora</string>
     <string name="card_type_temperature_graph">Tendencia de temperatura</string>
+    <string name="card_type_forecast_evolution">Evolucion del pronostico</string>
     <string name="card_type_daily_forecast">Pronostico diario</string>
     <string name="card_type_uv_index">Indice UV</string>
     <string name="card_type_wind_compass">Viento</string>
@@ -329,6 +330,18 @@
     <string name="forecast_hourly_cloud_elevated">La nubosidad se mantiene elevada durante buena parte del dia.</string>
     <string name="forecast_hourly_cloud_overcast">Espera cielos mayormente cubiertos durante este tramo.</string>
     <string name="forecast_hourly_humidity_range">La humedad va de %1$d%% a %2$d%% en las proximas %3$d horas.</string>
+    <string name="forecast_evolution_loading_title">Revisando cambios del pronostico</string>
+    <string name="forecast_evolution_loading_message">Comparando las ejecuciones mas recientes del modelo Open-Meteo.</string>
+    <string name="forecast_evolution_unavailable_title">Evolucion del pronostico no disponible</string>
+    <string name="forecast_evolution_unavailable_message">Las ejecuciones recientes del modelo aun no estan listas para esta ubicacion.</string>
+    <string name="forecast_evolution_model">Open-Meteo %1$s</string>
+    <string name="forecast_evolution_runs">Ultima %1$s vs anterior %2$s UTC</string>
+    <string name="forecast_evolution_temp_shift">Cambio temp. prom.</string>
+    <string name="forecast_evolution_rain_shift">Cambio riesgo lluvia prom.</string>
+    <string name="forecast_evolution_temp_delta">%1$s</string>
+    <string name="forecast_evolution_rain_delta">%1$+d%%</string>
+    <string name="forecast_evolution_point">%1$s: %2$s, %3$s lluvia</string>
+    <string name="forecast_evolution_semantics">Evolucion del pronostico. Ultima ejecucion comparada con la anterior. Cambio promedio de temperatura %1$s. Cambio promedio de riesgo de lluvia %2$s.</string>
     <string name="details_intro">Una lectura rapida de humedad, luz, presion y visibilidad para entender mejor el resto del pronostico.</string>
     <string name="details_snow_depth">Profundidad de nieve</string>
     <string name="summary_chip_live_conditions">Condiciones en vivo</string>

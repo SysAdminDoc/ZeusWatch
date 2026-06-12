@@ -93,6 +93,7 @@ import com.sysadmindoc.nimbus.ui.component.AqiCard
 import com.sysadmindoc.nimbus.ui.component.ClothingSuggestionCard
 import com.sysadmindoc.nimbus.ui.component.CurrentConditionsHeader
 import com.sysadmindoc.nimbus.ui.component.DailyForecastList
+import com.sysadmindoc.nimbus.ui.component.ForecastEvolutionCard
 import com.sysadmindoc.nimbus.ui.component.HourlyForecastStrip
 import com.sysadmindoc.nimbus.ui.component.LocalAdaptiveLayout
 import com.sysadmindoc.nimbus.ui.component.LocalUnitSettings
@@ -987,6 +988,7 @@ private val FORECAST_CARD_TYPES = setOf(
     CardType.NOWCAST,
     CardType.HOURLY_FORECAST,
     CardType.TEMPERATURE_GRAPH,
+    CardType.FORECAST_EVOLUTION,
     CardType.DAILY_FORECAST,
 )
 
@@ -1078,6 +1080,28 @@ private fun RenderForecastCard(
                     modifier = modifier,
                     normalHigh = avgHigh,
                     normalLow = avgLow,
+                )
+            }
+        }
+        CardType.FORECAST_EVOLUTION -> {
+            when {
+                context.state.forecastEvolution != null -> ForecastEvolutionCard(
+                    data = context.state.forecastEvolution,
+                    modifier = modifier,
+                )
+                context.state.isForecastEvolutionLoading -> InlineNoticeCard(
+                    title = stringResource(R.string.forecast_evolution_loading_title),
+                    message = stringResource(R.string.forecast_evolution_loading_message),
+                    icon = Icons.Filled.Refresh,
+                    tint = NimbusBlueAccent,
+                    modifier = modifier,
+                )
+                context.state.forecastEvolutionUnavailable -> InlineNoticeCard(
+                    title = stringResource(R.string.forecast_evolution_unavailable_title),
+                    message = stringResource(R.string.forecast_evolution_unavailable_message),
+                    icon = Icons.Filled.CloudOff,
+                    tint = NimbusTextSecondary,
+                    modifier = modifier,
                 )
             }
         }

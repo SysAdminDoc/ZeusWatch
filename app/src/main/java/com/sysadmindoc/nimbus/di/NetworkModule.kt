@@ -19,6 +19,7 @@ import com.sysadmindoc.nimbus.data.api.NwsAlertAdapter
 import com.sysadmindoc.nimbus.data.api.NwsAlertApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoArchiveApi
+import com.sysadmindoc.nimbus.data.api.OpenMeteoSingleRunApi
 import com.sysadmindoc.nimbus.data.api.OpenWeatherMapApi
 import com.sysadmindoc.nimbus.data.api.PirateWeatherApi
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
@@ -196,6 +197,23 @@ object NetworkModule {
     @Singleton
     fun provideOpenMeteoArchiveApi(@Named("archive") retrofit: Retrofit): OpenMeteoArchiveApi {
         return retrofit.create(OpenMeteoArchiveApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    @Named("single_runs")
+    fun provideSingleRunsRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(OpenMeteoSingleRunApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOpenMeteoSingleRunApi(@Named("single_runs") retrofit: Retrofit): OpenMeteoSingleRunApi {
+        return retrofit.create(OpenMeteoSingleRunApi::class.java)
     }
 
     @Provides

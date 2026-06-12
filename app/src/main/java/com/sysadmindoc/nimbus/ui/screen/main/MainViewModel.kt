@@ -28,6 +28,9 @@ import com.sysadmindoc.nimbus.util.WeatherSummaryEngine
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import com.sysadmindoc.nimbus.data.repository.AirQualityRepository
 import com.sysadmindoc.nimbus.data.repository.AlertRepository
+import com.sysadmindoc.nimbus.data.repository.CardType
+import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionData
+import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionRepository
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.OnThisDayRepository
@@ -82,6 +85,7 @@ data class MainViewModelDependencies @Inject constructor(
     val summaryEngine: SummaryEngine,
     val connectivityObserver: ConnectivityObserver,
     val onThisDayRepository: OnThisDayRepository,
+    val forecastEvolutionRepository: ForecastEvolutionRepository,
     val wearSyncManager: WearSyncManager,
     @DefaultDispatcher val defaultDispatcher: CoroutineDispatcher,
 )
@@ -103,6 +107,7 @@ class MainViewModel @Inject constructor(
     private val summaryEngine = dependencies.summaryEngine
     private val connectivityObserver = dependencies.connectivityObserver
     private val onThisDayRepository = dependencies.onThisDayRepository
+    private val forecastEvolutionRepository = dependencies.forecastEvolutionRepository
     private val wearSyncManager = dependencies.wearSyncManager
     private val defaultDispatcher = dependencies.defaultDispatcher
     private val _uiState = MutableStateFlow(MainUiState())
@@ -150,6 +155,9 @@ class MainViewModel @Inject constructor(
                 }
                 val prior = previousSettings
                 previousSettings = settings
+                if (prior != null) {
+                    handleForecastEvolutionSettingChange(prior, settings)
+                }
                 // Derived data (summary, golden hour, driving/health alerts)
                 // bakes units and thresholds in at compute time — recompute it
                 // when a relevant setting changes, otherwise it stays stale
@@ -181,6 +189,28 @@ class MainViewModel @Inject constructor(
             old.healthAlertsEnabled != new.healthAlertsEnabled ||
             old.migraineAlerts != new.migraineAlerts ||
             old.migrainePressureThreshold != new.migrainePressureThreshold
+
+    private fun handleForecastEvolutionSettingChange(old: NimbusSettings, new: NimbusSettings) {
+        val wasEnabled = old.isCardEnabled(CardType.FORECAST_EVOLUTION)
+        val isEnabled = new.isCardEnabled(CardType.FORECAST_EVOLUTION)
+        when {
+            !wasEnabled && isEnabled -> {
+                val lat = activeLatitude ?: return
+                val lon = activeLongitude ?: return
+                val requestId = weatherRequestCounter.get()
+                viewModelScope.launch { fetchForecastEvolution(lat, lon, requestId) }
+            }
+            wasEnabled && !isEnabled -> {
+                _uiState.update {
+                    it.copy(
+                        forecastEvolution = null,
+                        isForecastEvolutionLoading = false,
+                        forecastEvolutionUnavailable = false,
+                    )
+                }
+            }
+        }
+    }
 
     // ── Saved Locations (for HorizontalPager) ────────────────────────────
 
@@ -414,6 +444,9 @@ class MainViewModel @Inject constructor(
                         launch { fetchAstronomy(data, lat, lon, requestId) }
                         launch { fetchRadarPreview(lat, lon, requestId) }
                         launch { fetchNowcast(lat, lon, requestId) }
+                        if (_uiState.value.settings.isCardEnabled(CardType.FORECAST_EVOLUTION)) {
+                            launch { fetchForecastEvolution(lat, lon, requestId) }
+                        }
                     }
                     if (!isLatestWeatherRequest(requestId)) return@fold
                     // Sync to watch after all data is available
@@ -566,6 +599,42 @@ class MainViewModel @Inject constructor(
             if (e is CancellationException) throw e
             Log.w(TAG, "fetchNowcast failed", e)
         }
+    }
+
+    private suspend fun fetchForecastEvolution(lat: Double, lon: Double, requestId: Long) {
+        if (!isLatestWeatherRequest(requestId)) return
+        _uiState.update {
+            it.copy(
+                isForecastEvolutionLoading = true,
+                forecastEvolutionUnavailable = false,
+                forecastEvolution = null,
+            )
+        }
+        forecastEvolutionRepository.getForecastEvolution(lat, lon).fold(
+            onSuccess = { evolution ->
+                if (isLatestWeatherRequest(requestId)) {
+                    _uiState.update {
+                        it.copy(
+                            forecastEvolution = evolution,
+                            isForecastEvolutionLoading = false,
+                            forecastEvolutionUnavailable = false,
+                        )
+                    }
+                }
+            },
+            onFailure = { e ->
+                if (isLatestWeatherRequest(requestId)) {
+                    Log.w(TAG, "Forecast evolution unavailable", e)
+                    _uiState.update {
+                        it.copy(
+                            forecastEvolution = null,
+                            isForecastEvolutionLoading = false,
+                            forecastEvolutionUnavailable = true,
+                        )
+                    }
+                }
+            },
+        )
     }
 
     // ── On This Day (historical same-date snapshot) ──────────────────────
@@ -947,6 +1016,9 @@ data class MainUiState(
     val goldenHourTimes: Pair<String, String>? = null,
     val isOffline: Boolean = false,
     val onThisDay: com.sysadmindoc.nimbus.data.model.OnThisDayData? = null,
+    val forecastEvolution: ForecastEvolutionData? = null,
+    val isForecastEvolutionLoading: Boolean = false,
+    val forecastEvolutionUnavailable: Boolean = false,
 )
 
 private data class DerivedWeatherState(
@@ -977,4 +1049,10 @@ private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
     petSafetyAlerts = persistentListOf(),
     goldenHourTimes = null,
     onThisDay = null,
+    forecastEvolution = null,
+    isForecastEvolutionLoading = false,
+    forecastEvolutionUnavailable = false,
 )
+
+private fun NimbusSettings.isCardEnabled(cardType: CardType): Boolean =
+    cardType.name !in disabledCards
