@@ -1,10 +1,16 @@
 package com.sysadmindoc.nimbus.ui.component
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,9 +39,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -67,15 +76,35 @@ fun GlassActionButton(
     highlighted: Boolean = false,
 ) {
     val shape = RoundedCornerShape(10.dp)
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val borderColor by animateColorAsState(
+        targetValue = when {
+            highlighted -> NimbusBlueAccent.copy(alpha = 0.52f)
+            pressed -> NimbusBlueAccent.copy(alpha = 0.36f)
+            else -> NimbusCardBorder
+        },
+        animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing),
+        label = "glassActionBorder",
+    )
+    val iconTint by animateColorAsState(
+        targetValue = if (highlighted || pressed) NimbusTextPrimary else NimbusTextPrimary.copy(alpha = 0.88f),
+        animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing),
+        label = "glassActionIcon",
+    )
     Box(
         modifier = modifier
             .size(48.dp)
+            .graphicsLayer {
+                scaleX = if (pressed) 0.97f else 1f
+                scaleY = if (pressed) 0.97f else 1f
+            }
             .clip(shape)
             .background(
                 Brush.verticalGradient(
-                    colors = if (highlighted) {
+                    colors = if (highlighted || pressed) {
                         listOf(
-                            NimbusBlueAccent.copy(alpha = 0.18f),
+                            NimbusBlueAccent.copy(alpha = if (pressed) 0.24f else 0.18f),
                             NimbusGlassBottom,
                         )
                     } else {
@@ -88,13 +117,15 @@ fun GlassActionButton(
             )
             .border(
                 width = 1.dp,
-                color = if (highlighted) NimbusBlueAccent.copy(alpha = 0.42f) else NimbusCardBorder,
+                color = borderColor,
                 shape = shape,
             )
             .semantics {
                 this.contentDescription = contentDescription
             }
             .clickable(
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = onClick,
                 role = Role.Button,
             ),
@@ -103,7 +134,7 @@ fun GlassActionButton(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = NimbusTextPrimary.copy(alpha = 0.92f),
+            tint = iconTint,
             modifier = Modifier.size(20.dp),
         )
     }
@@ -375,6 +406,41 @@ fun NimbusSelectableSegment(
     val minHeight = if (compact) 40.dp else 48.dp
     val horizontalPadding = if (compact) 12.dp else 14.dp
     val verticalPadding = if (compact) 8.dp else 10.dp
+    val containerTop by animateColorAsState(
+        targetValue = if (selected) tint.copy(alpha = 0.26f) else NimbusGlassTop.copy(alpha = 0.64f),
+        animationSpec = tween(durationMillis = 170, easing = FastOutSlowInEasing),
+        label = "segmentTop",
+    )
+    val containerBottom by animateColorAsState(
+        targetValue = if (selected) NimbusGlassBottom else NimbusCardBg,
+        animationSpec = tween(durationMillis = 170, easing = FastOutSlowInEasing),
+        label = "segmentBottom",
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (selected) tint.copy(alpha = 0.56f) else NimbusCardBorder,
+        animationSpec = tween(durationMillis = 170, easing = FastOutSlowInEasing),
+        label = "segmentBorder",
+    )
+    val indicatorColor by animateColorAsState(
+        targetValue = if (selected) tint else NimbusTextTertiary.copy(alpha = 0.42f),
+        animationSpec = tween(durationMillis = 170, easing = FastOutSlowInEasing),
+        label = "segmentIndicator",
+    )
+    val indicatorSize by animateDpAsState(
+        targetValue = if (selected) 8.dp else 5.dp,
+        animationSpec = tween(durationMillis = 170, easing = FastOutSlowInEasing),
+        label = "segmentIndicatorSize",
+    )
+    val textColor by animateColorAsState(
+        targetValue = if (selected) NimbusTextPrimary else NimbusTextSecondary,
+        animationSpec = tween(durationMillis = 170, easing = FastOutSlowInEasing),
+        label = "segmentText",
+    )
+    val iconTint by animateColorAsState(
+        targetValue = if (selected) NimbusTextPrimary else NimbusTextTertiary,
+        animationSpec = tween(durationMillis = 170, easing = FastOutSlowInEasing),
+        label = "segmentIcon",
+    )
 
     Row(
         modifier = modifier
@@ -382,20 +448,10 @@ fun NimbusSelectableSegment(
             .clip(shape)
             .background(
                 Brush.verticalGradient(
-                    colors = if (selected) {
-                        listOf(
-                            tint.copy(alpha = 0.26f),
-                            NimbusGlassBottom,
-                        )
-                    } else {
-                        listOf(
-                            NimbusGlassTop.copy(alpha = 0.64f),
-                            NimbusCardBg,
-                        )
-                    },
+                    colors = listOf(containerTop, containerBottom),
                 ),
             )
-            .border(1.dp, if (selected) tint.copy(alpha = 0.56f) else NimbusCardBorder, shape)
+            .border(1.dp, borderColor, shape)
             .selectable(
                 selected = selected,
                 onClick = onClick,
@@ -412,17 +468,25 @@ fun NimbusSelectableSegment(
         if (showIndicator) {
             Box(
                 modifier = Modifier
-                    .size(if (selected) 9.dp else 7.dp)
+                    .size(10.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(if (selected) tint else NimbusTextTertiary.copy(alpha = 0.42f)),
-            )
+                    .background(Color.Transparent),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(indicatorSize)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(indicatorColor),
+                )
+            }
             Spacer(modifier = Modifier.width(8.dp))
         }
         if (leadingIcon != null) {
             Icon(
                 imageVector = leadingIcon,
                 contentDescription = null,
-                tint = if (selected) NimbusTextPrimary else NimbusTextTertiary,
+                tint = iconTint,
                 modifier = Modifier.size(14.dp),
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -430,7 +494,7 @@ fun NimbusSelectableSegment(
         Text(
             text = label,
             style = if (compact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
-            color = if (selected) NimbusTextPrimary else NimbusTextSecondary,
+            color = textColor,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             maxLines = maxLines,
             overflow = TextOverflow.Ellipsis,
@@ -475,6 +539,7 @@ fun InlineNoticeCard(
                 ),
             )
             .border(1.dp, tint.copy(alpha = 0.22f), RoundedCornerShape(10.dp))
+            .semantics(mergeDescendants = true) {}
             .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -499,12 +564,16 @@ fun InlineNoticeCard(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
                 color = NimbusTextPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
