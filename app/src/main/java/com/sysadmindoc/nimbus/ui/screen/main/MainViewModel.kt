@@ -310,6 +310,11 @@ class MainViewModel @Inject constructor(
             try {
                 if (!isLatestWeatherRequest(requestId)) return@launch
 
+                useGpsLocation = true
+                activeLocationId = null
+                activeLocationName = null
+                activeSourceOverrides = SourceOverrides()
+
                 beginWeatherLoad(clearDisplayedWeather)
 
                 if (!locationProvider.hasLocationPermission) {
@@ -416,6 +421,11 @@ class MainViewModel @Inject constructor(
                             locationRepository.ensureCurrentLocation(lat, lon, data.location.name)
                         } catch (e: Exception) {
                             Log.w(TAG, "Failed to update current location entry", e)
+                        }
+                        try {
+                            prefs.saveBackgroundAlertLocation(lat, lon, data.location.name)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to persist background alert location", e)
                         }
                     }
                     if (!isLatestWeatherRequest(requestId)) return@fold

@@ -22,11 +22,11 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Periodic background worker that fires proactive precipitation notifications
- * for the user's last viewed location ("Rain starts in 15 min" / "Rain stops soon").
+ * for the user's GPS-derived background alert location ("Rain starts in 15 min" / "Rain stops soon").
  *
  * Behavior:
  *  - Runs every 15 minutes (matches the Open-Meteo minutely_15 cadence).
- *  - Pulls the last-known user location from [UserPreferences.lastLocation].
+ *  - Pulls the GPS-derived alert anchor from [UserPreferences.backgroundAlertLocation].
  *  - Calls [WeatherRepository.getMinutelyPrecipitation] and passes the result
  *    through the pure-function [detectNowcastTransition] for classification.
  *  - Fires at most one notification per run. The "transition signature"
@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit
  *
  *  Silently skips if:
  *    - user toggled `nowcastingAlerts` off
- *    - no last location is known yet
+ *    - no GPS-derived background alert location is known yet
  *    - POST_NOTIFICATIONS permission not granted
  *    - the minutely API returns nothing usable
  */
@@ -57,8 +57,8 @@ class NowcastAlertWorker @AssistedInject constructor(
             Log.d(TAG, "Nowcast alerts disabled; skipping")
             return Result.success()
         }
-        val loc = prefs.lastLocation.first() ?: run {
-            Log.d(TAG, "No last location; skipping")
+        val loc = prefs.backgroundAlertLocation.first() ?: run {
+            Log.d(TAG, "No background alert location; skipping")
             return Result.success()
         }
 

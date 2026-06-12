@@ -71,13 +71,13 @@ class AlertCheckWorker @AssistedInject constructor(
                 }
             )
         } else {
-            val lastLoc = prefs.lastLocation.first()
-            if (lastLoc != null) {
+            val alertLoc = prefs.backgroundAlertLocation.first()
+            if (alertLoc != null) {
                 listOf(
                     AlertCheckLocation(
-                        latitude = lastLoc.latitude,
-                        longitude = lastLoc.longitude,
-                        name = lastLoc.name,
+                        latitude = alertLoc.latitude,
+                        longitude = alertLoc.longitude,
+                        name = alertLoc.name,
                     )
                 )
             }

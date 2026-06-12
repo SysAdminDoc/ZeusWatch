@@ -121,7 +121,9 @@ class MainViewModelTest {
 
         every { prefs.settings } returns flowOf(NimbusSettings())
         every { prefs.lastLocation } returns flowOf(null)
+        every { prefs.backgroundAlertLocation } returns flowOf(null)
         coEvery { prefs.saveLastLocation(any(), any(), any()) } returns mockk()
+        coEvery { prefs.saveBackgroundAlertLocation(any(), any(), any()) } returns mockk()
         coEvery { locationRepository.ensureCurrentLocation(any(), any(), any()) } returns Unit
         every { locationRepository.savedLocations } returns savedLocationsFlow
         coEvery { alertRepository.getAlerts(any(), any()) } coAnswers { Result.success(emptyList()) }
@@ -222,6 +224,16 @@ class MainViewModelTest {
         assertFalse(state.isLoading)
         assertNotNull(state.weatherData)
         assertEquals("Denver", state.weatherData?.location?.name)
+    }
+
+    @Test
+    fun `gps weather success stores background alert location`() = runTest {
+        stubLocationSuccess()
+        viewModel = createAndAdvance()
+
+        coVerify(exactly = 1) {
+            prefs.saveBackgroundAlertLocation(39.7, -104.9, "Denver")
+        }
     }
 
     @Test
@@ -379,6 +391,20 @@ class MainViewModelTest {
         assertEquals("Seattle", state.weatherData?.location?.name)
         assertTrue(state.isCached)
         assertNull(state.error)
+    }
+
+    @Test
+    fun `saved location fetch does not replace background alert location`() = runTest {
+        stubLocationSuccess()
+        viewModel = createAndAdvance()
+        clearMocks(prefs, answers = false, recordedCalls = true, childMocks = false)
+
+        viewModel.loadWeatherForCoords(seattle.latitude, seattle.longitude, seattle.id, seattle.name)
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) {
+            prefs.saveBackgroundAlertLocation(any(), any(), any())
+        }
     }
 
     @Test

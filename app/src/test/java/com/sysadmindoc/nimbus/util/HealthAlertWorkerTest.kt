@@ -43,7 +43,7 @@ class HealthAlertWorkerTest {
                 migraineAlerts = true,
             )
         )
-        every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
         coEvery {
             weatherRepository.getWeather(39.7, -104.9, "Denver")
         } returns Result.success(
@@ -101,7 +101,7 @@ class HealthAlertWorkerTest {
                     migraineAlerts = true,
                 )
             )
-            every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+            every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
 
             val worker = HealthAlertWorker(context, params, weatherRepository, prefs)
 
