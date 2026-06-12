@@ -1,6 +1,8 @@
 package com.sysadmindoc.nimbus.ui.component
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.annotation.StringRes
 import androidx.compose.material3.MaterialTheme
@@ -67,9 +70,11 @@ fun WeatherCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(14.dp, shape, clip = false)
+            .shadow(8.dp, shape, clip = false)
             .clip(shape)
-            .animateContentSize()
+            .animateContentSize(
+                animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+            )
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -120,10 +125,17 @@ fun WeatherCard(
                     ) {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(NimbusBlueAccent.copy(alpha = 0.82f))
-                                .width(8.dp)
-                                .height(8.dp),
+                                .width(3.dp)
+                                .height(18.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            NimbusBlueAccent.copy(alpha = 0.94f),
+                                            NimbusBlueAccent.copy(alpha = 0.38f),
+                                        ),
+                                    ),
+                                ),
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
@@ -142,6 +154,7 @@ fun WeatherCard(
                         NimbusStatusBadge(
                             text = statusLabel,
                             tint = statusTint,
+                            modifier = Modifier.widthIn(max = 156.dp),
                             maxLines = 1,
                         )
                     }
