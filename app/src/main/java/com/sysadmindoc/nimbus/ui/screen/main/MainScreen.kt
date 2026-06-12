@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -254,187 +255,284 @@ fun MainScreen(
     LaunchedEffect(weatherThemeState) {
         com.sysadmindoc.nimbus.ui.theme.WeatherThemeBus.state.value = weatherThemeState
     }
+    val contentActions = MainContentActions(
+        onRefresh = { viewModel.refresh() },
+        onNavigateToSettings = onNavigateToSettings,
+        onNavigateToRadar = onNavigateToRadar,
+        onNavigateToLocations = onNavigateToLocations,
+        onNavigateToCompare = onNavigateToCompare,
+        onLocationSelected = { index -> viewModel.onPageChanged(index) },
+    )
+    val screenActions = MainScreenActions(
+        content = contentActions,
+        onLoadWeather = { viewModel.loadWeather() },
+        onUseLastLocation = { viewModel.useLastLocation() },
+        onRequestLocationPermissions = requestLocationPermissions,
+    )
     CompositionLocalProvider(
         LocalUnitSettings provides state.settings,
         com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState provides weatherThemeState,
     ) {
-        Scaffold(
-            containerColor = NimbusNavyDark,
-            bottomBar = {
-                ZeusWatchBottomNav(
-                    selectedTab = activeSelectedTab,
-                    onTabSelected = { selectedTab = it },
-                    visibleTabs = visibleTabs,
-                )
+        MainScreenScaffold(
+            state = state,
+            selectedTab = activeSelectedTab,
+            visibleTabs = visibleTabs,
+            isTablet = isTablet,
+            actions = screenActions,
+            onTabSelected = { selectedTab = it },
+        )
+    }
+}
+
+private data class MainContentActions(
+    val onRefresh: () -> Unit,
+    val onNavigateToSettings: () -> Unit,
+    val onNavigateToRadar: (Double, Double) -> Unit,
+    val onNavigateToLocations: () -> Unit,
+    val onNavigateToCompare: () -> Unit,
+    val onLocationSelected: (Int) -> Unit,
+)
+
+private data class MainScreenActions(
+    val content: MainContentActions,
+    val onLoadWeather: () -> Unit,
+    val onUseLastLocation: () -> Unit,
+    val onRequestLocationPermissions: () -> Unit,
+)
+
+@Composable
+private fun MainScreenScaffold(
+    state: MainUiState,
+    selectedTab: Int,
+    visibleTabs: List<BottomTab>,
+    isTablet: Boolean,
+    actions: MainScreenActions,
+    onTabSelected: (Int) -> Unit,
+) {
+    Scaffold(
+        containerColor = NimbusNavyDark,
+        bottomBar = {
+            ZeusWatchBottomNav(
+                selectedTab = selectedTab,
+                onTabSelected = onTabSelected,
+                visibleTabs = visibleTabs,
+            )
+        },
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            MainScreenBody(
+                state = state,
+                selectedTab = selectedTab,
+                isTablet = isTablet,
+                actions = actions,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainScreenBody(
+    state: MainUiState,
+    selectedTab: Int,
+    isTablet: Boolean,
+    actions: MainScreenActions,
+) {
+    val chooseLocationLabel = stringResource(R.string.common_choose_location)
+    val retryGpsLabel = stringResource(R.string.common_retry_gps)
+    val useLastLocationLabel = stringResource(R.string.main_use_last_location)
+    val lastLocationName = state.lastLocationName
+
+    when {
+        state.isLoading && state.weatherData == null -> StartupState(
+            title = stringResource(R.string.main_finding_forecast_title),
+            message = if (lastLocationName != null) {
+                stringResource(R.string.main_finding_forecast_with_last, lastLocationName)
+            } else {
+                stringResource(R.string.main_finding_forecast_without_last)
             },
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-            ) {
-                val hasLocationPermissionError =
-                    state.weatherData == null && isLocationPermissionError(state.error)
-                val grantLocationLabel = stringResource(R.string.main_grant_location)
-                val retryLabel = stringResource(R.string.retry)
-                val chooseLocationLabel = stringResource(R.string.common_choose_location)
-                val retryGpsLabel = stringResource(R.string.common_retry_gps)
-                val useLastLocationLabel = stringResource(R.string.main_use_last_location)
-                val lastLocationName = state.lastLocationName
-                val actionLabel = if (hasLocationPermissionError) grantLocationLabel else retryLabel
-                val retryIcon = if (hasLocationPermissionError) Icons.Filled.LocationOn else Icons.Filled.Refresh
-                val retryAction = if (hasLocationPermissionError) {
-                    requestLocationPermissions
-                } else {
-                    { viewModel.loadWeather() }
-                }
+            primaryActionLabel = if (lastLocationName != null) useLastLocationLabel else chooseLocationLabel,
+            onPrimaryAction = if (lastLocationName != null) actions.onUseLastLocation else actions.content.onNavigateToLocations,
+            secondaryActionLabel = if (lastLocationName != null) chooseLocationLabel else retryGpsLabel,
+            onSecondaryAction = if (lastLocationName != null) actions.content.onNavigateToLocations else actions.onLoadWeather,
+            tertiaryActionLabel = if (lastLocationName != null) retryGpsLabel else null,
+            onTertiaryAction = if (lastLocationName != null) actions.onLoadWeather else null,
+        )
+        state.error != null && state.weatherData == null -> MainErrorState(
+            state = state,
+            actions = actions,
+        )
+        state.weatherData != null -> WeatherTabHost(
+            state = state,
+            selectedTab = selectedTab,
+            isTablet = isTablet,
+            actions = actions,
+        )
+        else -> ErrorState(
+            message = stringResource(R.string.main_loading_weather_data),
+            onRetry = actions.onLoadWeather,
+        )
+    }
+}
 
-                when {
-                    state.isLoading && state.weatherData == null -> StartupState(
-                        title = stringResource(R.string.main_finding_forecast_title),
-                        message = if (lastLocationName != null) {
-                            stringResource(R.string.main_finding_forecast_with_last, lastLocationName)
-                        } else {
-                            stringResource(R.string.main_finding_forecast_without_last)
-                        },
-                        primaryActionLabel = if (lastLocationName != null) useLastLocationLabel else chooseLocationLabel,
-                        onPrimaryAction = if (lastLocationName != null) {
-                            { viewModel.useLastLocation() }
-                        } else {
-                            onNavigateToLocations
-                        },
-                        secondaryActionLabel = if (lastLocationName != null) chooseLocationLabel else retryGpsLabel,
-                        onSecondaryAction = if (lastLocationName != null) {
-                            onNavigateToLocations
-                        } else {
-                            { viewModel.loadWeather() }
-                        },
-                        tertiaryActionLabel = if (lastLocationName != null) retryGpsLabel else null,
-                        onTertiaryAction = if (lastLocationName != null) {
-                            { viewModel.loadWeather() }
-                        } else {
-                            null
-                        },
+@Composable
+private fun MainErrorState(
+    state: MainUiState,
+    actions: MainScreenActions,
+) {
+    val hasLocationPermissionError = isLocationPermissionError(state.error)
+    ErrorState(
+        message = state.error.orEmpty(),
+        onRetry = if (hasLocationPermissionError) actions.onRequestLocationPermissions else actions.onLoadWeather,
+        icon = errorIconForMessage(state.error),
+        actionLabel = if (hasLocationPermissionError) {
+            stringResource(R.string.main_grant_location)
+        } else {
+            stringResource(R.string.retry)
+        },
+        actionIcon = if (hasLocationPermissionError) Icons.Filled.LocationOn else Icons.Filled.Refresh,
+        secondaryActionLabel = stringResource(R.string.common_choose_location),
+        onSecondaryAction = actions.content.onNavigateToLocations,
+        isLocationPermissionError = hasLocationPermissionError,
+    )
+}
+
+private fun errorIconForMessage(message: String?): ImageVector = when {
+    message.orEmpty().contains("permission", ignoreCase = true) ||
+        message.orEmpty().contains("location", ignoreCase = true) -> Icons.Filled.LocationOff
+    message.orEmpty().contains("network", ignoreCase = true) ||
+        message.orEmpty().contains("connect", ignoreCase = true) ||
+        message.orEmpty().contains("offline", ignoreCase = true) ||
+        message.orEmpty().contains("internet", ignoreCase = true) -> Icons.Filled.CloudOff
+    else -> Icons.Filled.ErrorOutline
+}
+
+@Composable
+private fun WeatherTabHost(
+    state: MainUiState,
+    selectedTab: Int,
+    isTablet: Boolean,
+    actions: MainScreenActions,
+) {
+    val data = state.weatherData ?: return
+    val referenceTime = data.current.observationTime
+    val referenceDate = referenceTime?.toLocalDate() ?: data.daily.firstOrNull()?.date
+
+    if (isTablet) {
+        TabletWeatherTabs(
+            state = state,
+            selectedTab = selectedTab,
+            referenceDate = referenceDate,
+            actions = actions,
+        )
+    } else {
+        PhoneWeatherTabs(
+            state = state,
+            selectedTab = selectedTab,
+            referenceDate = referenceDate,
+            actions = actions,
+        )
+    }
+}
+
+@Composable
+private fun TabletWeatherTabs(
+    state: MainUiState,
+    selectedTab: Int,
+    referenceDate: java.time.LocalDate?,
+    actions: MainScreenActions,
+) {
+    val data = state.weatherData ?: return
+    val referenceTime = data.current.observationTime
+    Row(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.weight(0.55f)) {
+            Crossfade(targetState = selectedTab, animationSpec = tween(300), label = "tabletTab") { tab ->
+                when (tab) {
+                    BottomTab.TODAY.ordinal -> TodayContent(state = state, actions = actions)
+                    BottomTab.HOURLY.ordinal -> HourlyTab(
+                        hourly = data.hourly,
+                        locationName = data.location.name,
+                        referenceTime = referenceTime,
+                        isRefreshing = state.isRefreshing,
+                        onRefresh = actions.content.onRefresh,
                     )
-                    state.error != null && state.weatherData == null -> ErrorState(
-                        message = state.error!!,
-                        onRetry = retryAction,
-                        icon = when {
-                            state.error!!.contains("permission", ignoreCase = true) ||
-                            state.error!!.contains("location", ignoreCase = true) -> Icons.Filled.LocationOff
-                            state.error!!.contains("network", ignoreCase = true) ||
-                            state.error!!.contains("connect", ignoreCase = true) ||
-                            state.error!!.contains("offline", ignoreCase = true) ||
-                            state.error!!.contains("internet", ignoreCase = true) -> Icons.Filled.CloudOff
-                            else -> Icons.Filled.ErrorOutline
-                        },
-                        actionLabel = actionLabel,
-                        actionIcon = retryIcon,
-                        secondaryActionLabel = chooseLocationLabel,
-                        onSecondaryAction = onNavigateToLocations,
-                        isLocationPermissionError = hasLocationPermissionError,
-                    )
-                    state.weatherData != null -> {
-                        val data = state.weatherData!!
-                        val referenceTime = data.current.observationTime
-                        val referenceDate = referenceTime?.toLocalDate() ?: data.daily.firstOrNull()?.date
-
-                        if (isTablet) {
-                            // ── Two-pane tablet layout ──────────────────
-                            Row(modifier = Modifier.fillMaxSize()) {
-                                // Left pane: Weather content (tab-switched)
-                                Box(modifier = Modifier.weight(0.55f)) {
-                                    Crossfade(targetState = activeSelectedTab, animationSpec = tween(300), label = "tabletTab") { tab ->
-                                        when (tab) {
-                                            BottomTab.TODAY.ordinal -> TodayContent(
-                                                state = state,
-                                                onRetry = { viewModel.loadWeather() },
-                                                onRefresh = { viewModel.refresh() },
-                                                onNavigateToSettings = onNavigateToSettings,
-                                                onNavigateToRadar = onNavigateToRadar,
-                                                onNavigateToLocations = onNavigateToLocations,
-                                                onNavigateToCompare = onNavigateToCompare,
-                                                onLocationSelected = { index -> viewModel.onPageChanged(index) },
-                                                onUseLastLocation = { viewModel.useLastLocation() },
-                                            )
-                                            BottomTab.HOURLY.ordinal -> HourlyTab(
-                                                hourly = data.hourly,
-                                                locationName = data.location.name,
-                                                referenceTime = referenceTime,
-                                                isRefreshing = state.isRefreshing,
-                                                onRefresh = { viewModel.refresh() },
-                                            )
-                                            BottomTab.DAILY.ordinal -> DailyTab(
-                                                daily = data.daily,
-                                                locationName = data.location.name,
-                                                referenceDate = referenceDate,
-                                                isRefreshing = state.isRefreshing,
-                                                onRefresh = { viewModel.refresh() },
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // Vertical divider between panes
-                                VerticalDivider(
-                                    modifier = Modifier.fillMaxHeight(),
-                                    thickness = 1.dp,
-                                    color = NimbusCardBg,
-                                )
-
-                                // Right pane: Radar always visible
-                                Box(modifier = Modifier.weight(0.45f)) {
-                                    RadarTab(
-                                        latitude = data.location.latitude,
-                                        longitude = data.location.longitude,
-                                    )
-                                }
-                            }
-                        } else {
-                            // ── Phone layout with tab switching ─────────
-                            Crossfade(targetState = activeSelectedTab, animationSpec = tween(300), label = "phoneTab") { tab ->
-                                when (tab) {
-                                    BottomTab.TODAY.ordinal -> TodayContent(
-                                        state = state,
-                                        onRetry = { viewModel.loadWeather() },
-                                        onRefresh = { viewModel.refresh() },
-                                        onNavigateToSettings = onNavigateToSettings,
-                                        onNavigateToRadar = onNavigateToRadar,
-                                        onNavigateToLocations = onNavigateToLocations,
-                                        onNavigateToCompare = onNavigateToCompare,
-                                        onLocationSelected = { index -> viewModel.onPageChanged(index) },
-                                        onUseLastLocation = { viewModel.useLastLocation() },
-                                    )
-                                    BottomTab.HOURLY.ordinal -> HourlyTab(
-                                        hourly = data.hourly,
-                                        locationName = data.location.name,
-                                        referenceTime = referenceTime,
-                                        isRefreshing = state.isRefreshing,
-                                        onRefresh = { viewModel.refresh() },
-                                    )
-                                    BottomTab.DAILY.ordinal -> DailyTab(
-                                        daily = data.daily,
-                                        locationName = data.location.name,
-                                        referenceDate = referenceDate,
-                                        isRefreshing = state.isRefreshing,
-                                        onRefresh = { viewModel.refresh() },
-                                    )
-                                    BottomTab.RADAR.ordinal -> RadarTab(
-                                        latitude = data.location.latitude,
-                                        longitude = data.location.longitude,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    else -> ErrorState(
-                        message = stringResource(R.string.main_loading_weather_data),
-                        onRetry = { viewModel.loadWeather() },
+                    BottomTab.DAILY.ordinal -> DailyTab(
+                        daily = data.daily,
+                        locationName = data.location.name,
+                        referenceDate = referenceDate,
+                        isRefreshing = state.isRefreshing,
+                        onRefresh = actions.content.onRefresh,
                     )
                 }
             }
         }
+        VerticalDivider(
+            modifier = Modifier.fillMaxHeight(),
+            thickness = 1.dp,
+            color = NimbusCardBg,
+        )
+        Box(modifier = Modifier.weight(0.45f)) {
+            RadarTab(
+                latitude = data.location.latitude,
+                longitude = data.location.longitude,
+            )
+        }
     }
+}
+
+@Composable
+private fun PhoneWeatherTabs(
+    state: MainUiState,
+    selectedTab: Int,
+    referenceDate: java.time.LocalDate?,
+    actions: MainScreenActions,
+) {
+    val data = state.weatherData ?: return
+    val referenceTime = data.current.observationTime
+    Crossfade(targetState = selectedTab, animationSpec = tween(300), label = "phoneTab") { tab ->
+        when (tab) {
+            BottomTab.TODAY.ordinal -> TodayContent(state = state, actions = actions)
+            BottomTab.HOURLY.ordinal -> HourlyTab(
+                hourly = data.hourly,
+                locationName = data.location.name,
+                referenceTime = referenceTime,
+                isRefreshing = state.isRefreshing,
+                onRefresh = actions.content.onRefresh,
+            )
+            BottomTab.DAILY.ordinal -> DailyTab(
+                daily = data.daily,
+                locationName = data.location.name,
+                referenceDate = referenceDate,
+                isRefreshing = state.isRefreshing,
+                onRefresh = actions.content.onRefresh,
+            )
+            BottomTab.RADAR.ordinal -> RadarTab(
+                latitude = data.location.latitude,
+                longitude = data.location.longitude,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TodayContent(
+    state: MainUiState,
+    actions: MainScreenActions,
+) {
+    TodayContent(
+        state = state,
+        onRetry = actions.onLoadWeather,
+        onRefresh = actions.content.onRefresh,
+        onNavigateToSettings = actions.content.onNavigateToSettings,
+        onNavigateToRadar = actions.content.onNavigateToRadar,
+        onNavigateToLocations = actions.content.onNavigateToLocations,
+        onNavigateToCompare = actions.content.onNavigateToCompare,
+        onLocationSelected = actions.content.onLocationSelected,
+        onUseLastLocation = actions.onUseLastLocation,
+    )
 }
 
 @Composable
@@ -455,6 +553,14 @@ internal fun TodayContent(
     val grantLocationLabel = stringResource(R.string.main_grant_location)
     val retryLabel = stringResource(R.string.retry)
     val lastLocationName = state.lastLocationName
+    val contentActions = MainContentActions(
+        onRefresh = onRefresh,
+        onNavigateToSettings = onNavigateToSettings,
+        onNavigateToRadar = onNavigateToRadar,
+        onNavigateToLocations = onNavigateToLocations,
+        onNavigateToCompare = onNavigateToCompare,
+        onLocationSelected = onLocationSelected,
+    )
 
     when {
         state.isLoading && state.weatherData == null -> StartupState(
@@ -490,24 +596,8 @@ internal fun TodayContent(
             isLocationPermissionError = isLocationPermissionError(state.error),
         )
         state.weatherData != null -> WeatherContent(
-            data = state.weatherData!!,
-            alerts = state.alerts,
-            airQuality = state.airQuality,
-            astronomy = state.astronomy,
-            isRefreshing = state.isRefreshing,
-            particlesEnabled = state.particlesEnabled,
-            onRefresh = onRefresh,
-            onNavigateToSettings = onNavigateToSettings,
-            onNavigateToRadar = onNavigateToRadar,
-            onNavigateToLocations = onNavigateToLocations,
-            onNavigateToCompare = onNavigateToCompare,
-            savedLocations = state.savedLocations,
-            currentPage = state.currentPage,
-            onLocationSelected = onLocationSelected,
-            radarPreviewTileUrl = state.radarPreviewTileUrl,
-            radarBaseMapUrl = state.radarBaseMapUrl,
-            isCached = state.isCached,
             state = state,
+            actions = contentActions,
         )
         else -> ShimmerLoadingSkeleton()
     }
@@ -516,30 +606,17 @@ internal fun TodayContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WeatherContent(
-    data: WeatherData,
-    alerts: List<WeatherAlert>,
-    airQuality: AirQualityData?,
-    astronomy: AstronomyData?,
-    isRefreshing: Boolean,
-    particlesEnabled: Boolean,
-    onRefresh: () -> Unit,
-    onNavigateToSettings: () -> Unit,
-    onNavigateToRadar: (Double, Double) -> Unit,
-    onNavigateToLocations: () -> Unit,
-    onNavigateToCompare: () -> Unit = {},
-    savedLocations: List<SavedLocationEntity> = emptyList(),
-    currentPage: Int = 0,
-    onLocationSelected: (Int) -> Unit = {},
-    radarPreviewTileUrl: String? = null,
-    radarBaseMapUrl: String? = null,
-    isCached: Boolean = false,
     state: MainUiState = MainUiState(),
+    actions: MainContentActions,
 ) {
+    val data = state.weatherData ?: return
+    val airQuality = state.airQuality
+    val astronomy = state.astronomy
+    val alerts = state.alerts
     val bgBrush = skyGradient(
         isDay = data.current.isDay,
         weatherCode = data.current.weatherCode.code,
     )
-    val context = LocalContext.current
     val layout = LocalAdaptiveLayout.current
     val deepLinkTarget = LocalMainDeepLinkTarget.current
 
@@ -547,10 +624,6 @@ private fun WeatherContent(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showShareMenu by remember { mutableStateOf(false) }
     val settings = LocalUnitSettings.current
-    val manageLocationsDescription = stringResource(R.string.main_manage_locations_cd)
-    val shareWeatherDescription = stringResource(R.string.main_share_weather_cd)
-    val compareLocationsDescription = stringResource(R.string.main_compare_locations_cd)
-    val settingsDescription = stringResource(R.string.main_settings_cd)
     val justNowLabel = stringResource(R.string.main_just_now)
     val minuteAgoFormat = stringResource(R.string.main_minutes_ago)
     val hourAgoFormat = stringResource(R.string.main_hours_ago)
@@ -563,7 +636,6 @@ private fun WeatherContent(
         )
     }
 
-    // Precompute enabled cards for LazyColumn
     val enabledCards = remember(settings.cardOrder, settings.disabledCards) {
         settings.cardOrder.filter { card -> card.name !in settings.disabledCards }
     }
@@ -573,7 +645,6 @@ private fun WeatherContent(
     }
     val listState = rememberLazyListState()
 
-    // Precipitation chance + updated time state
     val todayPrecipChance = data.daily.firstOrNull()?.precipitationProbability ?: 0
     var updatedAgo by remember { mutableStateOf("") }
     var updatedAgeMinutes by remember { mutableStateOf(0L) }
@@ -591,12 +662,12 @@ private fun WeatherContent(
     }
 
     PullToRefreshBox(
-        isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
+        isRefreshing = state.isRefreshing,
+        onRefresh = actions.onRefresh,
         modifier = Modifier.fillMaxSize(),
     ) {
         val cardPad = Modifier.padding(horizontal = layout.contentPadding)
-        val hasLocationBar = savedLocations.size > 1
+        val hasLocationBar = state.savedLocations.size > 1
         val hasAlertBanner = alerts.isNotEmpty()
         val focusedItemIndex = weatherContentItemIndexForDeepLinkTarget(
             target = deepLinkTarget,
@@ -623,62 +694,18 @@ private fun WeatherContent(
                 .background(bgBrush)
                 .padding(bottom = 8.dp),
         ) {
-            // ── Toolbar ─────────────────────────────────────────────
             item(key = "toolbar") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = layout.contentPadding, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    PremiumToolbarButton(
-                        icon = Icons.Filled.LocationOn,
-                        contentDescription = manageLocationsDescription,
-                        onClick = onNavigateToLocations,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Box {
-                            PremiumToolbarButton(
-                                icon = Icons.Filled.Share,
-                                contentDescription = shareWeatherDescription,
-                                onClick = { showShareMenu = true },
-                            )
-                            DropdownMenu(
-                                expanded = showShareMenu,
-                                onDismissRequest = { showShareMenu = false },
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.share_as_text)) },
-                                    onClick = {
-                                        showShareMenu = false
-                                        ShareWeatherHelper.share(context, data, airQuality, settings)
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.share_as_image)) },
-                                    onClick = {
-                                        showShareMenu = false
-                                        ShareWeatherHelper.shareAsImage(context, data, settings)
-                                    },
-                                )
-                            }
-                        }
-                        PremiumToolbarButton(
-                            icon = Icons.AutoMirrored.Filled.CompareArrows,
-                            contentDescription = compareLocationsDescription,
-                            onClick = onNavigateToCompare,
-                        )
-                        PremiumToolbarButton(
-                            icon = Icons.Filled.Settings,
-                            contentDescription = settingsDescription,
-                            onClick = onNavigateToSettings,
-                        )
-                    }
-                }
+                WeatherToolbar(
+                    layout = layout,
+                    data = data,
+                    airQuality = airQuality,
+                    settings = settings,
+                    actions = actions,
+                    showShareMenu = showShareMenu,
+                    onShareMenuChange = { showShareMenu = it },
+                )
             }
 
-            // ── Offline Banner ──────────────────────────────────────
             if (state.isOffline) {
                 item(key = "offline_banner") {
                     InlineNoticeCard(
@@ -691,19 +718,17 @@ private fun WeatherContent(
                 }
             }
 
-            // ── Location Selector Bar ────────────────────────────────
             if (hasLocationBar) {
                 item(key = "location_bar") {
                     LocationSelectorBar(
-                        locations = savedLocations,
-                        currentIndex = currentPage,
-                        onSelected = onLocationSelected,
+                        locations = state.savedLocations,
+                        currentIndex = state.currentPage,
+                        onSelected = actions.onLocationSelected,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                     )
                 }
             }
 
-            // ── Alert Banner ─────────────────────────────────────────
             if (hasAlertBanner) {
                 item(key = "alert_banner") {
                     AlertBanner(
@@ -714,113 +739,217 @@ private fun WeatherContent(
                 }
             }
 
-            // ── Hero ─────────────────────────────────────────────────
             item(key = "hero") {
-                Box(
-                    // mergeDescendants: announce the summary once instead of the
-                    // summary plus every child element separately.
-                    modifier = Modifier.semantics(mergeDescendants = true) {
-                        contentDescription = AccessibilityHelper.currentConditions(
-                            data.current, data.location.name, settings,
-                        )
-                    },
-                ) {
-                    if (particlesEnabled) {
-                        WeatherParticles(
-                            weatherCode = data.current.weatherCode,
-                            isDay = data.current.isDay,
-                            modifier = Modifier.matchParentSize(),
-                        )
-                    }
-                    CurrentConditionsHeader(
-                        current = data.current,
-                        locationName = data.location.name,
-                        yesterdayHigh = state.yesterdayHigh.takeIf { settings.showYesterdayComparison },
-                    )
-                }
+                WeatherHero(
+                    data = data,
+                    state = state,
+                    settings = settings,
+                )
             }
 
-            // ── Precip chance + updated time ─────────────────────────
             item(key = "updated_row") {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = layout.contentPadding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (todayPrecipChance > 0) {
-                            NimbusStatusBadge(
-                                icon = Icons.Filled.WaterDrop,
-                                text = stringResource(R.string.main_rain_risk, todayPrecipChance),
-                                tint = NimbusBlueAccent,
-                            )
-                        }
-                        val stalenessColor = when {
-                            isCached -> NimbusTextTertiary.copy(alpha = 0.78f)
-                            updatedAgeMinutes < 60 -> NimbusTextTertiary
-                            updatedAgeMinutes < 120 -> NimbusWarning.copy(alpha = 0.7f)
-                            else -> NimbusWarning
-                        }
-                        NimbusStatusBadge(
-                            text = if (isCached) {
-                                stringResource(R.string.main_offline_ready_status, updatedAgo)
-                            } else {
-                                stringResource(R.string.main_refreshed_status, updatedAgo)
-                            },
-                            tint = stalenessColor,
-                        )
-                    }
-                }
+                WeatherUpdatedRow(
+                    layout = layout,
+                    todayPrecipChance = todayPrecipChance,
+                    updatedAgeMinutes = updatedAgeMinutes,
+                    updatedAgo = updatedAgo,
+                    isCached = state.isCached,
+                )
             }
 
-            // ── Spacer before cards ───────────────────────────────
             item(key = "pre_cards_spacer") {
                 Spacer(modifier = Modifier.height(18.dp))
             }
 
-            // ── Dynamic Cards (truly lazy now) ───────────────────────
-            val cardContext = CardRenderContext(
-                state = state,
-                data = data,
-                airQuality = airQuality,
-                astronomy = astronomy,
-                settings = settings,
-                radarPreviewTileUrl = radarPreviewTileUrl,
-                radarBaseMapUrl = radarBaseMapUrl,
-                onNavigateToRadar = onNavigateToRadar,
+            weatherCardItems(
+                visibleCards = visibleCards,
+                cardPad = cardPad,
+                cardSpacing = layout.cardSpacing,
+                context = CardRenderContext(
+                    state = state,
+                    data = data,
+                    airQuality = airQuality,
+                    astronomy = astronomy,
+                    settings = settings,
+                    radarPreviewTileUrl = state.radarPreviewTileUrl,
+                    radarBaseMapUrl = state.radarBaseMapUrl,
+                    onNavigateToRadar = actions.onNavigateToRadar,
+                ),
             )
-            items(
-                items = visibleCards,
-                key = { it.name },
-                contentType = { it.name },
-            ) { cardType ->
-                RenderCard(
-                    cardType = cardType,
-                    modifier = cardPad,
-                    context = cardContext,
-                )
-                Spacer(modifier = Modifier.height(layout.cardSpacing))
-            }
 
-            // ── Footer ──────────────────────────────────────────────
-            item(key = "footer") {
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = stringResource(R.string.main_footer, com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = NimbusTextSecondary,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            weatherFooterItem()
+        }
+    }
+}
+
+@Composable
+private fun WeatherToolbar(
+    layout: AdaptiveLayoutInfo,
+    data: WeatherData,
+    airQuality: AirQualityData?,
+    settings: NimbusSettings,
+    actions: MainContentActions,
+    showShareMenu: Boolean,
+    onShareMenuChange: (Boolean) -> Unit,
+) {
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = layout.contentPadding, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PremiumToolbarButton(
+            icon = Icons.Filled.LocationOn,
+            contentDescription = stringResource(R.string.main_manage_locations_cd),
+            onClick = actions.onNavigateToLocations,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box {
+                PremiumToolbarButton(
+                    icon = Icons.Filled.Share,
+                    contentDescription = stringResource(R.string.main_share_weather_cd),
+                    onClick = { onShareMenuChange(true) },
+                )
+                DropdownMenu(
+                    expanded = showShareMenu,
+                    onDismissRequest = { onShareMenuChange(false) },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.share_as_text)) },
+                        onClick = {
+                            onShareMenuChange(false)
+                            ShareWeatherHelper.share(context, data, airQuality, settings)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.share_as_image)) },
+                        onClick = {
+                            onShareMenuChange(false)
+                            ShareWeatherHelper.shareAsImage(context, data, settings)
+                        },
+                    )
+                }
+            }
+            PremiumToolbarButton(
+                icon = Icons.AutoMirrored.Filled.CompareArrows,
+                contentDescription = stringResource(R.string.main_compare_locations_cd),
+                onClick = actions.onNavigateToCompare,
+            )
+            PremiumToolbarButton(
+                icon = Icons.Filled.Settings,
+                contentDescription = stringResource(R.string.main_settings_cd),
+                onClick = actions.onNavigateToSettings,
+            )
+        }
+    }
+}
+
+@Composable
+private fun WeatherHero(
+    data: WeatherData,
+    state: MainUiState,
+    settings: NimbusSettings,
+) {
+    Box(
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            contentDescription = AccessibilityHelper.currentConditions(
+                data.current, data.location.name, settings,
+            )
+        },
+    ) {
+        if (state.particlesEnabled) {
+            WeatherParticles(
+                weatherCode = data.current.weatherCode,
+                isDay = data.current.isDay,
+                modifier = Modifier.matchParentSize(),
+            )
+        }
+        CurrentConditionsHeader(
+            current = data.current,
+            locationName = data.location.name,
+            yesterdayHigh = state.yesterdayHigh.takeIf { settings.showYesterdayComparison },
+        )
+    }
+}
+
+@Composable
+private fun WeatherUpdatedRow(
+    layout: AdaptiveLayoutInfo,
+    todayPrecipChance: Int,
+    updatedAgeMinutes: Long,
+    updatedAgo: String,
+    isCached: Boolean,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = layout.contentPadding),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (todayPrecipChance > 0) {
+                NimbusStatusBadge(
+                    icon = Icons.Filled.WaterDrop,
+                    text = stringResource(R.string.main_rain_risk, todayPrecipChance),
+                    tint = NimbusBlueAccent,
                 )
             }
+            val stalenessColor = when {
+                isCached -> NimbusTextTertiary.copy(alpha = 0.78f)
+                updatedAgeMinutes < 60 -> NimbusTextTertiary
+                updatedAgeMinutes < 120 -> NimbusWarning.copy(alpha = 0.7f)
+                else -> NimbusWarning
+            }
+            NimbusStatusBadge(
+                text = if (isCached) {
+                    stringResource(R.string.main_offline_ready_status, updatedAgo)
+                } else {
+                    stringResource(R.string.main_refreshed_status, updatedAgo)
+                },
+                tint = stalenessColor,
+            )
         }
+    }
+}
+
+private fun LazyListScope.weatherCardItems(
+    visibleCards: List<CardType>,
+    cardPad: Modifier,
+    cardSpacing: androidx.compose.ui.unit.Dp,
+    context: CardRenderContext,
+) {
+    items(
+        items = visibleCards,
+        key = { it.name },
+        contentType = { it.name },
+    ) { cardType ->
+        RenderCard(
+            cardType = cardType,
+            modifier = cardPad,
+            context = context,
+        )
+        Spacer(modifier = Modifier.height(cardSpacing))
+    }
+}
+
+private fun LazyListScope.weatherFooterItem() {
+    item(key = "footer") {
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = stringResource(R.string.main_footer, com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME),
+            style = MaterialTheme.typography.labelSmall,
+            color = NimbusTextSecondary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
     }
 }
 
