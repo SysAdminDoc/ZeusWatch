@@ -1,10 +1,17 @@
 package com.sysadmindoc.nimbus.data.repository
 
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -99,5 +106,117 @@ class SettingsTransferTest {
         assertEquals(-1, backup.sortOrder)
         assertTrue(backup.isCurrentLocation)
         assertEquals(WeatherSourceProvider.MET_NORWAY.name, backup.forecastSource)
+    }
+
+    @Test
+    fun `import preview rejects malformed json`() {
+        val result = runCatching { previewSettingsImport("{not json") }
+
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `import preview rejects future schema version`() {
+        val raw = json.encodeToString(
+            SettingsBackup(
+                schemaVersion = 99,
+                settings = NimbusSettings().toBackup(),
+            ),
+        )
+
+        val result = runCatching { previewSettingsImport(raw) }
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull()?.message.orEmpty().contains("Unsupported settings backup version 99"))
+    }
+
+    @Test
+    fun `import preview reports skipped blank and duplicate saved locations`() {
+        val raw = json.encodeToString(
+            SettingsBackup(
+                settings = NimbusSettings().toBackup(),
+                savedLocations = listOf(
+                    SettingsBackupLocation(
+                        name = "Denver",
+                        region = "Colorado",
+                        country = "US",
+                        latitude = 39.7392,
+                        longitude = -104.9903,
+                    ),
+                    SettingsBackupLocation(
+                        name = "denver",
+                        region = "colorado",
+                        country = "us",
+                        latitude = 39.73921,
+                        longitude = -104.99029,
+                    ),
+                    SettingsBackupLocation(
+                        name = "",
+                        latitude = 47.6062,
+                        longitude = -122.3321,
+                    ),
+                ),
+                customAlerts = emptyList(),
+            ),
+        )
+
+        val preview = previewSettingsImport(raw, currentSavedLocationCount = 4)
+
+        assertEquals(4, preview.currentSavedLocationCount)
+        assertEquals(1, preview.savedLocationCount)
+        assertEquals(1, preview.skippedLocationCount)
+        assertEquals(1, preview.duplicateLocationCount)
+        assertTrue(SettingsImportWarning.BLANK_LOCATION_NAMES in preview.warnings)
+        assertTrue(SettingsImportWarning.DUPLICATE_LOCATIONS in preview.warnings)
+    }
+
+    @Test
+    fun `import rolls back snapshot when location replacement fails`() = runTest {
+        val prefs = mockk<UserPreferences>(relaxed = true)
+        val locationRepository = mockk<LocationRepository>()
+        val originalLocation = SavedLocationEntity(
+            id = 7,
+            name = "Original",
+            latitude = 35.0,
+            longitude = -90.0,
+        )
+        every { prefs.settings } returns flowOf(NimbusSettings(tempUnit = TempUnit.CELSIUS))
+        every { prefs.customAlertRules } returns flowOf(emptyList())
+        every { prefs.lastLocation } returns flowOf(null)
+        coEvery { locationRepository.getAll() } returns listOf(originalLocation)
+        coEvery { locationRepository.replaceAll(any()) } throws IllegalStateException("replace failed")
+        coEvery { locationRepository.restoreAll(any()) } returns Unit
+
+        val raw = json.encodeToString(
+            SettingsBackup(
+                settings = NimbusSettings(tempUnit = TempUnit.FAHRENHEIT).toBackup(),
+                savedLocations = listOf(
+                    SettingsBackupLocation(
+                        name = "Imported",
+                        latitude = 40.0,
+                        longitude = -105.0,
+                    ),
+                ),
+                lastLocation = SettingsBackupLastLocation(
+                    latitude = 40.0,
+                    longitude = -105.0,
+                    name = "Imported",
+                ),
+            ),
+        )
+        val manager = SettingsTransferManager(prefs, locationRepository)
+
+        val result = runCatching { manager.importJson(raw) }
+
+        assertTrue(result.isFailure)
+        assertNotNull(result.exceptionOrNull())
+        coVerify {
+            locationRepository.restoreAll(
+                match { restored ->
+                    restored.single().id == 7L && restored.single().name == "Original"
+                },
+            )
+            prefs.clearLastLocation()
+        }
     }
 }

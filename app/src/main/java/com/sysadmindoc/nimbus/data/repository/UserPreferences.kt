@@ -423,6 +423,10 @@ class UserPreferences @Inject constructor(
         it[Keys.DISABLED_CARDS] = DEFAULT_DISABLED_CARDS
     }
 
+    suspend fun setOnboardingComplete(complete: Boolean) = store.edit {
+        it[Keys.ONBOARDING_COMPLETE] = complete
+    }
+
     suspend fun completeOnboarding(tempUnit: TempUnit, starterCardSet: StarterCardSet) = store.edit { prefs ->
         prefs[Keys.TEMP_UNIT] = tempUnit.name
         prefs[Keys.WIND_UNIT] = preferredWindUnitFor(tempUnit).name
@@ -582,6 +586,12 @@ class UserPreferences @Inject constructor(
         it[Keys.LAST_LAT] = lat.toString()
         it[Keys.LAST_LON] = lon.toString()
         it[Keys.LAST_LOCATION_NAME] = name
+    }
+
+    suspend fun clearLastLocation() = store.edit {
+        it.remove(Keys.LAST_LAT)
+        it.remove(Keys.LAST_LON)
+        it.remove(Keys.LAST_LOCATION_NAME)
     }
 
     suspend fun saveBackgroundAlertLocation(lat: Double, lon: Double, name: String) = store.edit {

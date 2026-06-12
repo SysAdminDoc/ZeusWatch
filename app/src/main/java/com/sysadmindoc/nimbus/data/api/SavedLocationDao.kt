@@ -82,4 +82,10 @@ interface SavedLocationDao {
         deleteAll()
         locations.forEach { insert(it.copy(id = 0)) }
     }
+
+    @Transaction
+    suspend fun restoreAll(locations: List<SavedLocationEntity>) {
+        deleteAll()
+        locations.forEach { insert(it) }
+    }
 }

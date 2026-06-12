@@ -51,6 +51,10 @@ class SettingsViewModel @Inject constructor(
     private val _transferStatus = MutableStateFlow<String?>(null)
     val transferStatus: StateFlow<String?> = _transferStatus.asStateFlow()
 
+    private val _pendingImportPreview = MutableStateFlow<SettingsImportPreview?>(null)
+    val pendingImportPreview: StateFlow<SettingsImportPreview?> = _pendingImportPreview.asStateFlow()
+    private var pendingImportRaw: String? = null
+
     init {
         viewModelScope.launch {
             val packs = withContext(Dispatchers.IO) {
@@ -196,9 +200,33 @@ class SettingsViewModel @Inject constructor(
                     reader.readText()
                 } ?: error("Could not open import file.")
             }
+            val preview = withContext(Dispatchers.IO) {
+                settingsTransferManager.previewImportJson(raw)
+            }
+            pendingImportRaw = raw
+            _pendingImportPreview.value = preview
+            _transferStatus.value = null
+        }.fold(
+            onSuccess = {},
+            onFailure = {
+                pendingImportRaw = null
+                _pendingImportPreview.value = null
+                _transferStatus.value = appContext.getString(
+                    R.string.settings_transfer_import_error,
+                    it.message ?: appContext.getString(R.string.common_something_went_wrong),
+                )
+            },
+        )
+    }
+
+    fun confirmPendingImport() = viewModelScope.launch {
+        val raw = pendingImportRaw ?: return@launch
+        runCatching {
             withContext(Dispatchers.IO) { settingsTransferManager.importJson(raw) }
         }.fold(
             onSuccess = { result ->
+                pendingImportRaw = null
+                _pendingImportPreview.value = null
                 _transferStatus.value = appContext.getString(
                     R.string.settings_transfer_import_success,
                     result.savedLocationCount,
@@ -212,6 +240,11 @@ class SettingsViewModel @Inject constructor(
                 )
             },
         )
+    }
+
+    fun cancelPendingImport() {
+        pendingImportRaw = null
+        _pendingImportPreview.value = null
     }
 
     fun clearTransferStatus() {
