@@ -293,6 +293,8 @@ Optional fallback sources (require API keys configured in Settings):
 
 OpenWeatherMap and Pirate Weather keys are stored in an encrypted DataStore backed by Tink and Android Keystore. Existing plaintext keys migrate automatically on first launch.
 
+Community reports use an anonymous append-only Firestore model: users can read reports and submit new condition reports, but reports cannot be updated or deleted after submission. `firestore.rules` validates coordinates, condition enum values, timestamp freshness, note length, and the hashed anonymous device ID server-side. For `standard` Firebase deployments, enable Firebase App Check for Firestore to add app-attestation abuse protection. The `freenet` flavor is unaffected and uses a no-op community report repository with no Firebase dependency.
+
 ### Open-Meteo Parameters Used
 
 **Current:** temperature, humidity, feels-like, weather code, wind (speed/direction/gusts), pressure, UV, visibility, dew point, cloud cover, precipitation, snowfall, snow depth, CAPE
@@ -451,12 +453,17 @@ Third-party icon packs are discoverable via:
 
 # Instrumented Compose UI tests — screen rendering, interactions
 ./gradlew connectedStandardDebugAndroidTest
+
+# Firestore community-report rules tests
+npm install
+npm run test:firestore-rules
 ```
 
 | Suite | Framework | Coverage |
 |-------|-----------|----------|
 | Unit | JUnit 4 + MockK + Turbine + coroutines-test | WeatherFormatter (20), WeatherCode (12), Accessibility (12), AirQuality (14), Alerts (9), MainViewModel (10), LocationsViewModel (7) |
 | UI | Compose UI Test + JUnit4 + Hilt Testing | MainScreen (6), SettingsScreen (10), LocationsScreen (8) |
+| Firestore rules | Firebase Emulator + rules-unit-testing | Community report create/read validation, malformed/stale rejection, append-only delete/update denial |
 
 **180+ tests** across 14 test suites.
 
