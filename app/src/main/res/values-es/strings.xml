@@ -1100,6 +1100,11 @@
     <string name="severe_weather">Potencial de clima severo</string>
     <string name="sunshine">Duracion del sol</string>
     <string name="compare_weather">Comparar clima</string>
+    <!-- Quick Settings Tile -->
+    <string name="qs_tile_label">Clima</string>
+    <string name="qs_tile_no_location">Abre la app para establecer ubicacion</string>
+    <string name="qs_tile_no_data">Toca para actualizar</string>
+
     <string name="wallpaper_label">Clima ZeusWatch</string>
     <string name="wallpaper_description">Efectos de particulas meteorologicas en vivo sobre tu fondo</string>
 
