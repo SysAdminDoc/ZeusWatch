@@ -158,6 +158,7 @@ class SettingsViewModel @Inject constructor(
 
     // Haptics
     fun setHapticFeedbackForAlerts(enabled: Boolean) = viewModelScope.launch { prefs.setHapticFeedbackForAlerts(enabled) }
+    fun setAccessibilityLayout(enabled: Boolean) = viewModelScope.launch { prefs.setAccessibilityLayout(enabled) }
 
     // Cache
     fun setCacheTtlMinutes(minutes: Int) = viewModelScope.launch { prefs.setCacheTtlMinutes(minutes) }
@@ -169,6 +170,10 @@ class SettingsViewModel @Inject constructor(
     fun setSourceAlertsFallback(provider: WeatherSourceProvider?) = viewModelScope.launch { prefs.setSourceAlertsFallback(provider) }
     fun setSourceAirQuality(provider: WeatherSourceProvider) = viewModelScope.launch { prefs.setSourceAirQuality(provider) }
     fun setSourceMinutely(provider: WeatherSourceProvider) = viewModelScope.launch { prefs.setSourceMinutely(provider) }
+    fun setGadgetbridgeBroadcastEnabled(enabled: Boolean) = viewModelScope.launch {
+        prefs.setGadgetbridgeBroadcastEnabled(enabled)
+        if (enabled) WidgetRefreshWorker.sync(appContext, true)
+    }
 
     // API keys
     fun setOwmApiKey(key: String) = viewModelScope.launch { prefs.setOwmApiKey(key) }

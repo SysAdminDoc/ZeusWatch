@@ -37,3 +37,17 @@ val DEFAULT_DISABLED_CARDS: Set<String> = CardType.entries
     .filterNot { it.defaultEnabled }
     .map { it.name }
     .toSet()
+
+private val ACCESSIBILITY_PRIORITY_CARDS = listOf(
+    CardType.SEVERE_WEATHER,
+    CardType.WEATHER_SUMMARY,
+    CardType.HOURLY_FORECAST,
+    CardType.DAILY_FORECAST,
+    CardType.DETAILS_GRID,
+)
+
+fun accessibilityCardOrder(baseOrder: List<CardType>): List<CardType> {
+    val prioritized = ACCESSIBILITY_PRIORITY_CARDS.filter { it in baseOrder }
+    val rest = baseOrder.filter { it !in ACCESSIBILITY_PRIORITY_CARDS }
+    return prioritized + rest
+}
