@@ -15,6 +15,7 @@ import com.sysadmindoc.nimbus.data.api.JmaAlertApi
 import com.sysadmindoc.nimbus.data.api.MetNorwayApi
 import com.sysadmindoc.nimbus.data.api.MeteoAlarmAdapter
 import com.sysadmindoc.nimbus.data.api.MeteoAlarmApi
+import com.sysadmindoc.nimbus.data.api.NoaaSwpcApi
 import com.sysadmindoc.nimbus.data.api.NwsAlertAdapter
 import com.sysadmindoc.nimbus.data.api.NwsAlertApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
@@ -475,5 +476,24 @@ object NetworkModule {
     @Singleton
     fun provideBrightSkyApi(@Named("brightsky") retrofit: Retrofit): BrightSkyApi {
         return retrofit.create(BrightSkyApi::class.java)
+    }
+
+    // --- NOAA SWPC (Aurora / Kp Index) ---
+
+    @Provides
+    @Singleton
+    @Named("noaa_swpc")
+    fun provideNoaaSwpcRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(NoaaSwpcApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideNoaaSwpcApi(@Named("noaa_swpc") retrofit: Retrofit): NoaaSwpcApi {
+        return retrofit.create(NoaaSwpcApi::class.java)
     }
 }

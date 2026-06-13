@@ -90,6 +90,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.ui.component.AdaptiveLayoutInfo
 import com.sysadmindoc.nimbus.ui.component.AlertBanner
+import com.sysadmindoc.nimbus.ui.component.AuroraKpCard
 import com.sysadmindoc.nimbus.ui.component.AlertDetailSheet
 import com.sysadmindoc.nimbus.ui.component.AqiCard
 import com.sysadmindoc.nimbus.ui.component.ClothingSuggestionCard
@@ -1375,6 +1376,12 @@ private fun RenderDetailCard(
             forecastHighC = data.daily.firstOrNull()?.temperatureHigh,
             modifier = modifier,
         )
+        CardType.AURORA_KP -> {
+            val kpData = context.state.auroraKpData
+            if (kpData != null) {
+                AuroraKpCard(data = kpData, modifier = modifier)
+            }
+        }
         else -> Unit
     }
 }
