@@ -32,6 +32,7 @@ import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.readPersistentWeatherNotificationEnabled
 import com.sysadmindoc.nimbus.data.repository.sourceOverrides
 import com.sysadmindoc.nimbus.sync.WearSyncManager
+import com.sysadmindoc.nimbus.util.GadgetbridgeWeatherBroadcaster
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import dagger.assisted.Assisted
@@ -58,6 +59,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
     private val weatherRepository: WeatherRepository,
     private val locationRepository: LocationRepository,
     private val wearSyncManager: WearSyncManager,
+    private val gadgetbridgeWeatherBroadcaster: GadgetbridgeWeatherBroadcaster,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
@@ -94,6 +96,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
             updatePersistentNotification(settings, state.primaryWeather, lastLoc)
             cacheRemainingSavedLocations(savedLocations, state)
             saveSavedCitySummaries(savedLocations, convertTemp, state)
+            broadcastToGadgetbridge(settings, state)
             updateWidgetsIfNeeded(state.refreshedAnyLocation, lastLoc)
 
             state.toWorkResult()
@@ -191,6 +194,9 @@ class WidgetRefreshWorker @AssistedInject constructor(
                 WeatherNotificationHelper.showOrUpdate(applicationContext, cached, settings)
             } catch (_: Exception) {
             }
+        }
+        if (settings.gadgetbridgeBroadcastEnabled) {
+            gadgetbridgeWeatherBroadcaster.broadcast(primary = cached)
         }
     }
 
@@ -389,6 +395,18 @@ class WidgetRefreshWorker @AssistedInject constructor(
             WidgetDataProvider.saveSavedCities(applicationContext, cities)
             state.refreshedAnyLocation = true
         }
+    }
+
+    private fun broadcastToGadgetbridge(settings: NimbusSettings, state: WidgetRefreshState) {
+        if (!settings.gadgetbridgeBroadcastEnabled) return
+        val primaryWeather = state.primaryWeather ?: return
+        val secondary = state.weatherByLocationKey
+            .values
+            .filterNot { weather ->
+                weather.location.latitude == primaryWeather.location.latitude &&
+                    weather.location.longitude == primaryWeather.location.longitude
+            }
+        gadgetbridgeWeatherBroadcaster.broadcast(primary = primaryWeather, secondary = secondary)
     }
 
     private fun buildWidgetData(
