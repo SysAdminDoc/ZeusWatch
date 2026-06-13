@@ -11,10 +11,12 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.sysadmindoc.nimbus.data.repository.AirQualityRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import com.sysadmindoc.nimbus.data.model.CustomAlertMetric
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
@@ -37,6 +39,7 @@ class CustomAlertWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted params: WorkerParameters,
     private val weatherRepository: WeatherRepository,
+    private val airQualityRepository: AirQualityRepository,
     private val prefs: UserPreferences,
 ) : CoroutineWorker(appContext, params) {
 
@@ -51,7 +54,11 @@ class CustomAlertWorker @AssistedInject constructor(
         val weather = weatherResult.getOrNull()
             ?: return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
 
-        val triggered = evaluateCustomAlertRules(rules, weather)
+        val airQuality = if (rules.any { it.enabled && it.metric == CustomAlertMetric.AQI_NOW }) {
+            airQualityRepository.getAirQuality(loc.latitude, loc.longitude).getOrNull()
+        } else null
+
+        val triggered = evaluateCustomAlertRules(rules, weather, airQuality)
         if (triggered.isEmpty()) return Result.success()
 
         val store = CustomAlertDedupeStore(applicationContext)

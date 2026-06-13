@@ -76,6 +76,11 @@ enum class CustomAlertMetric(
         summary = "Current barometric pressure",
         unit = CustomAlertUnit.HPA,
     ),
+    AQI_NOW(
+        label = "Air quality",
+        summary = "Current US EPA air quality index",
+        unit = CustomAlertUnit.AQI,
+    ),
 }
 
 /** Comparison direction. */
@@ -95,4 +100,5 @@ enum class CustomAlertUnit(val shortLabel: String) {
     MM("mm"),
     UV(""),
     HPA("hPa"),
+    AQI("AQI"),
 }
