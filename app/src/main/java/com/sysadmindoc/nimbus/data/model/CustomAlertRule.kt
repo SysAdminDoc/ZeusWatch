@@ -56,6 +56,26 @@ enum class CustomAlertMetric(
         summary = "Today's maximum UV index",
         unit = CustomAlertUnit.UV,
     ),
+    DEW_POINT_NOW(
+        label = "Dew point",
+        summary = "Current dew point temperature",
+        unit = CustomAlertUnit.CELSIUS,
+    ),
+    FEELS_LIKE_NOW(
+        label = "Feels like",
+        summary = "Current apparent temperature (heat index / wind chill)",
+        unit = CustomAlertUnit.CELSIUS,
+    ),
+    SNOWFALL_SUM_NEXT_24H(
+        label = "Snow (next 24h)",
+        summary = "Total snowfall in the next 24 hours",
+        unit = CustomAlertUnit.MM,
+    ),
+    PRESSURE_NOW(
+        label = "Pressure",
+        summary = "Current barometric pressure",
+        unit = CustomAlertUnit.HPA,
+    ),
 }
 
 /** Comparison direction. */
@@ -74,4 +94,5 @@ enum class CustomAlertUnit(val shortLabel: String) {
     KMH("km/h"),
     MM("mm"),
     UV(""),
+    HPA("hPa"),
 }
