@@ -43,18 +43,18 @@ class CompareViewModel @Inject constructor(
 
     fun selectLocation1(location: SavedLocationEntity) {
         primaryRequestToken = consumeRequestToken()
-        _uiState.update { it.copy(location1 = location, weather1 = null, error = null) }
+        _uiState.update { it.copy(location1 = location, weather1 = null, error1 = null) }
         fetchWeather(location, Slot.PRIMARY, primaryRequestToken)
     }
 
     fun selectLocation2(location: SavedLocationEntity) {
         secondaryRequestToken = consumeRequestToken()
-        _uiState.update { it.copy(location2 = location, weather2 = null, error = null) }
+        _uiState.update { it.copy(location2 = location, weather2 = null, error2 = null) }
         fetchWeather(location, Slot.SECONDARY, secondaryRequestToken)
     }
 
     fun retry() {
-        _uiState.update { it.copy(error = null) }
+        _uiState.update { it.copy(error1 = null, error2 = null) }
         val loc1 = _uiState.value.location1
         val loc2 = _uiState.value.location2
         if (loc1 != null) {
@@ -96,7 +96,8 @@ class CompareViewModel @Inject constructor(
                 location2 = secondary,
                 weather1 = if (state.location1?.id == primary?.id) state.weather1 else null,
                 weather2 = if (state.location2?.id == secondary?.id) state.weather2 else null,
-                error = if (locations.isEmpty()) null else state.error,
+                error1 = if (locations.isEmpty()) null else state.error1,
+                error2 = if (locations.isEmpty()) null else state.error2,
             )
         }
 
@@ -120,14 +121,14 @@ class CompareViewModel @Inject constructor(
                                     if (requestToken != primaryRequestToken || state.location1?.id != location.id) {
                                         state
                                     } else {
-                                        state.copy(weather1 = data, error = null)
+                                        state.copy(weather1 = data, error1 = null)
                                     }
                                 }
                                 Slot.SECONDARY -> {
                                     if (requestToken != secondaryRequestToken || state.location2?.id != location.id) {
                                         state
                                     } else {
-                                        state.copy(weather2 = data, error = null)
+                                        state.copy(weather2 = data, error2 = null)
                                     }
                                 }
                             }
@@ -142,7 +143,7 @@ class CompareViewModel @Inject constructor(
                                     } else {
                                         state.copy(
                                             weather1 = null,
-                                            error = "Couldn't load weather for ${location.name}.",
+                                            error1 = "Couldn't load weather for ${location.name}.",
                                         )
                                     }
                                 }
@@ -152,7 +153,7 @@ class CompareViewModel @Inject constructor(
                                     } else {
                                         state.copy(
                                             weather2 = null,
-                                            error = "Couldn't load weather for ${location.name}.",
+                                            error2 = "Couldn't load weather for ${location.name}.",
                                         )
                                     }
                                 }
@@ -187,5 +188,8 @@ data class CompareUiState(
     val weather1: WeatherData? = null,
     val weather2: WeatherData? = null,
     val isLoading: Boolean = false,
-    val error: String? = null,
-)
+    val error1: String? = null,
+    val error2: String? = null,
+) {
+    val error: String? get() = error1 ?: error2
+}

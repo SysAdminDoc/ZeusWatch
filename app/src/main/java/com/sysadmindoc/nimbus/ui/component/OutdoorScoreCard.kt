@@ -32,21 +32,14 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.WeatherFormatter
 
-/**
- * Outdoor activity suitability score card.
- * Shows a circular gauge 0-100 with color-coded rating.
- */
 @Composable
 fun OutdoorScoreCard(
-    score: Int,
+    breakdown: WeatherFormatter.OutdoorScoreBreakdown,
     modifier: Modifier = Modifier,
-    tempCelsius: Double = 20.0,
-    humidity: Int = 50,
-    windKmh: Double = 10.0,
-    uvIndex: Double = 3.0,
-    precipProbability: Int = 0,
 ) {
+    val score = breakdown.score
     val label = stringResource(outdoorScoreLabelRes(score))
     val description = stringResource(outdoorScoreDescriptionRes(score))
     val scoreColor = when {
@@ -56,27 +49,23 @@ fun OutdoorScoreCard(
         score >= 20 -> Color(0xFFFF5722)
         else -> Color(0xFFF44336)
     }
-    val tempScore = factorScore(tempCelsius, 15.0, 25.0, 5.0, 35.0)
-    val windScore = (100 - (windKmh / 50.0 * 100).toInt()).coerceIn(0, 100)
-    val rainScore = (100 - precipProbability).coerceIn(0, 100)
-    val uvScore = (100 - (uvIndex / 11.0 * 100).toInt()).coerceIn(0, 100)
-    val humidityScore = factorScore(humidity.toDouble(), 30.0, 60.0, 10.0, 85.0)
     val factors = listOf(
-        stringResource(R.string.outdoor_factor_temp) to tempScore,
-        stringResource(R.string.outdoor_factor_wind) to windScore,
-        stringResource(R.string.outdoor_factor_rain) to rainScore,
-        stringResource(R.string.outdoor_factor_uv) to uvScore,
-        stringResource(R.string.outdoor_factor_humidity) to humidityScore,
+        stringResource(R.string.outdoor_factor_temp) to breakdown.tempScore,
+        stringResource(R.string.outdoor_factor_wind) to breakdown.windScore,
+        stringResource(R.string.outdoor_factor_rain) to breakdown.precipScore,
+        stringResource(R.string.outdoor_factor_uv) to breakdown.uvScore,
+        stringResource(R.string.outdoor_factor_humidity) to breakdown.humidityScore,
+        stringResource(R.string.outdoor_factor_aqi) to breakdown.aqiScore,
     )
     val semanticSummary = stringResource(
         R.string.outdoor_score_semantics,
         score,
         label,
-        tempScore,
-        windScore,
-        rainScore,
-        uvScore,
-        humidityScore,
+        breakdown.tempScore,
+        breakdown.windScore,
+        breakdown.precipScore,
+        breakdown.uvScore,
+        breakdown.humidityScore,
     )
 
     WeatherCard(
@@ -90,7 +79,6 @@ fun OutdoorScoreCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            // Score gauge
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.size(80.dp),
@@ -100,7 +88,6 @@ fun OutdoorScoreCard(
                     val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
                     val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
 
-                    // Background arc
                     drawArc(
                         color = Color.White.copy(alpha = 0.1f),
                         startAngle = 135f,
@@ -110,7 +97,6 @@ fun OutdoorScoreCard(
                         size = arcSize,
                         style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
                     )
-                    // Score arc
                     drawArc(
                         color = scoreColor,
                         startAngle = 135f,
@@ -145,7 +131,6 @@ fun OutdoorScoreCard(
             }
         }
 
-        // Factor breakdown
         Spacer(modifier = Modifier.height(12.dp))
         factors.forEach { (name, value) ->
             FactorBar(name = name, value = value)
@@ -167,14 +152,6 @@ private fun outdoorScoreDescriptionRes(score: Int): Int = when {
     score >= 40 -> R.string.outdoor_desc_indoor
     score >= 20 -> R.string.outdoor_desc_not_recommended
     else -> R.string.outdoor_desc_stay_inside
-}
-
-private fun factorScore(value: Double, idealLow: Double, idealHigh: Double, okLow: Double, okHigh: Double): Int {
-    return when {
-        value in idealLow..idealHigh -> 100
-        value in okLow..okHigh -> 60
-        else -> 20
-    }
 }
 
 @Composable

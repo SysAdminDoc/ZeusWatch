@@ -5,6 +5,7 @@ import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.util.withRetry
 import kotlinx.coroutines.flow.first
 import java.time.ZoneId
 import javax.inject.Inject
@@ -53,7 +54,9 @@ class WeatherSourceManager @Inject constructor(
         val primary = config.forecast
         val fallback = config.forecastFallback
 
-        val result = getForecastFrom(primary, latitude, longitude, locationName, locationTimeZone)
+        val result = withRetry {
+            getForecastFrom(primary, latitude, longitude, locationName, locationTimeZone)
+        }
         if (result.isSuccess) {
             return result.map { it.copy(sourceProvider = primary.displayName) }
         }
@@ -61,7 +64,9 @@ class WeatherSourceManager @Inject constructor(
         Log.w(TAG, "Primary forecast source ${primary.displayName} failed, trying fallback", result.exceptionOrNull())
 
         if (fallback != null && fallback != primary) {
-            val fallbackResult = getForecastFrom(fallback, latitude, longitude, locationName, locationTimeZone)
+            val fallbackResult = withRetry {
+                getForecastFrom(fallback, latitude, longitude, locationName, locationTimeZone)
+            }
             if (fallbackResult.isSuccess) {
                 return fallbackResult.map {
                     it.copy(sourceProvider = fallback.displayName, usedFallback = true)
@@ -123,13 +128,17 @@ class WeatherSourceManager @Inject constructor(
         val primary = config.alerts
         val fallback = config.alertsFallback
 
-        val result = getAlertsFrom(primary, latitude, longitude, includeMeteredSources)
+        val result = withRetry {
+            getAlertsFrom(primary, latitude, longitude, includeMeteredSources)
+        }
         if (result.isSuccess) return result
 
         Log.w(TAG, "Primary alert source ${primary.displayName} failed, trying fallback", result.exceptionOrNull())
 
         if (fallback != null && fallback != primary) {
-            val fallbackResult = getAlertsFrom(fallback, latitude, longitude, includeMeteredSources)
+            val fallbackResult = withRetry {
+                getAlertsFrom(fallback, latitude, longitude, includeMeteredSources)
+            }
             if (fallbackResult.isSuccess) return fallbackResult
             Log.w(TAG, "Fallback alert source ${fallback.displayName} also failed", fallbackResult.exceptionOrNull())
         }
@@ -177,7 +186,7 @@ class WeatherSourceManager @Inject constructor(
         val config = prefs.settings.first().sourceConfig
         val primary = config.airQuality
 
-        return getAirQualityFrom(primary, latitude, longitude)
+        return withRetry { getAirQualityFrom(primary, latitude, longitude) }
     }
 
     private suspend fun getAirQualityFrom(
@@ -199,7 +208,7 @@ class WeatherSourceManager @Inject constructor(
         val config = prefs.settings.first().sourceConfig
         val primary = config.minutely
 
-        return getMinutelyFrom(primary, latitude, longitude)
+        return withRetry { getMinutelyFrom(primary, latitude, longitude) }
     }
 
     private suspend fun getMinutelyFrom(

@@ -806,7 +806,7 @@ class MainViewModel @Inject constructor(
                 context = appContext,
             )
 
-            val score = WeatherFormatter.outdoorActivityScore(
+            val outdoorBreakdown = WeatherFormatter.outdoorActivityScore(
                 tempCelsius = data.current.temperature,
                 humidity = data.current.humidity,
                 windKmh = data.current.windSpeed,
@@ -840,7 +840,7 @@ class MainViewModel @Inject constructor(
 
             DerivedWeatherState(
                 weatherSummary = templateSummary,
-                outdoorScore = score,
+                outdoorScore = outdoorBreakdown,
                 drivingAlerts = drivingAlerts.toImmutableList(),
                 healthAlerts = healthAlerts.toImmutableList(),
                 clothingSuggestions = clothingSuggestions.toImmutableList(),
@@ -1137,7 +1137,7 @@ data class MainUiState(
     val weatherSummary: String = "",
     val yesterdayHigh: Double? = null,
     val nowcastData: ImmutableList<MinutelyPrecipitation> = persistentListOf(),
-    val outdoorScore: Int = 0,
+    val outdoorScore: WeatherFormatter.OutdoorScoreBreakdown? = null,
     val drivingAlerts: ImmutableList<DrivingAlert> = persistentListOf(),
     val healthAlerts: ImmutableList<HealthAlert> = persistentListOf(),
     val clothingSuggestions: ImmutableList<ClothingSuggestion> = persistentListOf(),
@@ -1153,7 +1153,7 @@ data class MainUiState(
 
 private data class DerivedWeatherState(
     val weatherSummary: String,
-    val outdoorScore: Int,
+    val outdoorScore: WeatherFormatter.OutdoorScoreBreakdown?,
     val drivingAlerts: ImmutableList<DrivingAlert>,
     val healthAlerts: ImmutableList<HealthAlert>,
     val clothingSuggestions: ImmutableList<ClothingSuggestion>,
@@ -1178,7 +1178,7 @@ private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
     weatherSummary = "",
     yesterdayHigh = null,
     nowcastData = persistentListOf(),
-    outdoorScore = 0,
+    outdoorScore = null,
     drivingAlerts = persistentListOf(),
     healthAlerts = persistentListOf(),
     clothingSuggestions = persistentListOf(),

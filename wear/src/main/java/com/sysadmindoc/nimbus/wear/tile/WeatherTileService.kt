@@ -181,6 +181,25 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
                     .setMaxLines(1)
                     .build(),
             )
+            if (data.syncedAtMs > 0L) {
+                val ageMin = ((System.currentTimeMillis() - data.syncedAtMs) / 60_000L).coerceAtLeast(0)
+                val ageLabel = when {
+                    ageMin < 1 -> getString(R.string.wear_tile_just_now)
+                    ageMin < 60 -> getString(R.string.wear_tile_updated_min, ageMin)
+                    else -> getString(R.string.wear_tile_updated_hr, ageMin / 60)
+                }
+                layout.addContent(
+                    Text.Builder()
+                        .setText(ageLabel)
+                        .setFontStyle(
+                            LayoutElementBuilders.FontStyle.Builder()
+                                .setSize(sp(9f))
+                                .setColor(argb(0xFF5A6180.toInt()))
+                                .build(),
+                        )
+                        .build(),
+                )
+            }
         }
 
         val timeline = TimelineBuilders.Timeline.Builder()
