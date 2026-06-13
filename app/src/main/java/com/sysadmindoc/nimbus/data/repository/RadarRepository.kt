@@ -18,17 +18,18 @@ class RadarRepository @Inject constructor(
             val radar = response.radar ?: return@withContext Result.failure(
                 Exception("No radar data available")
             )
+            val host = response.host
             val past = radar.past.map { frame ->
                 TimedTileUrl(
                     timestamp = frame.time,
-                    tileUrl = RainViewerApi.buildTileUrl(frame.path),
+                    tileUrl = RainViewerApi.buildTileUrl(frame.path, host),
                     isPast = true,
                 )
             }
             val forecast = radar.nowcast.map { frame ->
                 TimedTileUrl(
                     timestamp = frame.time,
-                    tileUrl = RainViewerApi.buildTileUrl(frame.path),
+                    tileUrl = RainViewerApi.buildTileUrl(frame.path, host),
                     isPast = false,
                 )
             }
