@@ -35,6 +35,7 @@ enum class CardType(val label: String, val defaultEnabled: Boolean = true) {
     SOLAR("Solar Irradiance", false),
     MARINE("Marine", false),
     FLOOD_RISK("Flood Risk", false),
+    CLIMATE_OUTLOOK("Climate Outlook", false),
 }
 
 val DEFAULT_CARD_ORDER: List<CardType> = CardType.entries.toList()
