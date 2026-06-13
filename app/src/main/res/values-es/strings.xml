@@ -247,10 +247,14 @@
     <string name="card_type_cloud_cover">Nubosidad</string>
     <string name="card_type_visibility">Visibilidad</string>
     <string name="card_type_on_this_day">En esta fecha</string>
+    <string name="card_type_aurora_kp">Aurora / Indice Kp</string>
     <string name="card_title_astronomy">Astronomia</string>
     <string name="card_title_forecast_brief">Resumen del pronostico</string>
     <string name="card_title_outdoor_activity">Actividad al aire libre</string>
     <string name="card_title_sunshine">Sol</string>
+    <string name="card_title_aurora_kp">Aurora / Indice Kp</string>
+    <string name="aurora_kp_value">Kp %1$s</string>
+    <string name="aurora_kp_semantics">Indice Kp de aurora %1$s, %2$s.</string>
 
     <!-- Today card internals -->
     <string name="current_metric_high">Maxima</string>

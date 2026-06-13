@@ -30,6 +30,8 @@ import com.sysadmindoc.nimbus.util.WeatherSummaryEngine
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import com.sysadmindoc.nimbus.data.repository.AirQualityRepository
 import com.sysadmindoc.nimbus.data.repository.AlertRepository
+import com.sysadmindoc.nimbus.data.repository.AuroraKpData
+import com.sysadmindoc.nimbus.data.repository.AuroraRepository
 import com.sysadmindoc.nimbus.data.repository.CardType
 import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionData
 import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionRepository
@@ -110,6 +112,7 @@ data class MainViewModelDependencies @Inject constructor(
     val connectivityObserver: ConnectivityObserver,
     val onThisDayRepository: OnThisDayRepository,
     val forecastEvolutionRepository: ForecastEvolutionRepository,
+    val auroraRepository: AuroraRepository,
     val wearSyncManager: WearSyncManager,
     val gadgetbridgeBroadcaster: GadgetbridgeWeatherBroadcaster,
     @DefaultDispatcher val defaultDispatcher: CoroutineDispatcher,
@@ -133,6 +136,7 @@ class MainViewModel @Inject constructor(
     private val connectivityObserver = dependencies.connectivityObserver
     private val onThisDayRepository = dependencies.onThisDayRepository
     private val forecastEvolutionRepository = dependencies.forecastEvolutionRepository
+    private val auroraRepository = dependencies.auroraRepository
     private val wearSyncManager = dependencies.wearSyncManager
     private val gadgetbridgeBroadcaster = dependencies.gadgetbridgeBroadcaster
     private val defaultDispatcher = dependencies.defaultDispatcher
@@ -501,6 +505,9 @@ class MainViewModel @Inject constructor(
                         if (_uiState.value.settings.isCardEnabled(CardType.FORECAST_EVOLUTION)) {
                             launch { fetchForecastEvolution(lat, lon, requestId) }
                         }
+                        if (_uiState.value.settings.isCardEnabled(CardType.AURORA_KP)) {
+                            launch { fetchAuroraKp(requestId) }
+                        }
                     }
                     if (!isLatestWeatherRequest(requestId)) return@fold
                     // Sync to watch after all data is available
@@ -769,6 +776,24 @@ class MainViewModel @Inject constructor(
             if (isLatestWeatherRequest(requestId) && _uiState.value.onThisDay == null) {
                 _uiState.update { it.copy(onThisDay = null) }
             }
+        }
+    }
+
+    // ── Aurora / Kp Index ─────────────────────────────────────────────────
+
+    private suspend fun fetchAuroraKp(requestId: Long) {
+        try {
+            auroraRepository.getKpIndex().fold(
+                onSuccess = { data ->
+                    if (isLatestWeatherRequest(requestId)) {
+                        _uiState.update { it.copy(auroraKpData = data) }
+                    }
+                },
+                onFailure = { Log.w(TAG, "fetchAuroraKp failed: ${it.message}") },
+            )
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "fetchAuroraKp failed", e)
         }
     }
 
@@ -1145,6 +1170,7 @@ data class MainUiState(
     val goldenHourTimes: Pair<String, String>? = null,
     val isOffline: Boolean = false,
     val onThisDay: com.sysadmindoc.nimbus.data.model.OnThisDayData? = null,
+    val auroraKpData: AuroraKpData? = null,
     val forecastEvolution: ForecastEvolutionData? = null,
     val isForecastEvolutionLoading: Boolean = false,
     val forecastEvolutionUnavailable: Boolean = false,
@@ -1185,6 +1211,7 @@ private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
     petSafetyAlerts = persistentListOf(),
     goldenHourTimes = null,
     onThisDay = null,
+    auroraKpData = null,
     forecastEvolution = null,
     isForecastEvolutionLoading = false,
     forecastEvolutionUnavailable = false,

@@ -36,4 +36,5 @@ internal val CardType.labelRes: Int
         CardType.CLOUD_COVER -> R.string.card_type_cloud_cover
         CardType.VISIBILITY -> R.string.card_type_visibility
         CardType.ON_THIS_DAY -> R.string.card_type_on_this_day
+        CardType.AURORA_KP -> R.string.card_type_aurora_kp
     }
