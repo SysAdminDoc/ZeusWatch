@@ -572,6 +572,7 @@
     <string name="outdoor_factor_rain">Rain</string>
     <string name="outdoor_factor_uv">UV</string>
     <string name="outdoor_factor_humidity">Humidity</string>
+    <string name="outdoor_factor_aqi">AQI</string>
     <string name="outdoor_score_semantics">Outdoor activity score %1$d out of 100, %2$s. Factor scores: temperature %3$d, wind %4$d, rain %5$d, UV %6$d, humidity %7$d.</string>
     <string name="wind_compass_semantics">Wind compass. Wind from %1$s at %2$s.</string>
     <string name="wind_compass_semantics_gusts">Wind compass. Wind from %1$s at %2$s. Gusts up to %3$s.</string>

@@ -419,6 +419,16 @@ object WeatherFormatter {
      * Composite score 0-100 for outdoor activity suitability.
      * Considers temperature comfort, wind, UV, precipitation, air quality.
      */
+    data class OutdoorScoreBreakdown(
+        val score: Int,
+        val tempScore: Int,
+        val humidityScore: Int,
+        val windScore: Int,
+        val uvScore: Int,
+        val precipScore: Int,
+        val aqiScore: Int,
+    )
+
     fun outdoorActivityScore(
         tempCelsius: Double,
         humidity: Int,
@@ -426,8 +436,7 @@ object WeatherFormatter {
         uvIndex: Double,
         precipProbability: Int,
         aqi: Int? = null,
-    ): Int {
-        // Temperature: ideal 15-25C = 100, penalty for deviation
+    ): OutdoorScoreBreakdown {
         val tempScore = when {
             tempCelsius in 15.0..25.0 -> 100
             tempCelsius in 10.0..30.0 -> 80
@@ -435,21 +444,18 @@ object WeatherFormatter {
             tempCelsius in 0.0..40.0 -> 25
             else -> 10
         }
-        // Humidity: ideal 30-60%
         val humidityScore = when {
             humidity in 30..60 -> 100
             humidity in 20..70 -> 80
             humidity in 10..80 -> 50
             else -> 30
         }
-        // Wind: calm is best
         val windScore = when {
             windKmh < 15 -> 100
             windKmh < 30 -> 75
             windKmh < 50 -> 40
             else -> 15
         }
-        // UV: moderate is fine
         val uvScore = when {
             uvIndex < 3 -> 100
             uvIndex < 6 -> 85
@@ -457,19 +463,17 @@ object WeatherFormatter {
             uvIndex < 11 -> 35
             else -> 15
         }
-        // Precipitation: lower is better
         val precipScore = (100 - precipProbability).coerceIn(0, 100)
-        // AQI: lower is better
         val aqiScore = when {
-            aqi == null -> 80 // assume decent if unknown
+            aqi == null -> 80
             aqi <= 50 -> 100
             aqi <= 100 -> 70
             aqi <= 150 -> 40
             else -> 15
         }
-        // Weighted average
-        return ((tempScore * 0.30) + (windScore * 0.20) + (precipScore * 0.20) +
+        val composite = ((tempScore * 0.30) + (windScore * 0.20) + (precipScore * 0.20) +
             (uvScore * 0.10) + (humidityScore * 0.10) + (aqiScore * 0.10)).toInt().coerceIn(0, 100)
+        return OutdoorScoreBreakdown(composite, tempScore, humidityScore, windScore, uvScore, precipScore, aqiScore)
     }
 
     fun outdoorScoreLabel(score: Int): String = when {

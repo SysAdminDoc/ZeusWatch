@@ -543,6 +543,7 @@
     <string name="outdoor_factor_rain">Lluvia</string>
     <string name="outdoor_factor_uv">UV</string>
     <string name="outdoor_factor_humidity">Humedad</string>
+    <string name="outdoor_factor_aqi">AQI</string>
     <string name="outdoor_score_semantics">Puntuacion de actividad al aire libre %1$d de 100, %2$s. Factores: temperatura %3$d, viento %4$d, lluvia %5$d, UV %6$d, humedad %7$d.</string>
     <string name="wind_compass_semantics">Brujula de viento. Viento desde %1$s a %2$s.</string>
     <string name="wind_compass_semantics_gusts">Brujula de viento. Viento desde %1$s a %2$s. Rafagas hasta %3$s.</string>

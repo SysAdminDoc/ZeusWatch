@@ -144,11 +144,12 @@ object WidgetDataProvider {
         }
     }
 
-    /** Load weather data for a specific widget, falling back to global data if not found. */
+    /** Load weather data for a specific widget. Falls back to global data only for unpinned widgets. */
     suspend fun load(context: Context, appWidgetId: Int): WidgetWeatherData? {
         val prefs = context.widgetDataStore.data.first()
+        val isPinned = WidgetLocationPrefs.getLocationId(context, appWidgetId) != null
         val location = prefs[stringPreferencesKey(wKey(appWidgetId, "location"))]
-            ?: return load(context) // fallback to global
+            ?: return if (isPinned) null else load(context)
 
         val hourlyJson = prefs[stringPreferencesKey(wKey(appWidgetId, "hourly"))]
         val dailyJson = prefs[stringPreferencesKey(wKey(appWidgetId, "daily"))]

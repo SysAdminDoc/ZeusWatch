@@ -33,11 +33,9 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import javax.inject.Singleton
@@ -88,41 +86,6 @@ object NetworkModule {
         coerceInputValues = true
     }
 
-    /**
-     * Retry interceptor: retries on IOException or transient 5xx up to 2 times
-     * with exponential backoff (1s, 2s). Runs on OkHttp's dispatcher thread —
-     * `Thread.sleep` is acceptable there (it is not a coroutine context), but
-     * we always pipe the backoff through an interruptible wait so a cancelled
-     * request tears down promptly instead of pinning the thread.
-     *
-     * 429 rate-limit responses are *not* retried here; [RateLimitInterceptor]
-     * handles those with a single `Retry-After`-honoring retry.
-     */
-    private val retryInterceptor = Interceptor { chain ->
-        val request = chain.request()
-        var lastException: IOException? = null
-        for (attempt in 0..2) {
-            try {
-                val response = chain.proceed(request)
-                if (response.code in 500..599 && attempt < 2) {
-                    response.close()
-                } else {
-                    return@Interceptor response
-                }
-            } catch (e: IOException) {
-                lastException = e
-                if (attempt >= 2) throw e
-            }
-            try {
-                Thread.sleep(1_000L * (1 shl attempt)) // 1s, 2s
-            } catch (interrupted: InterruptedException) {
-                Thread.currentThread().interrupt()
-                throw IOException("Retry interrupted", interrupted)
-            }
-        }
-        throw lastException ?: IOException("Request failed after retries")
-    }
-
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
@@ -130,7 +93,6 @@ object NetworkModule {
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
-            .addInterceptor(retryInterceptor)
             .apply {
                 if (BuildConfig.DEBUG) {
                     // OkHttp 4.x's HttpLoggingInterceptor doesn't support query-param
