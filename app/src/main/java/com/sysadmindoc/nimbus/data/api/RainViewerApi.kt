@@ -23,13 +23,15 @@ interface RainViewerApi {
          *  {z}/{x}/{y} placeholders are required by MapLibre. */
         fun buildTileUrl(
             path: String,
+            host: String? = null,
             colorScheme: Int = 4, // 4 = "The Weather Channel" scheme
             smooth: Boolean = true,
             snow: Boolean = true,
         ): String {
+            val resolvedHost = host?.takeIf { it.isNotBlank() } ?: TILE_HOST
             val smoothFlag = if (smooth) 1 else 0
             val snowFlag = if (snow) 1 else 0
-            return "$TILE_HOST$path/512/{z}/{x}/{y}/$colorScheme/${smoothFlag}_${snowFlag}.png"
+            return "$resolvedHost$path/512/{z}/{x}/{y}/$colorScheme/${smoothFlag}_${snowFlag}.png"
         }
     }
 }
