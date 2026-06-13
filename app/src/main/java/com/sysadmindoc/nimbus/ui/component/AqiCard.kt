@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.HourlyAqi
+import com.sysadmindoc.nimbus.ui.screen.main.LocalUnitSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
@@ -39,6 +40,7 @@ fun AqiCard(
     modifier: Modifier = Modifier,
     statusLabel: String? = null,
     statusTint: Color = NimbusTextSecondary,
+    referenceTime: java.time.LocalDateTime? = null,
 ) {
     val aqiLevelLabel = stringResource(data.aqiLevel.labelRes)
     val aqiAdvice = stringResource(data.aqiLevel.adviceRes)
@@ -120,7 +122,7 @@ fun AqiCard(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 items(data.hourlyAqi) { hour ->
-                    HourlyAqiChip(hour)
+                    HourlyAqiChip(hour, referenceTime)
                 }
             }
         }
@@ -163,11 +165,11 @@ private fun PollutantChip(label: String, value: String, unit: String, isWorst: B
 }
 
 @Composable
-private fun HourlyAqiChip(hour: HourlyAqi) {
-    val hourLabel = when (hour.hour) {
-        "Now" -> stringResource(R.string.common_now)
-        else -> hour.hour
-    }
+private fun HourlyAqiChip(hour: HourlyAqi, referenceTime: java.time.LocalDateTime? = null) {
+    val settings = LocalUnitSettings.current
+    val hourLabel = com.sysadmindoc.nimbus.util.WeatherFormatter.formatRelativeHourLabel(
+        hour.time, referenceTime, settings,
+    ).let { if (it == "Now") stringResource(R.string.common_now) else it }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
