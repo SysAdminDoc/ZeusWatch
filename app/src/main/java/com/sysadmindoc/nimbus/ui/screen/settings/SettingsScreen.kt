@@ -190,6 +190,7 @@ fun SettingsScreen(
             onCustomIconPackId = viewModel::setCustomIconPackId,
             onThemeMode = viewModel::setThemeMode,
             onSummaryStyle = viewModel::setSummaryStyle,
+            onCustomSummaryTemplate = viewModel::setCustomSummaryTemplate,
             onCardEnabled = viewModel::setCardEnabled,
             onMoveCard = viewModel::moveCard,
             onResetCardPreferences = viewModel::resetCardPreferences,

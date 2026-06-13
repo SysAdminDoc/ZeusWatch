@@ -62,6 +62,7 @@ class UserPreferences @Inject constructor(
         val CUSTOM_ICON_PACK_ID = stringPreferencesKey("custom_icon_pack_id")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val SUMMARY_STYLE = stringPreferencesKey("summary_style")
+        val CUSTOM_SUMMARY_TEMPLATE = stringPreferencesKey("custom_summary_template")
 
         // Card config (stored as JSON strings)
         val CARD_ORDER = stringPreferencesKey("card_order")
@@ -175,6 +176,7 @@ class UserPreferences @Inject constructor(
             customIconPackId = prefs[Keys.CUSTOM_ICON_PACK_ID] ?: "",
             themeMode = safeValueOf<ThemeMode>(prefs[Keys.THEME_MODE] ?: ThemeMode.STATIC_DARK.name) ?: ThemeMode.STATIC_DARK,
             summaryStyle = safeValueOf<SummaryStyle>(prefs[Keys.SUMMARY_STYLE] ?: SummaryStyle.AI_GENERATED.name) ?: SummaryStyle.AI_GENERATED,
+            customSummaryTemplate = prefs[Keys.CUSTOM_SUMMARY_TEMPLATE] ?: "",
             // Card config
             cardOrder = parseCardOrder(prefs[Keys.CARD_ORDER]),
             disabledCards = prefs[Keys.DISABLED_CARDS] ?: DEFAULT_DISABLED_CARDS,
@@ -293,6 +295,7 @@ class UserPreferences @Inject constructor(
     suspend fun setCustomIconPackId(id: String) = store.edit { it[Keys.CUSTOM_ICON_PACK_ID] = id }
     suspend fun setThemeMode(mode: ThemeMode) = store.edit { it[Keys.THEME_MODE] = mode.name }
     suspend fun setSummaryStyle(style: SummaryStyle) = store.edit { it[Keys.SUMMARY_STYLE] = style.name }
+    suspend fun setCustomSummaryTemplate(template: String) = store.edit { it[Keys.CUSTOM_SUMMARY_TEMPLATE] = template }
 
     // Card config
     suspend fun setCardOrder(order: List<CardType>) = store.edit { it[Keys.CARD_ORDER] = order.joinToString(",") { c -> c.name } }
@@ -529,6 +532,7 @@ data class NimbusSettings(
     val customIconPackId: String = "",
     val themeMode: ThemeMode = ThemeMode.STATIC_DARK,
     val summaryStyle: SummaryStyle = SummaryStyle.AI_GENERATED,
+    val customSummaryTemplate: String = "",
     // Card config
     val disabledCards: Set<String> = DEFAULT_DISABLED_CARDS,
     val cardOrder: List<CardType> = DEFAULT_CARD_ORDER,
@@ -675,6 +679,7 @@ enum class ThemeMode(val label: String) {
 enum class SummaryStyle(val label: String) {
     TEMPLATE("Standard"),
     AI_GENERATED("AI-Generated (Gemini)"),
+    CUSTOM_TEMPLATE("Custom Template"),
 }
 
 data class SavedLocation(

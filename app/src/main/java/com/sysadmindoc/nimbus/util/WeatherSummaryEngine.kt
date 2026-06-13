@@ -69,14 +69,7 @@ object WeatherSummaryEngine {
         val parts = mutableListOf<String>()
 
         // Opening: time-of-day greeting + condition
-        // Use location-local observation time when available; fall back to device time
-        val hour = current.observationTime?.hour ?: java.time.LocalTime.now().hour
-        val timeOfDay = when {
-            !current.isDay -> summaryString(context, R.string.summary_time_tonight, "tonight")
-            hour < 12 -> summaryString(context, R.string.summary_time_morning, "this morning")
-            hour < 17 -> summaryString(context, R.string.summary_time_afternoon, "this afternoon")
-            else -> summaryString(context, R.string.summary_time_evening, "this evening")
-        }
+        val timeOfDay = timeOfDayLabel(current, context)
         val conditionPhrase = conditionPhrase(current.weatherCode, current.isDay, context)
         parts.add(
             summaryString(
@@ -152,6 +145,16 @@ object WeatherSummaryEngine {
         return parts.joinToString(" ").replaceFirstChar { it.uppercase() } + ". " + tempSentence + comparisonStr
     }
 
+    internal fun timeOfDayLabel(current: CurrentConditions, context: Context?): String {
+        val hour = current.observationTime?.hour ?: java.time.LocalTime.now().hour
+        return when {
+            !current.isDay -> summaryString(context, R.string.summary_time_tonight, "tonight")
+            hour < 12 -> summaryString(context, R.string.summary_time_morning, "this morning")
+            hour < 17 -> summaryString(context, R.string.summary_time_afternoon, "this afternoon")
+            else -> summaryString(context, R.string.summary_time_evening, "this evening")
+        }
+    }
+
     private fun conditionPhrase(code: WeatherCode, isDay: Boolean, context: Context? = null): String {
         if (context != null) return code.localizedDescription(context)
         val phrases = if (isDay) daytimeConditionPhrases else nighttimeConditionPhrases
@@ -210,6 +213,10 @@ object WeatherSummaryEngine {
         // Always compute the template fallback first (cheap)
         val templateSummary = generate(current, today, hourly, yesterdayHigh, s, context)
 
+        if (s.summaryStyle == SummaryStyle.CUSTOM_TEMPLATE && s.customSummaryTemplate.isNotBlank()) {
+            return generateFromCustomTemplate(current, today, hourly, s, context)
+        }
+
         if (s.summaryStyle != SummaryStyle.AI_GENERATED || aiEngine == null) {
             return templateSummary
         }
@@ -243,5 +250,45 @@ object WeatherSummaryEngine {
             Log.w(TAG, "AI summary failed, using template fallback: ${e.message}")
             templateSummary
         }
+    }
+
+    private fun generateFromCustomTemplate(
+        current: CurrentConditions,
+        today: DailyConditions?,
+        hourly: List<HourlyConditions>,
+        s: NimbusSettings,
+        context: Context?,
+    ): String {
+        val condition = conditionPhrase(current.weatherCode, current.isDay, context)
+        val timeLabel = timeOfDayLabel(current, context)
+        val temp = WeatherFormatter.formatTemperatureUnit(current.temperature, s)
+        val high = WeatherFormatter.formatTemperatureUnit(
+            today?.temperatureHigh ?: current.dailyHigh, s,
+        )
+        val low = WeatherFormatter.formatTemperatureUnit(
+            today?.temperatureLow ?: current.dailyLow, s,
+        )
+        val wind = WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, s)
+        val precipChance = today?.precipitationProbability
+            ?: hourly.firstOrNull()?.precipitationProbability
+            ?: 0
+        val maxPrecip12h = hourly.take(12)
+            .maxOfOrNull { it.precipitationProbability ?: 0 } ?: 0
+
+        return s.customSummaryTemplate
+            .replace("{condition}", condition)
+            .replace("{time}", timeLabel)
+            .replace("{temp}", temp)
+            .replace("{high}", high)
+            .replace("{low}", low)
+            .replace("{humidity}", "${current.humidity}%")
+            .replace("{wind}", wind)
+            .replace("{wind_speed}", WeatherFormatter.formatWindSpeed(current.windSpeed, s))
+            .replace("{uv}", String.format("%.0f", current.uvIndex))
+            .replace("{precip}", "$precipChance%")
+            .replace("{precip_max}", "$maxPrecip12h%")
+            .replace("{pressure}", WeatherFormatter.formatPressure(current.pressure, s))
+            .replace("{dewpoint}", WeatherFormatter.formatTemperatureUnit(current.dewPoint ?: 0.0, s))
+            .trim()
     }
 }
