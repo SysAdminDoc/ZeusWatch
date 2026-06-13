@@ -1061,15 +1061,17 @@
 
     <!-- Nowcast notifications -->
     <string name="nowcast_notif_title_starting_soon">La lluvia empieza pronto</string>
-    <string name="nowcast_notif_title_starting_in">Lluvia en unos %1$d min</string>
+    <string name="nowcast_notif_title_starting_soon_named">La lluvia empieza pronto en %1$s</string>
+    <string name="nowcast_notif_title_starting_in">Lluvia en %1$d min</string>
+    <string name="nowcast_notif_title_starting_in_named">Lluvia en %1$d min en %2$s</string>
     <string name="nowcast_notif_title_stopping_soon">La lluvia para pronto</string>
-    <string name="nowcast_notif_title_easing_in">La lluvia amaina en unos %1$d min</string>
+    <string name="nowcast_notif_title_easing_in">La lluvia amaina en %1$d min</string>
     <string name="nowcast_notif_intensity_heavy">intensa</string>
     <string name="nowcast_notif_intensity_steady">constante</string>
     <string name="nowcast_notif_intensity_light">ligera</string>
-    <string name="nowcast_notif_body_starting_named">Se espera lluvia %1$s cerca de %2$s en unos %3$d minutos.</string>
-    <string name="nowcast_notif_body_starting">Se espera lluvia %1$s en unos %2$d minutos.</string>
-    <string name="nowcast_notif_body_stopping">Parece que la lluvia actual amainara en unos %1$d minutos.</string>
+    <string name="nowcast_notif_body_starting_named">Se espera lluvia %1$s cerca de %2$s en %3$d minutos.</string>
+    <string name="nowcast_notif_body_starting">Se espera lluvia %1$s en %2$d minutos.</string>
+    <string name="nowcast_notif_body_stopping">La lluvia amaina en %1$d minutos.</string>
 
     <!-- Localized weather labels -->
     <string name="weather_code_clear_sky">Despejado</string>

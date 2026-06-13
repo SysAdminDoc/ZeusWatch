@@ -1111,15 +1111,17 @@
 
     <!-- Nowcast notifications -->
     <string name="nowcast_notif_title_starting_soon">Rain starting soon</string>
-    <string name="nowcast_notif_title_starting_in">Rain in about %1$d min</string>
+    <string name="nowcast_notif_title_starting_soon_named">Rain starting soon at %1$s</string>
+    <string name="nowcast_notif_title_starting_in">Rain in %1$d min</string>
+    <string name="nowcast_notif_title_starting_in_named">Rain in %1$d min at %2$s</string>
     <string name="nowcast_notif_title_stopping_soon">Rain stopping soon</string>
-    <string name="nowcast_notif_title_easing_in">Rain easing in about %1$d min</string>
+    <string name="nowcast_notif_title_easing_in">Rain easing in %1$d min</string>
     <string name="nowcast_notif_intensity_heavy">heavy</string>
     <string name="nowcast_notif_intensity_steady">steady</string>
     <string name="nowcast_notif_intensity_light">light</string>
-    <string name="nowcast_notif_body_starting_named">Expect %1$s rain near %2$s in about %3$d minutes.</string>
-    <string name="nowcast_notif_body_starting">Expect %1$s rain starting in about %2$d minutes.</string>
-    <string name="nowcast_notif_body_stopping">Current rain looks like it\'ll ease off in about %1$d minutes.</string>
+    <string name="nowcast_notif_body_starting_named">Expect %1$s rain near %2$s in %3$d minutes.</string>
+    <string name="nowcast_notif_body_starting">Expect %1$s rain in %2$d minutes.</string>
+    <string name="nowcast_notif_body_stopping">Rain easing in %1$d minutes.</string>
 
     <!-- Localized weather labels -->
     <string name="weather_code_clear_sky">Clear</string>
