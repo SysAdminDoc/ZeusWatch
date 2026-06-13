@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
@@ -66,6 +67,7 @@ fun TemperatureGraph(
     modifier: Modifier = Modifier,
     normalHigh: Double? = null,
     normalLow: Double? = null,
+    confidenceBands: ConfidenceBandData? = null,
 ) {
     val s = LocalUnitSettings.current
     val context = LocalContext.current
@@ -134,6 +136,7 @@ fun TemperatureGraph(
 
                 drawPrecipitationBars(data, metrics)
                 drawNormalBand(metrics, normalHigh, normalLow)
+                drawConfidenceBand(data, metrics, confidenceBands)
                 drawTemperatureCurve(paths, metrics)
                 drawFeelsLikeOverlay(data, metrics)
                 drawHighLowMarkers(data, points, textMeasurer, labelStyle, s)
@@ -302,6 +305,75 @@ private fun DrawScope.drawNormalLine(
         end = Offset(metrics.width, y),
         strokeWidth = 1.dp.toPx(),
         pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())),
+    )
+}
+
+private fun DrawScope.drawConfidenceBand(
+    data: List<HourlyConditions>,
+    metrics: TemperatureGraphMetrics,
+    confidenceBands: ConfidenceBandData?,
+) {
+    confidenceBands ?: return
+    val upperPoints = mutableListOf<Offset>()
+    val lowerPoints = mutableListOf<Offset>()
+    for ((index, hour) in data.withIndex()) {
+        val entry = confidenceBands.entryAt(hour.time) ?: continue
+        val x = index * metrics.stepX
+        upperPoints.add(Offset(x, temperatureY(entry.temperatureUpper, metrics)))
+        lowerPoints.add(Offset(x, temperatureY(entry.temperatureLower, metrics)))
+    }
+    if (upperPoints.size < 2) return
+
+    val fillPath = Path()
+    upperPoints.forEachIndexed { index, point ->
+        if (index == 0) fillPath.moveTo(point.x, point.y)
+        else {
+            val prev = upperPoints[index - 1]
+            val cx = (prev.x + point.x) / 2f
+            fillPath.cubicTo(cx, prev.y, cx, point.y, point.x, point.y)
+        }
+    }
+    for (index in lowerPoints.indices.reversed()) {
+        val point = lowerPoints[index]
+        if (index == lowerPoints.lastIndex) fillPath.lineTo(point.x, point.y)
+        else {
+            val next = lowerPoints[index + 1]
+            val cx = (next.x + point.x) / 2f
+            fillPath.cubicTo(cx, next.y, cx, point.y, point.x, point.y)
+        }
+    }
+    fillPath.close()
+
+    drawPath(
+        path = fillPath,
+        color = NimbusBlueAccent.copy(alpha = 0.12f),
+    )
+    drawConfidenceBandEdge(upperPoints, metrics)
+    drawConfidenceBandEdge(lowerPoints, metrics)
+}
+
+private fun DrawScope.drawConfidenceBandEdge(
+    points: List<Offset>,
+    metrics: TemperatureGraphMetrics,
+) {
+    val path = Path()
+    points.forEachIndexed { index, point ->
+        if (index == 0) path.moveTo(point.x, point.y)
+        else {
+            val prev = points[index - 1]
+            val cx = (prev.x + point.x) / 2f
+            path.cubicTo(cx, prev.y, cx, point.y, point.x, point.y)
+        }
+    }
+    drawPath(
+        path = path,
+        color = NimbusBlueAccent.copy(alpha = 0.25f),
+        style = Stroke(
+            width = 1f,
+            cap = StrokeCap.Round,
+            join = StrokeJoin.Round,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f)),
+        ),
     )
 }
 

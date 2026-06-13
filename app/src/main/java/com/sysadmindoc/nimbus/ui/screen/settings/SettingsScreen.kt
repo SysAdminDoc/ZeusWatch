@@ -225,6 +225,7 @@ fun SettingsScreen(
             onShowOutdoorScore = viewModel::setShowOutdoorScore,
             onShowYesterdayComparison = viewModel::setShowYesterdayComparison,
             onShowForecastAccuracy = viewModel::setShowForecastAccuracy,
+            onShowConfidenceBands = viewModel::setShowConfidenceBands,
             onHourlyForecastHours = viewModel::setHourlyForecastHours,
             onMigraineAlerts = viewModel::setMigraineAlerts,
             onMigrainePressureThreshold = viewModel::setMigrainePressureThreshold,

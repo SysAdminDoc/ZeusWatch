@@ -150,6 +150,7 @@ class SettingsViewModel @Inject constructor(
     fun setShowOutdoorScore(enabled: Boolean) = viewModelScope.launch { prefs.setShowOutdoorScore(enabled) }
     fun setShowYesterdayComparison(enabled: Boolean) = viewModelScope.launch { prefs.setShowYesterdayComparison(enabled) }
     fun setShowForecastAccuracy(enabled: Boolean) = viewModelScope.launch { prefs.setShowForecastAccuracy(enabled) }
+    fun setShowConfidenceBands(enabled: Boolean) = viewModelScope.launch { prefs.setShowConfidenceBands(enabled) }
 
     // Forecast range
     fun setHourlyForecastHours(hours: Int) = viewModelScope.launch { prefs.setHourlyForecastHours(hours) }

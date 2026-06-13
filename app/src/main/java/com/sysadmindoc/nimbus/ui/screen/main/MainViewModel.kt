@@ -39,6 +39,8 @@ import com.sysadmindoc.nimbus.data.repository.MarineRepository
 import com.sysadmindoc.nimbus.util.ActivityIndex
 import com.sysadmindoc.nimbus.util.ActivityIndexEvaluator
 import com.sysadmindoc.nimbus.data.repository.CardType
+import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
+import com.sysadmindoc.nimbus.data.repository.ConfidenceBandRepository
 import com.sysadmindoc.nimbus.data.repository.ForecastAccuracyData
 import com.sysadmindoc.nimbus.data.repository.ForecastAccuracyRepository
 import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionData
@@ -121,6 +123,7 @@ data class MainViewModelDependencies @Inject constructor(
     val onThisDayRepository: OnThisDayRepository,
     val forecastEvolutionRepository: ForecastEvolutionRepository,
     val forecastAccuracyRepository: ForecastAccuracyRepository,
+    val confidenceBandRepository: ConfidenceBandRepository,
     val auroraRepository: AuroraRepository,
     val marineRepository: MarineRepository,
     val floodRepository: FloodRepository,
@@ -148,6 +151,7 @@ class MainViewModel @Inject constructor(
     private val onThisDayRepository = dependencies.onThisDayRepository
     private val forecastEvolutionRepository = dependencies.forecastEvolutionRepository
     private val forecastAccuracyRepository = dependencies.forecastAccuracyRepository
+    private val confidenceBandRepository = dependencies.confidenceBandRepository
     private val auroraRepository = dependencies.auroraRepository
     private val marineRepository = dependencies.marineRepository
     private val floodRepository = dependencies.floodRepository
@@ -531,6 +535,9 @@ class MainViewModel @Inject constructor(
                         if (_uiState.value.settings.showForecastAccuracy) {
                             launch { fetchForecastAccuracy(lat, lon, requestId) }
                         }
+                        if (_uiState.value.settings.showConfidenceBands) {
+                            launch { fetchConfidenceBands(lat, lon, requestId) }
+                        }
                     }
                     if (!isLatestWeatherRequest(requestId)) return@fold
                     // Sync to watch after all data is available
@@ -794,6 +801,24 @@ class MainViewModel @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.d(TAG, "fetchForecastAccuracy failed", e)
+        }
+    }
+
+    // ── Confidence Bands (Ensemble spread) ────────────────────────────────
+
+    private suspend fun fetchConfidenceBands(lat: Double, lon: Double, requestId: Long) {
+        try {
+            confidenceBandRepository.getConfidenceBands(lat, lon).fold(
+                onSuccess = { data ->
+                    if (isLatestWeatherRequest(requestId)) {
+                        _uiState.update { it.copy(confidenceBands = data) }
+                    }
+                },
+                onFailure = { Log.d(TAG, "Confidence bands unavailable: ${it.message}") },
+            )
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.d(TAG, "fetchConfidenceBands failed", e)
         }
     }
 
@@ -1267,6 +1292,7 @@ data class MainUiState(
     val isForecastEvolutionLoading: Boolean = false,
     val forecastEvolutionUnavailable: Boolean = false,
     val forecastAccuracy: ForecastAccuracyData? = null,
+    val confidenceBands: ConfidenceBandData? = null,
     val lastSeenVersionCode: Int = BuildConfig.VERSION_CODE,
 )
 
@@ -1313,6 +1339,7 @@ private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
     isForecastEvolutionLoading = false,
     forecastEvolutionUnavailable = false,
     forecastAccuracy = null,
+    confidenceBands = null,
 )
 
 private fun NimbusSettings.isCardEnabled(cardType: CardType): Boolean =

@@ -1133,6 +1133,7 @@ private fun RenderForecastCard(
                     modifier = modifier,
                     normalHigh = avgHigh,
                     normalLow = avgLow,
+                    confidenceBands = context.state.confidenceBands,
                 )
             }
         }
