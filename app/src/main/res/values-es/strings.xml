@@ -718,6 +718,8 @@
     <string name="main_hours_ago">hace %1$d h</string>
     <string name="main_offline_ready_status">Disponible sin conexion \u2022 %1$s</string>
     <string name="main_refreshed_status">Actualizado %1$s</string>
+    <string name="main_source_via">via %1$s</string>
+    <string name="main_source_fallback">Respaldo: %1$s</string>
     <string name="main_footer">ZeusWatch v%1$s \u2022 Datos de pronostico de Open-Meteo</string>
     <string name="main_nowcast_unavailable_title">Lluvia inmediata no disponible</string>
     <string name="main_nowcast_unavailable_message">Los datos de precipitacion minuto a minuto no estan disponibles para esta ubicacion ahora.</string>
@@ -841,6 +843,8 @@
     <string name="settings_alert_fallback">Alternativa de alertas</string>
     <string name="settings_air_quality_source">Fuente de calidad del aire</string>
     <string name="settings_minutely_source">Fuente de precipitacion minuto a minuto</string>
+    <string name="settings_gadgetbridge_broadcast">Difusion del clima a Gadgetbridge</string>
+    <string name="settings_gadgetbridge_broadcast_desc">Envia el clima actual a relojes compatibles con Gadgetbridge despues de cada actualizacion.</string>
     <string name="settings_api_keys">Claves API</string>
     <string name="settings_owm_key">Clave API de OpenWeatherMap</string>
     <string name="settings_pirate_key">Clave API de Pirate Weather</string>
