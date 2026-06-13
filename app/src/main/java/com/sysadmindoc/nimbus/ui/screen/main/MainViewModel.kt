@@ -39,6 +39,8 @@ import com.sysadmindoc.nimbus.data.repository.MarineRepository
 import com.sysadmindoc.nimbus.util.ActivityIndex
 import com.sysadmindoc.nimbus.util.ActivityIndexEvaluator
 import com.sysadmindoc.nimbus.data.repository.CardType
+import com.sysadmindoc.nimbus.data.repository.ClimateOutlookData
+import com.sysadmindoc.nimbus.data.repository.ClimateRepository
 import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
 import com.sysadmindoc.nimbus.data.repository.ConfidenceBandRepository
 import com.sysadmindoc.nimbus.data.repository.ForecastAccuracyData
@@ -127,6 +129,7 @@ data class MainViewModelDependencies @Inject constructor(
     val auroraRepository: AuroraRepository,
     val marineRepository: MarineRepository,
     val floodRepository: FloodRepository,
+    val climateRepository: ClimateRepository,
     val wearSyncManager: WearSyncManager,
     val gadgetbridgeBroadcaster: GadgetbridgeWeatherBroadcaster,
     @DefaultDispatcher val defaultDispatcher: CoroutineDispatcher,
@@ -155,6 +158,7 @@ class MainViewModel @Inject constructor(
     private val auroraRepository = dependencies.auroraRepository
     private val marineRepository = dependencies.marineRepository
     private val floodRepository = dependencies.floodRepository
+    private val climateRepository = dependencies.climateRepository
     private val wearSyncManager = dependencies.wearSyncManager
     private val gadgetbridgeBroadcaster = dependencies.gadgetbridgeBroadcaster
     private val defaultDispatcher = dependencies.defaultDispatcher
@@ -538,6 +542,9 @@ class MainViewModel @Inject constructor(
                         if (_uiState.value.settings.showConfidenceBands) {
                             launch { fetchConfidenceBands(lat, lon, requestId) }
                         }
+                        if (_uiState.value.settings.isCardEnabled(CardType.CLIMATE_OUTLOOK)) {
+                            launch { fetchClimateOutlook(lat, lon, requestId) }
+                        }
                     }
                     if (!isLatestWeatherRequest(requestId)) return@fold
                     // Sync to watch after all data is available
@@ -878,6 +885,24 @@ class MainViewModel @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.d(TAG, "fetchFlood failed", e)
+        }
+    }
+
+    // ── Climate Outlook ──────────────────────────────────────────────────
+
+    private suspend fun fetchClimateOutlook(lat: Double, lon: Double, requestId: Long) {
+        try {
+            climateRepository.getClimateOutlook(lat, lon).fold(
+                onSuccess = { data ->
+                    if (isLatestWeatherRequest(requestId)) {
+                        _uiState.update { it.copy(climateOutlook = data) }
+                    }
+                },
+                onFailure = { Log.d(TAG, "fetchClimateOutlook: no climate data") },
+            )
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.d(TAG, "fetchClimateOutlook failed", e)
         }
     }
 
@@ -1293,6 +1318,7 @@ data class MainUiState(
     val forecastEvolutionUnavailable: Boolean = false,
     val forecastAccuracy: ForecastAccuracyData? = null,
     val confidenceBands: ConfidenceBandData? = null,
+    val climateOutlook: ClimateOutlookData? = null,
     val lastSeenVersionCode: Int = BuildConfig.VERSION_CODE,
 )
 
@@ -1340,6 +1366,7 @@ private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
     forecastEvolutionUnavailable = false,
     forecastAccuracy = null,
     confidenceBands = null,
+    climateOutlook = null,
 )
 
 private fun NimbusSettings.isCardEnabled(cardType: CardType): Boolean =

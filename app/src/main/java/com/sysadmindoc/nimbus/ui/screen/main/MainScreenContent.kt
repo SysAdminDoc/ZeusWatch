@@ -91,6 +91,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.ui.component.AdaptiveLayoutInfo
 import com.sysadmindoc.nimbus.ui.component.ActivityIndexCard
 import com.sysadmindoc.nimbus.ui.component.AlertBanner
+import com.sysadmindoc.nimbus.ui.component.ClimateOutlookCard
 import com.sysadmindoc.nimbus.ui.component.FloodRiskCard
 import com.sysadmindoc.nimbus.ui.component.MarineCard
 import com.sysadmindoc.nimbus.ui.component.SolarIrradianceCard
@@ -1409,6 +1410,12 @@ private fun RenderDetailCard(
             val flood = context.state.floodData
             if (flood != null) {
                 FloodRiskCard(data = flood, modifier = modifier)
+            }
+        }
+        CardType.CLIMATE_OUTLOOK -> {
+            val climate = context.state.climateOutlook
+            if (climate != null) {
+                ClimateOutlookCard(data = climate, modifier = modifier)
             }
         }
         else -> Unit

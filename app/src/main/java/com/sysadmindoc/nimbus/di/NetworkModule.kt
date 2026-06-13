@@ -17,6 +17,7 @@ import com.sysadmindoc.nimbus.data.api.MeteoAlarmAdapter
 import com.sysadmindoc.nimbus.data.api.MeteoAlarmApi
 import com.sysadmindoc.nimbus.data.api.NoaaSwpcApi
 import com.sysadmindoc.nimbus.data.api.NwsAlertAdapter
+import com.sysadmindoc.nimbus.data.api.OpenMeteoClimateApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoEnsembleApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoFloodApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoMarineApi
@@ -572,5 +573,24 @@ object NetworkModule {
     @Singleton
     fun provideOpenMeteoEnsembleApi(@Named("ensemble") retrofit: Retrofit): OpenMeteoEnsembleApi {
         return retrofit.create(OpenMeteoEnsembleApi::class.java)
+    }
+
+    // --- Open-Meteo Climate (CMIP6 projections) ---
+
+    @Provides
+    @Singleton
+    @Named("climate")
+    fun provideClimateRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(OpenMeteoClimateApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOpenMeteoClimateApi(@Named("climate") retrofit: Retrofit): OpenMeteoClimateApi {
+        return retrofit.create(OpenMeteoClimateApi::class.java)
     }
 }
