@@ -23,6 +23,7 @@ import com.sysadmindoc.nimbus.util.HealthAlertEvaluator
 import com.sysadmindoc.nimbus.util.PetSafetyAlert
 import com.sysadmindoc.nimbus.util.PetSafetyEvaluator
 import com.sysadmindoc.nimbus.util.ConnectivityObserver
+import com.sysadmindoc.nimbus.util.GadgetbridgeWeatherBroadcaster
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import com.sysadmindoc.nimbus.util.SummaryEngine
 import com.sysadmindoc.nimbus.util.WeatherSummaryEngine
@@ -110,6 +111,7 @@ data class MainViewModelDependencies @Inject constructor(
     val onThisDayRepository: OnThisDayRepository,
     val forecastEvolutionRepository: ForecastEvolutionRepository,
     val wearSyncManager: WearSyncManager,
+    val gadgetbridgeBroadcaster: GadgetbridgeWeatherBroadcaster,
     @DefaultDispatcher val defaultDispatcher: CoroutineDispatcher,
 )
 
@@ -132,6 +134,7 @@ class MainViewModel @Inject constructor(
     private val onThisDayRepository = dependencies.onThisDayRepository
     private val forecastEvolutionRepository = dependencies.forecastEvolutionRepository
     private val wearSyncManager = dependencies.wearSyncManager
+    private val gadgetbridgeBroadcaster = dependencies.gadgetbridgeBroadcaster
     private val defaultDispatcher = dependencies.defaultDispatcher
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -509,6 +512,13 @@ class MainViewModel @Inject constructor(
                         )
                     } catch (e: Exception) {
                         Log.w(TAG, "Wear sync failed", e)
+                    }
+                    if (_uiState.value.settings.gadgetbridgeBroadcastEnabled) {
+                        try {
+                            gadgetbridgeBroadcaster.broadcast(data)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Gadgetbridge broadcast failed", e)
+                        }
                     }
                     // Yesterday comparison must complete before derived data computation
                     try {
