@@ -152,6 +152,14 @@
     <string name="custom_alert_metric_precip_sum_next_24h_summary">Total precipitation in the next 24 hours</string>
     <string name="custom_alert_metric_uv_index_max_today">Today\'s UV peak</string>
     <string name="custom_alert_metric_uv_index_max_today_summary">Today\'s maximum UV index</string>
+    <string name="custom_alert_metric_dew_point_now">Dew point</string>
+    <string name="custom_alert_metric_dew_point_now_summary">Current dew point temperature</string>
+    <string name="custom_alert_metric_feels_like_now">Feels like</string>
+    <string name="custom_alert_metric_feels_like_now_summary">Current apparent temperature</string>
+    <string name="custom_alert_metric_snowfall_sum_next_24h">Snow (next 24h)</string>
+    <string name="custom_alert_metric_snowfall_sum_next_24h_summary">Total snowfall in the next 24 hours</string>
+    <string name="custom_alert_metric_pressure_now">Pressure</string>
+    <string name="custom_alert_metric_pressure_now_summary">Current barometric pressure</string>
     <string name="custom_alert_operator_above">is above</string>
     <string name="custom_alert_operator_below">is below</string>
     <string name="custom_alert_notification_title">%1$s %2$s %3$s</string>

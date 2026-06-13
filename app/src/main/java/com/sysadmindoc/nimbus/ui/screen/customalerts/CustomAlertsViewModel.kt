@@ -140,6 +140,10 @@ internal fun defaultThresholdCanonical(metric: CustomAlertMetric): Double = when
     CustomAlertMetric.WIND_GUST_NEXT_12H -> 50.0
     CustomAlertMetric.PRECIP_SUM_NEXT_24H -> 10.0
     CustomAlertMetric.UV_INDEX_MAX_TODAY -> 8.0
+    CustomAlertMetric.DEW_POINT_NOW -> 20.0     // 20°C = muggy threshold
+    CustomAlertMetric.FEELS_LIKE_NOW -> 35.0    // 35°C ≈ 95°F danger zone
+    CustomAlertMetric.SNOWFALL_SUM_NEXT_24H -> 5.0
+    CustomAlertMetric.PRESSURE_NOW -> 1000.0    // hPa — storm threshold
 }
 
 internal fun defaultOperator(metric: CustomAlertMetric): CustomAlertOperator = when (metric) {

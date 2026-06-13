@@ -14,6 +14,10 @@ internal val CustomAlertMetric.labelRes: Int
         CustomAlertMetric.WIND_GUST_NEXT_12H -> R.string.custom_alert_metric_wind_gust_next_12h
         CustomAlertMetric.PRECIP_SUM_NEXT_24H -> R.string.custom_alert_metric_precip_sum_next_24h
         CustomAlertMetric.UV_INDEX_MAX_TODAY -> R.string.custom_alert_metric_uv_index_max_today
+        CustomAlertMetric.DEW_POINT_NOW -> R.string.custom_alert_metric_dew_point_now
+        CustomAlertMetric.FEELS_LIKE_NOW -> R.string.custom_alert_metric_feels_like_now
+        CustomAlertMetric.SNOWFALL_SUM_NEXT_24H -> R.string.custom_alert_metric_snowfall_sum_next_24h
+        CustomAlertMetric.PRESSURE_NOW -> R.string.custom_alert_metric_pressure_now
     }
 
 @get:StringRes
@@ -24,6 +28,10 @@ internal val CustomAlertMetric.summaryRes: Int
         CustomAlertMetric.WIND_GUST_NEXT_12H -> R.string.custom_alert_metric_wind_gust_next_12h_summary
         CustomAlertMetric.PRECIP_SUM_NEXT_24H -> R.string.custom_alert_metric_precip_sum_next_24h_summary
         CustomAlertMetric.UV_INDEX_MAX_TODAY -> R.string.custom_alert_metric_uv_index_max_today_summary
+        CustomAlertMetric.DEW_POINT_NOW -> R.string.custom_alert_metric_dew_point_now_summary
+        CustomAlertMetric.FEELS_LIKE_NOW -> R.string.custom_alert_metric_feels_like_now_summary
+        CustomAlertMetric.SNOWFALL_SUM_NEXT_24H -> R.string.custom_alert_metric_snowfall_sum_next_24h_summary
+        CustomAlertMetric.PRESSURE_NOW -> R.string.custom_alert_metric_pressure_now_summary
     }
 
 @get:StringRes
