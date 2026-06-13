@@ -165,6 +165,7 @@ data class SettingsBackupPreferences(
     val hourlyForecastHours: Int = 72,
     val migrainePressureThreshold: Double = 5.0,
     val hapticFeedbackForAlerts: Boolean = true,
+    val accessibilityLayout: Boolean = false,
     val cacheTtlMinutes: Int = 30,
     val sourceForecast: String = WeatherSourceProvider.defaultFor(WeatherDataType.FORECAST).name,
     val sourceForecastFallback: String? = null,
@@ -172,6 +173,7 @@ data class SettingsBackupPreferences(
     val sourceAlertsFallback: String? = null,
     val sourceAirQuality: String = WeatherSourceProvider.defaultFor(WeatherDataType.AIR_QUALITY).name,
     val sourceMinutely: String = WeatherSourceProvider.defaultFor(WeatherDataType.MINUTELY).name,
+    val gadgetbridgeBroadcastEnabled: Boolean = false,
     val onboardingComplete: Boolean = true,
 )
 
@@ -307,6 +309,7 @@ fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPrefere
     hourlyForecastHours = hourlyForecastHours,
     migrainePressureThreshold = migrainePressureThreshold,
     hapticFeedbackForAlerts = hapticFeedbackForAlerts,
+    accessibilityLayout = accessibilityLayout,
     cacheTtlMinutes = cacheTtlMinutes,
     sourceForecast = sourceConfig.forecast.name,
     sourceForecastFallback = sourceConfig.forecastFallback?.name,
@@ -314,6 +317,7 @@ fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPrefere
     sourceAlertsFallback = sourceConfig.alertsFallback?.name,
     sourceAirQuality = sourceConfig.airQuality.name,
     sourceMinutely = sourceConfig.minutely.name,
+    gadgetbridgeBroadcastEnabled = gadgetbridgeBroadcastEnabled,
     onboardingComplete = onboardingComplete,
 )
 
@@ -353,6 +357,7 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
     hourlyForecastHours = hourlyForecastHours.coerceIn(24, 72),
     migrainePressureThreshold = migrainePressureThreshold.coerceIn(1.0, 20.0),
     hapticFeedbackForAlerts = hapticFeedbackForAlerts,
+    accessibilityLayout = accessibilityLayout,
     cacheTtlMinutes = cacheTtlMinutes.coerceIn(15, 120),
     sourceConfig = SourceConfig(
         forecast = WeatherSourceProvider.fromStoredName(sourceForecast, WeatherDataType.FORECAST)
@@ -366,6 +371,7 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
         minutely = WeatherSourceProvider.fromStoredName(sourceMinutely, WeatherDataType.MINUTELY)
             ?: WeatherSourceProvider.defaultFor(WeatherDataType.MINUTELY),
     ).normalized(),
+    gadgetbridgeBroadcastEnabled = gadgetbridgeBroadcastEnabled,
     onboardingComplete = onboardingComplete,
 )
 
@@ -452,6 +458,7 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setHourlyForecastHours(settings.hourlyForecastHours)
     setMigrainePressureThreshold(settings.migrainePressureThreshold)
     setHapticFeedbackForAlerts(settings.hapticFeedbackForAlerts)
+    setAccessibilityLayout(settings.accessibilityLayout)
     setCacheTtlMinutes(settings.cacheTtlMinutes)
     setSourceForecast(settings.sourceConfig.forecast)
     setSourceForecastFallback(settings.sourceConfig.forecastFallback)
@@ -459,6 +466,7 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setSourceAlertsFallback(settings.sourceConfig.alertsFallback)
     setSourceAirQuality(settings.sourceConfig.airQuality)
     setSourceMinutely(settings.sourceConfig.minutely)
+    setGadgetbridgeBroadcastEnabled(settings.gadgetbridgeBroadcastEnabled)
     setOnboardingComplete(settings.onboardingComplete)
 }
 

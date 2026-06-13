@@ -832,6 +832,8 @@
     <string name="settings_accessibility_desc">Mantiene la interfaz legible, comoda y calmada en distintas condiciones.</string>
     <string name="settings_haptic_alerts">Respuesta haptica para alertas</string>
     <string name="settings_haptic_alerts_desc">Vibracion cuando se muestran alertas</string>
+    <string name="settings_accessibility_layout">Disposicion para lector de pantalla</string>
+    <string name="settings_accessibility_layout_desc">Prioriza alertas, condiciones actuales y pronostico para navegacion rapida con TalkBack</string>
     <string name="settings_visual_effects_title">Efectos visuales</string>
     <string name="settings_visual_effects_desc">Ajusta el movimiento ambiental a tu nivel preferido.</string>
     <string name="settings_weather_particles">Particulas del clima</string>

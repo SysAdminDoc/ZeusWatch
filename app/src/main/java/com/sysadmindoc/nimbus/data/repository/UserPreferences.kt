@@ -90,6 +90,7 @@ class UserPreferences @Inject constructor(
 
         // Haptics
         val HAPTIC_FEEDBACK_FOR_ALERTS = booleanPreferencesKey("haptic_alerts")
+        val ACCESSIBILITY_LAYOUT = booleanPreferencesKey("accessibility_layout")
 
         // Forecast range
         val HOURLY_FORECAST_HOURS = stringPreferencesKey("hourly_forecast_hours")
@@ -200,6 +201,7 @@ class UserPreferences @Inject constructor(
             migrainePressureThreshold = prefs[Keys.MIGRAINE_PRESSURE_THRESHOLD]?.toDoubleOrNull() ?: 5.0,
             // Haptics
             hapticFeedbackForAlerts = prefs[Keys.HAPTIC_FEEDBACK_FOR_ALERTS] ?: true,
+            accessibilityLayout = prefs[Keys.ACCESSIBILITY_LAYOUT] ?: false,
             // Data sources
             sourceConfig = SourceConfig(
                 forecast = prefs[Keys.SOURCE_FORECAST]?.let { safeValueOf<WeatherSourceProvider>(it) }
@@ -399,6 +401,7 @@ class UserPreferences @Inject constructor(
 
     // Haptics
     suspend fun setHapticFeedbackForAlerts(enabled: Boolean) = store.edit { it[Keys.HAPTIC_FEEDBACK_FOR_ALERTS] = enabled }
+    suspend fun setAccessibilityLayout(enabled: Boolean) = store.edit { it[Keys.ACCESSIBILITY_LAYOUT] = enabled }
     suspend fun setCacheTtlMinutes(minutes: Int) = store.edit { it[Keys.CACHE_TTL_MINUTES] = minutes.toString() }
 
     // Data sources
@@ -540,6 +543,8 @@ data class NimbusSettings(
     val migrainePressureThreshold: Double = 5.0,
     // Haptics
     val hapticFeedbackForAlerts: Boolean = true,
+    // Accessibility
+    val accessibilityLayout: Boolean = false,
     // Cache
     val cacheTtlMinutes: Int = 30,
     // Data sources

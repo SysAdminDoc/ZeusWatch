@@ -127,6 +127,7 @@ import com.sysadmindoc.nimbus.ui.component.OnThisDayCard
 import com.sysadmindoc.nimbus.ui.component.WindTrendCard
 import com.sysadmindoc.nimbus.ui.component.CloudCoverCard
 import com.sysadmindoc.nimbus.data.repository.CardType
+import com.sysadmindoc.nimbus.data.repository.accessibilityCardOrder
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.component.ShimmerLoadingSkeleton
 import com.sysadmindoc.nimbus.ui.component.TemperatureGraph
@@ -571,8 +572,9 @@ private fun WeatherContent(
         )
     }
 
-    val enabledCards = remember(settings.cardOrder, settings.disabledCards) {
-        settings.cardOrder.filter { card -> card.name !in settings.disabledCards }
+    val enabledCards = remember(settings.cardOrder, settings.disabledCards, settings.accessibilityLayout) {
+        val ordered = settings.cardOrder.filter { card -> card.name !in settings.disabledCards }
+        if (settings.accessibilityLayout) accessibilityCardOrder(ordered) else ordered
     }
     val focusedCard = mainDeepLinkCardTarget(deepLinkTarget)
     val visibleCards = remember(enabledCards, focusedCard) {

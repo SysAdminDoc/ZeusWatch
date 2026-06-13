@@ -886,6 +886,8 @@
     <string name="settings_accessibility_desc">Keep the interface readable, comfortable, and calm in different conditions.</string>
     <string name="settings_haptic_alerts">Haptic Feedback for Alerts</string>
     <string name="settings_haptic_alerts_desc">Vibration feedback when alerts are shown</string>
+    <string name="settings_accessibility_layout">Screen reader layout</string>
+    <string name="settings_accessibility_layout_desc">Front-load alerts, current conditions, and forecast for faster TalkBack navigation</string>
     <string name="settings_visual_effects_title">Visual Effects</string>
     <string name="settings_visual_effects_desc">Dial ambient motion up or down to match your preferred level of energy.</string>
     <string name="settings_weather_particles">Weather Particles</string>
