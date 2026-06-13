@@ -7,7 +7,9 @@ import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -86,33 +88,32 @@ class NowcastAlertWorker @AssistedInject constructor(
 
         val store = NowcastNotificationStore(applicationContext)
         val signature = transitionSignature(transition)
-        if (signature == store.lastSignature()) {
-            Log.d(TAG, "Already notified for $signature")
-            return Result.success()
-        }
-        val nowEpoch = System.currentTimeMillis() / 1000
-        val sinceLast = nowEpoch - store.lastNotifiedAtEpoch()
-        if (sinceLast < 0) {
-            // Device clock rolled back: the stored timestamp is in the future
-            // and would suppress every nowcast until the wall clock catches
-            // up. Clear it and let this run proceed.
-            Log.w(TAG, "Clock rollback detected (delta=${sinceLast}s); resetting cooldown")
-            store.clearCooldown()
-        } else if (sinceLast < MIN_SECONDS_BETWEEN_NOTIFICATIONS) {
-            Log.d(TAG, "Cooldown active; skipping")
-            return Result.success()
+        val isCountdownUpdate = signature == store.lastSignature()
+        if (!isCountdownUpdate) {
+            val nowEpoch = System.currentTimeMillis() / 1000
+            val sinceLast = nowEpoch - store.lastNotifiedAtEpoch()
+            if (sinceLast < 0) {
+                Log.w(TAG, "Clock rollback detected (delta=${sinceLast}s); resetting cooldown")
+                store.clearCooldown()
+            } else if (sinceLast < MIN_SECONDS_BETWEEN_NOTIFICATIONS) {
+                Log.d(TAG, "Cooldown active; skipping")
+                return Result.success()
+            }
         }
 
         val (title, body) = formatNowcastNotification(applicationContext, transition, loc.name)
         val delivered = AlertNotificationHelper.showNowcastNotification(applicationContext, title, body, series)
         if (delivered) {
-            store.record(signature, nowEpoch)
+            val nowEpoch = System.currentTimeMillis() / 1000
+            store.record(signature, if (isCountdownUpdate) store.lastNotifiedAtEpoch() else nowEpoch)
+            scheduleRecheck(applicationContext)
         }
         return Result.success()
     }
 
     companion object {
         private const val WORK_NAME = "nimbus_nowcast_alert"
+        private const val RECHECK_WORK_NAME = "nimbus_nowcast_recheck"
         private const val MAX_RETRY_ATTEMPTS = 3
 
         /** Min seconds between two back-to-back nowcast notifications. 45 min. */
@@ -133,9 +134,6 @@ class NowcastAlertWorker @AssistedInject constructor(
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,
-                // UPDATE (not KEEP): re-scheduling with a changed interval or
-                // constraints must take effect on existing installs; KEEP makes
-                // every re-schedule after the first a silent no-op.
                 ExistingPeriodicWorkPolicy.UPDATE,
                 request,
             )
@@ -143,6 +141,22 @@ class NowcastAlertWorker @AssistedInject constructor(
 
         fun cancel(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+            WorkManager.getInstance(context).cancelUniqueWork(RECHECK_WORK_NAME)
+        }
+
+        private fun scheduleRecheck(context: Context) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+            val request = OneTimeWorkRequestBuilder<NowcastAlertWorker>()
+                .setInitialDelay(5, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                RECHECK_WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                request,
+            )
         }
     }
 }
@@ -207,10 +221,12 @@ internal fun formatNowcastNotification(
 ): Pair<String, String> = when (t) {
     is NowcastTransition.RainStarting -> {
         val mins = t.minutesUntil.coerceAtLeast(1)
-        val title = if (mins <= 5) {
-            context.getString(R.string.nowcast_notif_title_starting_soon)
-        } else {
-            context.getString(R.string.nowcast_notif_title_starting_in, mins)
+        val hasLocation = !locationName.isNullOrBlank()
+        val title = when {
+            mins <= 5 && hasLocation -> context.getString(R.string.nowcast_notif_title_starting_soon_named, locationName)
+            mins <= 5 -> context.getString(R.string.nowcast_notif_title_starting_soon)
+            hasLocation -> context.getString(R.string.nowcast_notif_title_starting_in_named, mins, locationName)
+            else -> context.getString(R.string.nowcast_notif_title_starting_in, mins)
         }
         val intensity = context.getString(
             when {
@@ -219,7 +235,7 @@ internal fun formatNowcastNotification(
                 else -> R.string.nowcast_notif_intensity_light
             }
         )
-        val body = if (!locationName.isNullOrBlank()) {
+        val body = if (hasLocation) {
             context.getString(R.string.nowcast_notif_body_starting_named, intensity, locationName, mins)
         } else {
             context.getString(R.string.nowcast_notif_body_starting, intensity, mins)
