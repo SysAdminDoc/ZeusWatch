@@ -17,20 +17,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CompareArrows
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +46,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -437,6 +434,9 @@ private fun CompareConditionColumn(
             stringResource(weather.current.weatherCode.descriptionRes()),
             style = MaterialTheme.typography.labelSmall,
             color = NimbusTextSecondary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -618,13 +618,28 @@ private fun LocationSelector(
                         .background(if (selected != null) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.45f)),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(label, style = MaterialTheme.typography.labelSmall, color = NimbusTextTertiary)
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NimbusTextTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = NimbusTextTertiary,
+                    modifier = Modifier.size(18.dp),
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = selectedLabel,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                 color = if (selected != null) NimbusTextPrimary else NimbusBlueAccent,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             selected?.let {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -638,6 +653,7 @@ private fun LocationSelector(
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -645,7 +661,13 @@ private fun LocationSelector(
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             locations.forEach { loc ->
                 DropdownMenuItem(
-                    text = { Text(if (loc.isCurrentLocation) myLocationLabel else loc.name) },
+                    text = {
+                        Text(
+                            if (loc.isCurrentLocation) myLocationLabel else loc.name,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
                     onClick = {
                         expanded = false
                         onSelect(loc)
@@ -679,6 +701,9 @@ private fun CompareRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "$label: $value1, $value2"
+            }
             .clip(RoundedCornerShape(10.dp))
             .background(
                 Brush.verticalGradient(
@@ -698,16 +723,12 @@ private fun CompareRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = value1,
-                style = MaterialTheme.typography.bodyMedium,
+            CompareValueText(
+                value = value1,
                 color = color1,
+                highlighted = highlightFirst,
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (highlightFirst) NimbusBlueAccent.copy(alpha = 0.12f) else Color.Transparent)
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                textAlign = TextAlign.Center,
             )
             Box(
                 modifier = Modifier
@@ -720,21 +741,42 @@ private fun CompareRow(
                     style = MaterialTheme.typography.labelMedium,
                     color = NimbusTextTertiary,
                     textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            Text(
-                text = value2,
-                style = MaterialTheme.typography.bodyMedium,
+            CompareValueText(
+                value = value2,
                 color = color2,
+                highlighted = highlightSecond,
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (highlightSecond) NimbusBlueAccent.copy(alpha = 0.12f) else Color.Transparent)
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                textAlign = TextAlign.Center,
             )
         }
     }
+}
+
+@Composable
+private fun CompareValueText(
+    value: String,
+    color: Color,
+    highlighted: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = value,
+        style = MaterialTheme.typography.bodyMedium.copy(
+            fontWeight = if (highlighted) FontWeight.SemiBold else FontWeight.Normal,
+        ),
+        color = color,
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (highlighted) NimbusBlueAccent.copy(alpha = 0.12f) else Color.Transparent)
+            .padding(horizontal = 8.dp, vertical = 10.dp),
+        textAlign = TextAlign.Center,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable

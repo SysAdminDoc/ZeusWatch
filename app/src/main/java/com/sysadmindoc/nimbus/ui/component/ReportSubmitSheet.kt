@@ -5,25 +5,34 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -42,12 +51,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
@@ -91,6 +103,7 @@ fun ReportSubmitSheet(
                     .padding(vertical = 10.dp)
                     .width(40.dp)
                     .height(4.dp)
+                    .clip(RoundedCornerShape(4.dp))
                     .background(Color.White.copy(alpha = 0.16f))
                     .clearAndSetSemantics {
                         contentDescription = bottomSheetHandleDescription
@@ -102,6 +115,7 @@ fun ReportSubmitSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState())
                 .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -189,11 +203,20 @@ fun ReportSubmitSheet(
                 shape = RoundedCornerShape(12.dp),
             ) {
                 if (isSubmitting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = NimbusTextPrimary,
-                        strokeWidth = 2.dp,
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = NimbusTextPrimary,
+                            strokeWidth = 2.dp,
+                        )
+                        Text(
+                            text = stringResource(R.string.report_submit),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
                 } else {
                     Text(
                         text = if (selectedCondition == null) {
@@ -213,15 +236,14 @@ fun ReportSubmitSheet(
                 exit = fadeOut(),
             ) {
                 val isSuccess = submitResult == "success"
-                Text(
-                    text = if (isSuccess) {
-                        stringResource(R.string.report_success)
-                    } else {
-                        submitResult ?: ""
-                    },
-                    color = if (isSuccess) NimbusSuccess else NimbusError,
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
+                val feedbackMessage = if (isSuccess) {
+                    stringResource(R.string.report_success)
+                } else {
+                    submitResult ?: ""
+                }
+                ReportFeedbackCard(
+                    message = feedbackMessage,
+                    isSuccess = isSuccess,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp),
@@ -250,6 +272,8 @@ private fun ConditionChip(
 
     Box(
         modifier = Modifier
+            .widthIn(min = 82.dp)
+            .heightIn(min = 66.dp)
             .clip(shape)
             .background(bgColor)
             .border(1.dp, borderColor, shape)
@@ -276,7 +300,46 @@ private fun ConditionChip(
                 color = if (isSelected) NimbusTextPrimary else NimbusTextSecondary,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
             )
         }
+    }
+}
+
+@Composable
+private fun ReportFeedbackCard(
+    message: String,
+    isSuccess: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val tint = if (isSuccess) NimbusSuccess else NimbusError
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(tint.copy(alpha = 0.12f))
+            .border(1.dp, tint.copy(alpha = 0.28f), RoundedCornerShape(10.dp))
+            .semantics(mergeDescendants = true) {
+                liveRegion = LiveRegionMode.Polite
+                contentDescription = message
+            }
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = if (isSuccess) Icons.Filled.CheckCircle else Icons.Filled.ErrorOutline,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text = message,
+            color = if (isSuccess) NimbusTextPrimary else NimbusError,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Start,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
