@@ -17,6 +17,7 @@ import com.sysadmindoc.nimbus.data.api.MeteoAlarmAdapter
 import com.sysadmindoc.nimbus.data.api.MeteoAlarmApi
 import com.sysadmindoc.nimbus.data.api.NoaaSwpcApi
 import com.sysadmindoc.nimbus.data.api.NwsAlertAdapter
+import com.sysadmindoc.nimbus.data.api.OpenMeteoEnsembleApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoFloodApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoMarineApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoPreviousRunsApi
@@ -552,5 +553,24 @@ object NetworkModule {
     @Singleton
     fun provideOpenMeteoPreviousRunsApi(@Named("previous_runs") retrofit: Retrofit): OpenMeteoPreviousRunsApi {
         return retrofit.create(OpenMeteoPreviousRunsApi::class.java)
+    }
+
+    // --- Open-Meteo Ensemble (confidence bands) ---
+
+    @Provides
+    @Singleton
+    @Named("ensemble")
+    fun provideEnsembleRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(OpenMeteoEnsembleApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOpenMeteoEnsembleApi(@Named("ensemble") retrofit: Retrofit): OpenMeteoEnsembleApi {
+        return retrofit.create(OpenMeteoEnsembleApi::class.java)
     }
 }
