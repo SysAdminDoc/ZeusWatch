@@ -1,11 +1,17 @@
 package com.sysadmindoc.nimbus.ui.screen.locations
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,10 +22,12 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,11 +47,8 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Text
@@ -66,7 +71,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -88,7 +95,6 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusError
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
-import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusSurfaceVariant
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -124,6 +130,7 @@ fun LocationsScreen(
         },
         onRemoveLocation = { viewModel.removeLocation(it) },
         onMoveLocation = { from, to -> viewModel.moveLocation(from, to) },
+        onCommitReorder = { viewModel.commitReorder(it) },
         onForecastSourceSelected = { locationId, provider ->
             viewModel.setForecastSource(locationId, provider)
         },
@@ -147,6 +154,7 @@ internal fun LocationsContent(
     onAddLocation: (GeocodingResult) -> Unit = {},
     onRemoveLocation: (Long) -> Unit = {},
     onMoveLocation: (Int, Int) -> Unit = { _, _ -> },
+    onCommitReorder: (List<Long>) -> Unit = {},
     onForecastSourceSelected: (Long, WeatherSourceProvider?) -> Unit = { _, _ -> },
     onAlertSourceSelected: (Long, WeatherSourceProvider?) -> Unit = { _, _ -> },
 ) {
@@ -194,6 +202,7 @@ internal fun LocationsContent(
                 onAddLocation = onAddLocation,
                 onRemoveLocation = onRemoveLocation,
                 onMoveLocation = onMoveLocation,
+                onCommitReorder = onCommitReorder,
                 onForecastSourceSelected = onForecastSourceSelected,
                 onAlertSourceSelected = onAlertSourceSelected,
             )
@@ -212,12 +221,14 @@ private fun LocationsList(
     onAddLocation: (GeocodingResult) -> Unit,
     onRemoveLocation: (Long) -> Unit,
     onMoveLocation: (Int, Int) -> Unit = { _, _ -> },
+    onCommitReorder: (List<Long>) -> Unit = {},
     onForecastSourceSelected: (Long, WeatherSourceProvider?) -> Unit = { _, _ -> },
     onAlertSourceSelected: (Long, WeatherSourceProvider?) -> Unit = { _, _ -> },
 ) {
-    // Track drag state for reordering
     var draggedIndex by remember { mutableIntStateOf(-1) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
+    var dragList by remember(saved) { mutableStateOf(saved) }
+    val displayList = if (draggedIndex >= 0) dragList else saved
     val itemHeightPx = with(LocalDensity.current) { 62.dp.toPx() }
     val visibleSearchResults = filterDuplicateSearchResults(search.results, saved)
     val visibleRecentSearches = filterDuplicateSearchResults(recentSearches, saved)
@@ -303,8 +314,8 @@ private fun LocationsList(
                     }
                 }
             }
-            items(saved.size, key = { saved[it].id }) { index ->
-                val loc = saved[index]
+            items(displayList.size, key = { displayList[it].id }) { index ->
+                val loc = displayList[index]
                 val isDragged = draggedIndex == index
                 val condition = locationConditions[loc.id]
                 SavedLocationItem(
@@ -328,7 +339,11 @@ private fun LocationsList(
                             .zIndex(1f)
                             .graphicsLayer { translationY = dragOffsetY }
                     } else Modifier,
-                    onDragStart = { draggedIndex = index; dragOffsetY = 0f },
+                    onDragStart = {
+                        dragList = saved.toList()
+                        draggedIndex = index
+                        dragOffsetY = 0f
+                    },
                     onDrag = { delta ->
                         dragOffsetY += delta
                         val currentIndex = draggedIndex.takeIf { it >= 0 } ?: index
@@ -337,15 +352,24 @@ private fun LocationsList(
                             dragOffsetPx = dragOffsetY,
                             itemHeightPx = itemHeightPx,
                             minimumIndex = minimumMovableIndex,
-                            lastIndex = saved.lastIndex,
+                            lastIndex = displayList.lastIndex,
                         )
                         if (targetIndex != currentIndex) {
-                            onMoveLocation(currentIndex, targetIndex)
+                            val mutable = dragList.toMutableList()
+                            val item = mutable.removeAt(currentIndex)
+                            mutable.add(targetIndex, item)
+                            dragList = mutable
                             draggedIndex = targetIndex
                             dragOffsetY = 0f
                         }
                     },
-                    onDragEnd = { draggedIndex = -1; dragOffsetY = 0f },
+                    onDragEnd = {
+                        if (dragList != saved) {
+                            onCommitReorder(dragList.map { it.id })
+                        }
+                        draggedIndex = -1
+                        dragOffsetY = 0f
+                    },
                 )
             }
         } else if (search.query.length < 2) {
@@ -458,14 +482,12 @@ private fun SearchBar(
                         color = NimbusBlueAccent,
                         strokeWidth = 2.dp,
                     )
-                    query.isNotEmpty() -> IconButton(onClick = onClear, modifier = Modifier.size(40.dp)) {
-                        Icon(
-                            Icons.Filled.Clear,
-                            stringResource(R.string.common_clear),
-                            tint = NimbusTextTertiary,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                    query.isNotEmpty() -> LocationIconAction(
+                        icon = Icons.Filled.Clear,
+                        contentDescription = stringResource(R.string.common_clear),
+                        tint = NimbusTextTertiary,
+                        onClick = onClear,
+                    )
                 }
             },
             colors = TextFieldDefaults.colors(
@@ -789,12 +811,12 @@ private fun LocationLeadingControl(
     onDragEnd: () -> Unit,
 ) {
     if (showDragHandle) {
-        Icon(
-            Icons.Filled.DragHandle,
-            contentDescription = dragReorderDescription,
-            tint = NimbusTextTertiary,
+        Box(
             modifier = Modifier
-                .size(20.dp)
+                .size(40.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(NimbusCardBg.copy(alpha = 0.72f))
+                .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
                 .pointerInput(Unit) {
                     detectDragGesturesAfterLongPress(
                         onDragStart = { onDragStart() },
@@ -805,9 +827,21 @@ private fun LocationLeadingControl(
                         onDragEnd = { onDragEnd() },
                         onDragCancel = { onDragEnd() },
                     )
+                }
+                .semantics {
+                    contentDescription = dragReorderDescription
+                    role = Role.Button
                 },
-        )
-        Spacer(modifier = Modifier.width(8.dp))
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Filled.DragHandle,
+                contentDescription = null,
+                tint = NimbusTextTertiary,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Spacer(modifier = Modifier.width(10.dp))
     } else {
         Box(
             modifier = Modifier
@@ -895,31 +929,21 @@ private fun LocationRowActions(
     onRemove: () -> Unit,
     onSourceToggle: () -> Unit,
 ) {
-    IconButton(
+    LocationIconAction(
+        icon = Icons.Filled.Tune,
+        contentDescription = sourceSettingsDescription,
+        tint = NimbusBlueAccent,
+        highlighted = sourcePanelExpanded,
         onClick = onSourceToggle,
-        modifier = Modifier.size(36.dp),
-    ) {
-        Icon(
-            Icons.Filled.Tune,
-            contentDescription = sourceSettingsDescription,
-            tint = if (sourcePanelExpanded) NimbusBlueAccent else NimbusTextTertiary,
-            modifier = Modifier.size(17.dp),
-        )
-    }
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(NimbusError.copy(alpha = 0.12f))
-            .clickable(
-                onClick = onRemove,
-                role = Role.Button,
-            )
-            .semantics { contentDescription = removeDescription },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(Icons.Filled.Close, null, tint = NimbusError.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
-    }
+    )
+    Spacer(modifier = Modifier.width(4.dp))
+    LocationIconAction(
+        icon = Icons.Filled.Close,
+        contentDescription = removeDescription,
+        tint = NimbusError,
+        danger = true,
+        onClick = onRemove,
+    )
 }
 
 @Composable
@@ -977,6 +1001,8 @@ private fun LocationSourceDropdown(
     var expanded by remember { mutableStateOf(false) }
     val selectedLabel = selected?.let { stringResource(it.displayNameRes) }
         ?: stringResource(R.string.locations_use_default_source)
+    val expandedLabel = stringResource(R.string.common_expanded)
+    val collapsedLabel = stringResource(R.string.common_collapsed)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -998,10 +1024,14 @@ private fun LocationSourceDropdown(
             )
         }
         Box {
-            TextButton(onClick = { expanded = true }) {
-                Text(selectedLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null)
-            }
+            SourceDropdownTrigger(
+                label = label,
+                selectedLabel = selectedLabel,
+                expanded = expanded,
+                expandedLabel = expandedLabel,
+                collapsedLabel = collapsedLabel,
+                onClick = { expanded = true },
+            )
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
@@ -1024,6 +1054,140 @@ private fun LocationSourceDropdown(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LocationIconAction(
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit,
+    highlighted: Boolean = false,
+    danger: Boolean = false,
+) {
+    val shape = RoundedCornerShape(10.dp)
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val focused by interactionSource.collectIsFocusedAsState()
+    val borderColor by animateColorAsState(
+        targetValue = when {
+            focused -> tint.copy(alpha = 0.62f)
+            highlighted || pressed -> tint.copy(alpha = 0.42f)
+            danger -> tint.copy(alpha = 0.26f)
+            else -> NimbusCardBorder
+        },
+        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
+        label = "locationIconBorder",
+    )
+    val backgroundColor by animateColorAsState(
+        targetValue = when {
+            highlighted || focused || pressed -> tint.copy(alpha = if (pressed) 0.20f else 0.15f)
+            danger -> tint.copy(alpha = 0.11f)
+            else -> NimbusCardBg.copy(alpha = 0.68f)
+        },
+        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
+        label = "locationIconBackground",
+    )
+
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .graphicsLayer {
+                scaleX = if (pressed) 0.97f else 1f
+                scaleY = if (pressed) 0.97f else 1f
+            }
+            .clip(shape)
+            .background(backgroundColor)
+            .border(1.dp, borderColor, shape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+                role = Role.Button,
+            )
+            .semantics {
+                this.contentDescription = contentDescription
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = tint.copy(alpha = if (danger) 0.86f else 1f),
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+@Composable
+private fun SourceDropdownTrigger(
+    label: String,
+    selectedLabel: String,
+    expanded: Boolean,
+    expandedLabel: String,
+    collapsedLabel: String,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(9.dp)
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val focused by interactionSource.collectIsFocusedAsState()
+    val borderColor by animateColorAsState(
+        targetValue = if (expanded || focused) {
+            NimbusBlueAccent.copy(alpha = 0.58f)
+        } else {
+            NimbusCardBorder
+        },
+        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
+        label = "sourceDropdownBorder",
+    )
+
+    Row(
+        modifier = Modifier
+            .widthIn(min = 132.dp, max = 178.dp)
+            .heightIn(min = 42.dp)
+            .graphicsLayer {
+                scaleX = if (pressed) 0.98f else 1f
+                scaleY = if (pressed) 0.98f else 1f
+            }
+            .clip(shape)
+            .background(
+                if (expanded || focused || pressed) {
+                    NimbusBlueAccent.copy(alpha = 0.12f)
+                } else {
+                    NimbusGlassTop.copy(alpha = 0.58f)
+                },
+            )
+            .border(1.dp, borderColor, shape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+                role = Role.Button,
+            )
+            .semantics(mergeDescendants = true) {
+                contentDescription = "$label, $selectedLabel"
+                stateDescription = if (expanded) expandedLabel else collapsedLabel
+            }
+            .padding(start = 12.dp, end = 8.dp, top = 9.dp, bottom = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            selectedLabel,
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = NimbusTextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            Icons.Filled.KeyboardArrowDown,
+            contentDescription = null,
+            tint = NimbusTextSecondary,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 
