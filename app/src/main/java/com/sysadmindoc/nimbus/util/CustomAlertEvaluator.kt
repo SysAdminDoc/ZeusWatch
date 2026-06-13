@@ -9,6 +9,7 @@ import com.sysadmindoc.nimbus.data.model.CustomAlertUnit
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.PrecipUnit
+import com.sysadmindoc.nimbus.data.repository.PressureUnit
 import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.data.repository.WindUnit
 import java.util.Locale
@@ -52,6 +53,11 @@ internal fun evaluateCustomAlertRules(
             CustomAlertMetric.PRECIP_SUM_NEXT_24H ->
                 if (next24h.any { it.precipitation != null }) next24h.sumOf { it.precipitation ?: 0.0 } else null
             CustomAlertMetric.UV_INDEX_MAX_TODAY -> today?.uvIndexMax ?: next12h.mapNotNull { it.uvIndex }.maxOrNull()
+            CustomAlertMetric.DEW_POINT_NOW -> data.current.dewPoint
+            CustomAlertMetric.FEELS_LIKE_NOW -> data.current.feelsLike
+            CustomAlertMetric.SNOWFALL_SUM_NEXT_24H ->
+                if (next24h.any { it.snowfall != null }) next24h.sumOf { it.snowfall ?: 0.0 } else null
+            CustomAlertMetric.PRESSURE_NOW -> data.current.pressure.takeIf { it > 0.0 }
         } ?: continue
 
         val triggers = when (rule.operator) {
@@ -120,6 +126,10 @@ internal fun convertForDisplay(
         PrecipUnit.MM -> canonical
     }
     CustomAlertUnit.UV -> canonical
+    CustomAlertUnit.HPA -> when (settings.pressureUnit) {
+        PressureUnit.INHG -> canonical * 0.02953
+        PressureUnit.HPA, PressureUnit.MBAR -> canonical
+    }
 }
 
 /** Reverse of [convertForDisplay] — used when saving a user-entered threshold. */
@@ -142,6 +152,10 @@ internal fun convertToCanonical(
         PrecipUnit.MM -> displayValue
     }
     CustomAlertUnit.UV -> displayValue
+    CustomAlertUnit.HPA -> when (settings.pressureUnit) {
+        PressureUnit.INHG -> displayValue / 0.02953
+        PressureUnit.HPA, PressureUnit.MBAR -> displayValue
+    }
 }
 
 internal fun displayUnitLabel(metric: CustomAlertMetric, settings: NimbusSettings): String =
@@ -158,6 +172,11 @@ internal fun displayUnitLabel(metric: CustomAlertMetric, settings: NimbusSetting
             PrecipUnit.MM -> " mm"
         }
         CustomAlertUnit.UV -> ""
+        CustomAlertUnit.HPA -> when (settings.pressureUnit) {
+            PressureUnit.INHG -> " inHg"
+            PressureUnit.HPA -> " hPa"
+            PressureUnit.MBAR -> " mbar"
+        }
     }
 
 private fun formatWithPrecision(value: Double, metric: CustomAlertMetric): String {
@@ -166,6 +185,8 @@ private fun formatWithPrecision(value: Double, metric: CustomAlertMetric): Strin
         CustomAlertUnit.CELSIUS, CustomAlertUnit.KMH ->
             String.format(Locale.US, "%d", kotlin.math.round(value).toInt())
         CustomAlertUnit.MM, CustomAlertUnit.UV ->
+            String.format(Locale.US, "%.1f", value)
+        CustomAlertUnit.HPA ->
             String.format(Locale.US, "%.1f", value)
     }
 }
