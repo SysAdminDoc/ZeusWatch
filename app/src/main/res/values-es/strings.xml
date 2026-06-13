@@ -250,6 +250,8 @@
     <string name="card_type_aurora_kp">Aurora / Indice Kp</string>
     <string name="card_type_activity_index">Indice de Actividad</string>
     <string name="card_type_solar">Irradiancia Solar</string>
+    <string name="card_type_marine">Marino</string>
+    <string name="card_type_flood_risk">Riesgo de Inundacion</string>
     <string name="card_title_astronomy">Astronomia</string>
     <string name="card_title_forecast_brief">Resumen del pronostico</string>
     <string name="card_title_outdoor_activity">Actividad al aire libre</string>
@@ -276,6 +278,20 @@
     <string name="solar_wm2_value">%1$d W/m²</string>
     <string name="solar_kwh_value">%1$s kWh/m²</string>
     <string name="solar_semantics">Irradiancia solar: GHI %1$d vatios por metro cuadrado, DNI %2$d vatios por metro cuadrado, estimacion diaria %3$s kilovatios hora por metro cuadrado.</string>
+    <string name="card_title_marine">Marino</string>
+    <string name="marine_wave_height">Olas</string>
+    <string name="marine_wave_period">Periodo</string>
+    <string name="marine_wave_direction">Direccion</string>
+    <string name="marine_sst">TSM</string>
+    <string name="marine_meters_value">%1$s m</string>
+    <string name="marine_seconds_value">%1$ss</string>
+    <string name="marine_semantics">Condiciones marinas: altura de ola %1$s metros, periodo %2$s segundos, direccion %3$d grados.</string>
+    <string name="card_title_flood_risk">Riesgo de Inundacion</string>
+    <string name="flood_discharge_label">Caudal del Rio</string>
+    <string name="flood_mean_label">Promedio</string>
+    <string name="flood_max_label">Maximo</string>
+    <string name="flood_m3s_value">%1$s m³/s</string>
+    <string name="flood_semantics">Riesgo de inundacion: %1$s. Caudal actual %2$s metros cubicos por segundo, promedio %3$s.</string>
 
     <!-- Today card internals -->
     <string name="current_metric_high">Maxima</string>

@@ -279,6 +279,8 @@
     <string name="card_type_aurora_kp">Aurora / Kp Index</string>
     <string name="card_type_activity_index">Activity Index</string>
     <string name="card_type_solar">Solar Irradiance</string>
+    <string name="card_type_marine">Marine</string>
+    <string name="card_type_flood_risk">Flood Risk</string>
     <string name="card_title_astronomy">Astronomy</string>
     <string name="card_title_forecast_brief">Forecast Brief</string>
     <string name="card_title_outdoor_activity">Outdoor Activity</string>
@@ -305,6 +307,20 @@
     <string name="solar_wm2_value">%1$d W/m²</string>
     <string name="solar_kwh_value">%1$s kWh/m²</string>
     <string name="solar_semantics">Solar irradiance: GHI %1$d watts per square meter, DNI %2$d watts per square meter, daily estimate %3$s kilowatt hours per square meter.</string>
+    <string name="card_title_marine">Marine</string>
+    <string name="marine_wave_height">Waves</string>
+    <string name="marine_wave_period">Period</string>
+    <string name="marine_wave_direction">Direction</string>
+    <string name="marine_sst">SST</string>
+    <string name="marine_meters_value">%1$s m</string>
+    <string name="marine_seconds_value">%1$ss</string>
+    <string name="marine_semantics">Marine conditions: wave height %1$s meters, wave period %2$s seconds, direction %3$d degrees.</string>
+    <string name="card_title_flood_risk">Flood Risk</string>
+    <string name="flood_discharge_label">River Discharge</string>
+    <string name="flood_mean_label">Mean</string>
+    <string name="flood_max_label">Max</string>
+    <string name="flood_m3s_value">%1$s m³/s</string>
+    <string name="flood_semantics">Flood risk: %1$s. Current river discharge %2$s cubic meters per second, mean %3$s.</string>
 
     <!-- Today card internals -->
     <string name="current_metric_high">High</string>
