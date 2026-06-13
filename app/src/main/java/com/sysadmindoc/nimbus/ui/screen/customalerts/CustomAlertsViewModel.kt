@@ -144,6 +144,7 @@ internal fun defaultThresholdCanonical(metric: CustomAlertMetric): Double = when
     CustomAlertMetric.FEELS_LIKE_NOW -> 35.0    // 35°C ≈ 95°F danger zone
     CustomAlertMetric.SNOWFALL_SUM_NEXT_24H -> 5.0
     CustomAlertMetric.PRESSURE_NOW -> 1000.0    // hPa — storm threshold
+    CustomAlertMetric.AQI_NOW -> 100.0          // US EPA "Unhealthy for Sensitive Groups"
 }
 
 internal fun defaultOperator(metric: CustomAlertMetric): CustomAlertOperator = when (metric) {

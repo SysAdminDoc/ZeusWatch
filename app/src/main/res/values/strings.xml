@@ -166,6 +166,8 @@
     <string name="custom_alert_metric_snowfall_sum_next_24h_summary">Total snowfall in the next 24 hours</string>
     <string name="custom_alert_metric_pressure_now">Pressure</string>
     <string name="custom_alert_metric_pressure_now_summary">Current barometric pressure</string>
+    <string name="custom_alert_metric_aqi_now">Air quality</string>
+    <string name="custom_alert_metric_aqi_now_summary">Current US EPA air quality index</string>
     <string name="custom_alert_operator_above">is above</string>
     <string name="custom_alert_operator_below">is below</string>
     <string name="custom_alert_notification_title">%1$s %2$s %3$s</string>

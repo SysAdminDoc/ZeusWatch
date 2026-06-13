@@ -386,6 +386,8 @@ private fun formatThreshold(rule: CustomAlertRule, settings: NimbusSettings): St
         com.sysadmindoc.nimbus.data.model.CustomAlertUnit.UV,
         com.sysadmindoc.nimbus.data.model.CustomAlertUnit.HPA ->
             String.format(java.util.Locale.US, "%.1f", display)
+        com.sysadmindoc.nimbus.data.model.CustomAlertUnit.AQI ->
+            kotlin.math.round(display).toInt().toString()
     }
     return "$text$label"
 }
@@ -618,6 +620,7 @@ private fun metricAllowsNegativeThreshold(metric: CustomAlertMetric): Boolean = 
     CustomAlertMetric.UV_INDEX_MAX_TODAY,
     CustomAlertMetric.SNOWFALL_SUM_NEXT_24H,
     CustomAlertMetric.PRESSURE_NOW,
+    CustomAlertMetric.AQI_NOW,
     -> false
 }
 
@@ -863,5 +866,7 @@ private fun formatThresholdInput(
         com.sysadmindoc.nimbus.data.model.CustomAlertUnit.UV,
         com.sysadmindoc.nimbus.data.model.CustomAlertUnit.HPA ->
             String.format(java.util.Locale.US, "%.1f", displayValue)
+        com.sysadmindoc.nimbus.data.model.CustomAlertUnit.AQI ->
+            kotlin.math.round(displayValue).toInt().toString()
     }
 }

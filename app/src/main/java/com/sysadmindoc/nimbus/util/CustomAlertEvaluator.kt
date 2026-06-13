@@ -6,6 +6,7 @@ import com.sysadmindoc.nimbus.data.model.CustomAlertMetric
 import com.sysadmindoc.nimbus.data.model.CustomAlertOperator
 import com.sysadmindoc.nimbus.data.model.CustomAlertRule
 import com.sysadmindoc.nimbus.data.model.CustomAlertUnit
+import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.PrecipUnit
@@ -33,6 +34,7 @@ data class TriggeredCustomAlert(
 internal fun evaluateCustomAlertRules(
     rules: List<CustomAlertRule>,
     data: WeatherData,
+    airQuality: AirQualityData? = null,
 ): List<TriggeredCustomAlert> {
     val today = data.daily.firstOrNull()
     val tonight = data.daily.getOrNull(1) ?: data.daily.firstOrNull()
@@ -58,6 +60,7 @@ internal fun evaluateCustomAlertRules(
             CustomAlertMetric.SNOWFALL_SUM_NEXT_24H ->
                 if (next24h.any { it.snowfall != null }) next24h.sumOf { it.snowfall ?: 0.0 } else null
             CustomAlertMetric.PRESSURE_NOW -> data.current.pressure.takeIf { it > 0.0 }
+            CustomAlertMetric.AQI_NOW -> airQuality?.usAqi?.toDouble()?.takeIf { it > 0.0 }
         } ?: continue
 
         val triggers = when (rule.operator) {
@@ -130,6 +133,7 @@ internal fun convertForDisplay(
         PressureUnit.INHG -> canonical * 0.02953
         PressureUnit.HPA, PressureUnit.MBAR -> canonical
     }
+    CustomAlertUnit.AQI -> canonical
 }
 
 /** Reverse of [convertForDisplay] — used when saving a user-entered threshold. */
@@ -156,6 +160,7 @@ internal fun convertToCanonical(
         PressureUnit.INHG -> displayValue / 0.02953
         PressureUnit.HPA, PressureUnit.MBAR -> displayValue
     }
+    CustomAlertUnit.AQI -> displayValue
 }
 
 internal fun displayUnitLabel(metric: CustomAlertMetric, settings: NimbusSettings): String =
@@ -177,6 +182,7 @@ internal fun displayUnitLabel(metric: CustomAlertMetric, settings: NimbusSetting
             PressureUnit.HPA -> " hPa"
             PressureUnit.MBAR -> " mbar"
         }
+        CustomAlertUnit.AQI -> " AQI"
     }
 
 private fun formatWithPrecision(value: Double, metric: CustomAlertMetric): String {
@@ -188,5 +194,7 @@ private fun formatWithPrecision(value: Double, metric: CustomAlertMetric): Strin
             String.format(Locale.US, "%.1f", value)
         CustomAlertUnit.HPA ->
             String.format(Locale.US, "%.1f", value)
+        CustomAlertUnit.AQI ->
+            kotlin.math.round(value).toInt().toString()
     }
 }
