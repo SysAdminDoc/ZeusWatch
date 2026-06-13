@@ -183,7 +183,6 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.datastore)
-    implementation(libs.datastore.tink)
     implementation(libs.tink.android)
 
     // Images

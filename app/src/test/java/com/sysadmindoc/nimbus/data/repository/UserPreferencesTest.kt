@@ -1,7 +1,5 @@
 package com.sysadmindoc.nimbus.data.repository
 
-import androidx.datastore.preferences.core.preferencesOf
-import androidx.datastore.preferences.core.stringPreferencesKey
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import org.junit.Assert.*
 import org.junit.Test
@@ -403,60 +401,75 @@ class UserPreferencesTest {
         assertEquals(WeatherSourceProvider.OPEN_METEO, result)
     }
 
-    // --- API key migration ---
+    // --- Protobuf API key extraction (legacy encrypted DataStore migration) ---
 
     @Test
-    fun migrateApiKeyPreferencesCopiesLegacyKeysIntoEncryptedStore() {
-        val owmKey = stringPreferencesKey("owm_api_key")
-        val pirateWeatherKey = stringPreferencesKey("pirate_weather_api_key")
-
-        val migrated = migrateApiKeyPreferences(
-            currentData = preferencesOf(),
-            legacyData = preferencesOf(
-                owmKey to "owm-secret",
-                pirateWeatherKey to "pirate-secret",
-            ),
-        )
-
-        assertEquals("owm-secret", migrated[owmKey])
-        assertEquals("pirate-secret", migrated[pirateWeatherKey])
+    fun extractApiKeysFromEmptyBytesReturnsEmptyKeys() {
+        val keys = extractApiKeysFromPreferencesProto(ByteArray(0))
+        assertEquals("", keys.owmApiKey)
+        assertEquals("", keys.pirateWeatherApiKey)
     }
 
     @Test
-    fun migrateApiKeyPreferencesDoesNotOverwriteExistingEncryptedKeys() {
-        val owmKey = stringPreferencesKey("owm_api_key")
-        val pirateWeatherKey = stringPreferencesKey("pirate_weather_api_key")
-
-        val migrated = migrateApiKeyPreferences(
-            currentData = preferencesOf(
-                owmKey to "encrypted-owm",
-                pirateWeatherKey to "encrypted-pirate",
-            ),
-            legacyData = preferencesOf(
-                owmKey to "legacy-owm",
-                pirateWeatherKey to "legacy-pirate",
-            ),
-        )
-
-        assertEquals("encrypted-owm", migrated[owmKey])
-        assertEquals("encrypted-pirate", migrated[pirateWeatherKey])
+    fun extractApiKeysFromGarbageBytesReturnsEmptyKeys() {
+        val keys = extractApiKeysFromPreferencesProto(byteArrayOf(0xFF.toByte(), 0x01, 0x02))
+        assertEquals("", keys.owmApiKey)
+        assertEquals("", keys.pirateWeatherApiKey)
     }
 
     @Test
-    fun migrateApiKeyPreferencesIgnoresBlankLegacyKeys() {
-        val owmKey = stringPreferencesKey("owm_api_key")
-        val pirateWeatherKey = stringPreferencesKey("pirate_weather_api_key")
-
-        val migrated = migrateApiKeyPreferences(
-            currentData = preferencesOf(),
-            legacyData = preferencesOf(
-                owmKey to "",
-                pirateWeatherKey to "   ",
-            ),
+    fun extractApiKeysFromValidProtobufReturnsKeys() {
+        val proto = buildPreferencesProto(
+            "owm_api_key" to "owm-secret-123",
+            "pirate_weather_api_key" to "pirate-secret-456",
         )
+        val keys = extractApiKeysFromPreferencesProto(proto)
+        assertEquals("owm-secret-123", keys.owmApiKey)
+        assertEquals("pirate-secret-456", keys.pirateWeatherApiKey)
+    }
 
-        assertNull(migrated[owmKey])
-        assertNull(migrated[pirateWeatherKey])
+    @Test
+    fun extractApiKeysIgnoresUnrelatedEntries() {
+        val proto = buildPreferencesProto(
+            "some_other_key" to "value",
+            "owm_api_key" to "my-owm-key",
+        )
+        val keys = extractApiKeysFromPreferencesProto(proto)
+        assertEquals("my-owm-key", keys.owmApiKey)
+        assertEquals("", keys.pirateWeatherApiKey)
+    }
+
+    /**
+     * Build a minimal protobuf blob matching the DataStore Preferences
+     * wire format: field 1 (LEN) = map entries with string key (1) and
+     * Value message (2) containing string_value (5).
+     */
+    private fun buildPreferencesProto(vararg entries: Pair<String, String>): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        for ((key, value) in entries) {
+            val valueMsg = buildLenDelimited(5, value.toByteArray())
+            val entryMsg = buildLenDelimited(1, key.toByteArray()) + buildLenDelimited(2, valueMsg)
+            out.write(buildLenDelimited(1, entryMsg))
+        }
+        return out.toByteArray()
+    }
+
+    private fun buildLenDelimited(fieldNumber: Int, payload: ByteArray): ByteArray {
+        val tag = (fieldNumber shl 3) or 2
+        val out = java.io.ByteArrayOutputStream()
+        writeVarint(out, tag)
+        writeVarint(out, payload.size)
+        out.write(payload)
+        return out.toByteArray()
+    }
+
+    private fun writeVarint(out: java.io.ByteArrayOutputStream, value: Int) {
+        var v = value
+        while (v > 0x7F) {
+            out.write((v and 0x7F) or 0x80)
+            v = v ushr 7
+        }
+        out.write(v and 0x7F)
     }
 
     // --- SavedLocation ---
