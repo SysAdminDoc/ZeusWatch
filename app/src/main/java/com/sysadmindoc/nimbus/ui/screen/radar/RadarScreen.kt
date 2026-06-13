@@ -51,6 +51,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -395,7 +396,18 @@ private fun BoxScope.RadarNativeContent(
     )
     if (isRadarMode) {
         RadarPlaybackAndStatus(state, actions)
+        RadarAttribution(modifier = Modifier.align(Alignment.BottomStart))
     }
+}
+
+@Composable
+private fun RadarAttribution(modifier: Modifier = Modifier) {
+    Text(
+        text = "Radar: RainViewer",
+        color = NimbusTextPrimary.copy(alpha = 0.5f),
+        fontSize = 9.sp,
+        modifier = modifier.padding(start = 8.dp, bottom = 4.dp),
+    )
 }
 
 @Composable
