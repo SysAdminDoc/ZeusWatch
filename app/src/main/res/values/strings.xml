@@ -779,6 +779,8 @@
     <string name="main_hours_ago">%1$dh ago</string>
     <string name="main_offline_ready_status">Offline-ready \u2022 %1$s</string>
     <string name="main_refreshed_status">Refreshed %1$s</string>
+    <string name="main_source_via">via %1$s</string>
+    <string name="main_source_fallback">Fallback: %1$s</string>
     <string name="main_footer">ZeusWatch v%1$s \u2022 Forecast data from Open-Meteo</string>
     <string name="main_nowcast_unavailable_title">Rain nowcast unavailable</string>
     <string name="main_nowcast_unavailable_message">Minute-by-minute precipitation data is not available for this location right now.</string>
@@ -895,6 +897,8 @@
     <string name="settings_alert_fallback">Alert Fallback</string>
     <string name="settings_air_quality_source">Air Quality Source</string>
     <string name="settings_minutely_source">Minutely Precipitation Source</string>
+    <string name="settings_gadgetbridge_broadcast">Gadgetbridge weather broadcast</string>
+    <string name="settings_gadgetbridge_broadcast_desc">Send current weather to compatible Gadgetbridge watches after each refresh.</string>
     <string name="settings_api_keys">API Keys</string>
     <string name="settings_owm_key">OpenWeatherMap API Key</string>
     <string name="settings_pirate_key">Pirate Weather API Key</string>

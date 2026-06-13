@@ -689,6 +689,8 @@ private fun WeatherContent(
                     updatedAgeMinutes = updatedAgeMinutes,
                     updatedAgo = updatedAgo,
                     isCached = state.isCached,
+                    sourceProvider = data.sourceProvider,
+                    usedFallback = data.usedFallback,
                 )
             }
 
@@ -846,6 +848,8 @@ private fun WeatherUpdatedRow(
     updatedAgeMinutes: Long,
     updatedAgo: String,
     isCached: Boolean,
+    sourceProvider: String? = null,
+    usedFallback: Boolean = false,
 ) {
     Box(
         modifier = Modifier
@@ -879,6 +883,16 @@ private fun WeatherUpdatedRow(
                 },
                 tint = stalenessColor,
             )
+            if (sourceProvider != null) {
+                NimbusStatusBadge(
+                    text = if (usedFallback) {
+                        stringResource(R.string.main_source_fallback, sourceProvider)
+                    } else {
+                        stringResource(R.string.main_source_via, sourceProvider)
+                    },
+                    tint = if (usedFallback) NimbusWarning.copy(alpha = 0.7f) else NimbusTextTertiary,
+                )
+            }
         }
     }
 }

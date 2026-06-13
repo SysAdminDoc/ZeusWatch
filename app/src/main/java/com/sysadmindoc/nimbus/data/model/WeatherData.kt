@@ -13,6 +13,8 @@ data class WeatherData(
     val hourly: List<HourlyConditions>,
     val daily: List<DailyConditions>,
     val lastUpdated: LocalDateTime = LocalDateTime.now(),
+    val sourceProvider: String? = null,
+    val usedFallback: Boolean = false,
 )
 
 @Stable
