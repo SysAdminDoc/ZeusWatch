@@ -28,6 +28,9 @@
         <intent>
             <action android:name="com.sysadmindoc.nimbus.ICON_PACK" />
         </intent>
+        <intent>
+            <action android:name="nodomain.freeyourgadget.gadgetbridge.ACTION_GENERIC_WEATHER" />
+        </intent>
     </queries>
 
     <application
@@ -178,6 +181,18 @@
             <meta-data
                 android:name="android.service.wallpaper"
                 android:resource="@xml/weather_wallpaper" />
+        </service>
+
+        <!-- Quick Settings Tile -->
+        <service
+            android:name=".tile.WeatherQuickSettingsTile"
+            android:label="@string/qs_tile_label"
+            android:icon="@drawable/ic_w_sunny"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
         </service>
 
     </application>
