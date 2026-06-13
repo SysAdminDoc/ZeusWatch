@@ -1193,6 +1193,7 @@ private fun RenderAtmosphereCard(
                     modifier = modifier,
                     statusLabel = airQualityBadge?.text,
                     statusTint = airQualityBadge?.tint ?: NimbusTextSecondary,
+                    referenceTime = context.data.current.observationTime,
                 )
             } ?: if (context.state.airQualityFetchFailed) {
                 InlineNoticeCard(

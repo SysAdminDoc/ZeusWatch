@@ -24,7 +24,7 @@ data class AirQualityData(
 
 @Stable
 data class HourlyAqi(
-    val hour: String,
+    val time: java.time.LocalDateTime,
     val aqi: Int,
     val level: AqiLevel,
 )

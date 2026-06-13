@@ -76,7 +76,7 @@ class AirQualityRepository @Inject constructor(
                         // Hourly AQI (next 24h)
                         if (!t.isBefore(now.minusHours(1)) && hourlyAqi.size < 24) {
                             hourlyAqi.add(HourlyAqi(
-                                hour = WeatherFormatter.formatRelativeHourLabel(t, now),
+                                time = t,
                                 aqi = aqi,
                                 level = AqiLevel.fromAqi(aqi),
                             ))
