@@ -90,6 +90,7 @@ class SettingsViewModel @Inject constructor(
     fun setCustomIconPackId(id: String) = viewModelScope.launch { prefs.setCustomIconPackId(id) }
     fun setThemeMode(mode: ThemeMode) = viewModelScope.launch { prefs.setThemeMode(mode) }
     fun setSummaryStyle(style: SummaryStyle) = viewModelScope.launch { prefs.setSummaryStyle(style) }
+    fun setCustomSummaryTemplate(template: String) = viewModelScope.launch { prefs.setCustomSummaryTemplate(template) }
 
     // Card config
     /** Atomic single-step card move — see [UserPreferences.moveCardInOrder]. */

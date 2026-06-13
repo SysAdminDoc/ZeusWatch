@@ -119,6 +119,7 @@ internal val SummaryStyle.labelRes: Int
     get() = when (this) {
         SummaryStyle.TEMPLATE -> R.string.settings_summary_standard
         SummaryStyle.AI_GENERATED -> R.string.settings_summary_ai_generated
+        SummaryStyle.CUSTOM_TEMPLATE -> R.string.settings_summary_custom_template
     }
 
 @get:StringRes

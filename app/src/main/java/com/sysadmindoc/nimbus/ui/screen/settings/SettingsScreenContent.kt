@@ -203,6 +203,7 @@ internal data class SettingsActions(
     val onCustomIconPackId: (String) -> Unit = {},
     val onThemeMode: (ThemeMode) -> Unit = {},
     val onSummaryStyle: (SummaryStyle) -> Unit = {},
+    val onCustomSummaryTemplate: (String) -> Unit = {},
     val onCardEnabled: (CardType, Boolean) -> Unit = { _, _ -> },
     val onMoveCard: (CardType, Int) -> Unit = { _, _ -> },
     val onResetCardPreferences: () -> Unit = {},
@@ -350,6 +351,40 @@ private fun SettingsThemeAndSummaryControls(
             label = stringResource(style.labelRes),
             selected = settings.summaryStyle == style,
             onClick = { actions.onSummaryStyle(style) },
+        )
+    }
+    if (settings.summaryStyle == SummaryStyle.CUSTOM_TEMPLATE) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            stringResource(R.string.settings_custom_template_label),
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+        )
+        var templateText by rememberSaveable { mutableStateOf(settings.customSummaryTemplate) }
+        BasicTextField(
+            value = templateText,
+            onValueChange = {
+                templateText = it
+                actions.onCustomSummaryTemplate(it)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 100.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                .border(1.dp, NimbusTextSecondary.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .padding(12.dp),
+            textStyle = MaterialTheme.typography.bodySmall.copy(color = NimbusTextPrimary),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            stringResource(R.string.settings_custom_template_help),
+            style = MaterialTheme.typography.labelSmall,
+            color = NimbusTextSecondary.copy(alpha = 0.7f),
+            modifier = Modifier.padding(start = 4.dp),
         )
     }
 }

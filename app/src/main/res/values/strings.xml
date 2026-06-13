@@ -1038,6 +1038,9 @@
     <string name="settings_theme_weather_adaptive">Weather Adaptive</string>
     <string name="settings_summary_standard">Standard</string>
     <string name="settings_summary_ai_generated">AI-Generated (Gemini)</string>
+    <string name="settings_summary_custom_template">Custom Template</string>
+    <string name="settings_custom_template_label">Template</string>
+    <string name="settings_custom_template_help">Variables: {condition} {time} {temp} {high} {low} {humidity} {wind} {wind_speed} {uv} {precip} {precip_max} {pressure} {dewpoint}</string>
     <string name="weather_source_open_meteo">Open-Meteo</string>
     <string name="weather_source_open_meteo_bom">Open-Meteo + BOM ACCESS-G</string>
     <string name="weather_source_nws">National Weather Service</string>
