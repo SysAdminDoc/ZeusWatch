@@ -38,4 +38,5 @@ internal val CardType.labelRes: Int
         CardType.ON_THIS_DAY -> R.string.card_type_on_this_day
         CardType.AURORA_KP -> R.string.card_type_aurora_kp
         CardType.ACTIVITY_INDEX -> R.string.card_type_activity_index
+        CardType.SOLAR -> R.string.card_type_solar
     }

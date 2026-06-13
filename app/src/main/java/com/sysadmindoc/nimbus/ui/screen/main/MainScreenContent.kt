@@ -91,6 +91,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.ui.component.AdaptiveLayoutInfo
 import com.sysadmindoc.nimbus.ui.component.ActivityIndexCard
 import com.sysadmindoc.nimbus.ui.component.AlertBanner
+import com.sysadmindoc.nimbus.ui.component.SolarIrradianceCard
 import com.sysadmindoc.nimbus.ui.component.AuroraKpCard
 import com.sysadmindoc.nimbus.ui.component.AlertDetailSheet
 import com.sysadmindoc.nimbus.ui.component.AqiCard
@@ -1389,6 +1390,10 @@ private fun RenderDetailCard(
                 ActivityIndexCard(indices = indices, modifier = modifier)
             }
         }
+        CardType.SOLAR -> SolarIrradianceCard(
+            hourly = data.hourly,
+            modifier = modifier,
+        )
         else -> Unit
     }
 }

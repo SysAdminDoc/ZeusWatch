@@ -414,6 +414,8 @@ class WeatherRepository @Inject constructor(
                 windGusts = hourly.windGusts?.getOrNull(i),
                 sunshineDuration = hourly.sunshineDuration?.getOrNull(i),
                 surfacePressure = hourly.surfacePressure?.getOrNull(i),
+                shortwaveRadiation = hourly.shortwaveRadiation?.getOrNull(i),
+                directNormalIrradiance = hourly.directNormalIrradiance?.getOrNull(i),
             )
         }
     }
