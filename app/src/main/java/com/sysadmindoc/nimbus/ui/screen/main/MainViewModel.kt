@@ -32,6 +32,8 @@ import com.sysadmindoc.nimbus.data.repository.AirQualityRepository
 import com.sysadmindoc.nimbus.data.repository.AlertRepository
 import com.sysadmindoc.nimbus.data.repository.AuroraKpData
 import com.sysadmindoc.nimbus.data.repository.AuroraRepository
+import com.sysadmindoc.nimbus.util.ActivityIndex
+import com.sysadmindoc.nimbus.util.ActivityIndexEvaluator
 import com.sysadmindoc.nimbus.data.repository.CardType
 import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionData
 import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionRepository
@@ -859,6 +861,16 @@ class MainViewModel @Inject constructor(
             val clothingSuggestions = ClothingSuggestionEvaluator.evaluate(data.current)
             val petSafetyAlerts = PetSafetyEvaluator.evaluate(data.current)
 
+            val activityIndices = if (settings.isCardEnabled(CardType.ACTIVITY_INDEX)) {
+                ActivityIndexEvaluator.evaluate(
+                    current = data.current,
+                    precipProbability = data.daily.firstOrNull()?.precipitationProbability ?: 0,
+                    aqi = currentState.airQuality?.usAqi,
+                )
+            } else {
+                emptyList()
+            }
+
             val goldenHour = WeatherFormatter.goldenHourTimes(
                 data.current.sunrise, data.current.sunset, settings,
             )
@@ -871,6 +883,7 @@ class MainViewModel @Inject constructor(
                 clothingSuggestions = clothingSuggestions.toImmutableList(),
                 petSafetyAlerts = petSafetyAlerts.toImmutableList(),
                 goldenHourTimes = goldenHour,
+                activityIndices = activityIndices.toImmutableList(),
             )
         }
 
@@ -886,6 +899,7 @@ class MainViewModel @Inject constructor(
                 clothingSuggestions = derived.clothingSuggestions,
                 petSafetyAlerts = derived.petSafetyAlerts,
                 goldenHourTimes = derived.goldenHourTimes,
+                activityIndices = derived.activityIndices,
             )
         }
 
@@ -1171,6 +1185,7 @@ data class MainUiState(
     val isOffline: Boolean = false,
     val onThisDay: com.sysadmindoc.nimbus.data.model.OnThisDayData? = null,
     val auroraKpData: AuroraKpData? = null,
+    val activityIndices: ImmutableList<ActivityIndex> = persistentListOf(),
     val forecastEvolution: ForecastEvolutionData? = null,
     val isForecastEvolutionLoading: Boolean = false,
     val forecastEvolutionUnavailable: Boolean = false,
@@ -1185,6 +1200,7 @@ private data class DerivedWeatherState(
     val clothingSuggestions: ImmutableList<ClothingSuggestion>,
     val petSafetyAlerts: ImmutableList<PetSafetyAlert>,
     val goldenHourTimes: Pair<String, String>?,
+    val activityIndices: ImmutableList<ActivityIndex>,
 )
 
 private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
@@ -1212,6 +1228,7 @@ private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
     goldenHourTimes = null,
     onThisDay = null,
     auroraKpData = null,
+    activityIndices = persistentListOf(),
     forecastEvolution = null,
     isForecastEvolutionLoading = false,
     forecastEvolutionUnavailable = false,
