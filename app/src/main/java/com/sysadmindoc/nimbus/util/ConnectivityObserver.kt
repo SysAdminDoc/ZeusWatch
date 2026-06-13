@@ -6,10 +6,15 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.shareIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,6 +22,8 @@ import javax.inject.Singleton
 class ConnectivityObserver @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     val isOnline: Flow<Boolean> = callbackFlow {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
@@ -42,6 +49,7 @@ class ConnectivityObserver @Inject constructor(
         cm.registerNetworkCallback(request, callback)
         awaitClose { cm.unregisterNetworkCallback(callback) }
     }.distinctUntilChanged()
+        .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 1)
 
     private fun ConnectivityManager.currentOnlineState(): Boolean =
         getNetworkCapabilities(activeNetwork).hasUsableInternet()
