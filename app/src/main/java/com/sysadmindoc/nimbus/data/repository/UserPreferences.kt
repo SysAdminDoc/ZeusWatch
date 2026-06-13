@@ -114,7 +114,9 @@ class UserPreferences @Inject constructor(
         val OWM_API_KEY = owmApiKeyPreferenceKey
         val PIRATE_WEATHER_API_KEY = pirateWeatherApiKeyPreferenceKey
 
-        val SEEN_ALERT_IDS = stringSetPreferencesKey("seen_alert_ids")
+        val SEEN_ALERT_IDS_ORDERED = stringPreferencesKey("seen_alert_ids_ordered")
+        @Deprecated("Migrated to ordered string in SEEN_ALERT_IDS_ORDERED")
+        val SEEN_ALERT_IDS_LEGACY = stringSetPreferencesKey("seen_alert_ids")
         val LAST_LAT = stringPreferencesKey("last_lat")
         val LAST_LON = stringPreferencesKey("last_lon")
         val LAST_LOCATION_NAME = stringPreferencesKey("last_location_name")
@@ -459,25 +461,28 @@ class UserPreferences @Inject constructor(
         encryptedApiKeyStore.migrateFromLegacyEncryptedDataStore()
     }
 
-    /** Returns the set of alert IDs the user has already been notified about. */
-    suspend fun getSeenAlertIds(): Set<String> = store.data.map { it[Keys.SEEN_ALERT_IDS] ?: emptySet() }.first()
+    suspend fun getSeenAlertIds(): Set<String> = store.data.map { prefs ->
+        decodeSeenAlertIds(prefs)
+    }.first()
 
-    /** Mark alert IDs as seen. Caps at 200 entries to prevent unbounded growth. */
     suspend fun addSeenAlertIds(ids: Set<String>) = store.edit { prefs ->
-        val existing = prefs[Keys.SEEN_ALERT_IDS] ?: emptySet()
-        // `existing + ids` is an ordered LinkedHashSet running oldest -> newest
-        // (newly-added ids land at the tail), and the Preferences store
-        // preserves that insertion order across reads. When over the cap, drop
-        // the stale head with takeLast() — keeping the *newest* 200, which the
-        // old loop got backwards (it retained the oldest existing ids and so
-        // could re-notify still-active alerts). takeLast() also guarantees the
-        // just-added ids survive whenever ids.size <= 200.
-        val merged = existing + ids
-        prefs[Keys.SEEN_ALERT_IDS] = if (merged.size > 200) {
-            merged.toList().takeLast(200).toSet()
-        } else {
-            merged
+        val existing = decodeSeenAlertIds(prefs).toMutableList()
+        val newIds = ids.filter { it !in existing }
+        existing.addAll(newIds)
+        val trimmed = if (existing.size > 200) existing.takeLast(200) else existing
+        prefs[Keys.SEEN_ALERT_IDS_ORDERED] = trimmed.joinToString("\n")
+        @Suppress("DEPRECATION")
+        prefs.remove(Keys.SEEN_ALERT_IDS_LEGACY)
+    }
+
+    private fun decodeSeenAlertIds(prefs: Preferences): List<String> {
+        val ordered = prefs[Keys.SEEN_ALERT_IDS_ORDERED]
+        if (!ordered.isNullOrBlank()) {
+            return ordered.split("\n").filter { it.isNotBlank() }
         }
+        @Suppress("DEPRECATION")
+        val legacy = prefs[Keys.SEEN_ALERT_IDS_LEGACY]
+        return legacy?.toList() ?: emptyList()
     }
 
     suspend fun saveLastLocation(lat: Double, lon: Double, name: String) = store.edit {
