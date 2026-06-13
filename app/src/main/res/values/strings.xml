@@ -451,6 +451,10 @@
     <string name="forecast_evolution_rain_delta">%1$+d%%</string>
     <string name="forecast_evolution_point">%1$s: %2$s, %3$s rain</string>
     <string name="forecast_evolution_semantics">Forecast evolution. Latest run compared with previous run. Average temperature shift %1$s. Average rain risk shift %2$s.</string>
+    <string name="forecast_accuracy_too_warm">%1$dd ago: %2$s too warm</string>
+    <string name="forecast_accuracy_too_cool">%1$dd ago: %2$s too cool</string>
+    <string name="settings_show_forecast_accuracy">Forecast accuracy</string>
+    <string name="settings_show_forecast_accuracy_desc">Show how past forecasts compared to observed highs</string>
     <string name="details_intro">A fast read on moisture, light, pressure, and visibility so the rest of the forecast is easier to act on.</string>
     <string name="details_snow_depth">Snow Depth</string>
     <string name="summary_chip_live_conditions">Live conditions</string>
@@ -1148,6 +1152,11 @@
     <string name="share_weather_chooser">Share weather</string>
     <string name="share_weather_image_text">Weather for %1$s - %2$s</string>
     <string name="share_weather_image_chooser">Share weather image</string>
+
+    <!-- Quick Settings Tile -->
+    <string name="qs_tile_label">Weather</string>
+    <string name="qs_tile_no_location">Open app to set location</string>
+    <string name="qs_tile_no_data">Tap to refresh</string>
 
     <!-- Live Wallpaper -->
     <string name="wallpaper_label">ZeusWatch Weather</string>

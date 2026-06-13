@@ -219,6 +219,7 @@ internal data class SettingsActions(
     val onShowBeaufortColors: (Boolean) -> Unit = {},
     val onShowOutdoorScore: (Boolean) -> Unit = {},
     val onShowYesterdayComparison: (Boolean) -> Unit = {},
+    val onShowForecastAccuracy: (Boolean) -> Unit = {},
     val onHourlyForecastHours: (Int) -> Unit = {},
     val onMigraineAlerts: (Boolean) -> Unit = {},
     val onMigrainePressureThreshold: (Double) -> Unit = {},
@@ -701,6 +702,7 @@ private fun SettingsDataDisplaySection(
         description = stringResource(R.string.settings_data_display_desc),
     ) {
         SettingToggle(stringResource(R.string.settings_yesterday_comparison), stringResource(R.string.settings_yesterday_comparison_desc), settings.showYesterdayComparison, actions.onShowYesterdayComparison)
+        SettingToggle(stringResource(R.string.settings_show_forecast_accuracy), stringResource(R.string.settings_show_forecast_accuracy_desc), settings.showForecastAccuracy, actions.onShowForecastAccuracy)
         SettingToggle(stringResource(R.string.settings_outdoor_score), stringResource(R.string.settings_outdoor_score_desc), settings.showOutdoorScore, actions.onShowOutdoorScore)
         SettingToggle(stringResource(R.string.settings_snowfall_insights), stringResource(R.string.settings_snowfall_insights_desc), settings.showSnowfall, actions.onShowSnowfall)
         SettingToggle(stringResource(R.string.settings_storm_potential), stringResource(R.string.settings_storm_potential_desc), settings.showCape, actions.onShowCape)
