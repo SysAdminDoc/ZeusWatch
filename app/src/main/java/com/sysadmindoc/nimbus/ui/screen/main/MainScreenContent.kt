@@ -1228,15 +1228,11 @@ private fun RenderAtmosphereCard(
             }
         }
         CardType.OUTDOOR_SCORE -> {
-            if (context.state.outdoorScore > 0) {
+            val breakdown = context.state.outdoorScore
+            if (breakdown != null && breakdown.score > 0) {
                 OutdoorScoreCard(
-                    score = context.state.outdoorScore,
+                    breakdown = breakdown,
                     modifier = modifier,
-                    tempCelsius = data.current.temperature,
-                    humidity = data.current.humidity,
-                    windKmh = data.current.windSpeed,
-                    uvIndex = data.current.uvIndex,
-                    precipProbability = data.daily.firstOrNull()?.precipitationProbability ?: 0,
                 )
             }
         }

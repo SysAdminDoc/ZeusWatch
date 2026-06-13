@@ -462,7 +462,7 @@ class UserPreferences @Inject constructor(
     }
 
     suspend fun getSeenAlertIds(): Set<String> = store.data.map { prefs ->
-        decodeSeenAlertIds(prefs)
+        decodeSeenAlertIds(prefs).toSet()
     }.first()
 
     suspend fun addSeenAlertIds(ids: Set<String>) = store.edit { prefs ->
