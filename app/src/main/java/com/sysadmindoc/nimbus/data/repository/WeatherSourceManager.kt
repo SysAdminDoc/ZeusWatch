@@ -54,17 +54,23 @@ class WeatherSourceManager @Inject constructor(
         val fallback = config.forecastFallback
 
         val result = getForecastFrom(primary, latitude, longitude, locationName, locationTimeZone)
-        if (result.isSuccess) return result
+        if (result.isSuccess) {
+            return result.map { it.copy(sourceProvider = primary.displayName) }
+        }
 
         Log.w(TAG, "Primary forecast source ${primary.displayName} failed, trying fallback", result.exceptionOrNull())
 
         if (fallback != null && fallback != primary) {
             val fallbackResult = getForecastFrom(fallback, latitude, longitude, locationName, locationTimeZone)
-            if (fallbackResult.isSuccess) return fallbackResult
+            if (fallbackResult.isSuccess) {
+                return fallbackResult.map {
+                    it.copy(sourceProvider = fallback.displayName, usedFallback = true)
+                }
+            }
             Log.w(TAG, "Fallback forecast source ${fallback.displayName} also failed", fallbackResult.exceptionOrNull())
         }
 
-        return result // Return original failure
+        return result
     }
 
     private suspend fun getForecastFrom(
