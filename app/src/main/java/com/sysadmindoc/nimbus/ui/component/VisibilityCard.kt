@@ -171,8 +171,8 @@ private fun VisibilityScaleBar(
     )
     Canvas(modifier = modifier) {
         val w = size.width
-        val barH = 10f
-        val barY = 4f
+        val barH = 10.dp.toPx()
+        val barY = 4.dp.toPx()
         val maxKm = 50f
 
         // Draw segmented bar
@@ -186,7 +186,7 @@ private fun VisibilityScaleBar(
                 color = colors[i].copy(alpha = 0.35f),
                 topLeft = Offset(startX, barY),
                 size = Size(segW, barH),
-                cornerRadius = CornerRadius(3f, 3f),
+                cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx()),
             )
 
             // Label below
@@ -194,7 +194,7 @@ private fun VisibilityScaleBar(
             val measured = textMeasurer.measure(label, labelStyle)
             drawText(
                 measured,
-                topLeft = Offset(startX + segW / 2 - measured.size.width / 2, barY + barH + 4f),
+                topLeft = Offset(startX + segW / 2 - measured.size.width / 2, barY + barH + 4.dp.toPx()),
             )
         }
 
@@ -203,12 +203,12 @@ private fun VisibilityScaleBar(
         val posX = w * posFrac
         drawCircle(
             color = Color.White,
-            radius = 7f,
+            radius = 7.dp.toPx(),
             center = Offset(posX, barY + barH / 2),
         )
         drawCircle(
             color = visibilityTier(currentKm).color,
-            radius = 5f,
+            radius = 5.dp.toPx(),
             center = Offset(posX, barY + barH / 2),
         )
     }
@@ -245,7 +245,7 @@ private fun VisibilityTrendChart(
                 color = NimbusBlueAccent.copy(alpha = 0.6f),
                 start = points[i],
                 end = points[i + 1],
-                strokeWidth = 2f,
+                strokeWidth = 2.dp.toPx(),
                 cap = StrokeCap.Round,
             )
         }
@@ -254,7 +254,7 @@ private fun VisibilityTrendChart(
         points.forEach { pt ->
             drawCircle(
                 color = NimbusBlueAccent,
-                radius = 3f,
+                radius = 3.dp.toPx(),
                 center = pt,
             )
         }
@@ -267,7 +267,7 @@ private fun VisibilityTrendChart(
                 val x = (i.toFloat() / (hours.size - 1).coerceAtLeast(1)) * w
                 drawText(
                     measured,
-                    topLeft = Offset(x - measured.size.width / 2, chartH + 2f),
+                    topLeft = Offset(x - measured.size.width / 2, chartH + 2.dp.toPx()),
                 )
             }
         }

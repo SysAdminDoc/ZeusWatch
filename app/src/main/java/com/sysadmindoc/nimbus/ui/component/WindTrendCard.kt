@@ -119,7 +119,7 @@ fun WindTrendCard(
         ) {
             val w = size.width
             val h = size.height
-            val paddingBottom = 18f
+            val paddingBottom = 18.dp.toPx()
             val graphH = h - paddingBottom
 
             val ceiling = maxOf(maxWind, maxGust).coerceAtLeast(5.0)
@@ -137,7 +137,7 @@ fun WindTrendCard(
                         color = Color(0xFFFF9800).copy(alpha = 0.15f),
                         topLeft = Offset(x, graphH - barH),
                         size = Size(barW, barH),
-                        cornerRadius = CornerRadius(2f),
+                        cornerRadius = CornerRadius(2.dp.toPx()),
                     )
                 }
             }
@@ -189,8 +189,8 @@ fun WindTrendCard(
 
             // Peak dot
             if (peakIdx < points.size) {
-                drawCircle(NimbusBlueAccent, radius = 4f, center = points[peakIdx])
-                drawCircle(Color(0xFF0A0E1A), radius = 2f, center = points[peakIdx])
+                drawCircle(NimbusBlueAccent, radius = 4.dp.toPx(), center = points[peakIdx])
+                drawCircle(Color(0xFF0A0E1A), radius = 2.dp.toPx(), center = points[peakIdx])
             }
 
             // Time labels every 6h
@@ -200,7 +200,7 @@ fun WindTrendCard(
                     val m = textMeasurer.measure(label, labelStyle)
                     drawText(m, topLeft = Offset(
                         (points[i].x - m.size.width / 2f).coerceIn(0f, w - m.size.width),
-                        graphH + 2f,
+                        graphH + 2.dp.toPx(),
                     ))
                 }
             }

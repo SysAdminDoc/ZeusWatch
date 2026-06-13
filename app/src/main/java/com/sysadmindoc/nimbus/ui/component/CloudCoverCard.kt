@@ -131,10 +131,10 @@ private fun CloudCoverChart(
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        val bottomPad = 18f
+        val bottomPad = 18.dp.toPx()
         val chartH = h - bottomPad
         val barCount = hours.size
-        val barSpacing = 3f
+        val barSpacing = 3.dp.toPx()
         val barWidth = (w - (barCount - 1) * barSpacing) / barCount
 
         // Reference lines
@@ -176,7 +176,7 @@ private fun CloudCoverChart(
                 color = finalColor,
                 topLeft = Offset(x, chartH - barH),
                 size = Size(barWidth, barH),
-                cornerRadius = CornerRadius(3f, 3f),
+                cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx()),
             )
 
             // Time labels every 3 hours
@@ -187,7 +187,7 @@ private fun CloudCoverChart(
                     measured,
                     topLeft = Offset(
                         x + barWidth / 2 - measured.size.width / 2,
-                        chartH + 4f,
+                        chartH + 4.dp.toPx(),
                     ),
                 )
             }
