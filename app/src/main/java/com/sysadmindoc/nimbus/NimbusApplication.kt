@@ -71,6 +71,7 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
         DatabaseMaintenanceWorker.schedule(this)
 
         appScope.launch {
+            prefs.migrateEncryptedApiKeys()
             val settings = prefs.settings.first()
             if (settings.alertNotificationsEnabled) {
                 AlertCheckWorker.schedule(this@NimbusApplication)

@@ -10,6 +10,7 @@
     <cloud-backup>
         <exclude domain="file" path="datastore/nimbus_prefs.preferences_pb" />
         <exclude domain="file" path="datastore/nimbus_widget_data.preferences_pb" />
+        <exclude domain="file" path="encrypted_api_keys.json" />
         <exclude domain="database" path="nimbus.db" />
         <exclude domain="database" path="nimbus.db-wal" />
         <exclude domain="database" path="nimbus.db-shm" />
@@ -17,6 +18,7 @@
     <device-transfer>
         <exclude domain="file" path="datastore/nimbus_prefs.preferences_pb" />
         <exclude domain="file" path="datastore/nimbus_widget_data.preferences_pb" />
+        <exclude domain="file" path="encrypted_api_keys.json" />
         <exclude domain="database" path="nimbus.db" />
         <exclude domain="database" path="nimbus.db-wal" />
         <exclude domain="database" path="nimbus.db-shm" />
