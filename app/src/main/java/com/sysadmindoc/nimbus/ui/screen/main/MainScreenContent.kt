@@ -89,6 +89,7 @@ import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.ui.component.AdaptiveLayoutInfo
+import com.sysadmindoc.nimbus.ui.component.ActivityIndexCard
 import com.sysadmindoc.nimbus.ui.component.AlertBanner
 import com.sysadmindoc.nimbus.ui.component.AuroraKpCard
 import com.sysadmindoc.nimbus.ui.component.AlertDetailSheet
@@ -1380,6 +1381,12 @@ private fun RenderDetailCard(
             val kpData = context.state.auroraKpData
             if (kpData != null) {
                 AuroraKpCard(data = kpData, modifier = modifier)
+            }
+        }
+        CardType.ACTIVITY_INDEX -> {
+            val indices = context.state.activityIndices
+            if (indices.isNotEmpty()) {
+                ActivityIndexCard(indices = indices, modifier = modifier)
             }
         }
         else -> Unit
