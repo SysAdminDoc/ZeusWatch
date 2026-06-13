@@ -281,6 +281,7 @@
     <string name="card_type_solar">Solar Irradiance</string>
     <string name="card_type_marine">Marine</string>
     <string name="card_type_flood_risk">Flood Risk</string>
+    <string name="card_type_climate_outlook">Climate Outlook</string>
     <string name="card_title_astronomy">Astronomy</string>
     <string name="card_title_forecast_brief">Forecast Brief</string>
     <string name="card_title_outdoor_activity">Outdoor Activity</string>
@@ -321,6 +322,15 @@
     <string name="flood_max_label">Max</string>
     <string name="flood_m3s_value">%1$s m³/s</string>
     <string name="flood_semantics">Flood risk: %1$s. Current river discharge %2$s cubic meters per second, mean %3$s.</string>
+    <string name="card_title_climate_outlook">Climate Outlook</string>
+    <string name="climate_subtitle">CMIP6 projection vs 1950–1980 baseline</string>
+    <string name="climate_projected_label">2050 avg high</string>
+    <string name="climate_baseline_label">Baseline avg high</string>
+    <string name="climate_low_delta_label">Low Δ</string>
+    <string name="climate_precip_change_label">Precipitation change</string>
+    <string name="climate_temp_value">%1$s°C</string>
+    <string name="climate_delta_value">%1$s°C</string>
+    <string name="climate_semantics">Climate outlook: projected 2050 average high %1$s degrees, baseline %2$s degrees, change %3$s degrees.</string>
 
     <!-- Today card internals -->
     <string name="current_metric_high">High</string>

@@ -41,4 +41,5 @@ internal val CardType.labelRes: Int
         CardType.SOLAR -> R.string.card_type_solar
         CardType.MARINE -> R.string.card_type_marine
         CardType.FLOOD_RISK -> R.string.card_type_flood_risk
+        CardType.CLIMATE_OUTLOOK -> R.string.card_type_climate_outlook
     }
