@@ -68,6 +68,8 @@ data class HourlyWeather(
     @SerialName("sunshine_duration") val sunshineDuration: List<Double?>? = null,
     @SerialName("cape") val cape: List<Double?>? = null,
     @SerialName("surface_pressure") val surfacePressure: List<Double?>? = null,
+    @SerialName("shortwave_radiation") val shortwaveRadiation: List<Double?>? = null,
+    @SerialName("direct_normal_irradiance") val directNormalIrradiance: List<Double?>? = null,
 )
 
 @Serializable

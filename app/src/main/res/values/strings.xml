@@ -278,6 +278,7 @@
     <string name="card_type_on_this_day">On This Day</string>
     <string name="card_type_aurora_kp">Aurora / Kp Index</string>
     <string name="card_type_activity_index">Activity Index</string>
+    <string name="card_type_solar">Solar Irradiance</string>
     <string name="card_title_astronomy">Astronomy</string>
     <string name="card_title_forecast_brief">Forecast Brief</string>
     <string name="card_title_outdoor_activity">Outdoor Activity</string>
@@ -297,6 +298,13 @@
     <string name="activity_rating_good">Good</string>
     <string name="activity_rating_fair">Fair</string>
     <string name="activity_rating_poor">Poor</string>
+    <string name="card_title_solar">Solar Irradiance</string>
+    <string name="solar_ghi_label">GHI</string>
+    <string name="solar_dni_label">DNI</string>
+    <string name="solar_daily_estimate">Daily Est.</string>
+    <string name="solar_wm2_value">%1$d W/m²</string>
+    <string name="solar_kwh_value">%1$s kWh/m²</string>
+    <string name="solar_semantics">Solar irradiance: GHI %1$d watts per square meter, DNI %2$d watts per square meter, daily estimate %3$s kilowatt hours per square meter.</string>
 
     <!-- Today card internals -->
     <string name="current_metric_high">High</string>

@@ -72,6 +72,8 @@ data class HourlyConditions(
     val windGusts: Double? = null,
     val sunshineDuration: Double? = null,
     val surfacePressure: Double? = null,
+    val shortwaveRadiation: Double? = null,
+    val directNormalIrradiance: Double? = null,
 )
 
 @Stable
