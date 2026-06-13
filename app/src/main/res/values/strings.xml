@@ -277,6 +277,7 @@
     <string name="card_type_visibility">Visibility</string>
     <string name="card_type_on_this_day">On This Day</string>
     <string name="card_type_aurora_kp">Aurora / Kp Index</string>
+    <string name="card_type_activity_index">Activity Index</string>
     <string name="card_title_astronomy">Astronomy</string>
     <string name="card_title_forecast_brief">Forecast Brief</string>
     <string name="card_title_outdoor_activity">Outdoor Activity</string>
@@ -284,6 +285,18 @@
     <string name="card_title_aurora_kp">Aurora / Kp Index</string>
     <string name="aurora_kp_value">Kp %1$s</string>
     <string name="aurora_kp_semantics">Aurora Kp index %1$s, %2$s.</string>
+    <string name="card_title_activity_index">Activity Index</string>
+    <string name="activity_index_semantics">Activity scores: %1$s</string>
+    <string name="activity_running">Running</string>
+    <string name="activity_cycling">Cycling</string>
+    <string name="activity_fishing">Fishing</string>
+    <string name="activity_stargazing">Stargazing</string>
+    <string name="activity_grilling">Grilling</string>
+    <string name="activity_lawn_care">Lawn Care</string>
+    <string name="activity_rating_great">Great</string>
+    <string name="activity_rating_good">Good</string>
+    <string name="activity_rating_fair">Fair</string>
+    <string name="activity_rating_poor">Poor</string>
 
     <!-- Today card internals -->
     <string name="current_metric_high">High</string>
