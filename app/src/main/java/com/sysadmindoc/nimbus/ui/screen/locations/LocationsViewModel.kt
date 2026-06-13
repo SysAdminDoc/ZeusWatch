@@ -166,6 +166,12 @@ class LocationsViewModel @Inject constructor(
         }
     }
 
+    fun commitReorder(orderedIds: List<Long>) {
+        viewModelScope.launch {
+            locationRepository.reorderLocations(orderedIds)
+        }
+    }
+
     fun clearSearch() {
         searchJob?.cancel()
         searchRequestId += 1
