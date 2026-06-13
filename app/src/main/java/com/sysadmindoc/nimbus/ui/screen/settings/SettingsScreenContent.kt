@@ -223,6 +223,7 @@ internal data class SettingsActions(
     val onMigraineAlerts: (Boolean) -> Unit = {},
     val onMigrainePressureThreshold: (Double) -> Unit = {},
     val onHapticFeedbackForAlerts: (Boolean) -> Unit = {},
+    val onAccessibilityLayout: (Boolean) -> Unit = {},
     val onCacheTtlMinutes: (Int) -> Unit = {},
     val onSourceForecast: (WeatherSourceProvider) -> Unit = {},
     val onSourceForecastFallback: (WeatherSourceProvider?) -> Unit = {},
@@ -230,6 +231,7 @@ internal data class SettingsActions(
     val onSourceAlertsFallback: (WeatherSourceProvider?) -> Unit = {},
     val onSourceAirQuality: (WeatherSourceProvider) -> Unit = {},
     val onSourceMinutely: (WeatherSourceProvider) -> Unit = {},
+    val onGadgetbridgeBroadcastEnabled: (Boolean) -> Unit = {},
     val onOwmApiKey: (String) -> Unit = {},
     val onPirateWeatherApiKey: (String) -> Unit = {},
     val onExportSettings: () -> Unit = {},
@@ -759,6 +761,7 @@ private fun SettingsAccessibilitySection(
         description = stringResource(R.string.settings_accessibility_desc),
     ) {
         SettingToggle(stringResource(R.string.settings_haptic_alerts), stringResource(R.string.settings_haptic_alerts_desc), settings.hapticFeedbackForAlerts, actions.onHapticFeedbackForAlerts)
+        SettingToggle(stringResource(R.string.settings_accessibility_layout), stringResource(R.string.settings_accessibility_layout_desc), settings.accessibilityLayout, actions.onAccessibilityLayout)
     }
 }
 
@@ -797,6 +800,13 @@ private fun SettingsDataSourcesSection(
         SourceDropdown(stringResource(R.string.settings_air_quality_source), sourceConfig.airQuality, WeatherSourceProvider.forType(WeatherDataType.AIR_QUALITY), actions.onSourceAirQuality)
         Spacer(modifier = Modifier.height(8.dp))
         SourceDropdown(stringResource(R.string.settings_minutely_source), sourceConfig.minutely, WeatherSourceProvider.forType(WeatherDataType.MINUTELY), actions.onSourceMinutely)
+        Spacer(modifier = Modifier.height(12.dp))
+        SettingToggle(
+            stringResource(R.string.settings_gadgetbridge_broadcast),
+            stringResource(R.string.settings_gadgetbridge_broadcast_desc),
+            settings.gadgetbridgeBroadcastEnabled,
+            actions.onGadgetbridgeBroadcastEnabled,
+        )
         SettingsApiKeyFields(settings, actions)
     }
 }
