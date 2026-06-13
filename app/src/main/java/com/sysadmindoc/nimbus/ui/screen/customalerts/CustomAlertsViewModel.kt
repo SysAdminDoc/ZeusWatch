@@ -27,6 +27,8 @@ import javax.inject.Inject
  * the [CustomAlertWorker] so the periodic check reflects the new state
  * without waiting for the next app cold start.
  */
+internal const val MAX_CUSTOM_ALERT_RULES = 50
+
 @HiltViewModel
 class CustomAlertsViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
@@ -36,10 +38,11 @@ class CustomAlertsViewModel @Inject constructor(
     data class UiState(
         val rules: List<CustomAlertRule> = emptyList(),
         val settings: NimbusSettings = NimbusSettings(),
+        val isAtRuleCap: Boolean = false,
     )
 
     val uiState: StateFlow<UiState> = combine(prefs.customAlertRules, prefs.settings) { rules, s ->
-        UiState(rules = rules, settings = s)
+        UiState(rules = rules, settings = s, isAtRuleCap = rules.size >= MAX_CUSTOM_ALERT_RULES)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, UiState())
 
     /**
@@ -85,6 +88,8 @@ class CustomAlertsViewModel @Inject constructor(
         val replaced = prefs.updateCustomAlertRules { current ->
             if (current.any { it.id == next.id }) {
                 current.map { if (it.id == next.id) next else it }
+            } else if (current.size >= MAX_CUSTOM_ALERT_RULES) {
+                current
             } else {
                 current + next
             }
