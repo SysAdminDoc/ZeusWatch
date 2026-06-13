@@ -48,6 +48,8 @@ class BlitzortungService @Inject constructor(
 
     private val strikeBuffer = mutableListOf<LightningStrike>()
     private val bufferLock = Any()
+    @Volatile private var lastEmitTime = 0L
+    @Volatile private var pendingSinceLastEmit = 0
     private val webSocketClient: OkHttpClient = okHttpClient.newBuilder()
         .retryOnConnectionFailure(true)
         .build()
@@ -167,7 +169,13 @@ class BlitzortungService @Inject constructor(
                 strikeBuffer.removeAt(0)
             }
 
-            _recentStrikes.value = strikeBuffer.toList()
+            pendingSinceLastEmit++
+            val now = System.currentTimeMillis()
+            if (now - lastEmitTime >= EMIT_THROTTLE_MS || pendingSinceLastEmit >= EMIT_BATCH_SIZE) {
+                _recentStrikes.value = strikeBuffer.toList()
+                lastEmitTime = now
+                pendingSinceLastEmit = 0
+            }
         }
     }
 
@@ -178,5 +186,7 @@ class BlitzortungService @Inject constructor(
         private const val NORMAL_CLOSURE = 1000
         private const val MAX_BUFFER_SIZE = 500
         private const val MAX_AGE_MS = 10 * 60 * 1000L // 10 minutes
+        private const val EMIT_THROTTLE_MS = 500L
+        private const val EMIT_BATCH_SIZE = 10
     }
 }
