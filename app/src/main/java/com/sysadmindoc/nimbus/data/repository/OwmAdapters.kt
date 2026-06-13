@@ -14,6 +14,31 @@ import javax.inject.Named
 import javax.inject.Singleton
 
 private const val TAG = "OwmAdapter"
+private const val OWM_CACHE_TTL_MS = 60_000L
+
+@Singleton
+class OwmResponseCache @Inject constructor() {
+    @Volatile
+    private var entry: Entry? = null
+
+    private data class Entry(
+        val lat: Double,
+        val lon: Double,
+        val response: OwmOneCallResponse,
+        val timestamp: Long,
+    )
+
+    fun put(lat: Double, lon: Double, response: OwmOneCallResponse) {
+        entry = Entry(lat, lon, response, System.currentTimeMillis())
+    }
+
+    fun get(lat: Double, lon: Double): OwmOneCallResponse? {
+        val e = entry ?: return null
+        if (System.currentTimeMillis() - e.timestamp > OWM_CACHE_TTL_MS) return null
+        if (kotlin.math.abs(e.lat - lat) > 0.01 || kotlin.math.abs(e.lon - lon) > 0.01) return null
+        return e.response
+    }
+}
 
 /**
  * Convert an OWM 0..1 probability fraction (`pop`) to a 0..100 integer,
@@ -34,6 +59,7 @@ private fun owmPctToInt(fraction: Double): Int {
 class OwmForecastAdapter @Inject constructor(
     private val api: OpenWeatherMapApi,
     private val prefs: UserPreferences,
+    private val responseCache: OwmResponseCache,
 ) {
     suspend fun getWeather(
         latitude: Double,
@@ -44,6 +70,7 @@ class OwmForecastAdapter @Inject constructor(
         require(apiKey.isNotBlank()) { "OpenWeatherMap API key not configured" }
 
         val response = api.getOneCall(latitude, longitude, apiKey)
+        responseCache.put(latitude, longitude, response)
         mapToWeatherData(response, latitude, longitude, locationName)
     }.onFailure {
         if (it is kotlinx.coroutines.CancellationException) throw it
@@ -178,15 +205,17 @@ class OwmForecastAdapter @Inject constructor(
 class OwmAlertAdapter @Inject constructor(
     private val api: OpenWeatherMapApi,
     private val prefs: UserPreferences,
+    private val responseCache: OwmResponseCache,
 ) {
     suspend fun getAlerts(
         latitude: Double,
         longitude: Double,
     ): Result<List<WeatherAlert>> = runCatching {
-        val apiKey = prefs.settings.first().owmApiKey
-        require(apiKey.isNotBlank()) { "OpenWeatherMap API key not configured" }
-
-        val response = api.getOneCall(latitude, longitude, apiKey, exclude = "current,minutely,hourly,daily")
+        val response = responseCache.get(latitude, longitude) ?: run {
+            val apiKey = prefs.settings.first().owmApiKey
+            require(apiKey.isNotBlank()) { "OpenWeatherMap API key not configured" }
+            api.getOneCall(latitude, longitude, apiKey, exclude = "current,minutely,hourly,daily")
+        }
         response.alerts.mapIndexed { i, alert ->
             val zone = try { ZoneId.of(response.timezone) } catch (_: Exception) { ZoneId.systemDefault() }
             WeatherAlert(
