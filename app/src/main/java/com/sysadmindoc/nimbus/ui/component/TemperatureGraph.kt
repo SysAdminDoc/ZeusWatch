@@ -128,7 +128,7 @@ fun TemperatureGraph(
                         )
                     },
             ) {
-                val metrics = temperatureGraphMetrics(size.width, size.height, data)
+                val metrics = temperatureGraphMetrics(size.width, size.height, data, density)
                 val points = temperaturePoints(data, metrics)
                 val paths = buildTemperaturePaths(points, metrics.baselineY)
 
@@ -189,9 +189,10 @@ private fun temperatureGraphMetrics(
     width: Float,
     height: Float,
     data: List<HourlyConditions>,
+    density: Float = 1f,
 ): TemperatureGraphMetrics {
-    val paddingTop = 24f
-    val paddingBottom = 28f
+    val paddingTop = 24f * density
+    val paddingBottom = 28f * density
     val graphHeight = height - paddingTop - paddingBottom
     val temps = data.map { it.temperature }
     val allTemps = temps + data.mapNotNull { it.feelsLike }
@@ -299,8 +300,8 @@ private fun DrawScope.drawNormalLine(
         color = NimbusTextTertiary.copy(alpha = 0.3f),
         start = Offset(0f, y),
         end = Offset(metrics.width, y),
-        strokeWidth = 1f,
-        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)),
+        strokeWidth = 1.dp.toPx(),
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())),
     )
 }
 
@@ -392,12 +393,12 @@ private fun DrawScope.drawTemperatureMarker(
     labelStyle: TextStyle,
     settings: NimbusSettings,
 ) {
-    drawCircle(NimbusBlueAccent, radius = 4f, center = point)
-    drawCircle(Color(0xFF0A0E1A), radius = 2f, center = point)
+    drawCircle(NimbusBlueAccent, radius = 4.dp.toPx(), center = point)
+    drawCircle(Color(0xFF0A0E1A), radius = 2.dp.toPx(), center = point)
 
     val label = WeatherFormatter.formatTemperature(temperature, settings)
     val measured = textMeasurer.measure(label, labelStyle)
-    val labelY = if (isHigh) point.y - 16f else point.y + 6f
+    val labelY = if (isHigh) point.y - 16.dp.toPx() else point.y + 6.dp.toPx()
     drawText(measured, topLeft = Offset(point.x - measured.size.width / 2f, labelY))
 }
 
@@ -437,8 +438,8 @@ private fun DrawScope.drawInspectionOverlay(
     val nearPoint = points[nearestIndex]
     val nearHour = data[nearestIndex]
     drawInspectionGuide(nearPoint, metrics)
-    drawCircle(NimbusBlueAccent, radius = 6f, center = nearPoint)
-    drawCircle(Color.White, radius = 3f, center = nearPoint)
+    drawCircle(NimbusBlueAccent, radius = 6.dp.toPx(), center = nearPoint)
+    drawCircle(Color.White, radius = 3.dp.toPx(), center = nearPoint)
     drawInspectionTooltip(nearHour, nearPoint, metrics, inspectionText)
 }
 
@@ -450,8 +451,8 @@ private fun DrawScope.drawInspectionGuide(
         color = NimbusTextTertiary.copy(alpha = 0.5f),
         start = Offset(point.x, metrics.paddingTop),
         end = Offset(point.x, metrics.baselineY),
-        strokeWidth = 1f,
-        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f)),
+        strokeWidth = 1.dp.toPx(),
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx())),
     )
 }
 
@@ -469,14 +470,16 @@ private fun DrawScope.drawInspectionTooltip(
     )
     val measured = inspectionText.textMeasurer.measure(tooltipText, inspectionText.tooltipStyle)
     val tooltipX = (point.x - measured.size.width / 2f).coerceIn(0f, metrics.width - measured.size.width)
-    val tooltipY = 2f
+    val tooltipY = 2.dp.toPx()
+    val padH = 4.dp.toPx()
+    val padV = 2.dp.toPx()
     drawRoundRect(
         color = Color(0xFF1A2340),
-        topLeft = Offset(tooltipX - 4f, tooltipY),
-        size = Size(measured.size.width + 8f, measured.size.height + 4f),
-        cornerRadius = CornerRadius(6f),
+        topLeft = Offset(tooltipX - padH, tooltipY),
+        size = Size(measured.size.width + padH * 2, measured.size.height + padH),
+        cornerRadius = CornerRadius(6.dp.toPx()),
     )
-    drawText(measured, topLeft = Offset(tooltipX, tooltipY + 2f))
+    drawText(measured, topLeft = Offset(tooltipX, tooltipY + padV))
 }
 
 private fun inspectionTooltipText(

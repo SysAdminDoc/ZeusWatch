@@ -117,11 +117,10 @@ private fun HumidityGauge(
     val fraction = (humidity / 100f).coerceIn(0f, 1f)
 
     Canvas(modifier = modifier) {
-        val barHeight = 10f
+        val barHeight = 10.dp.toPx()
         val y = size.height / 2f - barHeight / 2f
         val cornerRadius = CornerRadius(barHeight / 2f)
 
-        // Track background
         drawRoundRect(
             color = trackColor,
             topLeft = Offset(0f, y),
@@ -129,7 +128,6 @@ private fun HumidityGauge(
             cornerRadius = cornerRadius,
         )
 
-        // Filled portion
         val fillWidth = size.width * fraction
         if (fillWidth > 0) {
             drawRoundRect(
@@ -140,14 +138,13 @@ private fun HumidityGauge(
             )
         }
 
-        // Zone markers at 30%, 60%
         listOf(0.3f, 0.6f).forEach { mark ->
             val x = size.width * mark
             drawLine(
                 color = Color.White.copy(alpha = 0.2f),
-                start = Offset(x, y - 4f),
-                end = Offset(x, y + barHeight + 4f),
-                strokeWidth = 1f,
+                start = Offset(x, y - 4.dp.toPx()),
+                end = Offset(x, y + barHeight + 4.dp.toPx()),
+                strokeWidth = 1.dp.toPx(),
             )
         }
     }

@@ -125,9 +125,9 @@ fun PrecipitationChartCard(
             ) {
                 val w = size.width
                 val h = size.height
-                val paddingBottom = 20f
+                val paddingBottom = 20.dp.toPx()
                 val graphHeight = h - paddingBottom
-                val barSpacing = 2f
+                val barSpacing = 2.dp.toPx()
                 val barWidth = (w / data.size) - barSpacing
 
                 data.forEachIndexed { i, hour ->
@@ -148,7 +148,7 @@ fun PrecipitationChartCard(
                             color = barColor,
                             topLeft = Offset(x, graphHeight - barH),
                             size = Size(barWidth, barH),
-                            cornerRadius = CornerRadius(2f),
+                            cornerRadius = CornerRadius(2.dp.toPx()),
                         )
 
                         // Precipitation amount overlay (darker tip)
@@ -158,7 +158,7 @@ fun PrecipitationChartCard(
                                 color = NimbusBlueAccent.copy(alpha = 0.5f),
                                 topLeft = Offset(x, graphHeight - precipH),
                                 size = Size(barWidth, precipH),
-                                cornerRadius = CornerRadius(2f),
+                                cornerRadius = CornerRadius(2.dp.toPx()),
                             )
                         }
                     }
@@ -171,7 +171,7 @@ fun PrecipitationChartCard(
                             measured,
                             topLeft = Offset(
                                 (x + barWidth / 2 - measured.size.width / 2).coerceIn(0f, w - measured.size.width),
-                                graphHeight + 4f,
+                                graphHeight + 4.dp.toPx(),
                             ),
                         )
                     }
