@@ -358,15 +358,14 @@ object NetworkModule {
 
     // --- OpenWeatherMap ---
 
+    private val owmRateLimiter = RateLimitInterceptor("openweathermap", rate = 1.0, burst = 5)
+
     @Provides
     @Singleton
     @Named("owm")
     fun provideOwmRetrofit(client: OkHttpClient): Retrofit {
-        // OWM free tier: 60 calls/min, 1M/month. Cap at ~1 req/s with burst 5.
-        // Certificate pinning mitigates MITM exfiltration of the user's
-        // `?appid=<key>` API key on untrusted networks (see ApiCertificatePins).
         val owmClient = client.newBuilder()
-            .addInterceptor(RateLimitInterceptor("openweathermap", rate = 1.0, burst = 5))
+            .addInterceptor(owmRateLimiter)
             .certificatePinner(ApiCertificatePins.build())
             .build()
         return Retrofit.Builder()
@@ -382,14 +381,12 @@ object NetworkModule {
         return retrofit.create(OpenWeatherMapApi::class.java)
     }
 
-    /** Separate OWM instance for Air Pollution (different base URL). */
     @Provides
     @Singleton
     @Named("owm_aqi")
     fun provideOwmAqiRetrofit(client: OkHttpClient): Retrofit {
-        // Same pinner as OWM forecast — same vendor TLS terminator.
         val owmAqiClient = client.newBuilder()
-            .addInterceptor(RateLimitInterceptor("openweathermap-aqi", rate = 1.0, burst = 5))
+            .addInterceptor(owmRateLimiter)
             .certificatePinner(ApiCertificatePins.build())
             .build()
         return Retrofit.Builder()
