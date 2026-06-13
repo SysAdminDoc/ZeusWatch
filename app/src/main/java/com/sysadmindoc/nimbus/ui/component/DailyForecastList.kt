@@ -48,6 +48,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.DailyConditions
+import com.sysadmindoc.nimbus.data.repository.ForecastAccuracyData
+import com.sysadmindoc.nimbus.data.repository.ForecastDelta
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
@@ -75,6 +77,7 @@ private enum class DailyTrendTab(@StringRes val labelRes: Int) {
 fun DailyForecastList(
     daily: List<DailyConditions>,
     referenceDate: java.time.LocalDate? = daily.firstOrNull()?.date,
+    forecastAccuracy: ForecastAccuracyData? = null,
     modifier: Modifier = Modifier,
 ) {
     val s = LocalUnitSettings.current
@@ -138,6 +141,9 @@ fun DailyForecastList(
                         isWarmest = index == warmestIndex && daily.size > 1,
                         weeklyMin = weeklyMin,
                         weeklyMax = weeklyMax,
+                        forecastDelta = forecastAccuracy?.bestPredictionDelta(
+                            day.date, day.temperatureHigh,
+                        ),
                         onDetailClick = { selectedDay = day },
                     )
                     DailyTrendTab.TEMPERATURE -> DailyTempRow(
@@ -455,6 +461,7 @@ private fun DailyOverviewRow(
     isWarmest: Boolean = false,
     weeklyMin: Double = 0.0,
     weeklyMax: Double = 0.0,
+    forecastDelta: ForecastDelta? = null,
     onDetailClick: () -> Unit,
 ) {
     val s = LocalUnitSettings.current
@@ -499,6 +506,9 @@ private fun DailyOverviewRow(
                         color = NimbusWarning,
                     )
                 }
+            }
+            if (forecastDelta != null) {
+                ForecastAccuracyBadge(delta = forecastDelta, settings = s)
             }
         }
         Spacer(Modifier.width(8.dp))
@@ -557,6 +567,37 @@ private fun DailyOverviewRow(
                 .background(Color.White.copy(alpha = 0.04f))
                 .padding(4.dp)
                 .size(20.dp),
+        )
+    }
+}
+
+@Composable
+private fun ForecastAccuracyBadge(
+    delta: ForecastDelta,
+    settings: NimbusSettings,
+) {
+    val absDelta = kotlin.math.abs(delta.temperatureDeltaC)
+    if (absDelta < 0.5) return
+    val isTooWarm = delta.temperatureDeltaC > 0
+    val badgeColor = if (isTooWarm) NimbusWarning else NimbusBlueAccent
+    val deltaFormatted = WeatherFormatter.formatTemperatureDelta(absDelta, settings)
+    val label = stringResource(
+        if (isTooWarm) R.string.forecast_accuracy_too_warm
+        else R.string.forecast_accuracy_too_cool,
+        delta.leadDays,
+        deltaFormatted,
+    )
+    Box(
+        modifier = Modifier
+            .padding(top = 3.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(badgeColor.copy(alpha = 0.10f))
+            .padding(horizontal = 7.dp, vertical = 3.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = badgeColor.copy(alpha = 0.85f),
         )
     }
 }

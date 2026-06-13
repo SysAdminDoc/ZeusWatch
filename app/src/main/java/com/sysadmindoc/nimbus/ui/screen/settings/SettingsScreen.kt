@@ -224,6 +224,7 @@ fun SettingsScreen(
             onShowBeaufortColors = viewModel::setShowBeaufortColors,
             onShowOutdoorScore = viewModel::setShowOutdoorScore,
             onShowYesterdayComparison = viewModel::setShowYesterdayComparison,
+            onShowForecastAccuracy = viewModel::setShowForecastAccuracy,
             onHourlyForecastHours = viewModel::setHourlyForecastHours,
             onMigraineAlerts = viewModel::setMigraineAlerts,
             onMigrainePressureThreshold = viewModel::setMigrainePressureThreshold,

@@ -19,6 +19,7 @@ import com.sysadmindoc.nimbus.data.api.NoaaSwpcApi
 import com.sysadmindoc.nimbus.data.api.NwsAlertAdapter
 import com.sysadmindoc.nimbus.data.api.OpenMeteoFloodApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoMarineApi
+import com.sysadmindoc.nimbus.data.api.OpenMeteoPreviousRunsApi
 import com.sysadmindoc.nimbus.data.api.NwsAlertApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoArchiveApi
@@ -532,5 +533,24 @@ object NetworkModule {
     @Singleton
     fun provideOpenMeteoFloodApi(@Named("flood") retrofit: Retrofit): OpenMeteoFloodApi {
         return retrofit.create(OpenMeteoFloodApi::class.java)
+    }
+
+    // --- Open-Meteo Previous Runs (forecast accuracy) ---
+
+    @Provides
+    @Singleton
+    @Named("previous_runs")
+    fun providePreviousRunsRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(OpenMeteoPreviousRunsApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOpenMeteoPreviousRunsApi(@Named("previous_runs") retrofit: Retrofit): OpenMeteoPreviousRunsApi {
+        return retrofit.create(OpenMeteoPreviousRunsApi::class.java)
     }
 }

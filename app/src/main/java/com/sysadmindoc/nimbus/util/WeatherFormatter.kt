@@ -40,6 +40,14 @@ object WeatherFormatter {
     /** Convert Celsius to user's preferred unit (raw numeric value). */
     fun convertedTemp(celsius: Double, s: NimbusSettings): Double = convertTemp(celsius, s.tempUnit)
 
+    fun formatTemperatureDelta(celsiusDelta: Double, s: NimbusSettings): String {
+        val converted = when (s.tempUnit) {
+            TempUnit.FAHRENHEIT -> celsiusDelta * 9.0 / 5.0
+            TempUnit.CELSIUS -> celsiusDelta
+        }
+        return "${converted.roundToInt()}${s.tempUnit.symbol}"
+    }
+
     private fun convertTemp(celsius: Double, unit: TempUnit): Double = when (unit) {
         TempUnit.FAHRENHEIT -> celsius * 9.0 / 5.0 + 32.0
         TempUnit.CELSIUS -> celsius

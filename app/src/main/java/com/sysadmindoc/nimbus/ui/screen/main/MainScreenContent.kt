@@ -132,6 +132,7 @@ import com.sysadmindoc.nimbus.ui.component.OnThisDayCard
 import com.sysadmindoc.nimbus.ui.component.WindTrendCard
 import com.sysadmindoc.nimbus.ui.component.CloudCoverCard
 import com.sysadmindoc.nimbus.data.repository.CardType
+import com.sysadmindoc.nimbus.data.repository.ForecastAccuracyData
 import com.sysadmindoc.nimbus.data.repository.accessibilityCardOrder
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.component.ShimmerLoadingSkeleton
@@ -1160,6 +1161,7 @@ private fun RenderForecastCard(
         CardType.DAILY_FORECAST -> DailyForecastList(
             daily = data.daily,
             referenceDate = referenceDate,
+            forecastAccuracy = context.state.forecastAccuracy,
             modifier = modifier,
         )
         else -> Unit

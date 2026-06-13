@@ -149,6 +149,7 @@ class SettingsViewModel @Inject constructor(
     fun setShowBeaufortColors(enabled: Boolean) = viewModelScope.launch { prefs.setShowBeaufortColors(enabled) }
     fun setShowOutdoorScore(enabled: Boolean) = viewModelScope.launch { prefs.setShowOutdoorScore(enabled) }
     fun setShowYesterdayComparison(enabled: Boolean) = viewModelScope.launch { prefs.setShowYesterdayComparison(enabled) }
+    fun setShowForecastAccuracy(enabled: Boolean) = viewModelScope.launch { prefs.setShowForecastAccuracy(enabled) }
 
     // Forecast range
     fun setHourlyForecastHours(hours: Int) = viewModelScope.launch { prefs.setHourlyForecastHours(hours) }
