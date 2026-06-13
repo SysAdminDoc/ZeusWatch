@@ -25,6 +25,7 @@ class SettingsTransferTest {
         val backup = SettingsBackup(
             settings = NimbusSettings(
                 tempUnit = TempUnit.CELSIUS,
+                gadgetbridgeBroadcastEnabled = true,
                 owmApiKey = "owm-secret",
                 pirateWeatherApiKey = "pirate-secret",
             ).toBackup(),
@@ -37,6 +38,7 @@ class SettingsTransferTest {
         assertFalse(encoded.contains("owmApiKey"))
         assertFalse(encoded.contains("pirateWeatherApiKey"))
         assertTrue(encoded.contains(TempUnit.CELSIUS.name))
+        assertTrue(encoded.contains("\"gadgetbridgeBroadcastEnabled\":true"))
     }
 
     @Test
@@ -52,6 +54,7 @@ class SettingsTransferTest {
             migrainePressureThreshold = -10.0,
             cacheTtlMinutes = 5,
             sourceForecast = "NOT_A_PROVIDER",
+            gadgetbridgeBroadcastEnabled = true,
         ).toSettings()
 
         assertEquals(TempUnit.FAHRENHEIT, restored.tempUnit)
@@ -68,6 +71,7 @@ class SettingsTransferTest {
             WeatherSourceProvider.defaultFor(WeatherDataType.FORECAST),
             restored.sourceConfig.forecast,
         )
+        assertTrue(restored.gadgetbridgeBroadcastEnabled)
     }
 
     @Test
