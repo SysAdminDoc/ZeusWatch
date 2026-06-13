@@ -14,6 +14,8 @@
     <string name="widget_large_desc">Hourly forecast with 5-day outlook</string>
     <string name="widget_forecast_strip_desc">Compact hourly temperature strip</string>
     <string name="widget_saved_cities_desc">Saved-city temperatures</string>
+    <string name="widget_temp_label">ZeusWatch Temp</string>
+    <string name="widget_temp_desc">Temperature and icon only</string>
     <string name="widget_loading_message">Loading...</string>
     <string name="widget_empty_title">ZeusWatch</string>
     <string name="widget_small_empty_message">Tap to open and load a live forecast.</string>

@@ -169,6 +169,19 @@
                 android:resource="@xml/widget_saved_cities_info" />
         </receiver>
 
+        <!-- Temperature Widget (1x1): temp + icon only -->
+        <receiver
+            android:name=".widget.NimbusTempWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_temp_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_temp_info" />
+        </receiver>
+
         <!-- Live Weather Wallpaper -->
         <service
             android:name=".wallpaper.WeatherWallpaperService"

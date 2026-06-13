@@ -149,6 +149,8 @@ class WidgetRefreshWorker @AssistedInject constructor(
                 NimbusMediumWidgetReceiver::class.java,
                 NimbusLargeWidgetReceiver::class.java,
                 NimbusForecastStripWidgetReceiver::class.java,
+                NimbusSavedCitiesWidgetReceiver::class.java,
+                NimbusTempWidgetReceiver::class.java,
             ).flatMap { receiver ->
                 manager.getAppWidgetIds(ComponentName(applicationContext, receiver)).toList()
             }.toSet()
@@ -334,6 +336,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
         NimbusLargeWidget().updateAll(applicationContext)
         NimbusForecastStripWidget().updateAll(applicationContext)
         NimbusSavedCitiesWidget().updateAll(applicationContext)
+        NimbusTempWidget().updateAll(applicationContext)
     }
 
     private fun updatePersistentNotification(
@@ -523,6 +526,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
                 NimbusLargeWidgetReceiver::class.java,
                 NimbusForecastStripWidgetReceiver::class.java,
                 NimbusSavedCitiesWidgetReceiver::class.java,
+                NimbusTempWidgetReceiver::class.java,
             ).any { receiver ->
                 manager.getAppWidgetIds(ComponentName(context, receiver)).isNotEmpty()
             }
