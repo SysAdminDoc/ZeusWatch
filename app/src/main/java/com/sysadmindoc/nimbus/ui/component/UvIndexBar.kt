@@ -138,7 +138,7 @@ fun UvIndexBar(
                                 NimbusUvExtreme,
                             ),
                         ),
-                        cornerRadius = CornerRadius(5f, 5f),
+                        cornerRadius = CornerRadius(5.dp.toPx(), 5.dp.toPx()),
                         size = Size(w, h),
                     )
 
@@ -146,12 +146,12 @@ fun UvIndexBar(
                     val markerX = (uvIndex.toFloat() / 12f).coerceIn(0f, 1f) * w
                     drawCircle(
                         color = Color.White,
-                        radius = 7f,
+                        radius = 7.dp.toPx(),
                         center = Offset(markerX, h / 2f),
                     )
                     drawCircle(
                         color = levelColor,
-                        radius = 5f,
+                        radius = 5.dp.toPx(),
                         center = Offset(markerX, h / 2f),
                     )
                 }

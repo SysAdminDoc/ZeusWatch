@@ -124,7 +124,7 @@ fun PressureTrendCard(
         ) {
             val w = size.width
             val h = size.height
-            val paddingBottom = 18f
+            val paddingBottom = 18.dp.toPx()
             val graphH = h - paddingBottom
 
             val pressures = data.map { it.second }
@@ -141,7 +141,7 @@ fun PressureTrendCard(
                 color = NimbusTextTertiary.copy(alpha = 0.2f),
                 start = Offset(0f, avgY),
                 end = Offset(w, avgY),
-                strokeWidth = 1f,
+                strokeWidth = 1.dp.toPx(),
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f)),
             )
 
@@ -168,8 +168,8 @@ fun PressureTrendCard(
 
             // Current position dot
             val lastPt = points.last()
-            drawCircle(NimbusBlueAccent, radius = 4f, center = lastPt)
-            drawCircle(Color(0xFF0A0E1A), radius = 2f, center = lastPt)
+            drawCircle(NimbusBlueAccent, radius = 4.dp.toPx(), center = lastPt)
+            drawCircle(Color(0xFF0A0E1A), radius = 2.dp.toPx(), center = lastPt)
 
             // Time labels every 6h
             for (i in data.indices step 6) {
@@ -178,7 +178,7 @@ fun PressureTrendCard(
                     val m = textMeasurer.measure(label, labelStyle)
                     drawText(m, topLeft = Offset(
                         (points[i].x - m.size.width / 2f).coerceIn(0f, w - m.size.width),
-                        graphH + 2f,
+                        graphH + 2.dp.toPx(),
                     ))
                 }
             }

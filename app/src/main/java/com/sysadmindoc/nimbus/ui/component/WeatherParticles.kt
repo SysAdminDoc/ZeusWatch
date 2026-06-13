@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
 import kotlin.math.PI
@@ -148,14 +149,14 @@ private fun DrawScope.drawRain(particles: List<Particle>, phase: Float, gx: Floa
     particles.forEach { p ->
         val y = ((p.y + phase * p.speed) % 1f) * h
         val x = (p.x + phase * 0.05f) % 1f * w + gx * p.speed
-        val length = 12f + p.size * 16f
-        val angle = 0.15f + gx * 0.03f // tilt rain angle with gravity
+        val length = 12.dp.toPx() + p.size * 16.dp.toPx()
+        val angle = 0.15f + gx * 0.03f
 
         drawLine(
             color = rainColor.copy(alpha = p.alpha),
             start = Offset(x, y + gy),
             end = Offset(x + length * angle, y + length + gy),
-            strokeWidth = 1.5f + p.size * 0.5f,
+            strokeWidth = 1.5.dp.toPx() + p.size * 0.5.dp.toPx(),
             cap = StrokeCap.Round,
         )
     }
@@ -171,7 +172,7 @@ private fun DrawScope.drawSnow(particles: List<Particle>, phase: Float, gx: Floa
         val drift = sin((phase + p.x) * 2 * PI.toFloat()) * 20f * p.drift * 10f
         val x = (p.x * w) + drift + gx * p.speed * 2f
 
-        val radius = 1.5f + p.size * 2.5f
+        val radius = 1.5.dp.toPx() + p.size * 2.5.dp.toPx()
         drawCircle(
             color = snowColor.copy(alpha = p.alpha * 0.8f),
             radius = radius,
@@ -184,8 +185,8 @@ private fun DrawScope.drawSunRays(rotation: Float, gx: Float = 0f, gy: Float = 0
     val cx = size.width * 0.75f + gx * 2f
     val cy = size.height * 0.2f + gy * 1.5f
     val rayCount = 12
-    val innerRadius = 30f
-    val outerRadius = 80f
+    val innerRadius = 30.dp.toPx()
+    val outerRadius = 80.dp.toPx()
 
     rotate(rotation, pivot = Offset(cx, cy)) {
         for (i in 0 until rayCount) {
@@ -206,7 +207,7 @@ private fun DrawScope.drawSunRays(rotation: Float, gx: Float = 0f, gy: Float = 0
                 ),
                 start = Offset(startX, startY),
                 end = Offset(endX, endY),
-                strokeWidth = 3f,
+                strokeWidth = 3.dp.toPx(),
                 cap = StrokeCap.Round,
             )
         }
@@ -220,7 +221,7 @@ private fun DrawScope.drawStars(particles: List<Particle>, phase: Float, gx: Flo
     particles.take(20).forEach { p ->
         val twinkle = (sin((phase + p.x * 3f) * 2 * PI.toFloat()) + 1f) / 2f
         val alpha = p.alpha * 0.5f * twinkle + 0.05f
-        val radius = 1f + p.size * 1.5f
+        val radius = 1.dp.toPx() + p.size * 1.5.dp.toPx()
 
         drawCircle(
             color = Color.White.copy(alpha = alpha),
@@ -242,7 +243,7 @@ private fun DrawScope.drawFog(phase: Float, gy: Float = 0f) {
             color = Color.White.copy(alpha = alpha),
             start = Offset(-20f, y),
             end = Offset(w + 20f, y),
-            strokeWidth = 40f,
+            strokeWidth = 40.dp.toPx(),
             cap = StrokeCap.Round,
         )
     }
