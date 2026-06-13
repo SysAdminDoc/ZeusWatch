@@ -18,6 +18,7 @@ internal val CustomAlertMetric.labelRes: Int
         CustomAlertMetric.FEELS_LIKE_NOW -> R.string.custom_alert_metric_feels_like_now
         CustomAlertMetric.SNOWFALL_SUM_NEXT_24H -> R.string.custom_alert_metric_snowfall_sum_next_24h
         CustomAlertMetric.PRESSURE_NOW -> R.string.custom_alert_metric_pressure_now
+        CustomAlertMetric.AQI_NOW -> R.string.custom_alert_metric_aqi_now
     }
 
 @get:StringRes
@@ -32,6 +33,7 @@ internal val CustomAlertMetric.summaryRes: Int
         CustomAlertMetric.FEELS_LIKE_NOW -> R.string.custom_alert_metric_feels_like_now_summary
         CustomAlertMetric.SNOWFALL_SUM_NEXT_24H -> R.string.custom_alert_metric_snowfall_sum_next_24h_summary
         CustomAlertMetric.PRESSURE_NOW -> R.string.custom_alert_metric_pressure_now_summary
+        CustomAlertMetric.AQI_NOW -> R.string.custom_alert_metric_aqi_now_summary
     }
 
 @get:StringRes
