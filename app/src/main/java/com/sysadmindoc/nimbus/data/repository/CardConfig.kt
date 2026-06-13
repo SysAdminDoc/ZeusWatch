@@ -33,6 +33,8 @@ enum class CardType(val label: String, val defaultEnabled: Boolean = true) {
     AURORA_KP("Aurora / Kp Index", false),
     ACTIVITY_INDEX("Activity Index", false),
     SOLAR("Solar Irradiance", false),
+    MARINE("Marine", false),
+    FLOOD_RISK("Flood Risk", false),
 }
 
 val DEFAULT_CARD_ORDER: List<CardType> = CardType.entries.toList()

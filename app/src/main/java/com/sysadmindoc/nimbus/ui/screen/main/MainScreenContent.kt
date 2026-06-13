@@ -91,6 +91,8 @@ import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.ui.component.AdaptiveLayoutInfo
 import com.sysadmindoc.nimbus.ui.component.ActivityIndexCard
 import com.sysadmindoc.nimbus.ui.component.AlertBanner
+import com.sysadmindoc.nimbus.ui.component.FloodRiskCard
+import com.sysadmindoc.nimbus.ui.component.MarineCard
 import com.sysadmindoc.nimbus.ui.component.SolarIrradianceCard
 import com.sysadmindoc.nimbus.ui.component.AuroraKpCard
 import com.sysadmindoc.nimbus.ui.component.AlertDetailSheet
@@ -1394,6 +1396,18 @@ private fun RenderDetailCard(
             hourly = data.hourly,
             modifier = modifier,
         )
+        CardType.MARINE -> {
+            val marine = context.state.marineData
+            if (marine != null) {
+                MarineCard(data = marine, modifier = modifier)
+            }
+        }
+        CardType.FLOOD_RISK -> {
+            val flood = context.state.floodData
+            if (flood != null) {
+                FloodRiskCard(data = flood, modifier = modifier)
+            }
+        }
         else -> Unit
     }
 }

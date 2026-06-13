@@ -17,6 +17,8 @@ import com.sysadmindoc.nimbus.data.api.MeteoAlarmAdapter
 import com.sysadmindoc.nimbus.data.api.MeteoAlarmApi
 import com.sysadmindoc.nimbus.data.api.NoaaSwpcApi
 import com.sysadmindoc.nimbus.data.api.NwsAlertAdapter
+import com.sysadmindoc.nimbus.data.api.OpenMeteoFloodApi
+import com.sysadmindoc.nimbus.data.api.OpenMeteoMarineApi
 import com.sysadmindoc.nimbus.data.api.NwsAlertApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoArchiveApi
@@ -492,5 +494,43 @@ object NetworkModule {
     @Singleton
     fun provideNoaaSwpcApi(@Named("noaa_swpc") retrofit: Retrofit): NoaaSwpcApi {
         return retrofit.create(NoaaSwpcApi::class.java)
+    }
+
+    // --- Open-Meteo Marine ---
+
+    @Provides
+    @Singleton
+    @Named("marine")
+    fun provideMarineRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(OpenMeteoMarineApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOpenMeteoMarineApi(@Named("marine") retrofit: Retrofit): OpenMeteoMarineApi {
+        return retrofit.create(OpenMeteoMarineApi::class.java)
+    }
+
+    // --- Open-Meteo Flood ---
+
+    @Provides
+    @Singleton
+    @Named("flood")
+    fun provideFloodRetrofit(client: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(OpenMeteoFloodApi.BASE_URL)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOpenMeteoFloodApi(@Named("flood") retrofit: Retrofit): OpenMeteoFloodApi {
+        return retrofit.create(OpenMeteoFloodApi::class.java)
     }
 }

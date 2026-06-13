@@ -32,6 +32,10 @@ import com.sysadmindoc.nimbus.data.repository.AirQualityRepository
 import com.sysadmindoc.nimbus.data.repository.AlertRepository
 import com.sysadmindoc.nimbus.data.repository.AuroraKpData
 import com.sysadmindoc.nimbus.data.repository.AuroraRepository
+import com.sysadmindoc.nimbus.data.repository.FloodData
+import com.sysadmindoc.nimbus.data.repository.FloodRepository
+import com.sysadmindoc.nimbus.data.repository.MarineData
+import com.sysadmindoc.nimbus.data.repository.MarineRepository
 import com.sysadmindoc.nimbus.util.ActivityIndex
 import com.sysadmindoc.nimbus.util.ActivityIndexEvaluator
 import com.sysadmindoc.nimbus.data.repository.CardType
@@ -115,6 +119,8 @@ data class MainViewModelDependencies @Inject constructor(
     val onThisDayRepository: OnThisDayRepository,
     val forecastEvolutionRepository: ForecastEvolutionRepository,
     val auroraRepository: AuroraRepository,
+    val marineRepository: MarineRepository,
+    val floodRepository: FloodRepository,
     val wearSyncManager: WearSyncManager,
     val gadgetbridgeBroadcaster: GadgetbridgeWeatherBroadcaster,
     @DefaultDispatcher val defaultDispatcher: CoroutineDispatcher,
@@ -139,6 +145,8 @@ class MainViewModel @Inject constructor(
     private val onThisDayRepository = dependencies.onThisDayRepository
     private val forecastEvolutionRepository = dependencies.forecastEvolutionRepository
     private val auroraRepository = dependencies.auroraRepository
+    private val marineRepository = dependencies.marineRepository
+    private val floodRepository = dependencies.floodRepository
     private val wearSyncManager = dependencies.wearSyncManager
     private val gadgetbridgeBroadcaster = dependencies.gadgetbridgeBroadcaster
     private val defaultDispatcher = dependencies.defaultDispatcher
@@ -510,6 +518,12 @@ class MainViewModel @Inject constructor(
                         if (_uiState.value.settings.isCardEnabled(CardType.AURORA_KP)) {
                             launch { fetchAuroraKp(requestId) }
                         }
+                        if (_uiState.value.settings.isCardEnabled(CardType.MARINE)) {
+                            launch { fetchMarine(lat, lon, requestId) }
+                        }
+                        if (_uiState.value.settings.isCardEnabled(CardType.FLOOD_RISK)) {
+                            launch { fetchFlood(lat, lon, requestId) }
+                        }
                     }
                     if (!isLatestWeatherRequest(requestId)) return@fold
                     // Sync to watch after all data is available
@@ -778,6 +792,42 @@ class MainViewModel @Inject constructor(
             if (isLatestWeatherRequest(requestId) && _uiState.value.onThisDay == null) {
                 _uiState.update { it.copy(onThisDay = null) }
             }
+        }
+    }
+
+    // ── Marine ──────────────────────────────────────────────────────────
+
+    private suspend fun fetchMarine(lat: Double, lon: Double, requestId: Long) {
+        try {
+            marineRepository.getMarine(lat, lon).fold(
+                onSuccess = { data ->
+                    if (isLatestWeatherRequest(requestId)) {
+                        _uiState.update { it.copy(marineData = data) }
+                    }
+                },
+                onFailure = { Log.d(TAG, "fetchMarine: no marine data (expected for inland locations)") },
+            )
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.d(TAG, "fetchMarine failed", e)
+        }
+    }
+
+    // ── Flood Risk ──────────────────────────────────────────────────────
+
+    private suspend fun fetchFlood(lat: Double, lon: Double, requestId: Long) {
+        try {
+            floodRepository.getFlood(lat, lon).fold(
+                onSuccess = { data ->
+                    if (isLatestWeatherRequest(requestId)) {
+                        _uiState.update { it.copy(floodData = data) }
+                    }
+                },
+                onFailure = { Log.d(TAG, "fetchFlood: no flood data") },
+            )
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.d(TAG, "fetchFlood failed", e)
         }
     }
 
@@ -1186,6 +1236,8 @@ data class MainUiState(
     val onThisDay: com.sysadmindoc.nimbus.data.model.OnThisDayData? = null,
     val auroraKpData: AuroraKpData? = null,
     val activityIndices: ImmutableList<ActivityIndex> = persistentListOf(),
+    val marineData: MarineData? = null,
+    val floodData: FloodData? = null,
     val forecastEvolution: ForecastEvolutionData? = null,
     val isForecastEvolutionLoading: Boolean = false,
     val forecastEvolutionUnavailable: Boolean = false,
@@ -1229,6 +1281,8 @@ private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
     onThisDay = null,
     auroraKpData = null,
     activityIndices = persistentListOf(),
+    marineData = null,
+    floodData = null,
     forecastEvolution = null,
     isForecastEvolutionLoading = false,
     forecastEvolutionUnavailable = false,
