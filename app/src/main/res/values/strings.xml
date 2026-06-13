@@ -16,6 +16,10 @@
     <string name="widget_saved_cities_desc">Saved-city temperatures</string>
     <string name="widget_temp_label">ZeusWatch Temp</string>
     <string name="widget_temp_desc">Temperature and icon only</string>
+    <string name="widget_compact_label">ZeusWatch Compact</string>
+    <string name="widget_compact_desc">Temperature, icon, and high/low</string>
+    <string name="widget_daily_label">ZeusWatch Daily</string>
+    <string name="widget_daily_desc">7-day forecast outlook</string>
     <string name="widget_loading_message">Loading...</string>
     <string name="widget_empty_title">ZeusWatch</string>
     <string name="widget_small_empty_message">Tap to open and load a live forecast.</string>
