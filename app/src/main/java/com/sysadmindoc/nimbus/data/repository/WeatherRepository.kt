@@ -5,6 +5,7 @@ import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
 import com.sysadmindoc.nimbus.data.api.WeatherDao
 import com.sysadmindoc.nimbus.data.location.ReverseGeocoder
 import com.sysadmindoc.nimbus.data.model.*
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -15,6 +16,8 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -30,14 +33,19 @@ class WeatherRepository @Inject constructor(
 ) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true }
 
+    private val inFlightRequests = ConcurrentHashMap<String, CompletableDeferred<Result<WeatherData>>>()
+
     companion object {
         private const val DEFAULT_CACHE_MAX_AGE_MS = 30 * 60 * 1000L
+
+        private fun coalescingKey(lat: Double, lon: Double): String =
+            String.format(Locale.US, "%.4f,%.4f", lat, lon)
     }
 
     /**
      * Public entry point — delegates through [WeatherSourceManager] which handles
-     * primary/fallback source selection. Falls back to direct Open-Meteo fetching
-     * if sourceManager is not yet injected (e.g. in tests).
+     * primary/fallback source selection. Coalesces concurrent requests for the same
+     * location so widget/worker and UI refreshes share a single network call.
      */
     suspend fun getWeather(
         latitude: Double,
@@ -46,13 +54,30 @@ class WeatherRepository @Inject constructor(
         locationTimeZone: String? = null,
         sourceOverrides: SourceOverrides = SourceOverrides(),
     ): Result<WeatherData> {
-        return sourceManager.get().getWeather(
-            latitude = latitude,
-            longitude = longitude,
-            locationName = locationName,
-            locationTimeZone = locationTimeZone,
-            sourceOverrides = sourceOverrides,
-        )
+        val key = coalescingKey(latitude, longitude)
+        val existing = inFlightRequests[key]
+        if (existing != null) return existing.await()
+
+        val deferred = CompletableDeferred<Result<WeatherData>>()
+        val winner = inFlightRequests.putIfAbsent(key, deferred)
+        if (winner != null) return winner.await()
+
+        return try {
+            val result = sourceManager.get().getWeather(
+                latitude = latitude,
+                longitude = longitude,
+                locationName = locationName,
+                locationTimeZone = locationTimeZone,
+                sourceOverrides = sourceOverrides,
+            )
+            deferred.complete(result)
+            result
+        } catch (e: Exception) {
+            deferred.completeExceptionally(e)
+            throw e
+        } finally {
+            inFlightRequests.remove(key)
+        }
     }
 
     suspend fun getWeather(location: SavedLocationEntity): Result<WeatherData> =
