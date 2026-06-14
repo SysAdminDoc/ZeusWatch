@@ -146,6 +146,73 @@ class WeatherSourceManager @Inject constructor(
         return result
     }
 
+    /**
+     * Detailed variant of [getAlerts] that preserves the outage signal end to
+     * end (see [AlertRepository.getAlertsDetailed]). Tries the primary alert
+     * source; only falls back when the primary was a total failure so a real
+     * "no alerts" answer isn't second-guessed.
+     */
+    suspend fun getAlertsDetailed(
+        latitude: Double,
+        longitude: Double,
+        sourceOverrides: SourceOverrides = SourceOverrides(),
+        includeMeteredSources: Boolean = true,
+    ): AlertFetchResult {
+        val config = prefs.settings.first().sourceConfig.withOverrides(sourceOverrides)
+        val primary = config.alerts
+        val fallback = config.alertsFallback
+
+        val primaryResult = getAlertsDetailedFrom(primary, latitude, longitude, includeMeteredSources)
+        if (!primaryResult.allAdaptersFailed) return primaryResult
+
+        Log.w(TAG, "Primary alert source ${primary.displayName} failed, trying fallback")
+
+        if (fallback != null && fallback != primary) {
+            val fallbackResult = getAlertsDetailedFrom(fallback, latitude, longitude, includeMeteredSources)
+            if (!fallbackResult.allAdaptersFailed) return fallbackResult
+            Log.w(TAG, "Fallback alert source ${fallback.displayName} also failed")
+        }
+
+        return primaryResult
+    }
+
+    private suspend fun getAlertsDetailedFrom(
+        provider: WeatherSourceProvider,
+        latitude: Double,
+        longitude: Double,
+        includeMeteredSources: Boolean,
+    ): AlertFetchResult = when (provider) {
+        WeatherSourceProvider.NWS,
+        WeatherSourceProvider.METEOALARM,
+        WeatherSourceProvider.JMA,
+        WeatherSourceProvider.ENVIRONMENT_CANADA -> {
+            val override = provider
+                .takeUnless { it == WeatherSourceProvider.defaultFor(WeatherDataType.ALERTS) }
+                ?.toAlertSourcePreference()
+            nwsAlertAdapter.getAlertsDetailed(
+                latitude = latitude,
+                longitude = longitude,
+                preferenceOverride = override,
+                includeMeteredSources = includeMeteredSources,
+            )
+        }
+        WeatherSourceProvider.OPEN_WEATHER_MAP ->
+            owmAlertAdapter.getAlerts(latitude, longitude).toFetchResult(provider.name)
+        WeatherSourceProvider.BRIGHT_SKY ->
+            brightSkyAlertAdapter.getAlerts(latitude, longitude).toFetchResult(provider.name)
+        else -> AlertFetchResult(
+            alerts = emptyList(),
+            allAdaptersFailed = true,
+            failedSources = listOf(provider.name),
+        )
+    }
+
+    private fun Result<List<WeatherAlert>>.toFetchResult(sourceId: String): AlertFetchResult =
+        fold(
+            onSuccess = { AlertFetchResult(it, allAdaptersFailed = false, failedSources = emptyList()) },
+            onFailure = { AlertFetchResult(emptyList(), allAdaptersFailed = true, failedSources = listOf(sourceId)) },
+        )
+
     private suspend fun getAlertsFrom(
         provider: WeatherSourceProvider,
         latitude: Double,
@@ -289,6 +356,18 @@ class AlertSourceManagerAdapter @Inject constructor(
         preferenceOverride: AlertSourcePreference? = null,
         includeMeteredSources: Boolean = true,
     ): Result<List<WeatherAlert>> = alertRepository.getAlerts(
+        latitude = latitude,
+        longitude = longitude,
+        preferenceOverride = preferenceOverride,
+        includeMeteredSources = includeMeteredSources,
+    )
+
+    suspend fun getAlertsDetailed(
+        latitude: Double,
+        longitude: Double,
+        preferenceOverride: AlertSourcePreference? = null,
+        includeMeteredSources: Boolean = true,
+    ): AlertFetchResult = alertRepository.getAlertsDetailed(
         latitude = latitude,
         longitude = longitude,
         preferenceOverride = preferenceOverride,
