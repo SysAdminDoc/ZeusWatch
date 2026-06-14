@@ -10,14 +10,17 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 
 const PROJECT_ID = "zeuswatch-rules-test";
 const COLLECTION = "community_reports";
-const DEVICE_ID = "a".repeat(64);
-const OTHER_DEVICE_ID = "b".repeat(64);
+const THROTTLES = "report_throttles";
+const UID = "anon-user-1";
+const OTHER_UID = "anon-user-2";
 
 const rules = await readFile("firestore.rules", "utf8");
 
@@ -32,12 +35,12 @@ function test(name, fn) {
   tests.push({ name, fn });
 }
 
-function report(overrides = {}) {
+function report(uid, overrides = {}) {
   return {
     latitude: 39.7392,
     longitude: -104.9903,
     condition: "RAIN",
-    deviceId: DEVICE_ID,
+    ownerUid: uid,
     timestamp: Date.now(),
     note: "Light rain starting",
     ...overrides,
@@ -50,69 +53,112 @@ function dbFor(uid = null) {
     : testEnv.unauthenticatedContext().firestore();
 }
 
-async function seedReport(id, data = report()) {
+// Submit a report the way the app does: a single atomic batch that creates the
+// report doc and bumps the per-account throttle ledger to the commit time.
+function submit(db, uid, reportId, overrides = {}) {
+  const batch = writeBatch(db);
+  batch.set(doc(db, COLLECTION, reportId), report(uid, overrides));
+  batch.set(doc(db, THROTTLES, uid), { lastReportAt: serverTimestamp() });
+  return batch.commit();
+}
+
+async function seedReport(id, data) {
   await testEnv.withSecurityRulesDisabled(async (context) => {
     await setDoc(doc(context.firestore(), COLLECTION, id), data);
   });
 }
 
-test("allows anonymous reads and valid creates", async () => {
-  const db = dbFor();
+test("requires an authenticated account for reads and creates", async () => {
+  const anon = dbFor();
+  await assertFails(getDocs(collection(anon, COLLECTION)));
+  await assertFails(submit(anon, UID, "anon-create"));
 
-  await assertSucceeds(setDoc(doc(db, COLLECTION, "valid"), report()));
+  const db = dbFor(UID);
+  await assertSucceeds(submit(db, UID, "valid"));
   await assertSucceeds(getDocs(collection(db, COLLECTION)));
 });
 
-test("rejects malformed report payloads", async () => {
-  const db = dbFor();
+test("enforces a per-account server-side write-rate limit", async () => {
+  const db = dbFor(UID);
+  await assertSucceeds(submit(db, UID, "first"));
+  // Second report from the same account within the window is rejected even
+  // though the client-side limiter is bypassed (separate raw SDK call).
+  await assertFails(submit(db, UID, "second"));
 
-  await assertFails(setDoc(doc(db, COLLECTION, "missing-longitude"), {
+  // A different account is unaffected by the first account's throttle.
+  const other = dbFor(OTHER_UID);
+  await assertSucceeds(submit(other, OTHER_UID, "other-first"));
+});
+
+test("rejects a report create without the matching throttle bump", async () => {
+  const db = dbFor(UID);
+  // Report alone, no throttle write -> getAfter() rate-limit check fails.
+  await assertFails(setDoc(doc(db, COLLECTION, "no-throttle"), report(UID)));
+
+  // Throttle doc that backdates lastReportAt instead of using the commit time.
+  const batch = writeBatch(db);
+  batch.set(doc(db, COLLECTION, "backdated"), report(UID));
+  batch.set(doc(db, THROTTLES, UID), { lastReportAt: Date.now() - 60_000 });
+  await assertFails(batch.commit());
+});
+
+test("rejects ownerUid spoofing", async () => {
+  const db = dbFor(UID);
+  await assertFails(submit(db, UID, "spoofed", { ownerUid: OTHER_UID }));
+});
+
+test("rejects malformed report payloads", async () => {
+  const db = dbFor(UID);
+
+  const missingLon = writeBatch(db);
+  missingLon.set(doc(db, COLLECTION, "missing-longitude"), {
     latitude: 39.7392,
     condition: "RAIN",
-    deviceId: DEVICE_ID,
+    ownerUid: UID,
     timestamp: Date.now(),
-  }));
-  await assertFails(setDoc(doc(db, COLLECTION, "extra-field"), report({ owner: "client" })));
-  await assertFails(setDoc(doc(db, COLLECTION, "bad-latitude"), report({ latitude: "39.7" })));
+  });
+  missingLon.set(doc(db, THROTTLES, UID), { lastReportAt: serverTimestamp() });
+  await assertFails(missingLon.commit());
+
+  await assertFails(submit(db, UID, "extra-field", { owner: "client" }));
+  await assertFails(submit(db, UID, "bad-latitude", { latitude: "39.7" }));
 });
 
 test("rejects stale and future report timestamps", async () => {
-  const db = dbFor();
-
-  await assertFails(
-    setDoc(doc(db, COLLECTION, "stale"), report({ timestamp: Date.now() - 11 * 60 * 1000 })),
-  );
-  await assertFails(
-    setDoc(doc(db, COLLECTION, "future"), report({ timestamp: Date.now() + 3 * 60 * 1000 })),
-  );
+  const db = dbFor(UID);
+  await assertFails(submit(db, UID, "stale", { timestamp: Date.now() - 11 * 60 * 1000 }));
+  await assertFails(submit(db, UID, "future", { timestamp: Date.now() + 3 * 60 * 1000 }));
 });
 
 test("rejects invalid report conditions", async () => {
-  const db = dbFor();
-
-  await assertFails(setDoc(doc(db, COLLECTION, "invalid-condition"), report({ condition: "METEOR" })));
-});
-
-test("rejects invalid anonymous device ids", async () => {
-  const db = dbFor();
-
-  await assertFails(setDoc(doc(db, COLLECTION, "short-device-id"), report({ deviceId: "abc123" })));
-  await assertFails(
-    setDoc(doc(db, COLLECTION, "non-hex-device-id"), report({ deviceId: "g".repeat(64) })),
-  );
+  const db = dbFor(UID);
+  await assertFails(submit(db, UID, "invalid-condition", { condition: "METEOR" }));
 });
 
 test("denies updates and deletes under append-only anonymous model", async () => {
-  await seedReport("owned", report({ deviceId: DEVICE_ID }));
-  await seedReport("other", report({ deviceId: OTHER_DEVICE_ID }));
+  await seedReport("owned", report(UID));
+  await seedReport("other", report(OTHER_UID));
 
-  const ownerDb = dbFor("owner");
-  const otherDb = dbFor("other");
+  const ownerDb = dbFor(UID);
+  const otherDb = dbFor(OTHER_UID);
 
   await assertFails(updateDoc(doc(ownerDb, COLLECTION, "owned"), { note: "Edited" }));
   await assertFails(deleteDoc(doc(ownerDb, COLLECTION, "owned")));
   await assertFails(deleteDoc(doc(otherDb, COLLECTION, "owned")));
   await assertFails(deleteDoc(doc(ownerDb, COLLECTION, "other")));
+});
+
+test("isolates the throttle ledger to its owning account", async () => {
+  const db = dbFor(UID);
+  // Cannot write another account's throttle doc.
+  await assertFails(
+    setDoc(doc(db, THROTTLES, OTHER_UID), { lastReportAt: serverTimestamp() }),
+  );
+  // Cannot read another account's throttle doc.
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), THROTTLES, OTHER_UID), { lastReportAt: 1 });
+  });
+  await assertFails(getDocs(collection(db, THROTTLES)));
 });
 
 try {
