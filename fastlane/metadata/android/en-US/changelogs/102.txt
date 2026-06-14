@@ -1,0 +1,6 @@
+v1.24.0 - Security & reliability
+
+- Community reports now use anonymous sign-in with server-side spam/rate-limit protection and no device identifier in report data.
+- Widgets, the persistent notification, and your watch now show last-known weather during outages instead of going blank.
+- Custom icon packs decode off the main thread, so the forecast list scrolls smoothly on first load.
+- Internal networking cleanup; no behavior change.
