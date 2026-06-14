@@ -449,4 +449,100 @@ class AlertRepositoryTest {
             TimeZone.setDefault(originalTimeZone)
         }
     }
+
+    // ── getAlertsDetailed: outage vs. all-clear (safety-of-life) ──────────
+
+    private fun fakeAdapter(
+        id: String,
+        result: Result<List<WeatherAlert>>? = null,
+        throws: Boolean = false,
+    ): AlertSourceAdapter {
+        val adapter = mockk<AlertSourceAdapter>()
+        every { adapter.sourceId } returns id
+        every { adapter.displayName } returns id
+        every { adapter.supportedRegions } returns setOf("GLOBAL")
+        every { adapter.isMetered } returns false
+        if (throws) {
+            coEvery { adapter.getAlerts(any(), any()) } throws RuntimeException("boom-$id")
+        } else {
+            coEvery { adapter.getAlerts(any(), any()) } returns result!!
+        }
+        return adapter
+    }
+
+    private fun allSourcesPrefs() {
+        every { prefs.settings } returns flowOf(
+            NimbusSettings(alertSourcePref = AlertSourcePreference.ALL_SOURCES),
+        )
+    }
+
+    @Test
+    fun `getAlertsDetailed reports total outage when every adapter fails`() = runTest {
+        allSourcesPrefs()
+        val thrower = fakeAdapter("a1", throws = true)
+        val failer = fakeAdapter("a2", result = Result.failure(RuntimeException("net")))
+
+        val repo = AlertRepository(context, setOf(thrower, failer), prefs)
+        val result = repo.getAlertsDetailed(39.7, -104.9)
+
+        assertTrue(result.allAdaptersFailed)
+        assertEquals(setOf("a1", "a2"), result.failedSources.toSet())
+        assertTrue(result.alerts.isEmpty())
+    }
+
+    @Test
+    fun `getAlertsDetailed flags partial failure with empty result as not-all-clear`() = runTest {
+        allSourcesPrefs()
+        val ok = fakeAdapter("ok", result = Result.success(emptyList()))
+        val bad = fakeAdapter("bad", throws = true)
+
+        val repo = AlertRepository(context, setOf(ok, bad), prefs)
+        val result = repo.getAlertsDetailed(39.7, -104.9)
+
+        assertFalse(result.allAdaptersFailed)
+        assertEquals(listOf("bad"), result.failedSources)
+        assertTrue(result.alerts.isEmpty())
+    }
+
+    @Test
+    fun `getAlertsDetailed delivers alerts and records the failed source`() = runTest {
+        allSourcesPrefs()
+        val ok = fakeAdapter("ok", result = Result.success(listOf(makeGlobalAlert())))
+        val bad = fakeAdapter("bad", result = Result.failure(RuntimeException("net")))
+
+        val repo = AlertRepository(context, setOf(ok, bad), prefs)
+        val result = repo.getAlertsDetailed(39.7, -104.9)
+
+        assertFalse(result.allAdaptersFailed)
+        assertEquals(1, result.alerts.size)
+        assertEquals(listOf("bad"), result.failedSources)
+    }
+
+    @Test
+    fun `getAlertsDetailed is not an outage when no adapter covers the location`() = runTest {
+        // AUTO + a regional-only adapter for a country it doesn't cover → nothing
+        // attempted. That is "no coverage", not a provider outage.
+        val brAddress = mockk<Address>()
+        every { brAddress.countryCode } returns "BR"
+        every { anyConstructed<Geocoder>().getFromLocation(any(), any(), any()) } returns listOf(brAddress)
+
+        val result = repository.getAlertsDetailed(-23.55, -46.63) // São Paulo, only NWS registered
+
+        assertFalse(result.allAdaptersFailed)
+        assertTrue(result.failedSources.isEmpty())
+        assertTrue(result.alerts.isEmpty())
+    }
+
+    @Test
+    fun `getAlerts still returns success-empty when all adapters fail (no behavior change)`() = runTest {
+        allSourcesPrefs()
+        val thrower = fakeAdapter("a1", throws = true)
+        val failer = fakeAdapter("a2", result = Result.failure(RuntimeException("net")))
+
+        val repo = AlertRepository(context, setOf(thrower, failer), prefs)
+        val result = repo.getAlerts(39.7, -104.9)
+
+        assertTrue(result.isSuccess)
+        assertTrue(result.getOrThrow().isEmpty())
+    }
 }
