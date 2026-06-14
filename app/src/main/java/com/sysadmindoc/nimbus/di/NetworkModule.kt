@@ -92,6 +92,20 @@ object NetworkModule {
         coerceInputValues = true
     }
 
+    /**
+     * Shared Retrofit assembly. Every weather/alert/third-party API uses the
+     * same kotlinx-serialization JSON converter over the app's OkHttp client,
+     * so each provider collapses to a single call. Providers needing bespoke
+     * headers, interceptors, or certificate pinning pass a customized [client]
+     * (built via `client.newBuilder()`) and otherwise share this one line.
+     */
+    private fun buildRetrofit(baseUrl: String, client: OkHttpClient): Retrofit =
+        Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
@@ -125,24 +139,14 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("weather")
-    fun provideWeatherRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(OpenMeteoApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideWeatherRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(OpenMeteoApi.BASE_URL, client)
 
     @Provides
     @Singleton
     @Named("geocoding")
-    fun provideGeocodingRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(GeocodingApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideGeocodingRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(GeocodingApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -153,13 +157,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("archive")
-    fun provideArchiveRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(OpenMeteoArchiveApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideArchiveRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(OpenMeteoArchiveApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -170,13 +169,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("single_runs")
-    fun provideSingleRunsRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(OpenMeteoSingleRunApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideSingleRunsRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(OpenMeteoSingleRunApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -193,13 +187,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("rainviewer")
-    fun provideRainViewerRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(RainViewerApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideRainViewerRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(RainViewerApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -221,11 +210,7 @@ object NetworkModule {
                 chain.proceed(request)
             }
             .build()
-        return Retrofit.Builder()
-            .baseUrl(NwsAlertApi.BASE_URL)
-            .client(nwsClient)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
+        return buildRetrofit(NwsAlertApi.BASE_URL, nwsClient)
     }
 
     @Provides
@@ -237,13 +222,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("airquality")
-    fun provideAirQualityRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(AirQualityApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideAirQualityRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(AirQualityApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -256,13 +236,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("meteoalarm")
-    fun provideMeteoAlarmRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(MeteoAlarmApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideMeteoAlarmRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(MeteoAlarmApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -273,13 +248,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("jma")
-    fun provideJmaRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(JmaAlertApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideJmaRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(JmaAlertApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -290,13 +260,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("eccc")
-    fun provideEnvironmentCanadaRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(EnvironmentCanadaAlertApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideEnvironmentCanadaRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(EnvironmentCanadaAlertApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -313,13 +278,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("eccc_forecast")
-    fun provideEnvironmentCanadaForecastRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(EnvironmentCanadaForecastApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideEnvironmentCanadaForecastRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(EnvironmentCanadaForecastApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -347,13 +307,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("wmo")
-    fun provideWmoRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(WmoAlertApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideWmoRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(WmoAlertApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -373,11 +328,7 @@ object NetworkModule {
             .addInterceptor(owmRateLimiter)
             .certificatePinner(ApiCertificatePins.build())
             .build()
-        return Retrofit.Builder()
-            .baseUrl(OpenWeatherMapApi.BASE_URL)
-            .client(owmClient)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
+        return buildRetrofit(OpenWeatherMapApi.BASE_URL, owmClient)
     }
 
     @Provides
@@ -394,11 +345,7 @@ object NetworkModule {
             .addInterceptor(owmRateLimiter)
             .certificatePinner(ApiCertificatePins.build())
             .build()
-        return Retrofit.Builder()
-            .baseUrl(OpenWeatherMapApi.AIR_POLLUTION_BASE_URL)
-            .client(owmAqiClient)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
+        return buildRetrofit(OpenWeatherMapApi.AIR_POLLUTION_BASE_URL, owmAqiClient)
     }
 
     @Provides
@@ -424,11 +371,7 @@ object NetworkModule {
             .addInterceptor(RateLimitInterceptor("pirateweather", rate = 0.5, burst = 4))
             .certificatePinner(ApiCertificatePins.build())
             .build()
-        return Retrofit.Builder()
-            .baseUrl(PirateWeatherApi.BASE_URL)
-            .client(pwClient)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
+        return buildRetrofit(PirateWeatherApi.BASE_URL, pwClient)
     }
 
     @Provides
@@ -448,11 +391,7 @@ object NetworkModule {
         // which is compliant. Rate limiting is their 20 req/s aggregate
         // cap — we sit far below that on the phone, so no extra throttle
         // here beyond the global retry interceptor.
-        return Retrofit.Builder()
-            .baseUrl(MetNorwayApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
+        return buildRetrofit(MetNorwayApi.BASE_URL, client)
     }
 
     @Provides
@@ -466,13 +405,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("brightsky")
-    fun provideBrightSkyRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(BrightSkyApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideBrightSkyRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(BrightSkyApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -485,13 +419,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("noaa_swpc")
-    fun provideNoaaSwpcRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(NoaaSwpcApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideNoaaSwpcRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(NoaaSwpcApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -504,13 +433,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("marine")
-    fun provideMarineRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(OpenMeteoMarineApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideMarineRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(OpenMeteoMarineApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -523,13 +447,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("flood")
-    fun provideFloodRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(OpenMeteoFloodApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideFloodRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(OpenMeteoFloodApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -542,13 +461,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("previous_runs")
-    fun providePreviousRunsRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(OpenMeteoPreviousRunsApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun providePreviousRunsRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(OpenMeteoPreviousRunsApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -561,13 +475,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("ensemble")
-    fun provideEnsembleRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(OpenMeteoEnsembleApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideEnsembleRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(OpenMeteoEnsembleApi.BASE_URL, client)
 
     @Provides
     @Singleton
@@ -580,13 +489,8 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("climate")
-    fun provideClimateRetrofit(client: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(OpenMeteoClimateApi.BASE_URL)
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
-    }
+    fun provideClimateRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(OpenMeteoClimateApi.BASE_URL, client)
 
     @Provides
     @Singleton
