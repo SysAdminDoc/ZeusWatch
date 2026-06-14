@@ -222,6 +222,10 @@ dependencies {
     // Configure at https://console.firebase.google.com and download the config file.
     "standardImplementation"(platform("com.google.firebase:firebase-bom:34.3.0"))
     "standardImplementation"("com.google.firebase:firebase-firestore")
+    // Anonymous Authentication — binds community reports to an anonymous account
+    // so Firestore rules can enforce ownerUid + server-side write-rate limiting
+    // without any personal sign-in. Requires Anonymous sign-in enabled in console.
+    "standardImplementation"("com.google.firebase:firebase-auth")
 
     // ACRA — crash reporting that works in both standard and freenet flavors
     // (no Google Play Services dependency). Core + mail sender so F-Droid

@@ -16,10 +16,16 @@ service cloud.firestore {
       ];
     }
 
-    function validAnonymousDeviceId(deviceId) {
-      return deviceId is string
-        && deviceId.size() == 64
-        && deviceId.matches('^[a-f0-9]{64}$');
+    // Minimum gap between two reports from the same anonymous account, enforced
+    // server-side via the report_throttles/{uid} doc updated in the same commit.
+    function rateLimitOk(uid) {
+      let throttle = /databases/$(database)/documents/report_throttles/$(uid);
+      // The create batch must bump this account's throttle doc to the commit time.
+      return getAfter(throttle).data.lastReportAt == request.time
+        && (
+          !exists(throttle)
+          || request.time > get(throttle).data.lastReportAt + duration.value(5, 'm')
+        );
     }
 
     // Default: deny all
@@ -27,16 +33,35 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Community weather reports
-    match /community_reports/{reportId} {
-      // Anyone can read reports (needed for map display)
-      allow read: if true;
+    // Per-account write-rate-limit ledger. One doc per anonymous uid holding the
+    // server timestamp of that account's most recent report. Only the owning
+    // account may read/write its own ledger, and the only writable value is the
+    // commit time itself (so it cannot be backdated to defeat the rate limit).
+    match /report_throttles/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastReportAt'])
+        && request.resource.data.lastReportAt == request.time;
+      allow delete: if false;
+    }
 
-      // Create: validate required fields and enforce limits.
-      // hasOnly() rejects payloads with unexpected extra keys; timestamp must be
-      // epoch millis near the server clock (+2 min future skew, -10 min past).
-      allow create: if request.resource.data.keys().hasAll(['latitude', 'longitude', 'condition', 'deviceId', 'timestamp'])
-        && request.resource.data.keys().hasOnly(['latitude', 'longitude', 'condition', 'deviceId', 'timestamp', 'note'])
+    // Community weather reports.
+    match /community_reports/{reportId} {
+      // Reads require an (anonymous) account so the collection is not a fully
+      // open, unauthenticated firehose. The standard flavor signs in
+      // anonymously before any read.
+      allow read: if request.auth != null;
+
+      // Create: requires an authenticated (anonymous) account, binds the report
+      // to that account via ownerUid, validates every field, enforces a
+      // timestamp near the server clock (+2 min future skew, -10 min past), and
+      // enforces a per-account write-rate limit via report_throttles. hasOnly()
+      // rejects payloads with unexpected extra keys.
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll(['latitude', 'longitude', 'condition', 'ownerUid', 'timestamp'])
+        && request.resource.data.keys().hasOnly(['latitude', 'longitude', 'condition', 'ownerUid', 'timestamp', 'note'])
+        && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.latitude is number
         && request.resource.data.latitude >= -90
         && request.resource.data.latitude <= 90
@@ -50,7 +75,7 @@ service cloud.firestore {
         && request.resource.data.timestamp >= request.time.toMillis() - 600000
         && (!request.resource.data.keys().hasAny(['note'])
           || (request.resource.data.note is string && request.resource.data.note.size() <= 100))
-        && validAnonymousDeviceId(request.resource.data.deviceId);
+        && rateLimitOk(request.auth.uid);
 
       // Anonymous append-only model: reports are not editable or deletable.
       allow delete: if false;
