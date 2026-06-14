@@ -17,6 +17,8 @@ import androidx.compose.material.icons.outlined.NightsStay
 import androidx.compose.material.icons.outlined.WbTwilight
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -29,6 +31,8 @@ import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.repository.IconStyle
 import com.sysadmindoc.nimbus.ui.theme.*
 import com.sysadmindoc.nimbus.util.IconPackManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * CompositionLocal providing the Hilt-managed [IconPackManager] to weather icon
@@ -62,13 +66,25 @@ fun WeatherIcon(
     // Try custom icon pack first
     if (settings.iconStyle == IconStyle.CUSTOM && packManager != null && settings.customIconPackId.isNotEmpty()) {
         val context = LocalContext.current
-        val bitmap: Bitmap? = remember(settings.customIconPackId, weatherCode.code, isDay) {
-            val pack = packManager.findPack(settings.customIconPackId, context)
-            pack?.let { packManager.loadIcon(context, it, weatherCode.code, isDay) }
+        val packId = settings.customIconPackId
+        // Cheap synchronous cache peek keeps already-decoded icons flicker-free.
+        val cached = remember(packId, weatherCode.code, isDay) {
+            packManager.peekCachedIcon(packId, weatherCode.code, isDay)
         }
-        if (bitmap != null) {
+        // First decode per icon (disk read + BitmapFactory) runs off the main
+        // thread so it can't jank the LazyColumn on first paint/scroll.
+        val bitmap: Bitmap? by produceState(initialValue = cached, packId, weatherCode.code, isDay) {
+            if (value == null) {
+                value = withContext(Dispatchers.IO) {
+                    packManager.findPack(packId, context)
+                        ?.let { packManager.loadIcon(context, it, weatherCode.code, isDay) }
+                }
+            }
+        }
+        val resolvedBitmap = bitmap
+        if (resolvedBitmap != null) {
             Image(
-                bitmap = bitmap.asImageBitmap(),
+                bitmap = resolvedBitmap.asImageBitmap(),
                 contentDescription = description,
                 modifier = modifier,
                 contentScale = ContentScale.Fit,

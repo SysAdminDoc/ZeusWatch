@@ -13,6 +13,7 @@ import com.sysadmindoc.nimbus.data.model.IconPackSource
 import dagger.hilt.android.qualifiers.ApplicationContext
 import org.json.JSONObject
 import java.io.InputStream
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -42,6 +43,21 @@ class IconPackManager @Inject constructor(
     // Cached results; cleared on refresh.
     private var cachedPacks: List<IconPack>? = null
 
+    // Decoded-bitmap cache so a given pack icon is only decoded from disk once.
+    // Small bounded set (~weather codes x day/night per pack), cleared on refresh.
+    private val bitmapCache = ConcurrentHashMap<String, Bitmap>()
+
+    private fun cacheKey(packId: String, wmoCode: Int, isDay: Boolean): String =
+        "$packId|$wmoCode|$isDay"
+
+    /**
+     * Synchronous peek into the decoded-bitmap cache — cheap enough to call from
+     * the composition thread. Returns null on a miss (decode via [loadIcon] off
+     * the main thread).
+     */
+    fun peekCachedIcon(packId: String, wmoCode: Int, isDay: Boolean): Bitmap? =
+        bitmapCache[cacheKey(packId, wmoCode, isDay)]
+
     // -------------------------------------------------------------------------
     // Discovery
     // -------------------------------------------------------------------------
@@ -62,6 +78,7 @@ class IconPackManager @Inject constructor(
     /** Force re-scan on next [getAvailablePacks] call. */
     fun refreshPacks() {
         cachedPacks = null
+        bitmapCache.clear()
     }
 
     /** Find a pack by its [id], or null. */
@@ -83,11 +100,13 @@ class IconPackManager @Inject constructor(
         wmoCode: Int,
         isDay: Boolean,
     ): Bitmap? {
+        bitmapCache[cacheKey(pack.id, wmoCode, isDay)]?.let { return it }
         val mapping = pack.mappings[wmoCode] ?: return null
         val filename = if (isDay) mapping.dayIcon else mapping.nightIcon
         return try {
             val stream = openIconStream(context, pack, filename) ?: return null
             stream.use { BitmapFactory.decodeStream(it) }
+                ?.also { bitmapCache[cacheKey(pack.id, wmoCode, isDay)] = it }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to load icon $filename from pack ${pack.id}", e)
             null
