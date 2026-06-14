@@ -38,6 +38,14 @@ class WeatherRepository @Inject constructor(
     companion object {
         private const val DEFAULT_CACHE_MAX_AGE_MS = 30 * 60 * 1000L
 
+        /**
+         * How stale last-known data may be and still be served by
+         * [getWeatherOrCached] when a live fetch fails. Wider than the normal
+         * cache TTL so background surfaces (widgets, wear) degrade gracefully
+         * during transient outages instead of going blank.
+         */
+        const val DEFAULT_STALE_FALLBACK_MS = 6 * 60 * 60 * 1000L
+
         private fun coalescingKey(lat: Double, lon: Double): String =
             String.format(Locale.US, "%.4f,%.4f", lat, lon)
     }
@@ -87,6 +95,45 @@ class WeatherRepository @Inject constructor(
             locationName = location.name,
             locationTimeZone = location.timeZone,
             sourceOverrides = location.sourceOverrides(),
+        )
+
+    /**
+     * Background-worker entry point: like [getWeather] but, when the live fetch
+     * fails (transient network/source outage), falls back to the last-known
+     * cached data within [allowStaleUpToMs] instead of returning a hard failure.
+     *
+     * The returned data carries its real observation time via
+     * [WeatherData.lastUpdated], so callers render a staleness label rather than
+     * presenting stale data as fresh. A successful live fetch always wins and
+     * writes through the cache, so the next fallback serves the fresh data. When
+     * the live fetch fails and no in-window cache exists, the original
+     * [Result.failure] is returned unchanged.
+     */
+    suspend fun getWeatherOrCached(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+        locationTimeZone: String? = null,
+        sourceOverrides: SourceOverrides = SourceOverrides(),
+        allowStaleUpToMs: Long = DEFAULT_STALE_FALLBACK_MS,
+    ): Result<WeatherData> {
+        val live = getWeather(latitude, longitude, locationName, locationTimeZone, sourceOverrides)
+        if (live.isSuccess) return live
+        val stale = readCachedWeather(latitude, longitude, allowStaleUpToMs)
+        return if (stale != null) Result.success(stale) else live
+    }
+
+    suspend fun getWeatherOrCached(
+        location: SavedLocationEntity,
+        allowStaleUpToMs: Long = DEFAULT_STALE_FALLBACK_MS,
+    ): Result<WeatherData> =
+        getWeatherOrCached(
+            latitude = location.latitude,
+            longitude = location.longitude,
+            locationName = location.name,
+            locationTimeZone = location.timeZone,
+            sourceOverrides = location.sourceOverrides(),
+            allowStaleUpToMs = allowStaleUpToMs,
         )
 
     /**
@@ -165,36 +212,48 @@ class WeatherRepository @Inject constructor(
 
     suspend fun getCachedWeather(latitude: Double, longitude: Double): WeatherData? =
         withContext(Dispatchers.IO) {
-            try {
-                val cacheMaxAgeMs = userPreferences.settings.first().cacheTtlMs
-                    .takeIf { it > 0L }
-                    ?: DEFAULT_CACHE_MAX_AGE_MS
-                val key = WeatherCacheEntity.makeKey(latitude, longitude)
-                val cached = weatherDao.getCached(key) ?: return@withContext null
-                if (cached.isExpired(cacheMaxAgeMs)) return@withContext null
-                val response = json.decodeFromString(OpenMeteoResponse.serializer(), cached.responseJson)
-                val location = LocationInfo(
-                    name = cached.locationName,
-                    region = cached.locationRegion,
-                    country = cached.locationCountry,
-                    latitude = cached.latitude,
-                    longitude = cached.longitude,
-                    timeZone = response.timezone?.takeIf { it.toZoneIdOrNull() != null },
-                )
-                mapToWeatherData(
-                    response,
-                    location,
-                    // Preserve the original fetch time so "updated X ago" and
-                    // the staleness colouring reflect the cache's real age —
-                    // not "now", which made every cached read look fresh.
-                    observedAt = Instant.ofEpochMilli(cached.cachedAt)
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDateTime(),
-                )
-            } catch (_: Exception) {
-                null
-            }
+            val cacheMaxAgeMs = userPreferences.settings.first().cacheTtlMs
+                .takeIf { it > 0L }
+                ?: DEFAULT_CACHE_MAX_AGE_MS
+            readCachedWeather(latitude, longitude, cacheMaxAgeMs)
         }
+
+    /**
+     * Decode the cached forecast for a location if it exists and is no older
+     * than [maxAgeMs]. Returns null on a cache miss, an over-age entry, or a
+     * decode failure. The decoded [WeatherData.lastUpdated] preserves the
+     * original fetch time so "updated X ago" and the staleness colouring reflect
+     * the cache's real age — not "now", which made every cached read look fresh.
+     */
+    private suspend fun readCachedWeather(
+        latitude: Double,
+        longitude: Double,
+        maxAgeMs: Long,
+    ): WeatherData? = withContext(Dispatchers.IO) {
+        try {
+            val key = WeatherCacheEntity.makeKey(latitude, longitude)
+            val cached = weatherDao.getCached(key) ?: return@withContext null
+            if (cached.isExpired(maxAgeMs)) return@withContext null
+            val response = json.decodeFromString(OpenMeteoResponse.serializer(), cached.responseJson)
+            val location = LocationInfo(
+                name = cached.locationName,
+                region = cached.locationRegion,
+                country = cached.locationCountry,
+                latitude = cached.latitude,
+                longitude = cached.longitude,
+                timeZone = response.timezone?.takeIf { it.toZoneIdOrNull() != null },
+            )
+            mapToWeatherData(
+                response,
+                location,
+                observedAt = Instant.ofEpochMilli(cached.cachedAt)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDateTime(),
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     suspend fun searchLocations(query: String): Result<List<LocationInfo>> =
         withContext(Dispatchers.IO) {

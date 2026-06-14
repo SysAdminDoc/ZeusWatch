@@ -231,8 +231,11 @@ class WidgetRefreshWorker @AssistedInject constructor(
         }
 
         state.attemptedNetworkRefresh = true
+        // On a transient outage, fall back to last-known data within the stale
+        // window so the widget/notification/wear surfaces don't go blank. The
+        // freshness badge reflects the cached observation time.
         state.primaryWeather = weatherRepository
-            .getWeather(lastLoc.latitude, lastLoc.longitude, lastLoc.name)
+            .getWeatherOrCached(lastLoc.latitude, lastLoc.longitude, lastLoc.name)
             .getOrNull()
 
         val primaryWeather = state.primaryWeather ?: return
@@ -307,7 +310,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
 
         state.attemptedNetworkRefresh = true
         return weatherRepository
-            .getWeather(
+            .getWeatherOrCached(
                 latitude = request.latitude,
                 longitude = request.longitude,
                 locationName = request.representativeName,
