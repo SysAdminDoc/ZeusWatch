@@ -395,6 +395,71 @@ class WeatherRepositoryTest {
         assertEquals(testLon, data.location.longitude, 0.01)
     }
 
+    // --- getWeatherOrCached (background-worker stale fallback) ---
+
+    @Test
+    fun getWeatherOrCachedReturnsLiveDataWhenFetchSucceeds() = runTest {
+        val fakeData = mockk<WeatherData>()
+        coEvery {
+            sourceManager.getWeather(testLat, testLon, null, null, SourceOverrides())
+        } returns Result.success(fakeData)
+
+        val result = repository.getWeatherOrCached(testLat, testLon)
+
+        assertTrue(result.isSuccess)
+        assertEquals(fakeData, result.getOrThrow())
+        // Live success must not touch the cache for a fallback read.
+        coVerify(exactly = 0) { weatherDao.getCached(any()) }
+    }
+
+    @Test
+    fun getWeatherOrCachedFallsBackToFreshCacheWhenFetchFails() = runTest {
+        coEvery {
+            sourceManager.getWeather(testLat, testLon, null, null, SourceOverrides())
+        } returns Result.failure(RuntimeException("offline"))
+        val cachedAt = System.currentTimeMillis() - (90 * 60 * 1000L) // 90 min old
+        coEvery { weatherDao.getCached(any()) } returns makeCacheEntity(cachedAt = cachedAt)
+
+        val result = repository.getWeatherOrCached(testLat, testLon)
+
+        assertTrue(result.isSuccess)
+        val data = result.getOrThrow()
+        assertEquals(testLocationName, data.location.name)
+        // Stale data is flagged via lastUpdated reflecting the real cache age.
+        val expected = java.time.Instant.ofEpochMilli(cachedAt)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalDateTime()
+        assertEquals(expected, data.lastUpdated)
+    }
+
+    @Test
+    fun getWeatherOrCachedReturnsFailureWhenFetchFailsAndNoCache() = runTest {
+        coEvery {
+            sourceManager.getWeather(testLat, testLon, null, null, SourceOverrides())
+        } returns Result.failure(RuntimeException("offline"))
+        coEvery { weatherDao.getCached(any()) } returns null
+
+        val result = repository.getWeatherOrCached(testLat, testLon)
+
+        assertTrue(result.isFailure)
+        assertEquals("offline", result.exceptionOrNull()?.message)
+    }
+
+    @Test
+    fun getWeatherOrCachedReturnsFailureWhenCacheOlderThanStaleWindow() = runTest {
+        coEvery {
+            sourceManager.getWeather(testLat, testLon, null, null, SourceOverrides())
+        } returns Result.failure(RuntimeException("offline"))
+        // Older than the 6h stale fallback window.
+        val cachedAt = System.currentTimeMillis() - (7 * 60 * 60 * 1000L)
+        coEvery { weatherDao.getCached(any()) } returns makeCacheEntity(cachedAt = cachedAt)
+
+        val result = repository.getWeatherOrCached(testLat, testLon)
+
+        assertTrue(result.isFailure)
+        assertEquals("offline", result.exceptionOrNull()?.message)
+    }
+
     @Test
     fun getCachedWeatherStampsLastUpdatedFromCacheTime() = runTest {
         // A cache written in the past must report that age via lastUpdated, not
