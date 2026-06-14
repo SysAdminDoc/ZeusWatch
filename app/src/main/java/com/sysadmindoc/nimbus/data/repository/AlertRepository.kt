@@ -23,6 +23,23 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 
 /**
+ * Outcome of a detailed alert fetch. Distinguishes a trustworthy "no active
+ * alerts" from an outage so safety-critical callers don't treat a total
+ * provider failure as clear skies.
+ *
+ * @property alerts the merged, deduped, sorted alerts that were retrieved.
+ * @property allAdaptersFailed true when every adapter that was actually queried
+ *   failed (transport error / `Result.failure`); false when nothing was
+ *   attempted (no covering source) or at least one query succeeded.
+ * @property failedSources source ids that failed, for logging/diagnostics.
+ */
+data class AlertFetchResult(
+    val alerts: List<WeatherAlert>,
+    val allAdaptersFailed: Boolean,
+    val failedSources: List<String>,
+)
+
+/**
  * Unified alert repository that dispatches to the correct international
  * alert source based on the user's location (country detection) and preferences.
  *
@@ -59,78 +76,162 @@ class AlertRepository @Inject constructor(
     ): Result<List<WeatherAlert>> =
         withContext(Dispatchers.IO) {
             try {
-                val settings = prefs.settings.first()
-                val pref = preferenceOverride ?: settings.alertSourcePref
-                val countryCode = detectCountry(latitude, longitude)
-
-                Log.d(TAG, "Detected country: $countryCode, alertSourcePref: $pref")
-
-                val selectedAdapters = resolveAdapters(pref, countryCode)
-                    .let { adapters ->
-                        if (includeMeteredSources) adapters else adapters.filterNot { it.isMetered }
-                    }
-
-                if (selectedAdapters.isEmpty()) {
-                    Log.d(TAG, "No alert adapters matched for country=$countryCode pref=$pref")
-                    return@withContext Result.success(emptyList())
-                }
-
-                // Query all applicable adapters in parallel
-                val allAlerts = coroutineScope {
-                    selectedAdapters.map { adapter ->
-                        async {
-                            try {
-                                when {
-                                    // MeteoAlarm's `getAlerts(lat, lon)` is a no-op stub —
-                                    // the API needs an ISO country code. Skip it cleanly
-                                    // (a) when the country isn't known yet and
-                                    // (b) when the user's country is outside MeteoAlarm's
-                                    // EUMETNET coverage — otherwise `ALL_SOURCES` mode
-                                    // would silently swallow MeteoAlarm whenever the
-                                    // device falls outside Europe.
-                                    adapter is MeteoAlarmAdapter -> {
-                                        if (countryCode != null &&
-                                            countryCode in adapter.supportedRegions
-                                        ) {
-                                            adapter.getAlertsForCountry(countryCode)
-                                        } else {
-                                            Result.success(emptyList())
-                                        }
-                                    }
-                                    adapter is WmoAlertAdapter -> {
-                                        if (countryCode != null) {
-                                            adapter.getAlertsForCountry(countryCode)
-                                        } else {
-                                            Result.success(emptyList())
-                                        }
-                                    }
-                                    else -> adapter.getAlerts(latitude, longitude)
-                                }
-                            } catch (e: Exception) {
-                                Log.w(TAG, "Adapter ${adapter.sourceId} failed: ${e.message}")
-                                Result.success(emptyList())
-                            }
-                        }
-                    }.awaitAll()
-                }
-
-                // Merge results, dedup by ID, sort by severity then urgency
-                val merged = allAlerts
-                    .mapNotNull { it.getOrNull() }
-                    .flatten()
-                    .distinctBy { it.id }
-                    .sortedWith(
-                        compareBy<WeatherAlert> { it.severity.sortOrder }
-                            .thenBy { it.urgency.sortOrder }
-                    )
-
-                Result.success(merged)
+                val outcomes = collectOutcomes(
+                    latitude, longitude, preferenceOverride, includeMeteredSources,
+                )
+                Result.success(mergeAlerts(outcomes))
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e(TAG, "Alert fetch failed", e)
                 Result.failure(e)
             }
         }
+
+    /**
+     * Like [getAlerts] but preserves the per-adapter outcome so callers (notably
+     * the background [com.sysadmindoc.nimbus.util.AlertCheckWorker]) can tell a
+     * genuine "no active alerts" from a provider outage. The plain [getAlerts]
+     * collapses an all-providers-down fetch into `success(emptyList())`, which
+     * would make a real outage during a severe-weather event look identical to
+     * clear skies and suppress the worker's retry. This safety-of-life path
+     * surfaces [AlertFetchResult.allAdaptersFailed] and the failed source ids.
+     */
+    suspend fun getAlertsDetailed(
+        latitude: Double,
+        longitude: Double,
+        preferenceOverride: AlertSourcePreference? = null,
+        includeMeteredSources: Boolean = true,
+    ): AlertFetchResult =
+        withContext(Dispatchers.IO) {
+            try {
+                val outcomes = collectOutcomes(
+                    latitude, longitude, preferenceOverride, includeMeteredSources,
+                )
+                val attempted = outcomes.count { it.attempted }
+                val failedSources = outcomes.filter { it.failed }.map { it.sourceId }
+                AlertFetchResult(
+                    alerts = mergeAlerts(outcomes),
+                    // Only an outage when something was actually attempted and all
+                    // attempts failed. Zero attempts (no covering adapter) is a
+                    // legitimate "no coverage", not a failure.
+                    allAdaptersFailed = attempted > 0 && failedSources.size == attempted,
+                    failedSources = failedSources,
+                )
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e(TAG, "Alert fetch failed", e)
+                // A top-level failure (e.g. settings read) is a total outage from
+                // the caller's perspective — never report it as all-clear.
+                AlertFetchResult(emptyList(), allAdaptersFailed = true, failedSources = emptyList())
+            }
+        }
+
+    /**
+     * Run the configured alert dispatch and return one [AdapterOutcome] per
+     * selected adapter. A thrown exception or a returned `Result.failure` marks
+     * that source as failed; the country-aware skip branches (MeteoAlarm/WMO
+     * with no/out-of-region country) are recorded as not-attempted so they
+     * never count toward an outage.
+     */
+    private suspend fun collectOutcomes(
+        latitude: Double,
+        longitude: Double,
+        preferenceOverride: AlertSourcePreference?,
+        includeMeteredSources: Boolean,
+    ): List<AdapterOutcome> {
+        val settings = prefs.settings.first()
+        val pref = preferenceOverride ?: settings.alertSourcePref
+        val countryCode = detectCountry(latitude, longitude)
+
+        Log.d(TAG, "Detected country: $countryCode, alertSourcePref: $pref")
+
+        val selectedAdapters = resolveAdapters(pref, countryCode)
+            .let { adapters ->
+                if (includeMeteredSources) adapters else adapters.filterNot { it.isMetered }
+            }
+
+        if (selectedAdapters.isEmpty()) {
+            Log.d(TAG, "No alert adapters matched for country=$countryCode pref=$pref")
+            return emptyList()
+        }
+
+        return coroutineScope {
+            selectedAdapters.map { adapter ->
+                async {
+                    // MeteoAlarm's `getAlerts(lat, lon)` is a no-op stub — the API
+                    // needs an ISO country code. Skip it cleanly (a) when the
+                    // country isn't known yet and (b) when the user's country is
+                    // outside MeteoAlarm's EUMETNET coverage — otherwise
+                    // `ALL_SOURCES` mode would silently swallow MeteoAlarm
+                    // whenever the device falls outside Europe.
+                    when {
+                        adapter is MeteoAlarmAdapter -> {
+                            if (countryCode != null && countryCode in adapter.supportedRegions) {
+                                queryAdapter(adapter) { adapter.getAlertsForCountry(countryCode) }
+                            } else {
+                                AdapterOutcome.skipped(adapter.sourceId)
+                            }
+                        }
+                        adapter is WmoAlertAdapter -> {
+                            if (countryCode != null) {
+                                queryAdapter(adapter) { adapter.getAlertsForCountry(countryCode) }
+                            } else {
+                                AdapterOutcome.skipped(adapter.sourceId)
+                            }
+                        }
+                        else -> queryAdapter(adapter) { adapter.getAlerts(latitude, longitude) }
+                    }
+                }
+            }.awaitAll()
+        }
+    }
+
+    /**
+     * Invoke an adapter, mapping both thrown exceptions and returned
+     * `Result.failure` to a failed [AdapterOutcome] so transport errors are
+     * visible to the detailed path instead of being collapsed into empty.
+     */
+    private suspend fun queryAdapter(
+        adapter: AlertSourceAdapter,
+        block: suspend () -> Result<List<WeatherAlert>>,
+    ): AdapterOutcome {
+        val result = try {
+            block()
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Log.w(TAG, "Adapter ${adapter.sourceId} threw: ${e.message}")
+            Result.failure(e)
+        }
+        return result.fold(
+            onSuccess = { AdapterOutcome(adapter.sourceId, it, attempted = true, failed = false) },
+            onFailure = {
+                Log.w(TAG, "Adapter ${adapter.sourceId} failed: ${it.message}")
+                AdapterOutcome(adapter.sourceId, emptyList(), attempted = true, failed = true)
+            },
+        )
+    }
+
+    /** Merge, dedup by ID, and sort by severity then urgency. */
+    private fun mergeAlerts(outcomes: List<AdapterOutcome>): List<WeatherAlert> =
+        outcomes
+            .flatMap { it.alerts }
+            .distinctBy { it.id }
+            .sortedWith(
+                compareBy<WeatherAlert> { it.severity.sortOrder }
+                    .thenBy { it.urgency.sortOrder }
+            )
+
+    private data class AdapterOutcome(
+        val sourceId: String,
+        val alerts: List<WeatherAlert>,
+        val attempted: Boolean,
+        val failed: Boolean,
+    ) {
+        companion object {
+            fun skipped(sourceId: String) =
+                AdapterOutcome(sourceId, emptyList(), attempted = false, failed = false)
+        }
+    }
 
     /**
      * Resolve which adapters to query based on user preference and detected country.

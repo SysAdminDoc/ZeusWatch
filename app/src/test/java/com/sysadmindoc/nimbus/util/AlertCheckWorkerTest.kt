@@ -1,10 +1,12 @@
 package com.sysadmindoc.nimbus.util
 
 import android.content.Context
+import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import com.sysadmindoc.nimbus.data.repository.AlertFetchResult
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.SavedLocation
@@ -59,7 +61,7 @@ class AlertCheckWorkerTest {
         )
         every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
         coEvery { prefs.getSeenAlertIds() } returns emptySet()
-        coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any()) } returns Result.success(listOf(lowSeverityAlert))
+        coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns AlertFetchResult(listOf(lowSeverityAlert), allAdaptersFailed = false, failedSources = emptyList())
 
         val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
         worker.doWork()
@@ -82,7 +84,7 @@ class AlertCheckWorkerTest {
         )
         every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
         coEvery { prefs.getSeenAlertIds() } returns emptySet()
-        coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any()) } returns Result.success(listOf(unknownAlert))
+        coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns AlertFetchResult(listOf(unknownAlert), allAdaptersFailed = false, failedSources = emptyList())
 
         val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
         worker.doWork()
@@ -118,7 +120,7 @@ class AlertCheckWorkerTest {
                 sortOrder = 1,
             ),
         )
-        coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any()) } returns Result.success(listOf(severeAlert))
+        coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns AlertFetchResult(listOf(severeAlert), allAdaptersFailed = false, failedSources = emptyList())
 
         val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
         worker.doWork()
@@ -139,7 +141,7 @@ class AlertCheckWorkerTest {
         )
         every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
         coEvery { prefs.getSeenAlertIds() } returns emptySet()
-        coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any()) } returns Result.success(listOf(severeAlert))
+        coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns AlertFetchResult(listOf(severeAlert), allAdaptersFailed = false, failedSources = emptyList())
         every { AlertNotificationHelper.showAlertNotification(any(), any(), any()) } returns false
 
         val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
@@ -182,17 +184,17 @@ class AlertCheckWorkerTest {
                 sortOrder = 1,
             ),
         )
-        coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any()) } returns Result.success(emptyList())
+        coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns AlertFetchResult(emptyList(), allAdaptersFailed = false, failedSources = emptyList())
 
         val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
         worker.doWork()
 
-        coVerify(exactly = 2) { weatherSourceManager.getAlerts(any(), any(), any(), includeMeteredSources = false) }
+        coVerify(exactly = 2) { weatherSourceManager.getAlertsDetailed(any(), any(), any(), includeMeteredSources = false) }
         coVerify(exactly = 1) {
-            weatherSourceManager.getAlerts(39.73921, -104.99031, any(), includeMeteredSources = false)
+            weatherSourceManager.getAlertsDetailed(39.73921, -104.99031, any(), includeMeteredSources = false)
         }
         coVerify(exactly = 1) {
-            weatherSourceManager.getAlerts(40.01499, -105.27050, any(), includeMeteredSources = false)
+            weatherSourceManager.getAlertsDetailed(40.01499, -105.27050, any(), includeMeteredSources = false)
         }
     }
 
@@ -213,6 +215,61 @@ class AlertCheckWorkerTest {
             ),
             distinct,
         )
+    }
+
+    @Test
+    fun `doWork retries when every alert provider is down`() = runTest {
+        singleLocationSettings()
+        coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns
+            AlertFetchResult(emptyList(), allAdaptersFailed = true, failedSources = listOf("nws"))
+
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
+        val result = worker.doWork()
+
+        // A total outage must not be treated as "all clear" — it retries.
+        assertEquals(ListenableWorker.Result.retry(), result)
+    }
+
+    @Test
+    fun `doWork retries on partial failure that returned no alerts`() = runTest {
+        // One source 200-empty, one source down → empty result we cannot trust.
+        singleLocationSettings()
+        coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns
+            AlertFetchResult(emptyList(), allAdaptersFailed = false, failedSources = listOf("meteoalarm"))
+
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
+        val result = worker.doWork()
+
+        assertEquals(ListenableWorker.Result.retry(), result)
+    }
+
+    @Test
+    fun `doWork delivers and succeeds when an alert arrives despite a failed source`() = runTest {
+        // Real alert from one source, another source down → deliver now (a
+        // present alert is trustworthy), record the failure, do not retry.
+        val severeAlert = testAlert(id = "severe-partial", severity = AlertSeverity.SEVERE)
+        singleLocationSettings()
+        coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns
+            AlertFetchResult(listOf(severeAlert), allAdaptersFailed = false, failedSources = listOf("meteoalarm"))
+
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
+        val result = worker.doWork()
+
+        assertEquals(ListenableWorker.Result.success(), result)
+        io.mockk.verify(exactly = 1) { AlertNotificationHelper.showAlertNotification(any(), any(), any()) }
+        coVerify(exactly = 1) { prefs.addSeenAlertIds(setOf("severe-partial")) }
+    }
+
+    private fun singleLocationSettings() {
+        every { prefs.settings } returns flowOf(
+            NimbusSettings(
+                alertNotificationsEnabled = true,
+                alertMinSeverity = com.sysadmindoc.nimbus.data.repository.AlertMinSeverity.SEVERE,
+                alertCheckAllLocations = false,
+            )
+        )
+        every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        coEvery { prefs.getSeenAlertIds() } returns emptySet()
     }
 
     private fun testAlert(

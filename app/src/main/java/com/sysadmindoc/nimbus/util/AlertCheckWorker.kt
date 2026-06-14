@@ -89,21 +89,28 @@ class AlertCheckWorker @AssistedInject constructor(
             return Result.success()
         }
 
-        var anyFetchFailed = false
-        var anyFetchSucceeded = false
+        var anyUntrustworthy = false
         for (location in locations) {
-            val result = weatherSourceManager.getAlerts(
+            val result = weatherSourceManager.getAlertsDetailed(
                 location.latitude,
                 location.longitude,
                 location.sourceOverrides,
                 includeMeteredSources = false,
             )
-            val alerts = result.getOrNull()
-            if (alerts == null) {
-                anyFetchFailed = true
-                continue
+            val alerts = result.alerts
+
+            // A result is trustworthy as "all clear" only if no provider was down.
+            // If every provider failed, OR a provider failed and we got zero
+            // alerts, we cannot distinguish an outage from clear skies — retry
+            // rather than risk silently dropping a severe-weather alert.
+            val untrustworthy = result.allAdaptersFailed ||
+                (result.failedSources.isNotEmpty() && alerts.isEmpty())
+            if (untrustworthy) {
+                anyUntrustworthy = true
             }
-            anyFetchSucceeded = true
+            if (result.failedSources.isNotEmpty()) {
+                Log.w(TAG, "Location=${location.name}: alert sources failed: ${result.failedSources}")
+            }
 
             val filtered = alerts.filter { alert ->
                 // Fail open on UNKNOWN severity: a provider that doesn't map its
@@ -135,11 +142,12 @@ class AlertCheckWorker @AssistedInject constructor(
             prefs.addSeenAlertIds(newSeenIds)
         }
 
-        // If every provider was unreachable, let WorkManager retry with the
-        // configured exponential backoff (bounded by runAttemptCount) instead of
-        // waiting a full 15-minute period — a transient blip shouldn't delay a
-        // severe-weather alert. Partial success (some locations fetched) is done.
-        return if (anyFetchFailed && !anyFetchSucceeded && runAttemptCount < MAX_RETRY_ATTEMPTS) {
+        // If any monitored location couldn't be trusted as "all clear" (every
+        // provider down, or a provider down with no alerts returned), let
+        // WorkManager retry with the configured exponential backoff (bounded by
+        // runAttemptCount) instead of waiting a full 15-minute period — a
+        // transient outage must not delay or mask a severe-weather alert.
+        return if (anyUntrustworthy && runAttemptCount < MAX_RETRY_ATTEMPTS) {
             Result.retry()
         } else {
             Result.success()
