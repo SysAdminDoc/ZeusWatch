@@ -81,7 +81,7 @@ class OwmForecastAdapterTest {
             windSpeedMs = 5.0, // 5 m/s = 18 km/h
         )
 
-        val result = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, "London")
+        val result = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, "London")
         assertTrue(result.isSuccess)
         val data = result.getOrThrow()
         assertEquals("London", data.location.name)
@@ -99,7 +99,7 @@ class OwmForecastAdapterTest {
             windGustMs = 8.0, // 8 m/s = 28.8 km/h
         )
 
-        val data = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow()
+        val data = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, null).getOrThrow()
         assertNotNull(data.current.windGusts)
         assertEquals(28.8, data.current.windGusts!!, 0.01)
     }
@@ -114,7 +114,7 @@ class OwmForecastAdapterTest {
             visibilityM = 8000, // OWM sends meters; stored as-is
         )
 
-        val data = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow()
+        val data = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, null).getOrThrow()
         assertEquals(8000.0, data.current.visibility!!, 0.01)
     }
 
@@ -128,7 +128,7 @@ class OwmForecastAdapterTest {
             weatherId = 800, // Clear sky
         )
 
-        val data = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow()
+        val data = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, null).getOrThrow()
         assertEquals(WeatherCode.CLEAR_SKY, data.current.weatherCode)
     }
 
@@ -142,7 +142,7 @@ class OwmForecastAdapterTest {
             weatherId = 200, // Thunderstorm with light rain
         )
 
-        val data = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow()
+        val data = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, null).getOrThrow()
         assertEquals(WeatherCode.THUNDERSTORM, data.current.weatherCode)
     }
 
@@ -157,7 +157,7 @@ class OwmForecastAdapterTest {
             nowEpoch = nowEpoch,
             icon = "01d",
         )
-        val dayData = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow()
+        val dayData = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, null).getOrThrow()
         assertTrue(dayData.current.isDay)
 
         // Night icon
@@ -165,7 +165,7 @@ class OwmForecastAdapterTest {
             nowEpoch = nowEpoch,
             icon = "01n",
         )
-        val nightData = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow()
+        val nightData = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, null).getOrThrow()
         assertFalse(nightData.current.isDay)
     }
 
@@ -187,7 +187,7 @@ class OwmForecastAdapterTest {
             ),
         )
 
-        val data = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow()
+        val data = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, null).getOrThrow()
         val firstHourly = data.hourly.firstOrNull()
         assertNotNull("hourly should be non-empty", firstHourly)
         assertEquals(75, firstHourly!!.precipitationProbability)
@@ -207,7 +207,7 @@ class OwmForecastAdapterTest {
             ),
         )
 
-        val data = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow()
+        val data = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, null).getOrThrow()
         assertEquals(100, data.hourly.first().precipitationProbability)
     }
 
@@ -217,7 +217,7 @@ class OwmForecastAdapterTest {
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = ""))
 
-        val result = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null)
+        val result = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, null)
         assertTrue("Blank API key must yield failure", result.isFailure)
     }
 
@@ -246,7 +246,7 @@ class OwmForecastAdapterTest {
             ),
         )
 
-        val data = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow()
+        val data = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, null).getOrThrow()
         assertEquals(0.2, data.current.snowfall!!, 0.001)
         assertEquals(0.15, data.hourly.first().snowfall!!, 0.001)
         assertEquals(1.2, data.daily.first().snowfallSum!!, 0.001)
@@ -270,7 +270,7 @@ class OwmForecastAdapterTest {
             ),
         )
 
-        val d = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow().daily.first()
+        val d = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, null).getOrThrow().daily.first()
         assertEquals(8.0, d.precipitationSum!!, 0.001)
     }
 
@@ -290,7 +290,7 @@ class OwmForecastAdapterTest {
             ),
         )
 
-        val d = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow().daily.first()
+        val d = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, null).getOrThrow().daily.first()
         assertEquals(8.0, d.precipitationSum!!, 0.001)
     }
 
@@ -310,7 +310,7 @@ class OwmForecastAdapterTest {
             ),
         )
 
-        val d = OwmForecastAdapter(api, prefs).getWeather(51.5, -0.1, null).getOrThrow().daily.first()
+        val d = OwmForecastAdapter(api, prefs, OwmResponseCache()).getWeather(51.5, -0.1, null).getOrThrow().daily.first()
         assertNull(d.precipitationSum)
     }
 }
@@ -332,7 +332,7 @@ class OwmAlertAdapterTest {
             ),
         )
 
-        val result = OwmAlertAdapter(api, prefs).getAlerts(0.0, 0.0)
+        val result = OwmAlertAdapter(api, prefs, OwmResponseCache()).getAlerts(0.0, 0.0)
         assertTrue(result.isSuccess)
         assertEquals(1, result.getOrThrow().size)
         assertEquals(com.sysadmindoc.nimbus.data.model.AlertSeverity.EXTREME,
@@ -352,7 +352,7 @@ class OwmAlertAdapterTest {
             ),
         )
 
-        val result = OwmAlertAdapter(api, prefs).getAlerts(0.0, 0.0)
+        val result = OwmAlertAdapter(api, prefs, OwmResponseCache()).getAlerts(0.0, 0.0)
         assertEquals(com.sysadmindoc.nimbus.data.model.AlertSeverity.SEVERE,
             result.getOrThrow().first().severity)
     }
@@ -370,7 +370,7 @@ class OwmAlertAdapterTest {
             ),
         )
 
-        val result = OwmAlertAdapter(api, prefs).getAlerts(0.0, 0.0)
+        val result = OwmAlertAdapter(api, prefs, OwmResponseCache()).getAlerts(0.0, 0.0)
         assertEquals(com.sysadmindoc.nimbus.data.model.AlertSeverity.MODERATE,
             result.getOrThrow().first().severity)
     }
@@ -385,7 +385,7 @@ class OwmAlertAdapterTest {
             alerts = emptyList(),
         )
 
-        val result = OwmAlertAdapter(api, prefs).getAlerts(0.0, 0.0)
+        val result = OwmAlertAdapter(api, prefs, OwmResponseCache()).getAlerts(0.0, 0.0)
         assertTrue(result.isSuccess)
         assertTrue(result.getOrThrow().isEmpty())
     }
@@ -396,7 +396,7 @@ class OwmAlertAdapterTest {
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = ""))
 
-        val result = OwmAlertAdapter(api, prefs).getAlerts(0.0, 0.0)
+        val result = OwmAlertAdapter(api, prefs, OwmResponseCache()).getAlerts(0.0, 0.0)
         assertTrue(result.isFailure)
     }
 }

@@ -62,7 +62,7 @@ class ForecastAdapterTimezoneTest {
         ForecastAdapterTimezoneContract.withDeviceTimeZone("America/New_York") {
             val api = mockk<OpenWeatherMapApi>()
             val prefs = mockk<UserPreferences>()
-            val adapter = OwmForecastAdapter(api, prefs)
+            val adapter = OwmForecastAdapter(api, prefs, OwmResponseCache())
             val locationZone = ZoneId.of("Pacific/Pago_Pago")
             val currentInstant = Instant.now().truncatedTo(ChronoUnit.HOURS)
 
