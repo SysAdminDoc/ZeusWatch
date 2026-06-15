@@ -1017,6 +1017,7 @@ private fun PremiumToolbarButton(
 
 // ── Shared Card Renderer ─────────────────────────────────────────────────
 
+@androidx.compose.runtime.Immutable
 private data class CardRenderContext(
     val state: MainUiState,
     val data: WeatherData,
