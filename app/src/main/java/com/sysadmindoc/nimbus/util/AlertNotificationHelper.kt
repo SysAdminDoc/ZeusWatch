@@ -508,16 +508,22 @@ object AlertNotificationHelper {
         else -> NotificationCompat.CATEGORY_RECOMMENDATION
     }
 
+    internal fun isFullScreenIntentAllowed(
+        context: Context,
+        sdkInt: Int = Build.VERSION.SDK_INT,
+    ): Boolean {
+        if (sdkInt < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return true
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        return nm.canUseFullScreenIntent()
+    }
+
     private fun fullScreenPendingIntentForExtremeAlert(
         context: Context,
         notificationId: Int,
         severity: AlertSeverity,
     ): PendingIntent? {
         if (severity != AlertSeverity.EXTREME) return null
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (!nm.canUseFullScreenIntent()) return null
-        }
+        if (!isFullScreenIntentAllowed(context)) return null
         return deepLinkPendingIntent(
             context = context,
             requestCode = notificationId + 0x10000,
