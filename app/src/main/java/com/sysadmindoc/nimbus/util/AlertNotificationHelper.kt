@@ -14,6 +14,7 @@ import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -510,12 +511,20 @@ object AlertNotificationHelper {
 
     internal fun isFullScreenIntentAllowed(
         context: Context,
-        sdkInt: Int = Build.VERSION.SDK_INT,
     ): Boolean {
-        if (sdkInt < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return true
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return true
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        return nm.canUseFullScreenIntent()
+        return canUseFullScreenIntentOnApi34(nm)
     }
+
+    internal fun isFullScreenIntentAllowedForPolicy(
+        sdkInt: Int,
+        canUseFullScreenIntent: Boolean,
+    ): Boolean = sdkInt < Build.VERSION_CODES.UPSIDE_DOWN_CAKE || canUseFullScreenIntent
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private fun canUseFullScreenIntentOnApi34(nm: NotificationManager): Boolean =
+        nm.canUseFullScreenIntent()
 
     private fun fullScreenPendingIntentForExtremeAlert(
         context: Context,

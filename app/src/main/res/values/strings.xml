@@ -573,6 +573,13 @@
     <string name="pressure_trend_semantics">Pressure trend. Current %1$s. %2$s. 24-hour change %3$s hectopascals.</string>
     <string name="temperature_graph_summary">Next %1$d hours: low %2$d°, high %3$d°, %4$s.</string>
     <string name="temperature_graph_semantics">Temperature trend graph. %1$s</string>
+    <string name="temperature_graph_semantics_with_uncertainty">Temperature trend graph. %1$s %2$s</string>
+    <string name="temperature_graph_uncertainty_label">Forecast spread</string>
+    <string name="temperature_graph_uncertainty_summary">Average model spread %1$s: %2$s.</string>
+    <string name="temperature_graph_uncertainty_explainer">The shaded band shows the likely low-to-high range from ensemble models.</string>
+    <string name="temperature_graph_uncertainty_low">narrow band, higher confidence</string>
+    <string name="temperature_graph_uncertainty_medium">moderate band, watch for updates</string>
+    <string name="temperature_graph_uncertainty_high">wide band, lower confidence</string>
     <string name="temperature_trend_warmer">trending warmer</string>
     <string name="temperature_trend_cooler">trending cooler</string>
     <string name="temperature_trend_steady">steady</string>

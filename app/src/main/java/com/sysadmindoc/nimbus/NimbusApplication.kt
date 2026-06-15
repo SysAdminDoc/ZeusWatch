@@ -11,6 +11,7 @@ import coil3.disk.directory
 import coil3.memory.MemoryCache
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.di.DefaultDispatcher
+import com.sysadmindoc.nimbus.security.CommunityReportSecurityInitializer
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
 import com.sysadmindoc.nimbus.util.CrashReporting
@@ -43,6 +44,9 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
     @DefaultDispatcher
     lateinit var defaultDispatcher: CoroutineDispatcher
 
+    @Inject
+    lateinit var communityReportSecurityInitializer: CommunityReportSecurityInitializer
+
     // A failure reading settings or scheduling workers must be logged, not
     // silently swallowed — otherwise alert/widget scheduling just never happens
     // and there's no signal why.
@@ -65,6 +69,7 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
 
     override fun onCreate() {
         super.onCreate()
+        communityReportSecurityInitializer.install(this)
         appScope = CoroutineScope(SupervisorJob() + defaultDispatcher + startupExceptionHandler)
         AlertNotificationHelper.createChannels(this)
         WeatherNotificationHelper.createChannel(this)

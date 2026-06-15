@@ -2,13 +2,20 @@ package com.sysadmindoc.nimbus.ui.component
 
 import android.content.Context
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -36,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.drawText
@@ -50,6 +59,7 @@ import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
+import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.LocalDateTime
@@ -93,7 +103,18 @@ fun TemperatureGraph(
         trendSummary.high,
         stringResource(trendSummary.directionRes),
     )
-    val semanticSummary = stringResource(R.string.temperature_graph_semantics, trendSummaryText)
+    val uncertaintySummary = remember(data, confidenceBands, s.tempUnit) {
+        buildForecastUncertaintySummary(data, confidenceBands, s)
+    }
+    val uncertaintyLevelText = uncertaintySummary?.let { stringResource(it.levelRes) }
+    val uncertaintyText = uncertaintySummary?.let {
+        stringResource(R.string.temperature_graph_uncertainty_summary, it.averageSpread, uncertaintyLevelText ?: "")
+    }
+    val semanticSummary = if (uncertaintyText != null) {
+        stringResource(R.string.temperature_graph_semantics_with_uncertainty, trendSummaryText, uncertaintyText)
+    } else {
+        stringResource(R.string.temperature_graph_semantics, trendSummaryText)
+    }
 
     WeatherCard(
         titleRes = R.string.card_type_temperature_graph,
@@ -101,66 +122,110 @@ fun TemperatureGraph(
             contentDescription = semanticSummary
         },
     ) {
-        Box {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-                    .padding(top = 8.dp, bottom = 4.dp)
-                    .pointerInput(Unit) {
-                        detectHorizontalDragGestures(
-                            onDragStart = { offset ->
-                                inspectX = offset.x
-                                isInspecting = true
-                            },
-                            onDragEnd = { isInspecting = false },
-                            onDragCancel = { isInspecting = false },
-                            onHorizontalDrag = { _, dragAmount ->
-                                inspectX = (inspectX + dragAmount).coerceIn(0f, size.width.toFloat())
-                            },
-                        )
-                    }
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onPress = { offset ->
-                                inspectX = offset.x
-                                isInspecting = true
-                                tryAwaitRelease()
-                                isInspecting = false
-                            },
-                        )
-                    }
-                    .drawWithCache {
-                        val metrics = temperatureGraphMetrics(size.width, size.height, data, density)
-                        val points = temperaturePoints(data, metrics)
-                        val paths = buildTemperaturePaths(points, metrics.baselineY)
-                        val inspectionText = TemperatureInspectionText(
-                            textMeasurer = textMeasurer,
-                            tooltipStyle = tooltipStyle,
-                            settings = s,
-                            referenceTime = referenceTime,
-                            context = context,
-                        )
-
-                        onDrawBehind {
-                            drawPrecipitationBars(data, metrics)
-                            drawNormalBand(metrics, normalHigh, normalLow)
-                            drawConfidenceBand(data, metrics, confidenceBands)
-                            drawTemperatureCurve(paths, metrics)
-                            drawFeelsLikeOverlay(data, metrics)
-                            drawHighLowMarkers(data, points, textMeasurer, labelStyle, s)
-                            drawTimeLabels(data, points, referenceTime, s, textMeasurer, labelStyle, metrics, context)
-                            drawInspectionOverlay(
-                                data = data,
-                                points = points,
-                                inspectX = inspectX,
-                                isInspecting = isInspecting,
-                                metrics = metrics,
-                                inspectionText = inspectionText,
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .padding(top = 8.dp, bottom = 4.dp)
+                        .pointerInput(Unit) {
+                            detectHorizontalDragGestures(
+                                onDragStart = { offset ->
+                                    inspectX = offset.x
+                                    isInspecting = true
+                                },
+                                onDragEnd = { isInspecting = false },
+                                onDragCancel = { isInspecting = false },
+                                onHorizontalDrag = { _, dragAmount ->
+                                    inspectX = (inspectX + dragAmount).coerceIn(0f, size.width.toFloat())
+                                },
                             )
                         }
-                    },
-            ) { }
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onPress = { offset ->
+                                    inspectX = offset.x
+                                    isInspecting = true
+                                    tryAwaitRelease()
+                                    isInspecting = false
+                                },
+                            )
+                        }
+                        .drawWithCache {
+                            val metrics = temperatureGraphMetrics(size.width, size.height, data, density)
+                            val points = temperaturePoints(data, metrics)
+                            val paths = buildTemperaturePaths(points, metrics.baselineY)
+                            val inspectionText = TemperatureInspectionText(
+                                textMeasurer = textMeasurer,
+                                tooltipStyle = tooltipStyle,
+                                settings = s,
+                                referenceTime = referenceTime,
+                                context = context,
+                            )
+
+                            onDrawBehind {
+                                drawPrecipitationBars(data, metrics)
+                                drawNormalBand(metrics, normalHigh, normalLow)
+                                drawConfidenceBand(data, metrics, confidenceBands)
+                                drawTemperatureCurve(paths, metrics)
+                                drawFeelsLikeOverlay(data, metrics)
+                                drawHighLowMarkers(data, points, textMeasurer, labelStyle, s)
+                                drawTimeLabels(data, points, referenceTime, s, textMeasurer, labelStyle, metrics, context)
+                                drawInspectionOverlay(
+                                    data = data,
+                                    points = points,
+                                    inspectX = inspectX,
+                                    isInspecting = isInspecting,
+                                    metrics = metrics,
+                                    inspectionText = inspectionText,
+                                )
+                            }
+                        },
+                ) { }
+            }
+            if (uncertaintySummary != null && uncertaintyText != null) {
+                ForecastUncertaintyLegend(summaryText = uncertaintyText)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ForecastUncertaintyLegend(summaryText: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White.copy(alpha = 0.04f))
+            .border(1.dp, NimbusBlueAccent.copy(alpha = 0.22f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(NimbusBlueAccent.copy(alpha = 0.22f))
+                .border(1.dp, NimbusBlueAccent.copy(alpha = 0.45f), RoundedCornerShape(3.dp)),
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = stringResource(R.string.temperature_graph_uncertainty_label),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = NimbusTextPrimary,
+            )
+            Text(
+                text = summaryText,
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
+            Text(
+                text = stringResource(R.string.temperature_graph_uncertainty_explainer),
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextTertiary,
+            )
         }
     }
 }
@@ -577,6 +642,11 @@ private data class TemperatureTrendSummary(
     val directionRes: Int,
 )
 
+private data class ForecastUncertaintySummary(
+    val averageSpread: String,
+    val levelRes: Int,
+)
+
 private fun buildTemperatureTrendSummary(
     data: List<HourlyConditions>,
     settings: NimbusSettings,
@@ -596,5 +666,31 @@ private fun buildTemperatureTrendSummary(
         low = low.toInt(),
         high = high.toInt(),
         directionRes = directionRes,
+    )
+}
+
+private fun buildForecastUncertaintySummary(
+    data: List<HourlyConditions>,
+    confidenceBands: ConfidenceBandData?,
+    settings: NimbusSettings,
+): ForecastUncertaintySummary? {
+    confidenceBands ?: return null
+    val spreads = data.mapNotNull { hour ->
+        confidenceBands.entryAt(hour.time)?.let { entry ->
+            (entry.temperatureUpper - entry.temperatureLower)
+                .takeIf { it >= 0.0 && !it.isNaN() && !it.isInfinite() }
+        }
+    }
+    if (spreads.size < 2) return null
+
+    val averageSpreadC = spreads.average()
+    val levelRes = when {
+        averageSpreadC < 2.0 -> R.string.temperature_graph_uncertainty_low
+        averageSpreadC < 5.0 -> R.string.temperature_graph_uncertainty_medium
+        else -> R.string.temperature_graph_uncertainty_high
+    }
+    return ForecastUncertaintySummary(
+        averageSpread = WeatherFormatter.formatTemperatureDelta(averageSpreadC, settings),
+        levelRes = levelRes,
     )
 }
