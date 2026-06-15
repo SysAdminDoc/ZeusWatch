@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -128,35 +129,38 @@ fun TemperatureGraph(
                                 isInspecting = false
                             },
                         )
-                    },
-            ) {
-                val metrics = temperatureGraphMetrics(size.width, size.height, data, density)
-                val points = temperaturePoints(data, metrics)
-                val paths = buildTemperaturePaths(points, metrics.baselineY)
+                    }
+                    .drawWithCache {
+                        val metrics = temperatureGraphMetrics(size.width, size.height, data, density)
+                        val points = temperaturePoints(data, metrics)
+                        val paths = buildTemperaturePaths(points, metrics.baselineY)
+                        val inspectionText = TemperatureInspectionText(
+                            textMeasurer = textMeasurer,
+                            tooltipStyle = tooltipStyle,
+                            settings = s,
+                            referenceTime = referenceTime,
+                            context = context,
+                        )
 
-                drawPrecipitationBars(data, metrics)
-                drawNormalBand(metrics, normalHigh, normalLow)
-                drawConfidenceBand(data, metrics, confidenceBands)
-                drawTemperatureCurve(paths, metrics)
-                drawFeelsLikeOverlay(data, metrics)
-                drawHighLowMarkers(data, points, textMeasurer, labelStyle, s)
-                drawTimeLabels(data, points, referenceTime, s, textMeasurer, labelStyle, metrics, context)
-                val inspectionText = TemperatureInspectionText(
-                    textMeasurer = textMeasurer,
-                    tooltipStyle = tooltipStyle,
-                    settings = s,
-                    referenceTime = referenceTime,
-                    context = context,
-                )
-                drawInspectionOverlay(
-                    data = data,
-                    points = points,
-                    inspectX = inspectX,
-                    isInspecting = isInspecting,
-                    metrics = metrics,
-                    inspectionText = inspectionText,
-                )
-            }
+                        onDrawBehind {
+                            drawPrecipitationBars(data, metrics)
+                            drawNormalBand(metrics, normalHigh, normalLow)
+                            drawConfidenceBand(data, metrics, confidenceBands)
+                            drawTemperatureCurve(paths, metrics)
+                            drawFeelsLikeOverlay(data, metrics)
+                            drawHighLowMarkers(data, points, textMeasurer, labelStyle, s)
+                            drawTimeLabels(data, points, referenceTime, s, textMeasurer, labelStyle, metrics, context)
+                            drawInspectionOverlay(
+                                data = data,
+                                points = points,
+                                inspectX = inspectX,
+                                isInspecting = isInspecting,
+                                metrics = metrics,
+                                inspectionText = inspectionText,
+                            )
+                        }
+                    },
+            ) { }
         }
     }
 }
