@@ -60,7 +60,7 @@ fun CurrentScreen(
         } else if (state.error != null) {
             WearStateCard(
                 title = stringResource(R.string.wear_forecast_unavailable),
-                message = state.error,
+                message = stringResource(R.string.wear_forecast_unavailable_message),
                 icon = "\u26A0\uFE0F",
                 actionLabel = stringResource(R.string.retry),
                 onAction = onRefresh,

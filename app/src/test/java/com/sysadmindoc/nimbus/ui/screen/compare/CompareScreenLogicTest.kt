@@ -22,7 +22,7 @@ class CompareScreenLogicTest {
     fun `shouldShowCompareFullScreenError only triggers when no locations are available`() {
         assertTrue(
             shouldShowCompareFullScreenError(
-                CompareUiState(error1 = "Network failure")
+                CompareUiState(failedLocation1 = savedLocation)
             )
         )
 
@@ -30,7 +30,7 @@ class CompareScreenLogicTest {
             shouldShowCompareFullScreenError(
                 CompareUiState(
                     savedLocations = listOf(savedLocation),
-                    error1 = "Network failure",
+                    failedLocation1 = savedLocation,
                 )
             )
         )

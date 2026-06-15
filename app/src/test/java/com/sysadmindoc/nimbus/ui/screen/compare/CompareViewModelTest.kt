@@ -23,6 +23,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -112,6 +113,19 @@ class CompareViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(miami.id, state.location1?.id)
         assertEquals(miami.name, state.weather1?.location?.name)
+        assertFalse(state.isLoading)
+    }
+
+    @Test
+    fun `failed comparison request records failed location without raw error copy`() = runTest {
+        coEvery { weatherRepository.getWeather(seattle) } returns Result.failure(Exception("raw network failure"))
+
+        viewModel = CompareViewModel(weatherRepository, locationRepository)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.hasError)
+        assertEquals(seattle.id, state.failedLocation2?.id)
         assertFalse(state.isLoading)
     }
 

@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.wear
 
+import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,6 +19,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "WearWeatherViewModel"
+private const val WEATHER_LOAD_FAILED = "weather_load_failed"
 
 @HiltViewModel
 class WearWeatherViewModel @Inject constructor(
@@ -70,8 +74,9 @@ class WearWeatherViewModel @Inject constructor(
                     }
                 },
                 onFailure = { e ->
+                    Log.w(TAG, "Failed to load wear weather", e)
                     _uiState.update {
-                        it.copy(isLoading = false, error = e.message ?: "Failed to load weather")
+                        it.copy(isLoading = false, error = WEATHER_LOAD_FAILED)
                     }
                 },
             )
