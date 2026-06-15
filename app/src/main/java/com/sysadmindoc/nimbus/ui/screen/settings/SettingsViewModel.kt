@@ -3,6 +3,7 @@ package com.sysadmindoc.nimbus.ui.screen.settings
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.nimbus.R
@@ -51,8 +52,8 @@ class SettingsViewModel @Inject constructor(
     private val _availableIconPacks = MutableStateFlow<List<IconPack>>(emptyList())
     val availableIconPacks: StateFlow<List<IconPack>> = _availableIconPacks.asStateFlow()
 
-    private val _transferStatus = MutableStateFlow<String?>(null)
-    val transferStatus: StateFlow<String?> = _transferStatus.asStateFlow()
+    private val _transferStatus = MutableStateFlow<SettingsTransferStatus?>(null)
+    val transferStatus: StateFlow<SettingsTransferStatus?> = _transferStatus.asStateFlow()
 
     private val _pendingImportPreview = MutableStateFlow<SettingsImportPreview?>(null)
     val pendingImportPreview: StateFlow<SettingsImportPreview?> = _pendingImportPreview.asStateFlow()
@@ -194,10 +195,10 @@ class SettingsViewModel @Inject constructor(
                 } ?: error("Could not open export file.")
             }
         }.fold(
-            onSuccess = { _transferStatus.value = appContext.getString(R.string.settings_transfer_export_success) },
+            onSuccess = { _transferStatus.value = SettingsTransferStatus.ExportSuccess },
             onFailure = {
                 Log.w(TAG, "Failed to export settings", it)
-                _transferStatus.value = appContext.getString(R.string.settings_transfer_export_error)
+                _transferStatus.value = SettingsTransferStatus.ExportError
             },
         )
     }
@@ -221,7 +222,7 @@ class SettingsViewModel @Inject constructor(
                 Log.w(TAG, "Failed to preview settings import", it)
                 pendingImportRaw = null
                 _pendingImportPreview.value = null
-                _transferStatus.value = appContext.getString(R.string.settings_transfer_import_error)
+                _transferStatus.value = SettingsTransferStatus.ImportError
             },
         )
     }
@@ -234,15 +235,14 @@ class SettingsViewModel @Inject constructor(
             onSuccess = { result ->
                 pendingImportRaw = null
                 _pendingImportPreview.value = null
-                _transferStatus.value = appContext.getString(
-                    R.string.settings_transfer_import_success,
-                    result.savedLocationCount,
-                    result.customAlertCount,
+                _transferStatus.value = SettingsTransferStatus.ImportSuccess(
+                    savedLocationCount = result.savedLocationCount,
+                    customAlertCount = result.customAlertCount,
                 )
             },
             onFailure = {
                 Log.w(TAG, "Failed to import settings", it)
-                _transferStatus.value = appContext.getString(R.string.settings_transfer_import_error)
+                _transferStatus.value = SettingsTransferStatus.ImportError
             },
         )
     }
@@ -254,5 +254,38 @@ class SettingsViewModel @Inject constructor(
 
     fun clearTransferStatus() {
         _transferStatus.value = null
+    }
+}
+
+enum class SettingsTransferStatusTone {
+    SUCCESS,
+    ERROR,
+}
+
+sealed interface SettingsTransferStatus {
+    @get:StringRes val messageRes: Int
+    val tone: SettingsTransferStatusTone
+
+    data object ExportSuccess : SettingsTransferStatus {
+        override val messageRes: Int = R.string.settings_transfer_export_success
+        override val tone: SettingsTransferStatusTone = SettingsTransferStatusTone.SUCCESS
+    }
+
+    data object ExportError : SettingsTransferStatus {
+        override val messageRes: Int = R.string.settings_transfer_export_error
+        override val tone: SettingsTransferStatusTone = SettingsTransferStatusTone.ERROR
+    }
+
+    data class ImportSuccess(
+        val savedLocationCount: Int,
+        val customAlertCount: Int,
+    ) : SettingsTransferStatus {
+        override val messageRes: Int = R.string.settings_transfer_import_success
+        override val tone: SettingsTransferStatusTone = SettingsTransferStatusTone.SUCCESS
+    }
+
+    data object ImportError : SettingsTransferStatus {
+        override val messageRes: Int = R.string.settings_transfer_import_error
+        override val tone: SettingsTransferStatusTone = SettingsTransferStatusTone.ERROR
     }
 }

@@ -44,6 +44,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
@@ -82,6 +84,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -125,7 +128,7 @@ internal fun SettingsContent(
     onNavigateToCustomAlerts: () -> Unit = {},
     notificationsPermissionGranted: Boolean = true,
     availableIconPacks: List<IconPack> = emptyList(),
-    transferStatus: String? = null,
+    transferStatus: SettingsTransferStatus? = null,
     pendingImportPreview: SettingsImportPreview? = null,
     actions: SettingsActions = SettingsActions(),
 ) {
@@ -251,7 +254,7 @@ private fun SettingsCategoryContent(
     notificationsPermissionGranted: Boolean,
     availableIconPacks: List<IconPack>,
     onNavigateToCustomAlerts: () -> Unit,
-    transferStatus: String?,
+    transferStatus: SettingsTransferStatus?,
     pendingImportPreview: SettingsImportPreview?,
     actions: SettingsActions,
 ) {
@@ -355,8 +358,9 @@ private fun SettingsThemeAndSummaryControls(
     }
     if (settings.summaryStyle == SummaryStyle.CUSTOM_TEMPLATE) {
         Spacer(modifier = Modifier.height(8.dp))
+        val templateLabel = stringResource(R.string.settings_custom_template_label)
         Text(
-            stringResource(R.string.settings_custom_template_label),
+            templateLabel,
             style = MaterialTheme.typography.bodySmall,
             color = NimbusTextSecondary,
             modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
@@ -374,6 +378,7 @@ private fun SettingsThemeAndSummaryControls(
                 .clip(RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                 .border(1.dp, NimbusTextSecondary.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                .semantics { contentDescription = templateLabel }
                 .padding(12.dp),
             textStyle = MaterialTheme.typography.bodySmall.copy(color = NimbusTextPrimary),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
@@ -884,7 +889,7 @@ private fun SettingsApiKeyFields(
 @Composable
 private fun SettingsAdvancedSection(
     settings: NimbusSettings,
-    transferStatus: String?,
+    transferStatus: SettingsTransferStatus?,
     pendingImportPreview: SettingsImportPreview?,
     actions: SettingsActions,
 ) {
@@ -935,11 +940,15 @@ private fun SettingsAdvancedSection(
             SettingsImportPreviewCard(preview, actions)
         }
         transferStatus?.let { status ->
+            val statusMessage = settingsTransferStatusMessage(status)
+            val isSuccess = status.tone == SettingsTransferStatusTone.SUCCESS
             Spacer(modifier = Modifier.height(10.dp))
             InlineNoticeCard(
                 title = stringResource(R.string.settings_transfer_status_title),
-                message = status,
-                icon = Icons.Filled.FileDownload,
+                message = statusMessage,
+                icon = if (isSuccess) Icons.Filled.CheckCircle else Icons.Filled.ErrorOutline,
+                tint = if (isSuccess) NimbusSuccess else NimbusError,
+                liveRegion = LiveRegionMode.Polite,
                 modifier = Modifier.clickable(
                     onClick = actions.onClearTransferStatus,
                     role = Role.Button,
@@ -947,6 +956,18 @@ private fun SettingsAdvancedSection(
             )
         }
     }
+}
+
+@Composable
+private fun settingsTransferStatusMessage(status: SettingsTransferStatus): String = when (status) {
+    SettingsTransferStatus.ExportSuccess,
+    SettingsTransferStatus.ExportError,
+    SettingsTransferStatus.ImportError -> stringResource(status.messageRes)
+    is SettingsTransferStatus.ImportSuccess -> stringResource(
+        status.messageRes,
+        status.savedLocationCount,
+        status.customAlertCount,
+    )
 }
 
 @Composable

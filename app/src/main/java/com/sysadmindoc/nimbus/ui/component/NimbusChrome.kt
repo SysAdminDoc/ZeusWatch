@@ -50,8 +50,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -576,6 +578,7 @@ fun InlineNoticeCard(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     tint: Color = NimbusBlueAccent,
+    liveRegion: LiveRegionMode? = null,
 ) {
     Row(
         modifier = modifier
@@ -590,7 +593,12 @@ fun InlineNoticeCard(
                 ),
             )
             .border(1.dp, tint.copy(alpha = 0.22f), RoundedCornerShape(10.dp))
-            .semantics(mergeDescendants = true) {}
+            .semantics(mergeDescendants = true) {
+                contentDescription = "$title. $message"
+                if (liveRegion != null) {
+                    this.liveRegion = liveRegion
+                }
+            }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
