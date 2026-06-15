@@ -813,7 +813,7 @@ private fun LocationLeadingControl(
     if (showDragHandle) {
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(48.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(NimbusCardBg.copy(alpha = 0.72f))
                 .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
@@ -1092,7 +1092,7 @@ private fun LocationIconAction(
 
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(48.dp)
             .graphicsLayer {
                 scaleX = if (pressed) 0.97f else 1f
                 scaleY = if (pressed) 0.97f else 1f
@@ -1146,7 +1146,7 @@ private fun SourceDropdownTrigger(
     Row(
         modifier = Modifier
             .widthIn(min = 132.dp, max = 178.dp)
-            .heightIn(min = 42.dp)
+            .heightIn(min = 48.dp)
             .graphicsLayer {
                 scaleX = if (pressed) 0.98f else 1f
                 scaleY = if (pressed) 0.98f else 1f

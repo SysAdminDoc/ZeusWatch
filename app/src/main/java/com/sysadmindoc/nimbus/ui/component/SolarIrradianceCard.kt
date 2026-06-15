@@ -26,6 +26,7 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import java.util.Locale
 
 private val GHI_COLOR = Color(0xFFFFD54F)
 private val DNI_COLOR = Color(0xFFFF8F00)
@@ -48,7 +49,7 @@ fun SolarIrradianceCard(
         R.string.solar_semantics,
         currentGhi.toInt(),
         currentDni.toInt(),
-        String.format("%.1f", dailyEnergy),
+        formatOneDecimal(dailyEnergy),
     )
 
     WeatherCard(
@@ -95,7 +96,7 @@ fun SolarIrradianceCard(
                     color = NimbusTextTertiary,
                 )
                 Text(
-                    text = stringResource(R.string.solar_kwh_value, String.format("%.1f", dailyEnergy)),
+                    text = stringResource(R.string.solar_kwh_value, formatOneDecimal(dailyEnergy)),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = NimbusTextSecondary,
                 )
@@ -113,6 +114,9 @@ fun SolarIrradianceCard(
         )
     }
 }
+
+private fun formatOneDecimal(value: Double): String =
+    String.format(Locale.getDefault(), "%.1f", value)
 
 @Composable
 private fun SolarChart(
