@@ -112,7 +112,7 @@ private fun CompareScreenBody(
 ) {
     when {
         state.isLoading && state.savedLocations.isEmpty() -> CompareFullScreenLoading()
-        shouldShowCompareFullScreenError(state) -> CompareFullScreenError(state.error, actions.onRetry)
+        shouldShowCompareFullScreenError(state) -> CompareFullScreenError(state, actions.onRetry)
         else -> CompareScrollableContent(state, settings, actions)
     }
 }
@@ -130,13 +130,13 @@ private fun CompareFullScreenLoading() {
 
 @Composable
 private fun CompareFullScreenError(
-    error: String?,
+    state: CompareUiState,
     onRetry: () -> Unit,
 ) {
     CompareCenteredState {
         CompareStateCard(
             title = stringResource(R.string.compare_unavailable_title),
-            message = error ?: stringResource(R.string.common_something_went_wrong),
+            message = compareLoadErrorMessage(state),
             actionLabel = stringResource(R.string.retry),
             onAction = onRetry,
         )
@@ -262,9 +262,9 @@ private fun CompareResultSection(
         state.savedLocations.size == 1 -> CompareNeedSecondLocation(state, actions.onNavigateToLocations)
         // One slot failed but the other loaded: keep the healthy slot's data
         // visible and scope the error card to the failed slot only.
-        state.error != null && (state.weather1 != null || state.weather2 != null) ->
+        state.hasError && (state.weather1 != null || state.weather2 != null) ->
             ComparePartialWeather(state, settings, actions)
-        state.error != null -> CompareLoadFailed(state.error, actions.onRetry)
+        state.hasError -> CompareLoadFailed(state, actions.onRetry)
         state.weather1 == null || state.weather2 == null -> CompareLoadingPair()
         else -> CompareLoadedWeather(state, settings)
     }
@@ -298,12 +298,12 @@ private fun CompareNeedSecondLocation(
 
 @Composable
 private fun CompareLoadFailed(
-    error: String?,
+    state: CompareUiState,
     onRetry: () -> Unit,
 ) {
     CompareEmptyState(
         title = stringResource(R.string.compare_load_failed_title),
-        message = error ?: stringResource(R.string.compare_load_failed_message),
+        message = compareLoadErrorMessage(state),
         actionLabel = stringResource(R.string.retry),
         onAction = onRetry,
     )
@@ -356,7 +356,22 @@ private fun ComparePartialWeather(
         CompareConditionColumn(loadedWeather, settings)
     }
     Spacer(Modifier.height(12.dp))
-    CompareLoadFailed(state.error, actions.onRetry)
+    CompareLoadFailed(state, actions.onRetry)
+}
+
+@Composable
+private fun compareLoadErrorMessage(state: CompareUiState): String {
+    val failedLocation = state.failedLocation
+    return if (failedLocation != null) {
+        val locationName = if (failedLocation.isCurrentLocation) {
+            stringResource(R.string.common_my_location)
+        } else {
+            failedLocation.name
+        }
+        stringResource(R.string.compare_load_failed_location_message, locationName)
+    } else {
+        stringResource(R.string.compare_load_failed_message)
+    }
 }
 
 @Composable
@@ -943,5 +958,5 @@ internal fun highlightedCompareSides(
 }
 
 internal fun shouldShowCompareFullScreenError(state: CompareUiState): Boolean {
-    return state.error != null && state.savedLocations.isEmpty()
+    return state.hasError && state.savedLocations.isEmpty()
 }

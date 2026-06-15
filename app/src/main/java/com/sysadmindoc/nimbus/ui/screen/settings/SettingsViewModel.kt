@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.ui.screen.settings
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.nimbus.R
@@ -26,6 +27,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+
+private const val TAG = "SettingsViewModel"
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -193,10 +196,8 @@ class SettingsViewModel @Inject constructor(
         }.fold(
             onSuccess = { _transferStatus.value = appContext.getString(R.string.settings_transfer_export_success) },
             onFailure = {
-                _transferStatus.value = appContext.getString(
-                    R.string.settings_transfer_export_error,
-                    it.message ?: appContext.getString(R.string.common_something_went_wrong),
-                )
+                Log.w(TAG, "Failed to export settings", it)
+                _transferStatus.value = appContext.getString(R.string.settings_transfer_export_error)
             },
         )
     }
@@ -217,12 +218,10 @@ class SettingsViewModel @Inject constructor(
         }.fold(
             onSuccess = {},
             onFailure = {
+                Log.w(TAG, "Failed to preview settings import", it)
                 pendingImportRaw = null
                 _pendingImportPreview.value = null
-                _transferStatus.value = appContext.getString(
-                    R.string.settings_transfer_import_error,
-                    it.message ?: appContext.getString(R.string.common_something_went_wrong),
-                )
+                _transferStatus.value = appContext.getString(R.string.settings_transfer_import_error)
             },
         )
     }
@@ -242,10 +241,8 @@ class SettingsViewModel @Inject constructor(
                 )
             },
             onFailure = {
-                _transferStatus.value = appContext.getString(
-                    R.string.settings_transfer_import_error,
-                    it.message ?: appContext.getString(R.string.common_something_went_wrong),
-                )
+                Log.w(TAG, "Failed to import settings", it)
+                _transferStatus.value = appContext.getString(R.string.settings_transfer_import_error)
             },
         )
     }

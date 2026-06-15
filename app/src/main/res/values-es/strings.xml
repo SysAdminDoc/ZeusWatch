@@ -243,6 +243,7 @@
     <string name="report_choose_condition">Elegir una condición</string>
     <string name="report_submit">Enviar reporte</string>
     <string name="report_success">Reporte enviado. Gracias por ayudar a usuarios cercanos.</string>
+    <string name="report_submit_error">No pudimos enviar ese reporte ahora. Revisa tu conexión e inténtalo de nuevo.</string>
     <string name="report_condition_cd">Condición %1$s</string>
     <string name="report_condition_sunny">Soleado</string>
     <string name="report_condition_partly_cloudy">Parcialmente nublado</string>
@@ -786,6 +787,7 @@
     <string name="compare_add_another_location">Agregar otra ubicación</string>
     <string name="compare_load_failed_title">No se pudo cargar la comparación</string>
     <string name="compare_load_failed_message">Algo salió mal al comparar ubicaciones.</string>
+    <string name="compare_load_failed_location_message">No se pudo cargar el clima de %1$s. Revisa tu conexión e inténtalo de nuevo.</string>
     <string name="compare_loading_title">Cargando comparación</string>
     <string name="compare_loading_message">Obteniendo pronósticos nuevos para ambas ubicaciones.</string>
     <string name="compare_feels_like_label">Sensación</string>
@@ -977,9 +979,9 @@
     <string name="settings_transfer_warning_blank_locations">%1$d ubicaciones guardadas tienen nombres vacíos y se omitirán.</string>
     <string name="settings_transfer_warning_duplicate_locations">%1$d ubicaciones guardadas duplicadas se omitirán.</string>
     <string name="settings_transfer_export_success">Ajustes exportados.</string>
-    <string name="settings_transfer_export_error">Error al exportar: %1$s</string>
+    <string name="settings_transfer_export_error">Error al exportar. Revisa el acceso al almacenamiento e inténtalo de nuevo.</string>
     <string name="settings_transfer_import_success">Ajustes restaurados con %1$d ubicaciones guardadas y %2$d alertas personalizadas.</string>
-    <string name="settings_transfer_import_error">Error al importar: %1$s</string>
+    <string name="settings_transfer_import_error">Error al importar. Elige un archivo de copia de ZeusWatch válido e inténtalo de nuevo.</string>
     <string name="settings_minutes">%1$d minutos</string>
     <string name="settings_hours">%1$d horas</string>
     <string name="settings_hour">%1$d hora</string>

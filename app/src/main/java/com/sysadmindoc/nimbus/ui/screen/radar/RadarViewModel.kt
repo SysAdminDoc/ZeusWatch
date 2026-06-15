@@ -30,6 +30,8 @@ import androidx.compose.runtime.Stable
 import javax.inject.Inject
 
 private const val RADAR_FRAME_REFRESH_INTERVAL_MS = 5 * 60 * 1000L
+private const val RADAR_LOAD_FAILED = "radar_load_failed"
+private const val REPORT_SUBMIT_FAILED = "report_submit_failed"
 
 @HiltViewModel
 class RadarViewModel @Inject constructor(
@@ -100,8 +102,9 @@ class RadarViewModel @Inject constructor(
                         }
                     },
                     onFailure = { e ->
+                        Log.w("RadarViewModel", "Failed to load radar frames", e)
                         _uiState.update {
-                            it.copy(isLoading = false, error = e.message ?: "Failed to load radar")
+                            it.copy(isLoading = false, error = RADAR_LOAD_FAILED)
                         }
                     }
                 )
@@ -249,8 +252,9 @@ class RadarViewModel @Inject constructor(
                     loadNearbyReports(lat, lon)
                 },
                 onFailure = { e ->
+                    Log.w("RadarViewModel", "Failed to submit community report", e)
                     _reportSubmitState.update {
-                        it.copy(isSubmitting = false, result = e.message ?: "Submission failed")
+                        it.copy(isSubmitting = false, result = REPORT_SUBMIT_FAILED)
                     }
                 }
             )
@@ -303,7 +307,7 @@ data class RadarUiState(
 @Stable
 data class ReportSubmitState(
     val isSubmitting: Boolean = false,
-    val result: String? = null, // null = idle, "success" = done, else error message
+    val result: String? = null, // null = idle, "success" = done, any other value = failed
 )
 
 internal fun canAnimateRadarPlayback(frameSet: RadarFrameSet?): Boolean =

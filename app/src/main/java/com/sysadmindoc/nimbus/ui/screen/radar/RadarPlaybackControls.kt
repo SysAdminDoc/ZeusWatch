@@ -123,7 +123,7 @@ fun RadarPlaybackControls(
                 enabled = playbackEnabled,
                 onClick = onTogglePlayback,
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(48.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(
                         if (playbackEnabled) NimbusBlueAccent.copy(alpha = 0.95f)

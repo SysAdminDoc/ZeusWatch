@@ -70,6 +70,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -546,7 +547,10 @@ private fun RuleThresholdInput(
             onValueChange = { onThresholdTextChange(it.replace(',', '.').filter { ch -> ch.isDigit() || ch == '.' || ch == '-' }) },
             textStyle = TextStyle(color = NimbusTextPrimary, fontSize = 20.sp),
             cursorBrush = SolidColor(NimbusBlueAccent),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Done,
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))

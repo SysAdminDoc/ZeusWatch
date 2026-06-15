@@ -85,7 +85,7 @@ import com.sysadmindoc.nimbus.util.labelRes
 @Composable
 fun ReportSubmitSheet(
     isSubmitting: Boolean,
-    submitResult: String?, // null = idle, "success" = done, else error message
+    submitResult: String?, // null = idle, "success" = done, any other value = failed
     onSubmit: (ReportCondition, String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -241,7 +241,7 @@ fun ReportSubmitSheet(
                 val feedbackMessage = if (isSuccess) {
                     stringResource(R.string.report_success)
                 } else {
-                    submitResult ?: ""
+                    stringResource(R.string.report_submit_error)
                 }
                 ReportFeedbackCard(
                     message = feedbackMessage,

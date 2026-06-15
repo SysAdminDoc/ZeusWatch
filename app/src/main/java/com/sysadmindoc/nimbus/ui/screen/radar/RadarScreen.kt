@@ -500,7 +500,7 @@ private fun BoxScope.RadarStatusOverlay(
             isOffline = state.isOffline,
         ) -> RadarStatusCard(
             title = radarUnavailableTitle,
-            message = state.radarState.error ?: radarUnavailableMessage,
+            message = radarUnavailableMessage,
             onRetry = onRetryFrames,
             modifier = Modifier.align(Alignment.Center),
         )

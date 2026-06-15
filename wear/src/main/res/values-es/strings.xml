@@ -17,6 +17,7 @@
     <string name="wear_refreshing_forecast">Actualizando pronóstico</string>
     <string name="wear_refreshing_forecast_message">Obteniendo el clima más reciente para tu lugar actual.</string>
     <string name="wear_forecast_unavailable">Pronóstico no disponible</string>
+    <string name="wear_forecast_unavailable_message">Revisa tu conexión o vuelve a actualizar en un momento.</string>
     <string name="wear_daylight">De día</string>
     <string name="wear_overnight">Noche</string>
     <string name="wear_high_low">Max %1$d\u00B0 \u2022 Min %2$d\u00B0</string>
