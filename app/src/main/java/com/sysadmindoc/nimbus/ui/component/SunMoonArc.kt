@@ -10,6 +10,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
@@ -84,30 +85,34 @@ fun SunArc(
                 contentDescription = semanticSummary
             }
             .fillMaxWidth()
-            .height(if (moonState != null) 100.dp else 70.dp),
-    ) {
-        val w = size.width
-        val h = size.height
-        val layout = SunArcLayout(
-            width = w,
-            horizonY = h * 0.80f,
-            arcRadius = w * 0.42f,
-            centerX = w / 2f,
-        )
-        drawTwilightZones(layout, totalMinutes, twilightColor)
-        drawHorizonLine(layout)
-        drawSunTrack(layout, sunProgress, isDaylight)
-        drawSunPosition(layout, sunProgress, isDaylight)
-        drawMoonTrack(layout, moonState)
-        drawSunArcLabels(
-            layout = layout,
-            textMeasurer = textMeasurer,
-            labelStyle = labelStyle,
-            sunriseLabel = sunriseLabel,
-            sunsetLabel = sunsetLabel,
-            twilightLabel = twilightLabel,
-        )
-    }
+            .height(if (moonState != null) 100.dp else 70.dp)
+            .drawWithCache {
+                val w = size.width
+                val h = size.height
+                val layout = SunArcLayout(
+                    width = w,
+                    horizonY = h * 0.80f,
+                    arcRadius = w * 0.42f,
+                    centerX = w / 2f,
+                )
+
+                onDrawBehind {
+                    drawTwilightZones(layout, totalMinutes, twilightColor)
+                    drawHorizonLine(layout)
+                    drawSunTrack(layout, sunProgress, isDaylight)
+                    drawSunPosition(layout, sunProgress, isDaylight)
+                    drawMoonTrack(layout, moonState)
+                    drawSunArcLabels(
+                        layout = layout,
+                        textMeasurer = textMeasurer,
+                        labelStyle = labelStyle,
+                        sunriseLabel = sunriseLabel,
+                        sunsetLabel = sunsetLabel,
+                        twilightLabel = twilightLabel,
+                    )
+                }
+            },
+    ) { }
 }
 
 private data class SunArcTimes(
