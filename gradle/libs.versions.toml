@@ -42,7 +42,7 @@ turbine = "1.2.0"
 core-testing = "2.2.0"
 junit-ext = "1.2.1"
 espresso = "3.7.0"
-hilt-testing = "2.53.1"
+hilt-testing = "2.59.2"
 robolectric = "4.15.1"
 
 [libraries]
