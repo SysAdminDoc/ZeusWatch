@@ -575,7 +575,7 @@ private fun DrawScope.drawInspectionOverlay(
 ) {
     if (!isInspecting || inspectX < 0f || metrics.stepX <= 0f) return
 
-    val nearestIndex = ((inspectX / metrics.stepX).toInt()).coerceIn(0, data.lastIndex)
+    val nearestIndex = ((inspectX / metrics.stepX + 0.5f).toInt()).coerceIn(0, data.lastIndex)
     val nearPoint = points[nearestIndex]
     val nearHour = data[nearestIndex]
     drawInspectionGuide(nearPoint, metrics)

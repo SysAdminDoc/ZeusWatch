@@ -379,10 +379,14 @@ class WidgetRefreshWorker @AssistedInject constructor(
                         state.weatherByLocationKey[key] = weather
                         state.refreshedAnyLocation = true
                     }
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
                 } catch (_: Exception) {
                     // Individual location failure is non-fatal.
                 }
             }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
             // Non-fatal; widget update already succeeded.
         }

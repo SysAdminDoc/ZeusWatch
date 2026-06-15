@@ -9,7 +9,7 @@ val NimbusTypography = Typography(
     displayLarge = TextStyle(
         fontWeight = FontWeight.Light,
         fontSize = 88.sp,
-        lineHeight = 82.sp,
+        lineHeight = 96.sp,
         letterSpacing = 0.sp,
     ),
     displayMedium = TextStyle(
