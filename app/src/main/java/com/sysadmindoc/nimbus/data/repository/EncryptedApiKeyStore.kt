@@ -96,6 +96,16 @@ class EncryptedApiKeyStore(context: Context) {
 
 private fun createAead(context: Context): Aead {
     AeadConfig.register()
+    return try {
+        buildAead(context)
+    } catch (_: Exception) {
+        context.getSharedPreferences(TINK_KEYSET_PREFS, Context.MODE_PRIVATE)
+            .edit().clear().commit()
+        buildAead(context)
+    }
+}
+
+private fun buildAead(context: Context): Aead {
     val keysetHandle = AndroidKeysetManager.Builder()
         .withSharedPref(context, TINK_KEYSET_NAME, TINK_KEYSET_PREFS)
         .withKeyTemplate(KeyTemplate.createFrom(PredefinedAeadParameters.AES256_GCM))
