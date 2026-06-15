@@ -11,6 +11,7 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.view.WindowCompat
@@ -35,6 +36,7 @@ import javax.inject.Inject
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import androidx.window.layout.WindowLayoutInfo
+import kotlinx.coroutines.flow.map
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -60,13 +62,17 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
-            val windowLayoutInfo by WindowInfoTracker
-                .getOrCreate(this)
-                .windowLayoutInfo(this)
-                .collectAsStateWithLifecycle(initialValue = WindowLayoutInfo(emptyList()))
+            val foldPostureFlow = remember {
+                WindowInfoTracker
+                    .getOrCreate(this)
+                    .windowLayoutInfo(this)
+                    .map { it.foldPosture() }
+            }
+            val foldPosture by foldPostureFlow
+                .collectAsStateWithLifecycle(initialValue = FoldPosture.FLAT)
             val adaptiveInfo = AdaptiveLayoutInfo.from(
                 widthClass = windowSizeClass.widthSizeClass,
-                foldPosture = windowLayoutInfo.foldPosture(),
+                foldPosture = foldPosture,
             )
             val settings by prefs.settings.collectAsStateWithLifecycle(initialValue = NimbusSettings())
             // Hoisted above NimbusTheme: the weather-adaptive scheme reads
