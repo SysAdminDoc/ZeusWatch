@@ -84,9 +84,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.math.abs
-import kotlin.math.ln
-import kotlin.math.tan
-import kotlin.math.cos
 import java.util.concurrent.atomic.AtomicLong
 
 private const val TAG = "MainViewModel"
@@ -706,13 +703,9 @@ class MainViewModel @Inject constructor(
                         }
                         return@fold
                     }
-                    val zoom = 6
-                    val (tileX, tileY) = latLonToTile(lat, lon, zoom)
-                    val radarUrl = latestFrame.tileUrl
-                        .replace("{z}", zoom.toString())
-                        .replace("{x}", tileX.toString())
-                        .replace("{y}", tileY.toString())
-                    val baseUrl = "https://basemaps.cartocdn.com/dark_all/$zoom/$tileX/$tileY@2x.png"
+                    val preview = radarRepository.buildPreviewTileUrls(lat, lon, latestFrame.tileUrl)
+                    val radarUrl = preview.radarTileUrl
+                    val baseUrl = preview.baseMapUrl
                     if (isLatestWeatherRequest(requestId)) {
                         _uiState.update {
                             it.copy(
@@ -1068,15 +1061,6 @@ class MainViewModel @Inject constructor(
             error is retrofit2.HttpException -> MainUiError(MainUiErrorKind.WEATHER_SERVICE, error.code())
             else -> MainUiError(MainUiErrorKind.GENERIC)
         }
-    }
-
-    private fun latLonToTile(lat: Double, lon: Double, zoom: Int): Pair<Int, Int> {
-        val n = 1 shl zoom
-        val clampedLat = lat.coerceIn(-85.0511, 85.0511)
-        val x = ((lon + 180.0) / 360.0 * n).toInt().coerceIn(0, n - 1)
-        val latRad = Math.toRadians(clampedLat)
-        val y = ((1.0 - ln(tan(latRad) + 1.0 / cos(latRad)) / Math.PI) / 2.0 * n).toInt().coerceIn(0, n - 1)
-        return Pair(x, y)
     }
 
     /**
