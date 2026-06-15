@@ -22,6 +22,7 @@ import com.sysadmindoc.nimbus.data.repository.FloodData
 import com.sysadmindoc.nimbus.data.repository.FloodRiskLevel
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import java.util.Locale
 
 @Composable
 fun FloodRiskCard(
@@ -29,11 +30,12 @@ fun FloodRiskCard(
     modifier: Modifier = Modifier,
 ) {
     val riskColor = floodRiskColor(data.riskLevel)
+    val riskLabel = stringResource(data.riskLevel.labelRes)
     val desc = stringResource(
         R.string.flood_semantics,
-        data.riskLevel.label,
-        String.format("%.0f", data.currentDischarge),
-        String.format("%.0f", data.meanDischarge),
+        riskLabel,
+        formatWholeNumber(data.currentDischarge),
+        formatWholeNumber(data.meanDischarge),
     )
 
     WeatherCard(
@@ -48,7 +50,7 @@ fun FloodRiskCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = data.riskLevel.label,
+                    text = riskLabel,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = riskColor,
                 )
@@ -59,7 +61,7 @@ fun FloodRiskCard(
                     color = NimbusTextTertiary,
                 )
                 Text(
-                    text = stringResource(R.string.flood_m3s_value, String.format("%.0f", data.currentDischarge)),
+                    text = stringResource(R.string.flood_m3s_value, formatWholeNumber(data.currentDischarge)),
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                     color = NimbusTextSecondary,
                 )
@@ -72,7 +74,7 @@ fun FloodRiskCard(
                     color = NimbusTextTertiary,
                 )
                 Text(
-                    text = stringResource(R.string.flood_m3s_value, String.format("%.0f", data.meanDischarge)),
+                    text = stringResource(R.string.flood_m3s_value, formatWholeNumber(data.meanDischarge)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NimbusTextTertiary,
                 )
@@ -83,7 +85,7 @@ fun FloodRiskCard(
                     color = NimbusTextTertiary,
                 )
                 Text(
-                    text = stringResource(R.string.flood_m3s_value, String.format("%.0f", data.maxDischarge)),
+                    text = stringResource(R.string.flood_m3s_value, formatWholeNumber(data.maxDischarge)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NimbusTextTertiary,
                 )
@@ -98,3 +100,14 @@ private fun floodRiskColor(level: FloodRiskLevel): Color = when (level) {
     FloodRiskLevel.HIGH -> Color(0xFFFF5722)
     FloodRiskLevel.EXTREME -> Color(0xFFF44336)
 }
+
+private val FloodRiskLevel.labelRes: Int
+    get() = when (this) {
+        FloodRiskLevel.LOW -> R.string.flood_risk_low
+        FloodRiskLevel.MODERATE -> R.string.flood_risk_moderate
+        FloodRiskLevel.HIGH -> R.string.flood_risk_high
+        FloodRiskLevel.EXTREME -> R.string.flood_risk_extreme
+    }
+
+private fun formatWholeNumber(value: Double): String =
+    String.format(Locale.getDefault(), "%.0f", value)

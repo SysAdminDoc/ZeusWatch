@@ -16,6 +16,7 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.repository.MarineData
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import java.util.Locale
 
 @Composable
 fun MarineCard(
@@ -24,8 +25,8 @@ fun MarineCard(
 ) {
     val desc = stringResource(
         R.string.marine_semantics,
-        String.format("%.1f", data.waveHeight),
-        String.format("%.1f", data.wavePeriod),
+        formatOneDecimal(data.waveHeight),
+        formatOneDecimal(data.wavePeriod),
         data.waveDirection,
     )
 
@@ -41,11 +42,11 @@ fun MarineCard(
         ) {
             MarineMetric(
                 label = stringResource(R.string.marine_wave_height),
-                value = stringResource(R.string.marine_meters_value, String.format("%.1f", data.waveHeight)),
+                value = stringResource(R.string.marine_meters_value, formatOneDecimal(data.waveHeight)),
             )
             MarineMetric(
                 label = stringResource(R.string.marine_wave_period),
-                value = stringResource(R.string.marine_seconds_value, String.format("%.0f", data.wavePeriod)),
+                value = stringResource(R.string.marine_seconds_value, formatWholeNumber(data.wavePeriod)),
             )
             MarineMetric(
                 label = stringResource(R.string.marine_wave_direction),
@@ -55,7 +56,7 @@ fun MarineCard(
             if (sst != null) {
                 MarineMetric(
                     label = stringResource(R.string.marine_sst),
-                    value = "${String.format("%.1f", sst)}°C",
+                    value = "${formatOneDecimal(sst)}°C",
                 )
             }
         }
@@ -77,3 +78,9 @@ private fun MarineMetric(label: String, value: String) {
         )
     }
 }
+
+private fun formatOneDecimal(value: Double): String =
+    String.format(Locale.getDefault(), "%.1f", value)
+
+private fun formatWholeNumber(value: Double): String =
+    String.format(Locale.getDefault(), "%.0f", value)

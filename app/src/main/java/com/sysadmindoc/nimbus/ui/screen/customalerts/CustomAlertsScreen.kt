@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -355,8 +356,8 @@ private fun RuleRow(
         Box(
             modifier = Modifier
                 .padding(start = 6.dp)
-                .size(34.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .size(48.dp)
+                .clip(RoundedCornerShape(10.dp))
                 .background(NimbusError.copy(alpha = 0.12f))
                 .clickable(
                     onClick = onDelete,
@@ -369,7 +370,7 @@ private fun RuleRow(
                 Icons.Filled.Delete,
                 contentDescription = null,
                 tint = NimbusError.copy(alpha = 0.88f),
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(20.dp),
             )
         }
     }
@@ -424,7 +425,8 @@ private fun RuleEditor(
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 12.dp)
-            .navigationBarsPadding(),
+            .navigationBarsPadding()
+            .imePadding(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         RuleEditorHeader(isNew = isNew)
