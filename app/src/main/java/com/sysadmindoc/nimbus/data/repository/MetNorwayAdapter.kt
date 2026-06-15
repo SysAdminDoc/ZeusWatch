@@ -37,6 +37,7 @@ private const val TAG = "MetNorwayAdapter"
 @Singleton
 class MetNorwayForecastAdapter @Inject constructor(
     private val api: MetNorwayApi,
+    private val httpCache: MetNorwayHttpCache,
 ) {
     suspend fun getWeather(
         latitude: Double,
@@ -44,8 +45,37 @@ class MetNorwayForecastAdapter @Inject constructor(
         locationName: String? = null,
         locationZone: ZoneId? = null,
     ): Result<WeatherData> = runCatching {
-        val response = api.getForecast(latitude, longitude)
-        mapToWeatherData(response, latitude, longitude, locationName, locationZone ?: ZoneId.systemDefault())
+        val zone = locationZone ?: ZoneId.systemDefault()
+        val cached = httpCache.get(latitude, longitude)
+
+        if (cached != null && cached.isFresh()) {
+            return@runCatching mapToWeatherData(cached.response, latitude, longitude, locationName, zone)
+        }
+
+        val httpResponse = api.getForecast(
+            latitude, longitude,
+            ifModifiedSince = cached?.lastModified,
+        )
+
+        val metResponse = when (httpResponse.code()) {
+            304 -> {
+                cached?.response ?: throw IllegalStateException("304 but no cached response")
+            }
+            in 200..299 -> {
+                val body = httpResponse.body() ?: throw IllegalStateException("Empty 200 response from MET Norway")
+                val lastMod = httpResponse.headers()["Last-Modified"]
+                val expires = MetNorwayHttpCache.parseHttpDate(httpResponse.headers()["Expires"])
+                httpCache.put(latitude, longitude, MetNorwayHttpCache.CacheEntry(
+                    lastModified = lastMod,
+                    expires = expires,
+                    response = body,
+                ))
+                body
+            }
+            else -> throw retrofit2.HttpException(httpResponse)
+        }
+
+        mapToWeatherData(metResponse, latitude, longitude, locationName, zone)
     }.onFailure {
         if (it is kotlinx.coroutines.CancellationException) throw it
         Log.w(TAG, "MET Norway forecast failed", it)
