@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.tile
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.drawable.Icon
@@ -58,8 +59,7 @@ class WeatherQuickSettingsTile : TileService() {
             )
             startActivityAndCollapse(pi)
         } else {
-            @Suppress("DEPRECATION")
-            startActivityAndCollapse(intent)
+            startActivityAndCollapseCompat(intent)
         }
     }
 
@@ -69,7 +69,7 @@ class WeatherQuickSettingsTile : TileService() {
         if (location == null) {
             tile.state = Tile.STATE_INACTIVE
             tile.label = getString(R.string.qs_tile_label)
-            tile.subtitle = getString(R.string.qs_tile_no_location)
+            tile.setSubtitleCompat(getString(R.string.qs_tile_no_location))
             tile.icon = Icon.createWithResource(this, R.drawable.ic_w_sunny)
             tile.updateTile()
             return
@@ -81,7 +81,7 @@ class WeatherQuickSettingsTile : TileService() {
         if (weather == null) {
             tile.state = Tile.STATE_ACTIVE
             tile.label = location.name
-            tile.subtitle = getString(R.string.qs_tile_no_data)
+            tile.setSubtitleCompat(getString(R.string.qs_tile_no_data))
             tile.icon = Icon.createWithResource(this, R.drawable.ic_w_sunny)
             tile.updateTile()
             return
@@ -97,8 +97,20 @@ class WeatherQuickSettingsTile : TileService() {
 
         tile.state = Tile.STATE_ACTIVE
         tile.label = "$temp $condition"
-        tile.subtitle = data.location.name
+        tile.setSubtitleCompat(data.location.name)
         tile.icon = Icon.createWithResource(this, tileIcon(data.current.weatherCode, data.current.isDay))
+    }
+
+    @SuppressLint("StartActivityAndCollapseDeprecated")
+    @Suppress("DEPRECATION")
+    private fun startActivityAndCollapseCompat(intent: Intent) {
+        startActivityAndCollapse(intent)
+    }
+
+    private fun Tile.setSubtitleCompat(value: CharSequence) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            subtitle = value
+        }
     }
 
     private fun tileIcon(code: WeatherCode, isDay: Boolean): Int = when {

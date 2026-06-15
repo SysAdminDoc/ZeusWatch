@@ -226,6 +226,9 @@ dependencies {
     // so Firestore rules can enforce ownerUid + server-side write-rate limiting
     // without any personal sign-in. Requires Anonymous sign-in enabled in console.
     "standardImplementation"("com.google.firebase:firebase-auth")
+    // App Check attestation for the only user-writable backend surface.
+    "standardImplementation"("com.google.firebase:firebase-appcheck-playintegrity")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug")
 
     // ACRA — crash reporting that works in both standard and freenet flavors
     // (no Google Play Services dependency). Core + mail sender so F-Droid
