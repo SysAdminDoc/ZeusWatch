@@ -246,6 +246,7 @@
     <string name="report_choose_condition">Choose a condition</string>
     <string name="report_submit">Submit report</string>
     <string name="report_success">Report submitted. Thanks for helping nearby users.</string>
+    <string name="report_submit_error">We couldn\'t send that report right now. Check your connection and try again.</string>
     <string name="report_condition_cd">%1$s condition</string>
     <string name="report_condition_sunny">Sunny</string>
     <string name="report_condition_partly_cloudy">Partly Cloudy</string>
@@ -821,6 +822,7 @@
     <string name="compare_add_another_location">Add Another Location</string>
     <string name="compare_load_failed_title">Couldn\'t Load Comparison</string>
     <string name="compare_load_failed_message">Something went wrong while comparing locations.</string>
+    <string name="compare_load_failed_location_message">Couldn\'t load weather for %1$s. Check your connection and try again.</string>
     <string name="compare_loading_title">Loading Comparison</string>
     <string name="compare_loading_message">Pulling fresh forecast data for both locations now.</string>
     <string name="compare_feels_like_label">Feels Like</string>
@@ -1005,9 +1007,9 @@
     <string name="settings_transfer_warning_blank_locations">%1$d saved locations have blank names and will be skipped.</string>
     <string name="settings_transfer_warning_duplicate_locations">%1$d duplicate saved locations will be skipped.</string>
     <string name="settings_transfer_export_success">Settings exported.</string>
-    <string name="settings_transfer_export_error">Export failed: %1$s</string>
+    <string name="settings_transfer_export_error">Export failed. Check storage access and try again.</string>
     <string name="settings_transfer_import_success">Settings restored with %1$d saved locations and %2$d custom alerts.</string>
-    <string name="settings_transfer_import_error">Import failed: %1$s</string>
+    <string name="settings_transfer_import_error">Import failed. Choose a valid ZeusWatch backup file and try again.</string>
     <string name="settings_minutes">%1$d minutes</string>
     <string name="settings_hours">%1$d hours</string>
     <string name="settings_hour">%1$d hour</string>
