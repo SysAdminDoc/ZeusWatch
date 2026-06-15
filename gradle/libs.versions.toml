@@ -31,7 +31,7 @@ maplibre = "11.5.2"
 acra = "5.13.1"
 detekt = "1.23.8"
 
-material3-windowsize = "1.3.2"
+material3-windowsize = "1.4.0"
 window = "1.5.1"
 
 # Testing
