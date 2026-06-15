@@ -62,7 +62,7 @@ fun NowcastCard(
         val lastRainIdx = filtered.indexOfLast { it.precipitation > 0.05 }
         when {
             firstRainIdx < 0 -> NowcastSummary(R.string.nowcast_summary_none)
-            firstRainIdx == 0 && lastRainIdx >= filtered.size - 2 -> NowcastSummary(R.string.nowcast_summary_continuing)
+            firstRainIdx == 0 && lastRainIdx >= filtered.size - 1 -> NowcastSummary(R.string.nowcast_summary_continuing)
             firstRainIdx == 0 -> NowcastSummary(R.string.nowcast_summary_ending, (lastRainIdx + 1) * 15)
             else -> NowcastSummary(R.string.nowcast_summary_starting, firstRainIdx * 15)
         }

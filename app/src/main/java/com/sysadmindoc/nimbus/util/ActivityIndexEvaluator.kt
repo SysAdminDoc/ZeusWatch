@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Stable
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
+import kotlin.math.roundToInt
 
 object ActivityIndexEvaluator {
 
@@ -13,7 +14,7 @@ object ActivityIndexEvaluator {
         aqi: Int? = null,
     ): List<ActivityIndex> = ActivityType.entries.map { type ->
         val factors = type.scoreFactors(current, precipProbability, aqi)
-        val score = factors.values.average().toInt().coerceIn(0, 100)
+        val score = factors.values.average().roundToInt().coerceIn(0, 100)
         ActivityIndex(type = type, score = score, factors = factors)
     }
 }

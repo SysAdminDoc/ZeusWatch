@@ -153,7 +153,14 @@ class AirQualityRepository @Inject constructor(
             zone = zoneId,
         )
         val moonrise = times.rise?.let { LocalDateTime.of(now.toLocalDate(), it).format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME) }
-        val moonset = times.set?.let { LocalDateTime.of(now.toLocalDate(), it).format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME) }
+        val moonset = times.set?.let { setTime ->
+            val setDate = if (times.rise != null && setTime.isBefore(times.rise)) {
+                now.toLocalDate().plusDays(1)
+            } else {
+                now.toLocalDate()
+            }
+            LocalDateTime.of(setDate, setTime).format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+        }
 
         // Day length from sunrise/sunset
         val dayLength = calculateDayLength(sunrise, sunset)

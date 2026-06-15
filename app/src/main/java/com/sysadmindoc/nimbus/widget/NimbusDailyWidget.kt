@@ -95,7 +95,7 @@ private fun DailyWidgetContent(
                 .background(WidgetTheme.cardColor)
                 .padding(horizontal = 10.dp, vertical = 4.dp),
         ) {
-            data.daily.take(7).forEach { day ->
+            data.daily.take(5).forEach { day ->
                 DailyRow(day, strings)
             }
         }

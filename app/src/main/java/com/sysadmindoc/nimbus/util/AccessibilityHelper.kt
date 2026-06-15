@@ -423,5 +423,5 @@ object AccessibilityHelper {
     }
 
     private const val NOWCAST_ENTRY_LIMIT = 8
-    private const val RAIN_THRESHOLD_MM = 0.05
+    private const val RAIN_THRESHOLD_MM = 0.1
 }

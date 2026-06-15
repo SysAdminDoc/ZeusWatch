@@ -95,13 +95,24 @@ object DrivingConditionEvaluator {
         if (current.weatherCode in listOf(
                 WeatherCode.SNOW_MODERATE, WeatherCode.SNOW_HEAVY,
                 WeatherCode.SNOW_SHOWERS_HEAVY, WeatherCode.FREEZING_RAIN_LIGHT,
-                WeatherCode.FREEZING_RAIN_HEAVY
+                WeatherCode.FREEZING_RAIN_HEAVY,
+                WeatherCode.FREEZING_DRIZZLE_LIGHT, WeatherCode.FREEZING_DRIZZLE_DENSE,
             )
         ) {
             alerts.add(DrivingAlert(
                 type = DrivingAlertType.SNOW_ICE,
                 severity = DrivingSeverity.DANGER,
                 messageRes = R.string.driving_alert_snow_ice_danger,
+            ))
+        } else if (current.weatherCode in listOf(
+                WeatherCode.SNOW_SLIGHT, WeatherCode.SNOW_SHOWERS_SLIGHT,
+                WeatherCode.SNOW_GRAINS,
+            )
+        ) {
+            alerts.add(DrivingAlert(
+                type = DrivingAlertType.SNOW_ICE,
+                severity = DrivingSeverity.CAUTION,
+                messageRes = R.string.driving_alert_snow_ice_caution,
             ))
         }
 

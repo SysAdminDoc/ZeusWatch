@@ -1154,6 +1154,7 @@
     <string name="driving_alert_high_wind_danger">Dangerous winds. Avoid driving if possible.</string>
     <string name="driving_alert_high_wind_caution">Strong winds may affect vehicle handling.</string>
     <string name="driving_alert_snow_ice_danger">Snow or freezing rain. Roads will be hazardous.</string>
+    <string name="driving_alert_snow_ice_caution">Light snow or ice. Roads may be slippery.</string>
     <string name="health_alert_type_migraine">Migraine Trigger</string>
     <string name="health_alert_type_respiratory">Respiratory</string>
     <string name="health_alert_type_arthritis">Joint Pain</string>

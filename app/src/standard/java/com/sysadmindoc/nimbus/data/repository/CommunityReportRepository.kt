@@ -159,10 +159,10 @@ class CommunityReportRepository @Inject constructor(
     // --- Mapping helpers ---
 
     private fun reportToMap(report: CommunityReport): Map<String, Any> = mapOf(
-        "latitude" to report.latitude,
-        "longitude" to report.longitude,
+        "latitude" to report.latitude.coerceIn(-90.0, 90.0),
+        "longitude" to report.longitude.coerceIn(-180.0, 180.0),
         "condition" to report.condition.name,
-        "note" to report.note,
+        "note" to report.note.trim().take(100),
         "timestamp" to report.timestamp,
         "ownerUid" to report.ownerUid,
     )
