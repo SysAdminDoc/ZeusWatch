@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -93,83 +94,60 @@ fun WindCompass(
                 val ringWidth = if (s.showBeaufortColors) 3f else 1.5f
                 // No semantics here: the merged WeatherCard above already carries
                 // compassDescription — duplicating it made TalkBack announce twice.
-                Canvas(modifier = Modifier.size(120.dp)) {
-                    val cx = size.width / 2f
-                    val cy = size.height / 2f
-                    val radius = size.width / 2f - 16f
-                    drawCircle(
-                        color = ringColor,
-                        radius = radius,
-                        center = Offset(cx, cy),
-                        style = Stroke(width = ringWidth),
-                    )
+                Canvas(
+                    modifier = Modifier.size(120.dp).drawWithCache {
+                        val cx = size.width / 2f
+                        val cy = size.height / 2f
+                        val radius = size.width / 2f - 16f
+                        val ringStroke = Stroke(width = ringWidth)
 
-                    // Tick marks for cardinal + ordinal directions
-                    val directions = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
-                    val cardinalStyle = TextStyle(
-                        color = NimbusTextTertiary,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-
-                    directions.forEachIndexed { i, dir ->
-                        val angle = (i * 45f - 90f) * (PI.toFloat() / 180f)
-                        val isCardinal = i % 2 == 0
-
-                        // Tick marks
-                        val innerR = radius - if (isCardinal) 8f else 5f
-                        val outerR = radius
-                        drawLine(
-                            color = Color.White.copy(alpha = if (isCardinal) 0.3f else 0.15f),
-                            start = Offset(cx + cos(angle) * innerR, cy + sin(angle) * innerR),
-                            end = Offset(cx + cos(angle) * outerR, cy + sin(angle) * outerR),
-                            strokeWidth = if (isCardinal) 1.5f else 1f,
+                        val directions = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+                        val cardinalStyle = TextStyle(
+                            color = NimbusTextTertiary,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Medium,
                         )
-
-                        // Cardinal labels
-                        if (isCardinal) {
+                        val cardinalLabels = directions.mapIndexedNotNull { i, dir ->
+                            if (i % 2 != 0) return@mapIndexedNotNull null
+                            val angle = (i * 45f - 90f) * (PI.toFloat() / 180f)
                             val labelR = radius + 12f
                             val lx = cx + cos(angle) * labelR
                             val ly = cy + sin(angle) * labelR
                             val measured = textMeasurer.measure(dir, cardinalStyle)
-                            drawText(
-                                textLayoutResult = measured,
-                                topLeft = Offset(
-                                    lx - measured.size.width / 2f,
-                                    ly - measured.size.height / 2f,
-                                ),
+                            Triple(measured, lx - measured.size.width / 2f, ly - measured.size.height / 2f)
+                        }
+
+                        val tickData = directions.indices.map { i ->
+                            val angle = (i * 45f - 90f) * (PI.toFloat() / 180f)
+                            val isCardinal = i % 2 == 0
+                            val innerR = radius - if (isCardinal) 8f else 5f
+                            TickMark(
+                                start = Offset(cx + cos(angle) * innerR, cy + sin(angle) * innerR),
+                                end = Offset(cx + cos(angle) * radius, cy + sin(angle) * radius),
+                                color = Color.White.copy(alpha = if (isCardinal) 0.3f else 0.15f),
+                                width = if (isCardinal) 1.5f else 1f,
                             )
                         }
-                    }
 
-                    // Direction arrow. Convention: points where the wind blows TO
-                    // (meteorological bearing + 180°), matching the hourly/daily arrows.
-                    rotate(windDirection.toFloat() + 180f, pivot = Offset(cx, cy)) {
                         val arrowPath = Path().apply {
-                            moveTo(cx, cy - radius + 12f) // tip
+                            moveTo(cx, cy - radius + 12f)
                             lineTo(cx - 6f, cy - radius + 26f)
                             lineTo(cx + 6f, cy - radius + 26f)
                             close()
                         }
-                        drawPath(arrowPath, NimbusBlueAccent)
 
-                        // Arrow line to center
-                        drawLine(
-                            color = NimbusBlueAccent.copy(alpha = 0.6f),
-                            start = Offset(cx, cy - radius + 26f),
-                            end = Offset(cx, cy),
-                            strokeWidth = 2f,
-                            cap = StrokeCap.Round,
-                        )
-                    }
-
-                    // Center dot
-                    drawCircle(
-                        color = NimbusBlueAccent,
-                        radius = 3f,
-                        center = Offset(cx, cy),
-                    )
-                }
+                        onDrawBehind {
+                            drawCircle(color = ringColor, radius = radius, center = Offset(cx, cy), style = ringStroke)
+                            tickData.forEach { drawLine(it.color, it.start, it.end, it.width) }
+                            cardinalLabels.forEach { (measured, x, y) -> drawText(measured, topLeft = Offset(x, y)) }
+                            rotate(windDirection.toFloat() + 180f, pivot = Offset(cx, cy)) {
+                                drawPath(arrowPath, NimbusBlueAccent)
+                                drawLine(NimbusBlueAccent.copy(alpha = 0.6f), Offset(cx, cy - radius + 26f), Offset(cx, cy), 2f, StrokeCap.Round)
+                            }
+                            drawCircle(color = NimbusBlueAccent, radius = 3f, center = Offset(cx, cy))
+                        }
+                    },
+                ) { }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -228,3 +206,5 @@ private fun beaufortLabelRes(scale: Int): Int = when (scale) {
     11 -> R.string.beaufort_violent_storm
     else -> R.string.beaufort_hurricane
 }
+
+private data class TickMark(val start: Offset, val end: Offset, val color: Color, val width: Float)

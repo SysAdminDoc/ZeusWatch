@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -170,79 +171,50 @@ private fun MoonCanvas(
     southernHemisphere: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
-        val radius = size.minDimension / 2f
-        val center = Offset(size.width / 2f, size.height / 2f)
+    Canvas(
+        modifier = modifier.drawWithCache {
+            val radius = size.minDimension / 2f
+            val center = Offset(size.width / 2f, size.height / 2f)
+            val illFraction = (illumination / 100.0).coerceIn(0.0, 1.0)
+            val isWaxing = (phase.ordinal <= MoonPhase.FULL_MOON.ordinal) xor southernHemisphere
+            val rimStroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx())
 
-        // Dark background circle (the "dark side")
-        drawCircle(
-            color = Color(0xFF1A1A2E),
-            radius = radius,
-            center = center,
-        )
-
-        // Illuminated portion
-        val illFraction = (illumination / 100.0).coerceIn(0.0, 1.0)
-        // In the southern hemisphere the lit hemisphere appears mirrored relative
-        // to the northern view, so flip the waxing/waning bias before drawing the
-        // terminator. Net effect: a waxing crescent reads "lit on the left" for a
-        // southern observer.
-        val isWaxing = (phase.ordinal <= MoonPhase.FULL_MOON.ordinal) xor southernHemisphere
-
-        // Build illuminated path using bezier approximation
-        val path = Path()
-        val steps = 100
-
-        if (illFraction > 0.01) {
-            // Right or left half illuminated (waxing = right, waning = left)
-            // The terminator curve is an ellipse
-            val terminatorX = ((1.0 - 2.0 * illFraction) * radius).toFloat()
-
-            path.moveTo(center.x, center.y - radius)
-            for (i in 0..steps) {
-                val angle = PI * i / steps
-                val y = center.y - radius * cos(angle).toFloat()
-
-                // Edge of moon (always semicircle)
-                val edgeX = if (isWaxing) {
-                    center.x + radius * sin(angle).toFloat()
-                } else {
-                    center.x - radius * sin(angle).toFloat()
+            val moonPath = if (illFraction > 0.01) {
+                Path().apply {
+                    val terminatorX = ((1.0 - 2.0 * illFraction) * radius).toFloat()
+                    val steps = 100
+                    moveTo(center.x, center.y - radius)
+                    for (i in 0..steps) {
+                        val angle = PI * i / steps
+                        val y = center.y - radius * cos(angle).toFloat()
+                        val edgeX = if (isWaxing) {
+                            center.x + radius * sin(angle).toFloat()
+                        } else {
+                            center.x - radius * sin(angle).toFloat()
+                        }
+                        if (i == 0) moveTo(edgeX, y) else lineTo(edgeX, y)
+                    }
+                    for (i in steps downTo 0) {
+                        val angle = PI * i / steps
+                        val y = center.y - radius * cos(angle).toFloat()
+                        val tx = if (isWaxing) {
+                            center.x + terminatorX * sin(angle).toFloat()
+                        } else {
+                            center.x - terminatorX * sin(angle).toFloat()
+                        }
+                        lineTo(tx, y)
+                    }
+                    close()
                 }
+            } else null
 
-                if (i == 0) path.moveTo(edgeX, y)
-                else path.lineTo(edgeX, y)
+            onDrawBehind {
+                drawCircle(color = Color(0xFF1A1A2E), radius = radius, center = center)
+                moonPath?.let { drawPath(it, color = NimbusMoonBlue.copy(alpha = 0.85f), style = Fill) }
+                drawCircle(color = NimbusMoonBlue.copy(alpha = 0.15f), radius = radius, center = center, style = rimStroke)
             }
-
-            // Terminator curve back
-            for (i in steps downTo 0) {
-                val angle = PI * i / steps
-                val y = center.y - radius * cos(angle).toFloat()
-                val tx = if (isWaxing) {
-                    center.x + terminatorX * sin(angle).toFloat()
-                } else {
-                    center.x - terminatorX * sin(angle).toFloat()
-                }
-                path.lineTo(tx, y)
-            }
-
-            path.close()
-
-            drawPath(
-                path = path,
-                color = NimbusMoonBlue.copy(alpha = 0.85f),
-                style = Fill,
-            )
-        }
-
-        // Subtle rim highlight
-        drawCircle(
-            color = NimbusMoonBlue.copy(alpha = 0.15f),
-            radius = radius,
-            center = center,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx()),
-        )
-    }
+        },
+    ) { }
 }
 
 @Composable
