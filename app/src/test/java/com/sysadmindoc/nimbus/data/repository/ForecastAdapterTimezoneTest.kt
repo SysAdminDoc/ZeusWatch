@@ -208,7 +208,7 @@ class ForecastAdapterTimezoneTest {
         ForecastAdapterTimezoneContract.withDeviceTimeZone("America/New_York") {
             val nyZone = ZoneId.of("America/New_York")
             val api = mockk<MetNorwayApi>()
-            val adapter = MetNorwayForecastAdapter(api)
+            val adapter = MetNorwayForecastAdapter(api, MetNorwayHttpCache())
             val baseUtc = OffsetDateTime.now(ZoneOffset.UTC)
                 .withMinute(0).withSecond(0).withNano(0)
 
@@ -239,10 +239,10 @@ class ForecastAdapterTimezoneTest {
                     ),
                 )
             }
-            coEvery { api.getForecast(any(), any(), any()) } returns MetNorwayResponse(
+            coEvery { api.getForecast(any(), any(), any(), any()) } returns retrofit2.Response.success(MetNorwayResponse(
                 type = "Feature",
                 properties = MetProperties(timeseries = entries),
-            )
+            ))
 
             val data = adapter.getWeather(60.39, 5.32, "Bergen").getOrThrow()
 
