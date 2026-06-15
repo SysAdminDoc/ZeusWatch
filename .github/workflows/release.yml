@@ -22,16 +22,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Cache Gradle
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.gradle/caches
@@ -80,6 +80,9 @@ jobs:
           'app/build/outputs/apk/*/release/*.apk'
           'wear/build/outputs/apk/release/*.apk'
 
+      - name: Generate Gradle dependency SBOM
+        run: ./gradlew :app:dependencies --configuration standardReleaseRuntimeClasspath --no-daemon > dist-sbom-gradle.txt 2>&1 || true
+
       - name: Resolve release tag
         id: tag
         run: |
@@ -116,16 +119,18 @@ jobs:
           done
           WR=$(find wear/build/outputs/apk/release -name "*.apk" | head -1)
           cp "$WR" "dist/ZeusWatch-wear-v${VER}.apk"
+          cp dist-sbom-gradle.txt "dist/SBOM-gradle-dependencies.txt"
           cd dist && sha256sum *.apk > SHA256SUMS.txt
           ls -lh
 
       - name: Upload release APKs as workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-apks
           path: |
             dist/*.apk
             dist/SHA256SUMS.txt
+            dist/SBOM-gradle-dependencies.txt
 
       - name: Upload APKs to GitHub Release
         if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && steps.tag.outputs.name != '')
@@ -136,4 +141,4 @@ jobs:
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" --generate-notes --title "ZeusWatch $TAG"
           fi
-          gh release upload "$TAG" dist/*.apk dist/SHA256SUMS.txt --clobber
+          gh release upload "$TAG" dist/*.apk dist/SHA256SUMS.txt dist/SBOM-gradle-dependencies.txt --clobber
