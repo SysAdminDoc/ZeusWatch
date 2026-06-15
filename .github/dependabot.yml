@@ -32,6 +32,15 @@ updates:
       # catalog update rather than a single PR.
       - dependency-name: "com.google.dagger.hilt.android"
 
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "automated"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
