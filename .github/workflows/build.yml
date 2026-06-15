@@ -61,6 +61,9 @@ jobs:
       - name: Check hardcoded user-facing strings
         run: python3 tools/check_localization.py
 
+      - name: Check docs consistency and version sync
+        run: python3 tools/check_docs_consistency.py
+
       - name: Test provider contract smoke tool
         run: python3 -m unittest discover -s tools -p '*_test.py'
 
