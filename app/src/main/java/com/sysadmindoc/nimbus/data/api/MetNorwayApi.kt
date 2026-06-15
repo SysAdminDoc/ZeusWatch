@@ -1,7 +1,9 @@
 package com.sysadmindoc.nimbus.data.api
 
 import com.sysadmindoc.nimbus.data.model.MetNorwayResponse
+import retrofit2.Response
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.Query
 
 /**
@@ -32,7 +34,8 @@ interface MetNorwayApi {
         @Query("lat") latitude: Double,
         @Query("lon") longitude: Double,
         @Query("altitude") altitude: Int? = null,
-    ): MetNorwayResponse
+        @Header("If-Modified-Since") ifModifiedSince: String? = null,
+    ): Response<MetNorwayResponse>
 
     companion object {
         const val BASE_URL = "https://api.met.no/weatherapi/locationforecast/2.0/"
