@@ -9,6 +9,7 @@ import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.SummaryStyle
+import java.util.Locale
 
 private const val TAG = "WeatherSummaryEngine"
 
@@ -284,7 +285,7 @@ object WeatherSummaryEngine {
             .replace("{humidity}", "${current.humidity}%")
             .replace("{wind}", wind)
             .replace("{wind_speed}", WeatherFormatter.formatWindSpeed(current.windSpeed, s))
-            .replace("{uv}", String.format("%.0f", current.uvIndex))
+            .replace("{uv}", String.format(Locale.getDefault(), "%.0f", current.uvIndex))
             .replace("{precip}", "$precipChance%")
             .replace("{precip_max}", "$maxPrecip12h%")
             .replace("{pressure}", WeatherFormatter.formatPressure(current.pressure, s))

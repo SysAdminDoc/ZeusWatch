@@ -137,7 +137,7 @@
     <string name="onboarding_continue">Continue</string>
     <string name="onboarding_finish">Start ZeusWatch</string>
     <string name="whats_new_title">What\'s new in ZeusWatch</string>
-    <string name="whats_new_body">A few recent upgrades are ready the next time you check the forecast.</string>
+    <string name="whats_new_body">A few recent upgrades are ready for the next time you check the forecast.</string>
     <string name="whats_new_version">Version %1$s</string>
     <string name="whats_new_done">Got it</string>
     <string-array name="whats_new_items">
@@ -336,6 +336,10 @@
     <string name="flood_discharge_label">River Discharge</string>
     <string name="flood_mean_label">Mean</string>
     <string name="flood_max_label">Max</string>
+    <string name="flood_risk_low">Low</string>
+    <string name="flood_risk_moderate">Moderate</string>
+    <string name="flood_risk_high">High</string>
+    <string name="flood_risk_extreme">Extreme</string>
     <string name="flood_m3s_value">%1$s m³/s</string>
     <string name="flood_semantics">Flood risk: %1$s. Current river discharge %2$s cubic meters per second, mean %3$s.</string>
     <string name="card_title_climate_outlook">Climate Outlook</string>

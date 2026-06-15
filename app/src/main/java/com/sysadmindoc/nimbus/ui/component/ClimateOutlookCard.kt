@@ -26,6 +26,7 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.repository.ClimateOutlookData
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import java.util.Locale
 
 @Composable
 fun ClimateOutlookCard(
@@ -35,9 +36,9 @@ fun ClimateOutlookCard(
     val deltaSign = if (data.highDelta >= 0) "+" else ""
     val desc = stringResource(
         R.string.climate_semantics,
-        String.format("%.1f", data.projectedAvgHigh),
-        String.format("%.1f", data.baselineAvgHigh),
-        String.format("%s%.1f", deltaSign, data.highDelta),
+        formatOneDecimal(data.projectedAvgHigh),
+        formatOneDecimal(data.baselineAvgHigh),
+        formatSignedOneDecimal(data.highDelta),
     )
 
     WeatherCard(
@@ -65,7 +66,7 @@ fun ClimateOutlookCard(
                     color = NimbusTextTertiary,
                 )
                 Text(
-                    text = stringResource(R.string.climate_temp_value, String.format("%.1f", data.projectedAvgHigh)),
+                    text = stringResource(R.string.climate_temp_value, formatOneDecimal(data.projectedAvgHigh)),
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                     color = NimbusTextSecondary,
                 )
@@ -85,7 +86,7 @@ fun ClimateOutlookCard(
                     color = NimbusTextTertiary,
                 )
                 Text(
-                    text = stringResource(R.string.climate_temp_value, String.format("%.1f", data.baselineAvgHigh)),
+                    text = stringResource(R.string.climate_temp_value, formatOneDecimal(data.baselineAvgHigh)),
                     style = MaterialTheme.typography.bodyLarge,
                     color = NimbusTextTertiary,
                 )
@@ -96,9 +97,8 @@ fun ClimateOutlookCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusTextTertiary,
                 )
-                val lowSign = if (data.lowDelta >= 0) "+" else ""
                 Text(
-                    text = stringResource(R.string.climate_delta_value, String.format("%s%.1f", lowSign, data.lowDelta)),
+                    text = stringResource(R.string.climate_delta_value, formatSignedOneDecimal(data.lowDelta)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = deltaColor(data.lowDelta),
                 )
@@ -120,7 +120,7 @@ fun ClimateOutlookCard(
             } else 0.0
             val precipSign = if (precipPct >= 0) "+" else ""
             Text(
-                text = String.format("%s%.0f%%", precipSign, precipPct),
+                text = String.format(Locale.getDefault(), "%s%.0f%%", precipSign, precipPct),
                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                 color = NimbusTextTertiary,
             )
@@ -130,10 +130,9 @@ fun ClimateOutlookCard(
 
 @Composable
 private fun DeltaBadge(delta: Double) {
-    val sign = if (delta >= 0) "+" else ""
     val color = deltaColor(delta)
     Text(
-        text = String.format("%s%.1f°", sign, delta),
+        text = "${formatSignedOneDecimal(delta)}°",
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
         color = color,
         modifier = Modifier
@@ -151,3 +150,9 @@ private fun deltaColor(delta: Double): Color = when {
     delta < 0.0 -> Color(0xFF64B5F6)
     else -> Color(0xFF9E9E9E)
 }
+
+private fun formatOneDecimal(value: Double): String =
+    String.format(Locale.getDefault(), "%.1f", value)
+
+private fun formatSignedOneDecimal(value: Double): String =
+    String.format(Locale.getDefault(), "%s%.1f", if (value >= 0) "+" else "", value)
