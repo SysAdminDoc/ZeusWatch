@@ -296,7 +296,7 @@ Optional fallback sources (require API keys configured in Settings):
 
 OpenWeatherMap and Pirate Weather keys are stored in an encrypted DataStore backed by Tink and Android Keystore. Existing plaintext keys migrate automatically on first launch.
 
-Community reports use an anonymous append-only Firestore model: users can read reports and submit new condition reports, but reports cannot be updated or deleted after submission. `firestore.rules` validates coordinates, condition enum values, timestamp freshness, note length, and the hashed anonymous device ID server-side. For `standard` Firebase deployments, enable Firebase App Check for Firestore to add app-attestation abuse protection. The `freenet` flavor is unaffected and uses a no-op community report repository with no Firebase dependency.
+Community reports use an anonymous append-only Firestore model: users can read reports and submit new condition reports, but reports cannot be updated or deleted after submission. Each report is bound to an anonymous Firebase Auth UID with a server-side per-account 5-minute write-rate limit. `firestore.rules` validates coordinates, condition enum values, timestamp freshness, note length, and owner UID binding. For `standard` Firebase deployments, enable Firebase App Check for Firestore to add app-attestation abuse protection. The `freenet` flavor is unaffected and uses a no-op community report repository with no Firebase dependency.
 
 ### Open-Meteo Parameters Used
 
