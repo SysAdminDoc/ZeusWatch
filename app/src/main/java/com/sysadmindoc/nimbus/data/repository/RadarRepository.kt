@@ -53,6 +53,7 @@ class RadarRepository @Inject constructor(
             }
             Result.success(RadarFrameSet(past = past, forecast = forecast))
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Result.failure(e)
         }
     }

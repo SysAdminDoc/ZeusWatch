@@ -37,8 +37,8 @@ class DailyBriefingWorker @AssistedInject constructor(
             return Result.success()
         }
 
-        val loc = prefs.lastLocation.first() ?: run {
-            Log.d(TAG, "No last location; skipping")
+        val loc = prefs.backgroundAlertLocation.first() ?: prefs.lastLocation.first() ?: run {
+            Log.d(TAG, "No background alert location; skipping")
             return Result.success()
         }
 

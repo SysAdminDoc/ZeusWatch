@@ -283,10 +283,10 @@ class OwmAqiAdapter @Inject constructor(
             aqiLevel = AqiLevel.fromAqi(usAqi),
             pm25 = c.pm2_5,
             pm10 = c.pm10,
-            ozone = c.o3 / 2.0, // μg/m3 → approximate ppb
-            nitrogenDioxide = c.no2 / 1.88, // μg/m3 → approximate ppb
-            sulphurDioxide = c.so2 / 2.62, // μg/m3 → approximate ppb
-            carbonMonoxide = c.co / 1145.0 * 1000.0, // μg/m3 → approximate ppb
+            ozone = c.o3,
+            nitrogenDioxide = c.no2,
+            sulphurDioxide = c.so2,
+            carbonMonoxide = c.co,
             pollen = PollenData(), // OWM doesn't provide pollen
         )
     }.onFailure {

@@ -1073,6 +1073,7 @@
     <string name="driving_alert_high_wind_danger">Vientos peligrosos. Evita conducir si es posible.</string>
     <string name="driving_alert_high_wind_caution">El viento fuerte puede afectar el manejo del vehículo.</string>
     <string name="driving_alert_snow_ice_danger">Nieve o lluvia helada. Las carreteras seran peligrosas.</string>
+    <string name="driving_alert_snow_ice_caution">Nieve ligera o hielo. Las carreteras pueden estar resbaladizas.</string>
     <string name="health_alert_type_migraine">Desencadenante de migraña</string>
     <string name="health_alert_type_respiratory">Respiratorio</string>
     <string name="health_alert_type_arthritis">Dolor articular</string>

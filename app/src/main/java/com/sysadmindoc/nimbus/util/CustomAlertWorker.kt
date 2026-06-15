@@ -68,7 +68,7 @@ class CustomAlertWorker @AssistedInject constructor(
         for (hit in triggered) {
             // Threshold is part of the key so editing a rule re-arms
             // evaluation the same day instead of staying muted until tomorrow.
-            val dedupeKey = "${hit.rule.id}:${hit.rule.thresholdCanonical}:$today"
+            val dedupeKey = "${hit.rule.id}:${"%.6f".format(java.util.Locale.US, hit.rule.thresholdCanonical)}:$today"
             if (!store.markAndCheckNew(dedupeKey)) continue
             val (title, body) = formatTriggeredAlert(applicationContext, hit, settings)
             val delivered = AlertNotificationHelper.showCustomAlertNotification(

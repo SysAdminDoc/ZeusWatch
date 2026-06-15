@@ -94,8 +94,8 @@ fun AqiCard(
         val pollutantScores = listOf(
             "PM2.5" to data.pm25 / 35.0,
             "PM10" to data.pm10 / 154.0,
-            "O3" to data.ozone / 100.0,
-            "NO2" to data.nitrogenDioxide / 100.0,
+            "O3" to data.ozone / 137.0,
+            "NO2" to data.nitrogenDioxide / 188.0,
         )
         val worstPollutant = pollutantScores.maxByOrNull { it.second }?.first
 

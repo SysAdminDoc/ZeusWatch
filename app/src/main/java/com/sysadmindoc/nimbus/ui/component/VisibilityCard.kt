@@ -228,7 +228,7 @@ private fun VisibilityTrendChart(
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        val bottomPad = 16f
+        val bottomPad = 16.dp.toPx()
         val chartH = h - bottomPad
         val maxVis = 50000f // 50km in meters
 

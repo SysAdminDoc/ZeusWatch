@@ -141,7 +141,7 @@ fun widgetEyebrowStyle(): TextStyle = WidgetTheme.eyebrowStyle.copy(color = widg
 fun widgetPrecipStyle(): TextStyle = WidgetTheme.precipStyle.copy(color = widgetAccentColor())
 
 @Composable
-fun widgetStatusStyle(): TextStyle = WidgetTheme.statusStyle.copy(color = widgetOnAccentContainerColor())
+fun widgetStatusStyle(): TextStyle = WidgetTheme.statusStyle.copy(color = widgetAccentColor())
 
 fun widgetUpdatedLabel(
     updatedAt: Long,

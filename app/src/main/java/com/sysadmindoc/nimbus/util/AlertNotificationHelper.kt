@@ -632,9 +632,12 @@ internal fun buildNowcastProgressTimeline(
                 )
             }
         }
+    val elapsed = java.time.Duration.between(buckets.first().time, referenceTime)
+        .toMinutes().toInt().coerceAtLeast(1)
     return NowcastProgressTimeline(
         segments = segments,
         points = points,
+        progressMinutes = elapsed,
     )
 }
 

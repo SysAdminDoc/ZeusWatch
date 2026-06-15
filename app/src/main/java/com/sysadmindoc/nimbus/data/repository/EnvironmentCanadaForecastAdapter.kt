@@ -297,14 +297,14 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         internal fun mapCurrentToWmo(cc: EcccCurrentConditions?): Int {
             if (cc == null) return 0
             val byIcon = iconToWmo(extractIconCode(cc.iconCode))
-            if (byIcon != null && byIcon > 0) return byIcon
+            if (byIcon != null && byIcon >= 0) return byIcon
             return conditionTextToWmo(cc.condition)
         }
 
         internal fun mapAbbreviatedToWmo(af: EcccAbbreviatedForecast?): Int {
             if (af == null) return 0
             val byIcon = iconToWmo(extractIconCode(af.iconCode))
-            if (byIcon != null && byIcon > 0) return byIcon
+            if (byIcon != null && byIcon >= 0) return byIcon
             return conditionTextToWmo(af.textSummary)
         }
 
@@ -312,7 +312,7 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
             if (element == null) return null
             val primitive = element as? JsonPrimitive ?: return null
             primitive.intOrNull?.let { return it }
-            return primitive.contentOrNull?.trim()?.trimStart('0')?.toIntOrNull()
+            return primitive.contentOrNull?.trim()?.trimStart('0')?.ifEmpty { "0" }?.toIntOrNull()
         }
 
         private fun iconToWmo(iconCode: Int?): Int? {
@@ -339,7 +339,7 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
                 25 -> 66                      // ice crystals
                 26 -> 73                      // blowing snow
                 27 -> 99                      // blizzard
-                28 -> 65                      // freezing drizzle
+                28 -> 57                      // freezing drizzle
                 else -> 0
             }
         }
