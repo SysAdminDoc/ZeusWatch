@@ -9,6 +9,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDateTime
+import java.util.Locale
 
 class MainScreenLogicTest {
 
@@ -143,5 +144,49 @@ class MainScreenLogicTest {
 
         assertEquals(SubFetchStatusKind.FAILED, result?.kind)
         assertNull(result?.ageMinutes)
+    }
+
+    @Test
+    fun `formatUpdatedAge formats minute and hour labels`() {
+        val now = LocalDateTime.of(2026, 6, 15, 12, 0)
+
+        val minuteAge = formatUpdatedAge(
+            lastUpdated = now.minusMinutes(12),
+            now = now,
+            justNowLabel = "Just now",
+            minuteAgoFormat = "%d min ago",
+            hourAgoFormat = "%d hr ago",
+            locale = Locale.US,
+        )
+        val hourAge = formatUpdatedAge(
+            lastUpdated = now.minusMinutes(130),
+            now = now,
+            justNowLabel = "Just now",
+            minuteAgoFormat = "%d min ago",
+            hourAgoFormat = "%d hr ago",
+            locale = Locale.US,
+        )
+
+        assertEquals(12L, minuteAge.minutes)
+        assertEquals("12 min ago", minuteAge.label)
+        assertEquals(130L, hourAge.minutes)
+        assertEquals("2 hr ago", hourAge.label)
+    }
+
+    @Test
+    fun `formatUpdatedAge clamps future timestamps to just now`() {
+        val now = LocalDateTime.of(2026, 6, 15, 12, 0)
+
+        val result = formatUpdatedAge(
+            lastUpdated = now.plusMinutes(3),
+            now = now,
+            justNowLabel = "Just now",
+            minuteAgoFormat = "%d min ago",
+            hourAgoFormat = "%d hr ago",
+            locale = Locale.US,
+        )
+
+        assertEquals(0L, result.minutes)
+        assertEquals("Just now", result.label)
     }
 }

@@ -143,7 +143,17 @@ object WeatherSummaryEngine {
             }
         } else ""
 
-        return parts.joinToString(" ").replaceFirstChar { it.uppercase() } + ". " + tempSentence + comparisonStr
+        val openingSentence = sentenceJoin(parts)
+        return "$openingSentence $tempSentence$comparisonStr"
+    }
+
+    private fun sentenceJoin(parts: List<String>): String {
+        return parts
+            .map { it.trim().trimEnd('.') }
+            .filter { it.isNotEmpty() }
+            .map { it.replaceFirstChar { char -> char.uppercase() } }
+            .joinToString(". ")
+            .plus(".")
     }
 
     internal fun timeOfDayLabel(current: CurrentConditions, context: Context?): String {
