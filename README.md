@@ -44,6 +44,22 @@ Releases publish per-ABI APKs to reduce download size:
 
 Download from [GitHub Releases](https://github.com/SysAdminDoc/zeuswatch/releases).
 
+### Verify Downloads
+
+Release APK signing certificate SHA-256:
+
+```text
+FB:03:10:AA:52:0F:6C:C6:EB:DA:04:61:71:9E:A9:22:40:EA:2B:4A:A1:D0:15:79:A9:D1:8A:F5:A9:5F:A7:CD
+```
+
+For every release, verify the checksum file and GitHub artifact provenance:
+
+```bash
+sha256sum -c SHA256SUMS.txt
+gh attestation verify ZeusWatch-standard-arm64-v8a-vX.Y.Z.apk --repo SysAdminDoc/ZeusWatch
+gh attestation verify SHA256SUMS.txt --repo SysAdminDoc/ZeusWatch
+```
+
 ---
 
 ## Features

@@ -16,6 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     timeout-minutes: 45
     env:
       HAS_RELEASE_SIGNING: ${{ secrets.SIGNING_KEYSTORE_BASE64 != '' && secrets.SIGNING_STORE_PASSWORD != '' && secrets.SIGNING_KEY_ALIAS != '' && secrets.SIGNING_KEY_PASSWORD != '' }}
@@ -131,6 +134,11 @@ jobs:
             dist/*.apk
             dist/SHA256SUMS.txt
             dist/SBOM-gradle-dependencies.txt
+
+      - name: Generate release artifact attestations
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
+        with:
+          subject-path: dist/*
 
       - name: Upload APKs to GitHub Release
         if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && steps.tag.outputs.name != '')
