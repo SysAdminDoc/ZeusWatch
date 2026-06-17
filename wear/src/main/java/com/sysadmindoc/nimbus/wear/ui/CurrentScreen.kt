@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -192,6 +193,7 @@ private fun TempUnitChip(
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier
+            .heightIn(min = 40.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(WearBlueAccent.copy(alpha = 0.14f), RoundedCornerShape(8.dp))
             .border(1.dp, WearBlueAccent.copy(alpha = 0.22f), RoundedCornerShape(8.dp))
@@ -220,6 +222,7 @@ private fun SyncFooter(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 36.dp)
             .clickable(
                 onClick = onRefresh,
                 role = Role.Button,
@@ -257,6 +260,7 @@ private fun AlertBanner(count: Int, topEvent: String, onTap: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 40.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(WearAlertAccent.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
             .border(1.dp, WearAlertAccent.copy(alpha = 0.22f), RoundedCornerShape(12.dp))

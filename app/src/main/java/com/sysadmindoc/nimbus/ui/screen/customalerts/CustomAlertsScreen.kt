@@ -444,6 +444,7 @@ private fun RuleEditor(
         RuleEnabledToggle(enabled = enabled, onEnabledChange = { enabled = it })
         RuleEditorActions(
             parsedThreshold = parsedThreshold,
+            thresholdText = thresholdText,
             metric = metric,
             operator = operator,
             enabled = enabled,
@@ -564,7 +565,11 @@ private fun RuleThresholdInput(
                 )
                 .border(
                     1.dp,
-                    if (isThresholdValid(metric, parsedThreshold)) NimbusCardBorder else NimbusError.copy(alpha = 0.42f),
+                    if (shouldShowThresholdError(metric, thresholdText, parsedThreshold)) {
+                        NimbusError.copy(alpha = 0.42f)
+                    } else {
+                        NimbusCardBorder
+                    },
                     RoundedCornerShape(8.dp),
                 )
                 .padding(horizontal = 12.dp, vertical = 12.dp),
@@ -588,6 +593,7 @@ private fun RuleThresholdFeedback(
     parsedThreshold: Double?,
 ) {
     when {
+        isThresholdInputInProgress(thresholdText) -> Unit
         parsedThreshold == null || parsedThreshold.isNaN() -> Text(
             text = stringResource(R.string.custom_alerts_invalid_threshold),
             style = MaterialTheme.typography.bodySmall,
@@ -635,6 +641,24 @@ private fun isThresholdValid(metric: CustomAlertMetric, parsedThreshold: Double?
     parsedThreshold != null &&
         !parsedThreshold.isNaN() &&
         (metricAllowsNegativeThreshold(metric) || parsedThreshold >= 0.0)
+
+internal fun isThresholdInputInProgress(thresholdText: String): Boolean {
+    val trimmed = thresholdText.trim()
+    return trimmed.isEmpty() ||
+        trimmed == "-" ||
+        trimmed == "." ||
+        trimmed == "-." ||
+        trimmed.endsWith(".")
+}
+
+private fun shouldShowThresholdError(
+    metric: CustomAlertMetric,
+    thresholdText: String,
+    parsedThreshold: Double?,
+): Boolean {
+    return !isThresholdInputInProgress(thresholdText) &&
+        !isThresholdValid(metric, parsedThreshold)
+}
 
 @Composable
 private fun RuleEnabledToggle(
@@ -711,13 +735,15 @@ private fun RuleEnabledToggle(
 @Composable
 private fun RuleEditorActions(
     parsedThreshold: Double?,
+    thresholdText: String,
     metric: CustomAlertMetric,
     operator: CustomAlertOperator,
     enabled: Boolean,
     onSave: (CustomAlertMetric, CustomAlertOperator, Double, Boolean) -> Unit,
     onCancel: () -> Unit,
 ) {
-    val thresholdValid = isThresholdValid(metric, parsedThreshold)
+    val thresholdValid = !isThresholdInputInProgress(thresholdText) &&
+        isThresholdValid(metric, parsedThreshold)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),

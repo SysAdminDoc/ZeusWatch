@@ -7,6 +7,8 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -412,6 +414,7 @@ private fun SettingsHomeCardsSection(
 
 @Composable
 private fun SettingsHomeCardsHeader(onResetCardPreferences: () -> Unit) {
+    val resetLabel = stringResource(R.string.settings_reset)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -425,6 +428,7 @@ private fun SettingsHomeCardsHeader(onResetCardPreferences: () -> Unit) {
         )
         Box(
             modifier = Modifier
+                .heightIn(min = 44.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(NimbusBlueAccent.copy(alpha = 0.12f))
                 .border(1.dp, NimbusBlueAccent.copy(alpha = 0.22f), RoundedCornerShape(8.dp))
@@ -432,10 +436,11 @@ private fun SettingsHomeCardsHeader(onResetCardPreferences: () -> Unit) {
                     onClick = onResetCardPreferences,
                     role = Role.Button,
                 )
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .semantics { contentDescription = resetLabel }
+                .padding(horizontal = 12.dp, vertical = 10.dp),
         ) {
             Text(
-                stringResource(R.string.settings_reset),
+                resetLabel,
                 style = MaterialTheme.typography.labelLarge,
                 color = NimbusBlueAccent,
             )
@@ -1153,6 +1158,8 @@ private fun SettingsCategoryPicker(
     selectedCategory: SettingsCategory,
     onSelectedCategory: (SettingsCategory) -> Unit,
 ) {
+    val selectedLabel = stringResource(R.string.common_selected)
+    val notSelectedLabel = stringResource(R.string.common_not_selected)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1196,6 +1203,10 @@ private fun SettingsCategoryPicker(
                         onClick = { onSelectedCategory(category) },
                         role = Role.Tab,
                     )
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = "$categoryLabel, $categorySummary"
+                        stateDescription = if (isSelected) selectedLabel else notSelectedLabel
+                    }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1234,7 +1245,7 @@ private fun SettingSection(
     initiallyExpanded: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(initiallyExpanded) }
+    var expanded by rememberSaveable(title) { mutableStateOf(initiallyExpanded) }
     val expandedLabel = stringResource(R.string.common_expanded)
     val collapsedLabel = stringResource(R.string.common_collapsed)
     val sectionDescription = if (expanded) {
@@ -1248,7 +1259,9 @@ private fun SettingSection(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(12.dp))
-            .animateContentSize()
+            .animateContentSize(
+                animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+            )
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -1264,6 +1277,7 @@ private fun SettingSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(min = 52.dp)
                 .clickable(
                     onClick = { expanded = !expanded },
                     role = Role.Button,

@@ -4,8 +4,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -67,6 +69,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -228,8 +231,9 @@ private fun LocationsList(
     var draggedIndex by remember { mutableIntStateOf(-1) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
     var dragList by remember(saved) { mutableStateOf(saved) }
+    var itemHeightsPx by remember(saved) { mutableStateOf<Map<Long, Int>>(emptyMap()) }
     val displayList = if (draggedIndex >= 0) dragList else saved
-    val itemHeightPx = with(LocalDensity.current) { 62.dp.toPx() }
+    val fallbackItemHeightPx = with(LocalDensity.current) { 62.dp.toPx() }
     val visibleSearchResults = filterDuplicateSearchResults(search.results, saved)
     val visibleRecentSearches = filterDuplicateSearchResults(recentSearches, saved)
     val currentLocation = saved.firstOrNull { it.isCurrentLocation }
@@ -347,10 +351,13 @@ private fun LocationsList(
                     onDrag = { delta ->
                         dragOffsetY += delta
                         val currentIndex = draggedIndex.takeIf { it >= 0 } ?: index
+                        val currentItemHeightPx = displayList.getOrNull(currentIndex)
+                            ?.let { itemHeightsPx[it.id]?.toFloat() }
+                            ?: fallbackItemHeightPx
                         val targetIndex = computeDraggedLocationTargetIndex(
                             currentIndex = currentIndex,
                             dragOffsetPx = dragOffsetY,
-                            itemHeightPx = itemHeightPx,
+                            itemHeightPx = currentItemHeightPx,
                             minimumIndex = minimumMovableIndex,
                             lastIndex = displayList.lastIndex,
                         )
@@ -369,6 +376,11 @@ private fun LocationsList(
                         }
                         draggedIndex = -1
                         dragOffsetY = 0f
+                    },
+                    onMeasuredHeight = { heightPx ->
+                        if (heightPx > 0 && itemHeightsPx[loc.id] != heightPx) {
+                            itemHeightsPx = itemHeightsPx + (loc.id to heightPx)
+                        }
                     },
                 )
             }
@@ -658,6 +670,7 @@ private fun SavedLocationItem(
     onDragStart: () -> Unit = {},
     onDrag: (Float) -> Unit = {},
     onDragEnd: () -> Unit = {},
+    onMeasuredHeight: (Int) -> Unit = {},
 ) {
     var sourcePanelExpanded by remember(location.id) { mutableStateOf(false) }
     val displayName = if (location.isCurrentLocation) {
@@ -670,7 +683,11 @@ private fun SavedLocationItem(
     val removeDescription = stringResource(R.string.locations_remove_cd, location.name)
     val sourceSettingsDescription = stringResource(R.string.locations_source_settings_cd, location.name)
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { onMeasuredHeight(it.size.height) },
+    ) {
         SavedLocationRow(
             location = location,
             displayName = displayName,
@@ -699,8 +716,18 @@ private fun SavedLocationItem(
 
         AnimatedVisibility(
             visible = sourcePanelExpanded && !location.isCurrentLocation,
-            enter = fadeIn(),
-            exit = fadeOut(),
+            enter = fadeIn(
+                animationSpec = tween(durationMillis = 130, easing = FastOutSlowInEasing),
+            ) + expandVertically(
+                expandFrom = Alignment.Top,
+                animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+            ),
+            exit = fadeOut(
+                animationSpec = tween(durationMillis = 110, easing = FastOutSlowInEasing),
+            ) + shrinkVertically(
+                shrinkTowards = Alignment.Top,
+                animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
+            ),
         ) {
             LocationSourcePanel(
                 location = location,

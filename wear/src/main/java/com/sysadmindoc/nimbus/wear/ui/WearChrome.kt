@@ -1,8 +1,13 @@
 package com.sysadmindoc.nimbus.wear.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,11 +19,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -142,20 +150,14 @@ internal fun WearStateCard(
             modifier = Modifier.fillMaxWidth(),
         )
         if (actionLabel != null && onAction != null) {
-            Text(
+            WearActionButton(
                 text = actionLabel,
                 fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = WearTextPrimary,
-                textAlign = TextAlign.Center,
+                contentColor = WearTextPrimary,
+                accent = accent,
+                onClick = onAction,
                 modifier = Modifier
-                    .heightIn(min = 32.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(accent.copy(alpha = 0.14f), RoundedCornerShape(8.dp))
-                    .border(1.dp, accent.copy(alpha = 0.22f), RoundedCornerShape(8.dp))
-                    .clickable(onClick = onAction, role = Role.Button)
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                    .fillMaxWidth(),
             )
         }
     }
@@ -212,18 +214,63 @@ private fun WearLinkButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Text(
+    WearActionButton(
         text = text,
         fontSize = 10.sp,
+        contentColor = WearBlueAccent,
+        accent = WearBlueAccent,
+        onClick = onClick,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun WearActionButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    accent: Color = WearBlueAccent,
+    contentColor: Color = WearBlueAccent,
+    fontSize: androidx.compose.ui.unit.TextUnit = 10.sp,
+) {
+    val shape = RoundedCornerShape(8.dp)
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val backgroundColor by animateColorAsState(
+        targetValue = accent.copy(alpha = if (pressed) 0.22f else 0.14f),
+        animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing),
+        label = "wearActionBackground",
+    )
+    val borderColor by animateColorAsState(
+        targetValue = accent.copy(alpha = if (pressed) 0.34f else 0.22f),
+        animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing),
+        label = "wearActionBorder",
+    )
+
+    Text(
+        text = text,
+        fontSize = fontSize,
         fontWeight = FontWeight.Medium,
-        color = WearBlueAccent,
+        color = contentColor,
         textAlign = TextAlign.Center,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier = modifier
-            .heightIn(min = 32.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(WearBlueAccent.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
-            .border(1.dp, WearBlueAccent.copy(alpha = 0.20f), RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick, role = Role.Button)
-            .padding(horizontal = 8.dp, vertical = 7.dp),
+            .heightIn(min = 40.dp)
+            .graphicsLayer {
+                scaleX = if (pressed) 0.97f else 1f
+                scaleY = if (pressed) 0.97f else 1f
+            }
+            .clip(shape)
+            .background(backgroundColor, shape)
+            .border(1.dp, borderColor, shape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+                role = Role.Button,
+            )
+            .semantics { contentDescription = text }
+            .padding(horizontal = 10.dp, vertical = 10.dp),
     )
 }

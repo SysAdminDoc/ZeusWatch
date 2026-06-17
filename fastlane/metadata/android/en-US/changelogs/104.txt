@@ -1,0 +1,7 @@
+v1.24.2 - Premium UX polish
+
+- Startup and recovery states now use clearer icon-labeled actions and calmer loading copy.
+- Settings category cards and expandable sections expose better selected/expanded state feedback.
+- Saved-place source panels expand more smoothly, and drag-reorder handles variable row heights more reliably.
+- Wear OS action, alert, refresh, and unit-toggle surfaces have stronger touch targets and pressed feedback.
+- Custom alert threshold editing stays calm while users type partial numeric values.
