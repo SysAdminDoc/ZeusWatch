@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -69,9 +70,10 @@ fun AlertBanner(
 
     // Haptic feedback for severe+ alerts on first composition
     if (settings.hapticFeedbackForAlerts) {
-        val topAlert = alerts.firstOrNull()
-        androidx.compose.runtime.LaunchedEffect(topAlert?.id) {
-            topAlert?.let {
+        val alertSetKey = remember(alerts) { alerts.map { it.id }.sorted().joinToString("|") }
+        val highestSeverityAlert = remember(alerts) { alerts.minByOrNull { it.severity.sortOrder } }
+        androidx.compose.runtime.LaunchedEffect(alertSetKey) {
+            highestSeverityAlert?.let {
                 com.sysadmindoc.nimbus.util.HapticHelper.vibrateForAlert(context, it.severity)
             }
         }

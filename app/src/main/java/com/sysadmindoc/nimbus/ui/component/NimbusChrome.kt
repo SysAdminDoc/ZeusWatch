@@ -224,8 +224,10 @@ fun PremiumMessageCard(
     loading: Boolean = false,
     badgeText: String? = null,
     primaryActionLabel: String? = null,
+    primaryActionIcon: ImageVector? = null,
     onPrimaryAction: (() -> Unit)? = null,
     secondaryActionLabel: String? = null,
+    secondaryActionIcon: ImageVector? = null,
     onSecondaryAction: (() -> Unit)? = null,
     tertiaryActionLabel: String? = null,
     onTertiaryAction: (() -> Unit)? = null,
@@ -317,6 +319,14 @@ fun PremiumMessageCard(
                     contentColor = NimbusTextPrimary,
                 ),
             ) {
+                if (primaryActionIcon != null) {
+                    Icon(
+                        imageVector = primaryActionIcon,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Text(
                     text = primaryActionLabel,
                     maxLines = 1,
@@ -337,6 +347,14 @@ fun PremiumMessageCard(
                     contentColor = NimbusTextPrimary,
                 ),
             ) {
+                if (secondaryActionIcon != null) {
+                    Icon(
+                        imageVector = secondaryActionIcon,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Text(
                     text = secondaryActionLabel,
                     maxLines = 1,

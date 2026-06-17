@@ -80,7 +80,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
@@ -570,6 +573,7 @@ private fun WeatherContent(
     val justNowLabel = stringResource(R.string.main_just_now)
     val minuteAgoFormat = stringResource(R.string.main_minutes_ago)
     val hourAgoFormat = stringResource(R.string.main_hours_ago)
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     selectedAlert?.let { alert ->
         AlertDetailSheet(
@@ -592,16 +596,21 @@ private fun WeatherContent(
     val todayPrecipChance = data.daily.firstOrNull()?.precipitationProbability ?: 0
     var updatedAgo by remember { mutableStateOf("") }
     var updatedAgeMinutes by remember { mutableStateOf(0L) }
-    LaunchedEffect(data.lastUpdated, justNowLabel, minuteAgoFormat, hourAgoFormat) {
-        while (true) {
-            val minutes = Duration.between(data.lastUpdated, LocalDateTime.now()).toMinutes()
-            updatedAgeMinutes = minutes
-            updatedAgo = when {
-                minutes < 1 -> justNowLabel
-                minutes < 60 -> String.format(Locale.getDefault(), minuteAgoFormat, minutes)
-                else -> String.format(Locale.getDefault(), hourAgoFormat, minutes / 60)
+    LaunchedEffect(data.lastUpdated, justNowLabel, minuteAgoFormat, hourAgoFormat, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                val updatedAge = formatUpdatedAge(
+                    lastUpdated = data.lastUpdated,
+                    now = LocalDateTime.now(),
+                    justNowLabel = justNowLabel,
+                    minuteAgoFormat = minuteAgoFormat,
+                    hourAgoFormat = hourAgoFormat,
+                    locale = Locale.getDefault(),
+                )
+                updatedAgeMinutes = updatedAge.minutes
+                updatedAgo = updatedAge.label
+                kotlinx.coroutines.delay(60_000L)
             }
-            kotlinx.coroutines.delay(60_000L)
         }
     }
 
@@ -1509,6 +1518,7 @@ private fun StartupState(
     tertiaryActionLabel: String? = null,
     onTertiaryAction: (() -> Unit)? = null,
 ) {
+    val hasLastLocationShortcut = tertiaryActionLabel != null
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1522,8 +1532,10 @@ private fun StartupState(
             loading = true,
             badgeText = stringResource(R.string.main_current_location_slow_badge),
             primaryActionLabel = primaryActionLabel,
+            primaryActionIcon = if (hasLastLocationShortcut) Icons.Filled.MyLocation else Icons.Filled.LocationOn,
             onPrimaryAction = onPrimaryAction,
             secondaryActionLabel = secondaryActionLabel,
+            secondaryActionIcon = if (hasLastLocationShortcut) Icons.Filled.LocationOn else Icons.Filled.Refresh,
             onSecondaryAction = onSecondaryAction,
             tertiaryActionLabel = tertiaryActionLabel,
             onTertiaryAction = onTertiaryAction,
@@ -1560,8 +1572,10 @@ private fun ErrorState(
             message = message,
             icon = icon,
             primaryActionLabel = resolvedActionLabel,
+            primaryActionIcon = actionIcon,
             onPrimaryAction = onRetry,
             secondaryActionLabel = secondaryActionLabel,
+            secondaryActionIcon = if (secondaryActionLabel != null) Icons.Filled.LocationOn else null,
             onSecondaryAction = onSecondaryAction,
             badgeText = if (secondaryActionLabel != null && onSecondaryAction != null) {
                 stringResource(R.string.main_manual_locations_available)
@@ -1578,6 +1592,28 @@ private fun ErrorState(
 private fun isLocationPermissionError(error: MainUiError?): Boolean =
     error?.kind == MainUiErrorKind.LOCATION_PERMISSION_REQUIRED ||
         error?.kind == MainUiErrorKind.LOCATION_PERMISSION_DENIED
+
+internal data class UpdatedAge(
+    val minutes: Long,
+    val label: String,
+)
+
+internal fun formatUpdatedAge(
+    lastUpdated: LocalDateTime,
+    now: LocalDateTime,
+    justNowLabel: String,
+    minuteAgoFormat: String,
+    hourAgoFormat: String,
+    locale: Locale,
+): UpdatedAge {
+    val minutes = Duration.between(lastUpdated, now).toMinutes().coerceAtLeast(0)
+    val label = when {
+        minutes < 1 -> justNowLabel
+        minutes < 60 -> String.format(locale, minuteAgoFormat, minutes)
+        else -> String.format(locale, hourAgoFormat, minutes / 60)
+    }
+    return UpdatedAge(minutes = minutes, label = label)
+}
 
 internal fun mainDeepLinkCardTarget(target: MainDeepLinkTarget?): CardType? = when (target) {
     MainDeepLinkTarget.NOWCAST -> CardType.NOWCAST

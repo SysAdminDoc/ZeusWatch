@@ -260,6 +260,18 @@ class WeatherSummaryEngineTest {
         assertFalse(result.contains("muggy"))
     }
 
+    @Test
+    fun `generate punctuates multiple weather addenda as sentences`() {
+        val c = current(humidity = 85, temperature = 30.0, windSpeed = 45.0, uvIndex = 8.0)
+
+        val result = WeatherSummaryEngine.generate(c, daily(), hourly(*IntArray(12) { 70 }), s = CELSIUS)
+
+        assertTrue("Expected wind addendum to be sentence-separated in: $result", result.contains(". With strong winds."))
+        assertTrue("Expected UV addendum to be sentence-separated in: $result", result.contains(". UV index is very high."))
+        assertTrue("Expected humidity addendum to be sentence-separated in: $result", result.contains(". And it will feel muggy."))
+        assertFalse("Expected no run-on wind/UV phrase in: $result", result.contains("strong winds UV index"))
+    }
+
     // ── Yesterday comparison ────────────────────────────────────────────────
 
     @Test
