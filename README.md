@@ -8,7 +8,7 @@
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 ![Build](https://github.com/SysAdminDoc/zeuswatch/actions/workflows/build.yml/badge.svg)
 
-> A free, open-source Android weather app with a premium dark UI, 29 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, Environment Canada, and WMO SWIC.
+> A free, open-source Android weather app with a premium dark UI, 35 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, Environment Canada, and WMO SWIC.
 
 <img width="1536" height="1024" alt="design" src="https://github.com/user-attachments/assets/dce70ccc-af71-48d8-8000-0b2935f45996" />
 
@@ -138,6 +138,10 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **3-Day** | 3x2 | Current conditions + 3-day forecast columns + staleness indicator |
 | **Forecast** | 4x3 | Current + 6hr hourly strip + 5-day rows + staleness indicator |
 | **Hourly Strip** | 4x1 | Current temp + next 5 hourly temps with icons and precip% |
+| **Saved Cities** | 4x3/4x4 | Up to 5 saved locations with cached temperature and condition |
+| **Temperature** | 1x1/2x1 | Compact icon + current temperature |
+| **Compact** | 2x1 | Icon, temperature, location, and updated state |
+| **Daily** | 4x2 | Five-day outlook rows with high/low and condition icons |
 
 - Per-widget location configuration via config activity
 - Tap-to-refresh (when data is null) and tap-to-open (when loaded)
@@ -152,7 +156,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Icon Style** | Meteocons Animated (Lottie, default) / Material Icons / Custom Icon Packs |
 | **Theme Mode** | Static Dark / Weather Adaptive (accent colors shift: amber for sun, blue for rain, purple for storms) |
 | **Weather Summary** | AI-Generated (Gemini Nano, default) / Standard template |
-| **Card Visibility** | Toggle each of the 29 card types on/off |
+| **Card Visibility** | Toggle each of the 35 card types on/off |
 | **Card Ordering** | Reorderable card list in Settings with move up/down arrows |
 | **Temperature** | Fahrenheit / Celsius |
 | **Wind Speed** | mph / km/h / m/s / knots |
@@ -216,7 +220,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 │  │+ViewModel│ │+ViewModel │ │ + VM     │ │+ VM      │ │+ ViewModel   │  │
 │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └──────┬───────┘  │
 │       │            │            │            │               │           │
-│  29 Card Types via LazyColumn items()                                    │
+│  35 Card Types via LazyColumn items()                                    │
 │  WeatherSummary | NowcastCard | RadarPreview | HourlyStrip | TempGraph  │
 │  DailyForecast | UvIndexBar | WindCompass | AqiCard | PollenCard | ...   │
 │  ClothingSuggestion | PetSafety | DrivingAlert | HealthAlert | ...      │
@@ -392,11 +396,15 @@ app/src/main/java/com/sysadmindoc/nimbus/
 │   └── BlitzortungService       # Real-time lightning WebSocket
 ├── wallpaper/
 │   └── WeatherWallpaperService  # Live weather wallpaper with particle effects
-└── widget/                      # 4 Glance home screen widgets
+└── widget/                      # 8 Glance home screen widgets
     ├── NimbusSmallWidget        # 3x1: temp + icon
     ├── NimbusMediumWidget       # 3x2: current + 3-day
     ├── NimbusLargeWidget        # 4x3: hourly + 5-day
     ├── NimbusForecastStripWidget# 4x1: hourly temp strip
+    ├── NimbusSavedCitiesWidget  # 4x3/4x4: saved-city overview
+    ├── NimbusTempWidget         # compact temp-only surface
+    ├── NimbusCompactWidget      # 2x1 compact current conditions
+    ├── NimbusDailyWidget        # 4x2 daily outlook
     ├── WidgetRefreshWorker      # Periodic refresh + proactive caching
     ├── WidgetRefreshAction      # Tap-to-refresh Glance callback
     ├── WidgetConfigActivity     # Per-widget location picker
@@ -412,7 +420,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | Section | Options |
 |---------|---------|
 | **Display** | Radar provider, icon style (Meteocons/Material/Custom), theme mode, summary style (AI/template) |
-| **Cards** | Toggle + reorder each of 29 card types with move up/down arrows |
+| **Cards** | Toggle + reorder each of 35 card types with move up/down arrows |
 | **Units** | Temperature, wind, pressure, precipitation, visibility, time format |
 | **Notifications** | Alert notifications (severity threshold, multi-location, source preference), persistent weather, nowcasting timelines, driving, health |
 | **Data Display** | Hourly range (48/72h), snowfall, CAPE, sunshine, golden hour, Beaufort colors, outdoor score, yesterday comparison |
@@ -423,11 +431,11 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | **Advanced** | Cache TTL (15/30/60/120 min) (collapsed by default) |
 | **About** | Version, data source, license |
 
-### Card Types (29)
+### Card Types (35)
 
 All cards can be independently shown/hidden and reordered:
 
-Weather Summary, Radar Preview, Rain Next Hour, Hourly Forecast, Temperature Graph, Forecast Evolution, Daily Forecast, UV Index, Wind Compass, Air Quality, Pollen, Outdoor Activity Score, Snowfall, Severe Weather Potential, Golden Hour, Sunshine Duration, Driving Conditions, Health Alerts, What to Wear, Pet Safety, Moon Phase, Humidity & Comfort, Precipitation Forecast, Pressure Trend, Wind Forecast, Today's Details, Cloud Cover, Visibility, On This Day
+Weather Summary, Radar Preview, Rain Next Hour, Hourly Forecast, Temperature Graph, Forecast Evolution, Daily Forecast, UV Index, Wind Compass, Air Quality, Pollen, Outdoor Activity Score, Snowfall, Severe Weather Potential, Golden Hour, Sunshine Duration, Driving Conditions, Health Alerts, What to Wear, Pet Safety, Moon Phase, Humidity & Comfort, Precipitation Forecast, Pressure Trend, Wind Forecast, Today's Details, Cloud Cover, Visibility, On This Day, Aurora / Kp Index, Activity Index, Solar Irradiance, Marine, Flood Risk, Climate Outlook
 
 ---
 
