@@ -8,6 +8,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -23,6 +24,9 @@ import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.FillLayer
+import org.maplibre.android.style.layers.Layer
+import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.RasterLayer
 import org.maplibre.android.style.sources.GeoJsonSource
@@ -31,9 +35,13 @@ import org.maplibre.android.style.sources.TileSet
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
+import org.maplibre.geojson.Polygon
 import com.sysadmindoc.nimbus.data.api.LightningStrike
+import com.sysadmindoc.nimbus.data.model.AlertPolygon
+import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.CommunityReport
 import com.sysadmindoc.nimbus.data.model.ReportCondition
+import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.SymbolLayer
 import kotlin.math.abs
@@ -56,12 +64,15 @@ fun RadarMapView(
     overlayTileUrl: String? = null,
     lightningStrikes: List<LightningStrike> = emptyList(),
     communityReports: List<CommunityReport> = emptyList(),
+    alertOverlays: List<WeatherAlert> = emptyList(),
     onMapReady: () -> Unit = {},
     onCameraMoveStarted: () -> Unit = {},
     onCameraIdle: () -> Unit = {},
+    onAlertSelected: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val currentOnAlertSelected by rememberUpdatedState(onAlertSelected)
 
     // Initialize MapLibre once
     remember { MapLibre.getInstance(context) }
@@ -122,6 +133,12 @@ fun RadarMapView(
         updateCommunityReports(style, communityReports)
     }
 
+    // Update active warning polygons reactively.
+    LaunchedEffect(alertOverlays) {
+        val style = styleRef ?: return@LaunchedEffect
+        updateAlertOverlayLayer(style, alertOverlays)
+    }
+
     // Re-center when the requested coordinates change materially (e.g. a deep
     // link that opened at 0,0 resolves to the real location after the map was
     // created). Keyed on styleRef so it re-runs once the style is ready and
@@ -147,6 +164,21 @@ fun RadarMapView(
                     // Camera listeners for pause/resume during gestures
                     map.addOnCameraMoveStartedListener { onCameraMoveStarted() }
                     map.addOnCameraIdleListener { onCameraIdle() }
+                    map.addOnMapClickListener { latLng ->
+                        val screenPoint = map.projection.toScreenLocation(latLng)
+                        val alertId = map.queryRenderedFeatures(
+                            screenPoint,
+                            ALERT_BORDER_LAYER_ID,
+                            ALERT_FILL_LAYER_ID,
+                        ).firstOrNull { it.hasProperty(ALERT_ID_PROPERTY) }
+                            ?.getStringProperty(ALERT_ID_PROPERTY)
+                        if (alertId != null) {
+                            currentOnAlertSelected(alertId)
+                            true
+                        } else {
+                            false
+                        }
+                    }
 
                     // Dark basemap
                     map.setStyle(
@@ -179,6 +211,11 @@ fun RadarMapView(
                         // Apply initial community reports layer
                         if (communityReports.isNotEmpty()) {
                             updateCommunityReports(style, communityReports)
+                        }
+
+                        // Apply initial active alert polygons
+                        if (alertOverlays.isNotEmpty()) {
+                            updateAlertOverlayLayer(style, alertOverlays)
                         }
 
                         // Attribution
@@ -261,6 +298,16 @@ private fun updateRadarLayers(
 private fun addRadarLayerBelowMarkers(style: Style, layer: RasterLayer) {
     // style.layers is ordered bottom-to-top; anchor below the lowest marker layer.
     val anchorId = style.layers.firstOrNull { it.id in RADAR_ANCHOR_LAYER_IDS }?.id
+        ?: style.layers.firstOrNull { it is SymbolLayer }?.id
+    if (anchorId != null) {
+        style.addLayerBelow(layer, anchorId)
+    } else {
+        style.addLayer(layer)
+    }
+}
+
+private fun addOverlayLayerBelowMarkers(style: Style, layer: Layer) {
+    val anchorId = style.layers.firstOrNull { it.id in MARKER_LAYER_IDS }?.id
         ?: style.layers.firstOrNull { it is SymbolLayer }?.id
     if (anchorId != null) {
         style.addLayerBelow(layer, anchorId)
@@ -417,6 +464,84 @@ private fun updateCommunityReports(
     }
 }
 
+private fun updateAlertOverlayLayer(
+    style: Style,
+    alertOverlays: List<WeatherAlert>,
+) {
+    if (alertOverlays.isEmpty()) {
+        style.getLayer(ALERT_BORDER_LAYER_ID)?.let { style.removeLayer(it) }
+        style.getLayer(ALERT_FILL_LAYER_ID)?.let { style.removeLayer(it) }
+        style.getSource(ALERT_SOURCE_ID)?.let { style.removeSource(it) }
+        return
+    }
+
+    val featureCollection = alertOverlayFeatureCollection(alertOverlays)
+    val existingSource = style.getSourceAs<GeoJsonSource>(ALERT_SOURCE_ID)
+    if (existingSource != null) {
+        existingSource.setGeoJson(featureCollection)
+        return
+    }
+
+    style.addSource(GeoJsonSource(ALERT_SOURCE_ID, featureCollection))
+
+    val fillLayer = FillLayer(ALERT_FILL_LAYER_ID, ALERT_SOURCE_ID).apply {
+        setProperties(
+            PropertyFactory.fillColor(Expression.get(ALERT_COLOR_PROPERTY)),
+            PropertyFactory.fillOpacity(0.18f),
+        )
+    }
+    addOverlayLayerBelowMarkers(style, fillLayer)
+
+    val borderLayer = LineLayer(ALERT_BORDER_LAYER_ID, ALERT_SOURCE_ID).apply {
+        setProperties(
+            PropertyFactory.lineColor(Expression.get(ALERT_COLOR_PROPERTY)),
+            PropertyFactory.lineOpacity(0.92f),
+            PropertyFactory.lineWidth(2.4f),
+        )
+    }
+    addOverlayLayerBelowMarkers(style, borderLayer)
+}
+
+internal fun alertOverlayFeatureCollection(alertOverlays: List<WeatherAlert>): FeatureCollection {
+    val features = alertOverlays.flatMap { alert ->
+        alert.geometry?.polygons?.mapNotNull { polygon ->
+            alertOverlayFeature(alert, polygon)
+        } ?: emptyList()
+    }
+    return FeatureCollection.fromFeatures(features)
+}
+
+private fun alertOverlayFeature(alert: WeatherAlert, polygon: AlertPolygon): Feature? {
+    val ring = closedPolygonRing(polygon)
+    if (ring.size < MIN_CLOSED_POLYGON_POINTS) return null
+    return Feature.fromGeometry(Polygon.fromLngLats(listOf(ring))).apply {
+        addStringProperty(ALERT_ID_PROPERTY, alert.id)
+        addStringProperty("event", alert.event)
+        addStringProperty("severity", alert.severity.name)
+        addStringProperty(ALERT_COLOR_PROPERTY, alert.severity.overlayColor)
+    }
+}
+
+private fun closedPolygonRing(polygon: AlertPolygon): List<Point> {
+    val points = polygon.points
+    if (points.size < MIN_POLYGON_POINTS) return emptyList()
+    val closedPoints = if (points.first() == points.last()) {
+        points
+    } else {
+        points + points.first()
+    }
+    return closedPoints.map { Point.fromLngLat(it.longitude, it.latitude) }
+}
+
+private val AlertSeverity.overlayColor: String
+    get() = when (this) {
+        AlertSeverity.EXTREME -> "#D32F2F"
+        AlertSeverity.SEVERE -> "#FF5722"
+        AlertSeverity.MODERATE -> "#FF9800"
+        AlertSeverity.MINOR -> "#FFD54F"
+        AlertSeverity.UNKNOWN -> "#9E9E9E"
+    }
+
 /** Map ReportCondition to a hex color for the circle marker. */
 private fun conditionColor(condition: ReportCondition): String = when (condition) {
     ReportCondition.SUNNY -> "#FFD54F"          // Yellow
@@ -440,10 +565,26 @@ private const val LIGHTNING_POINT_LAYER = "lightning-points"
 private const val REPORTS_SOURCE_ID = "community-reports-source"
 private const val REPORTS_LAYER_ID = "community-reports-circles"
 private const val REPORTS_LABEL_LAYER_ID = "community-reports-labels"
+private const val ALERT_SOURCE_ID = "active-alert-polygons-source"
+private const val ALERT_FILL_LAYER_ID = "active-alert-polygons-fill"
+private const val ALERT_BORDER_LAYER_ID = "active-alert-polygons-border"
+private const val ALERT_ID_PROPERTY = "alertId"
+private const val ALERT_COLOR_PROPERTY = "alertColor"
+private const val MIN_POLYGON_POINTS = 3
+private const val MIN_CLOSED_POLYGON_POINTS = 4
 private const val CAMERA_RECENTER_EPSILON_DEGREES = 0.001
 
 /** Marker layers radar rasters must always render beneath. */
 private val RADAR_ANCHOR_LAYER_IDS = setOf(
+    ALERT_FILL_LAYER_ID,
+    ALERT_BORDER_LAYER_ID,
+    LIGHTNING_GLOW_LAYER,
+    LIGHTNING_POINT_LAYER,
+    REPORTS_LAYER_ID,
+    REPORTS_LABEL_LAYER_ID,
+)
+
+private val MARKER_LAYER_IDS = setOf(
     LIGHTNING_GLOW_LAYER,
     LIGHTNING_POINT_LAYER,
     REPORTS_LAYER_ID,

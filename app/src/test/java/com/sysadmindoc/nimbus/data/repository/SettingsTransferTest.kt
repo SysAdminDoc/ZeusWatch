@@ -163,6 +163,11 @@ class SettingsTransferTest {
                         latitude = 47.6062,
                         longitude = -122.3321,
                     ),
+                    SettingsBackupLocation(
+                        name = "Invalid",
+                        latitude = 95.0,
+                        longitude = -122.3321,
+                    ),
                 ),
                 customAlerts = emptyList(),
             ),
@@ -173,8 +178,10 @@ class SettingsTransferTest {
         assertEquals(4, preview.currentSavedLocationCount)
         assertEquals(1, preview.savedLocationCount)
         assertEquals(1, preview.skippedLocationCount)
+        assertEquals(1, preview.invalidLocationCount)
         assertEquals(1, preview.duplicateLocationCount)
         assertTrue(SettingsImportWarning.BLANK_LOCATION_NAMES in preview.warnings)
+        assertTrue(SettingsImportWarning.INVALID_COORDINATES in preview.warnings)
         assertTrue(SettingsImportWarning.DUPLICATE_LOCATIONS in preview.warnings)
     }
 

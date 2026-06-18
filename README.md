@@ -127,6 +127,7 @@ gh attestation verify SHA256SUMS.txt --repo SysAdminDoc/ZeusWatch
 | **Radar Preview Card** | Live RainViewer tile + CartoDB dark basemap on the Today tab |
 | **Radar Tab** | Full-screen radar in the bottom nav with provider-aware rendering |
 | **Map Layer Selector** | Overlay layers: Radar, Lightning, Satellite, Clouds |
+| **Active Warning Polygons** | Native radar renders NWS warning polygons with severity colors and tappable alert details |
 | **Lightning Strike Overlay** | Real-time global lightning data via Blitzortung WebSocket with GeoJSON rendering |
 | **Community Weather Reports** | Firebase Firestore-backed crowd-sourced condition reporting with rate limiting |
 

@@ -21,7 +21,6 @@ import com.sysadmindoc.nimbus.data.repository.sourceOverrides
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
-import java.time.OffsetDateTime
 import java.util.concurrent.TimeUnit
 import java.util.Locale
 
@@ -155,13 +154,7 @@ class AlertCheckWorker @AssistedInject constructor(
     }
 
     private fun isExpired(alert: WeatherAlert): Boolean {
-        val expiresStr = alert.expires ?: return false
-        return try {
-            val expires = OffsetDateTime.parse(expiresStr)
-            expires.isBefore(OffsetDateTime.now())
-        } catch (_: Exception) {
-            false
-        }
+        return isAlertExpired(alert.expires)
     }
 
     companion object {

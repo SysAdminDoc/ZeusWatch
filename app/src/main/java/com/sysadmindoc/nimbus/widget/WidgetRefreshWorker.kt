@@ -245,6 +245,8 @@ class WidgetRefreshWorker @AssistedInject constructor(
         state.refreshedAnyLocation = true
         try {
             wearSyncManager.syncWeather(primaryWeather)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
         }
     }
@@ -265,6 +267,8 @@ class WidgetRefreshWorker @AssistedInject constructor(
         for (request in refreshPlan.requests) {
             try {
                 refreshMappedWidgetRequest(request, primaryLocationKey, convertTemp, state)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
             } catch (e: Exception) {
                 logWidgetRefreshFailure(request, e)
             }

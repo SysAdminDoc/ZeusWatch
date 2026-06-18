@@ -87,8 +87,8 @@ fun OnboardingScreen(
     var step by rememberSaveable { mutableIntStateOf(0) }
     var tempUnitName by rememberSaveable { mutableStateOf(TempUnit.FAHRENHEIT.name) }
     var starterCardSetName by rememberSaveable { mutableStateOf(StarterCardSet.STANDARD.name) }
-    val tempUnit = TempUnit.valueOf(tempUnitName)
-    val starterCardSet = StarterCardSet.valueOf(starterCardSetName)
+    val tempUnit = enumValueOrDefault(tempUnitName, TempUnit.FAHRENHEIT)
+    val starterCardSet = enumValueOrDefault(starterCardSetName, StarterCardSet.STANDARD)
 
     Box(
         modifier = Modifier
@@ -125,6 +125,10 @@ fun OnboardingScreen(
             )
         }
     }
+}
+
+private inline fun <reified T : Enum<T>> enumValueOrDefault(name: String, default: T): T {
+    return enumValues<T>().firstOrNull { it.name == name } ?: default
 }
 
 @Composable

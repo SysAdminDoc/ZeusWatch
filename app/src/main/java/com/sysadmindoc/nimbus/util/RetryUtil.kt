@@ -14,6 +14,9 @@ suspend fun <T> withRetry(
     initialDelayMs: Long = 1_000L,
     block: suspend () -> Result<T>,
 ): Result<T> {
+    if (maxAttempts < 1) {
+        return Result.failure(IllegalArgumentException("maxAttempts must be at least 1"))
+    }
     var lastResult: Result<T>? = null
     repeat(maxAttempts) { attempt ->
         val result = block()
@@ -24,7 +27,7 @@ suspend fun <T> withRetry(
             delay(initialDelayMs * (1 shl attempt))
         }
     }
-    return lastResult!!
+    return lastResult ?: Result.failure(IllegalStateException("retry block did not run"))
 }
 
 private fun isRetryable(exception: Throwable?): Boolean = when (exception) {

@@ -182,9 +182,12 @@ class BrightSkyForecastAdapter @Inject constructor(
      * Groups by date, computes high/low/dominant weather/max wind/total precip.
      */
     private fun aggregateDaily(entries: List<BsWeatherEntry>, zone: ZoneId): List<DailyConditions> {
-        return entries.groupBy { entry ->
-            parseTimestamp(entry.timestamp, zone)?.toLocalDate()
-        }.filterKeys { it != null }.map { (date, dayEntries) ->
+        return entries.mapNotNull { entry ->
+            parseTimestamp(entry.timestamp, zone)?.toLocalDate()?.let { it to entry }
+        }.groupBy(
+            keySelector = { it.first },
+            valueTransform = { it.second },
+        ).map { (date, dayEntries) ->
             val temps = dayEntries.mapNotNull { it.temperature }
             val winds = dayEntries.mapNotNull { it.windSpeed }
             val gusts = dayEntries.mapNotNull { it.windGustSpeed }
@@ -205,7 +208,7 @@ class BrightSkyForecastAdapter @Inject constructor(
             val windDirs = dayEntries.mapNotNull { it.windDirection }
 
             DailyConditions(
-                date = date!!,
+                date = date,
                 weatherCode = WeatherCode.fromCode(dominantWmo),
                 temperatureHigh = temps.maxOrNull() ?: 0.0,
                 temperatureLow = temps.minOrNull() ?: 0.0,
