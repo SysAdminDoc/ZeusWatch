@@ -227,11 +227,15 @@
     <string name="alert_detail_urgency_badge">%1$s urgency</string>
     <string name="alert_detail_title">Alert Details</string>
     <string name="alert_detail_issued_by">Issued by</string>
+    <string name="alert_detail_coverage">Coverage</string>
     <string name="alert_detail_areas">Areas</string>
     <string name="alert_detail_effective">Effective</string>
     <string name="alert_detail_expires">Expires</string>
     <string name="alert_detail_meaning">What this means</string>
     <string name="alert_detail_recommended_action">Recommended action</string>
+    <string name="alert_coverage_covers_current">Covers this location</string>
+    <string name="alert_coverage_covers_named">Covers %1$s</string>
+    <string name="alert_coverage_nearby_polygon">Nearby polygon; review affected areas</string>
     <string name="alert_time_expired">Expired</string>
     <string name="alert_time_days_hours_left">%1$dd %2$dh left</string>
     <string name="alert_time_hours_minutes_left">%1$dh %2$dm left</string>
