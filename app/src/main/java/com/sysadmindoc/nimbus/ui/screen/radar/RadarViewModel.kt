@@ -7,13 +7,16 @@ import com.sysadmindoc.nimbus.data.api.BlitzortungService
 import com.sysadmindoc.nimbus.data.api.LightningStrike
 import com.sysadmindoc.nimbus.data.model.CommunityReport
 import com.sysadmindoc.nimbus.data.model.ReportCondition
+import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.repository.CommunityReportSource
 import com.sysadmindoc.nimbus.data.repository.RadarFrameSet
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.RadarProvider
 import com.sysadmindoc.nimbus.data.repository.TimedTileUrl
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
+import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
 import com.sysadmindoc.nimbus.util.ConnectivityObserver
+import com.sysadmindoc.nimbus.util.parseAlertInstant
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -27,11 +30,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.Stable
+import java.time.Instant
 import javax.inject.Inject
 
 private const val RADAR_FRAME_REFRESH_INTERVAL_MS = 5 * 60 * 1000L
 private const val RADAR_LOAD_FAILED = "radar_load_failed"
 private const val REPORT_SUBMIT_FAILED = "report_submit_failed"
+internal const val ALERT_OVERLAY_FAILED = "alert_overlay_failed"
 
 @HiltViewModel
 class RadarViewModel @Inject constructor(
@@ -39,6 +44,7 @@ class RadarViewModel @Inject constructor(
     private val prefs: UserPreferences,
     private val blitzortungService: BlitzortungService,
     private val communityReportRepository: CommunityReportSource,
+    private val weatherSourceManager: WeatherSourceManager,
     connectivityObserver: ConnectivityObserver,
 ) : ViewModel() {
 
@@ -66,7 +72,9 @@ class RadarViewModel @Inject constructor(
 
     private var playbackJob: Job? = null
     private var frameLoadJob: Job? = null
+    private var alertOverlayLoadJob: Job? = null
     private var lastSuccessfulFrameLoadAtMillis: Long? = null
+    private var lastAlertOverlayLoadKey: String? = null
 
     fun loadFrames(force: Boolean = false) {
         val state = _uiState.value
@@ -228,9 +236,69 @@ class RadarViewModel @Inject constructor(
                     _nearbyReports.value = reports
                 },
                 onFailure = { e ->
-                    Log.e("RadarViewModel", "Failed to load community reports", e)
+                    Log.w("RadarViewModel", "Community reports unavailable: ${e.safeLogMessage()}")
                     _nearbyReports.value = emptyList()
                 }
+            )
+        }
+    }
+
+    /** Load active alert polygons for the native radar map. */
+    fun loadAlertOverlays(lat: Double, lon: Double, force: Boolean = false) {
+        if (lat == 0.0 && lon == 0.0) return
+        val locationKey = alertOverlayLocationKey(lat, lon)
+        if (!force && locationKey == lastAlertOverlayLoadKey && alertOverlayLoadJob?.isActive != true) {
+            return
+        }
+        if (force) {
+            alertOverlayLoadJob?.cancel()
+        }
+        alertOverlayLoadJob = viewModelScope.launch {
+            val thisJob = coroutineContext[Job]
+            try {
+                val result = weatherSourceManager.getAlertsDetailed(
+                    latitude = lat,
+                    longitude = lon,
+                    includeMeteredSources = false,
+                )
+                val polygonAlerts = result.alerts.filter { alert ->
+                    alert.geometry != null && !alert.isExpiredAt(Instant.now())
+                }
+                lastAlertOverlayLoadKey = locationKey
+                _uiState.update {
+                    it.copy(
+                        alertOverlays = polygonAlerts,
+                        alertOverlayError = if (result.allAdaptersFailed) ALERT_OVERLAY_FAILED else null,
+                        alertOverlayFailedSources = result.failedSources,
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w("RadarViewModel", "Failed to load alert overlays", e)
+                lastAlertOverlayLoadKey = locationKey
+                _uiState.update {
+                    it.copy(
+                        alertOverlays = emptyList(),
+                        alertOverlayError = ALERT_OVERLAY_FAILED,
+                        alertOverlayFailedSources = emptyList(),
+                    )
+                }
+            } finally {
+                if (alertOverlayLoadJob === thisJob) {
+                    alertOverlayLoadJob = null
+                }
+            }
+        }
+    }
+
+    fun clearAlertOverlays() {
+        alertOverlayLoadJob?.cancel()
+        alertOverlayLoadJob = null
+        lastAlertOverlayLoadKey = null
+        _uiState.update {
+            it.copy(
+                alertOverlays = emptyList(),
+                alertOverlayError = null,
+                alertOverlayFailedSources = emptyList(),
             )
         }
     }
@@ -275,6 +343,7 @@ class RadarViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         playbackJob?.cancel()
+        alertOverlayLoadJob?.cancel()
         blitzortungService.disconnect()
     }
 }
@@ -287,6 +356,9 @@ data class RadarUiState(
     val isPlaying: Boolean = false,
     val pausedByGesture: Boolean = false,
     val error: String? = null,
+    val alertOverlays: List<WeatherAlert> = emptyList(),
+    val alertOverlayError: String? = null,
+    val alertOverlayFailedSources: List<String> = emptyList(),
 ) {
     val canAnimatePlayback: Boolean
         get() = canAnimateRadarPlayback(frameSet)
@@ -330,3 +402,15 @@ internal fun shouldLoadRadarFrames(
     // as "stale" so we don't get stuck refusing to refresh for an entire interval.
     return delta < 0L || delta >= RADAR_FRAME_REFRESH_INTERVAL_MS
 }
+
+internal fun WeatherAlert.isExpiredAt(now: Instant): Boolean {
+    val expiresAt = parseAlertInstant(expires) ?: return false
+    return expiresAt.isBefore(now)
+}
+
+private fun alertOverlayLocationKey(lat: Double, lon: Double): String {
+    return "%.3f,%.3f".format(java.util.Locale.US, lat, lon)
+}
+
+private fun Throwable.safeLogMessage(): String =
+    message?.lineSequence()?.firstOrNull()?.take(180) ?: javaClass.simpleName

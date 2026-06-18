@@ -388,6 +388,11 @@
     <string name="radar_loading_message">Obteniendo los fotogramas de radar más recientes para esta zona.</string>
     <string name="radar_unavailable_title">Radar no disponible</string>
     <string name="radar_unavailable_message">No pudimos cargar los fotogramas de radar ahora mismo.</string>
+    <plurals name="radar_alert_overlay_count">
+        <item quantity="one">%1$d zona de alerta</item>
+        <item quantity="other">%1$d zonas de alerta</item>
+    </plurals>
+    <string name="radar_alert_overlay_unavailable">Zonas de alerta no disponibles</string>
     <string name="radar_offline_title">El radar necesita conexión</string>
     <string name="radar_offline_message">Vuelve a conectarte para reanudar radar en vivo, rayos y reportes meteorológicos comunitarios.</string>
     <string name="radar_offline_badge">Las tarjetas de pronóstico aún funcionan con datos en caché</string>
@@ -981,6 +986,7 @@
     <string name="settings_transfer_preview_cancel">Cancelar</string>
     <string name="settings_transfer_preview_confirm">Restaurar</string>
     <string name="settings_transfer_warning_blank_locations">%1$d ubicaciones guardadas tienen nombres vacíos y se omitirán.</string>
+    <string name="settings_transfer_warning_invalid_locations">%1$d ubicaciones guardadas tienen coordenadas no válidas y se omitirán.</string>
     <string name="settings_transfer_warning_duplicate_locations">%1$d ubicaciones guardadas duplicadas se omitirán.</string>
     <string name="settings_transfer_export_success">Ajustes exportados.</string>
     <string name="settings_transfer_export_error">Error al exportar. Revisa el acceso al almacenamiento e inténtalo de nuevo.</string>

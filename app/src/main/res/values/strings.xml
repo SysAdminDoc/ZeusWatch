@@ -391,6 +391,11 @@
     <string name="radar_loading_message">Fetching the latest radar frames for this area.</string>
     <string name="radar_unavailable_title">Radar unavailable</string>
     <string name="radar_unavailable_message">We couldn\'t load radar frames right now.</string>
+    <plurals name="radar_alert_overlay_count">
+        <item quantity="one">%1$d warning area</item>
+        <item quantity="other">%1$d warning areas</item>
+    </plurals>
+    <string name="radar_alert_overlay_unavailable">Alert areas unavailable</string>
     <string name="radar_offline_title">Radar needs a connection</string>
     <string name="radar_offline_message">Reconnect to resume live radar, lightning, and community weather reports.</string>
     <string name="radar_offline_badge">Forecast cards still work with cached data</string>
@@ -1009,6 +1014,7 @@
     <string name="settings_transfer_preview_cancel">Cancel</string>
     <string name="settings_transfer_preview_confirm">Restore</string>
     <string name="settings_transfer_warning_blank_locations">%1$d saved locations have blank names and will be skipped.</string>
+    <string name="settings_transfer_warning_invalid_locations">%1$d saved locations have invalid coordinates and will be skipped.</string>
     <string name="settings_transfer_warning_duplicate_locations">%1$d duplicate saved locations will be skipped.</string>
     <string name="settings_transfer_export_success">Settings exported.</string>
     <string name="settings_transfer_export_error">Export failed. Check storage access and try again.</string>

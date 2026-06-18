@@ -93,4 +93,17 @@ class RetryUtilTest {
         assertTrue(result.isFailure)
         assertEquals(2, calls)
     }
+
+    @Test
+    fun `invalid maxAttempts fails without invoking block`() = runTest {
+        var calls = 0
+        val result = withRetry<String>(maxAttempts = 0, initialDelayMs = 1L) {
+            calls++
+            Result.success("should not run")
+        }
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        assertEquals(0, calls)
+    }
 }

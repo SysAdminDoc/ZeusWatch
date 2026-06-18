@@ -84,7 +84,7 @@ class CommunityReportRepository @Inject constructor(
             lastSubmitTimestamp = now
             Result.success(docRef.id)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to submit report", e)
+            Log.w(TAG, "Community report submission unavailable: ${e.safeLogMessage()}")
             Result.failure(e)
         }
     }
@@ -131,7 +131,7 @@ class CommunityReportRepository @Inject constructor(
 
             Result.success(reports)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to fetch nearby reports", e)
+            Log.w(TAG, "Community report lookup unavailable: ${e.safeLogMessage()}")
             Result.failure(e)
         }
     }
@@ -193,3 +193,6 @@ class CommunityReportRepository @Inject constructor(
         private const val MAX_RESULTS = 200L
     }
 }
+
+private fun Throwable.safeLogMessage(): String =
+    message?.lineSequence()?.firstOrNull()?.take(180) ?: javaClass.simpleName

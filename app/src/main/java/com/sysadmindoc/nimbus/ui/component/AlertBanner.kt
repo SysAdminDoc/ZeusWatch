@@ -50,8 +50,9 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.coverageText
 import com.sysadmindoc.nimbus.util.labelRes
+import com.sysadmindoc.nimbus.util.parseAlertInstant
 import java.time.Duration
-import java.time.OffsetDateTime
+import java.time.Instant
 
 /**
  * Alert banner displayed at the top of the main screen when active alerts exist.
@@ -240,18 +241,16 @@ private fun AlertMetaBadge(
 }
 
 private fun formatExpiresIn(context: Context, isoString: String): String? {
-    return try {
-        val expires = OffsetDateTime.parse(isoString)
-        val now = OffsetDateTime.now()
-        if (expires.isBefore(now)) return context.getString(R.string.alert_time_expired)
-        val dur = Duration.between(now, expires)
-        val hours = dur.toHours()
-        val minutes = dur.toMinutes() % 60
-        when {
-            hours >= 24 -> context.getString(R.string.alert_time_days_hours_left, hours / 24, hours % 24)
-            hours >= 1 -> context.getString(R.string.alert_time_hours_minutes_left, hours, minutes)
-            minutes > 0 -> context.getString(R.string.alert_time_minutes_left, minutes)
-            else -> null
-        }
-    } catch (_: Exception) { null }
+    val expires = parseAlertInstant(isoString) ?: return null
+    val now = Instant.now()
+    if (expires.isBefore(now)) return context.getString(R.string.alert_time_expired)
+    val dur = Duration.between(now, expires)
+    val hours = dur.toHours()
+    val minutes = dur.toMinutes() % 60
+    return when {
+        hours >= 24 -> context.getString(R.string.alert_time_days_hours_left, hours / 24, hours % 24)
+        hours >= 1 -> context.getString(R.string.alert_time_hours_minutes_left, hours, minutes)
+        minutes > 0 -> context.getString(R.string.alert_time_minutes_left, minutes)
+        else -> null
+    }
 }

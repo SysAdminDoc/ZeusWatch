@@ -32,8 +32,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -45,6 +47,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -59,8 +63,10 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.api.LightningStrike
 import com.sysadmindoc.nimbus.data.model.CommunityReport
 import com.sysadmindoc.nimbus.data.model.ReportCondition
+import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.RadarProvider
+import com.sysadmindoc.nimbus.ui.component.AlertDetailSheet
 import com.sysadmindoc.nimbus.ui.component.GlassActionButton
 import com.sysadmindoc.nimbus.ui.component.NimbusStatusBadge
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
@@ -70,6 +76,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
+import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
 
 @Composable
 fun RadarScreen(
@@ -95,6 +102,7 @@ fun RadarScreen(
 
     var selectedLayer by remember { mutableStateOf(RadarLayer.RADAR) }
     var showReportSheet by remember { mutableStateOf(false) }
+    var selectedAlertId by remember { mutableStateOf<String?>(null) }
     val coordinates = RadarCoordinates(resolvedLat, resolvedLon)
     val canSubmitReport = canOpenCommunityReport(isOffline, resolvedLat, resolvedLon)
     val renderState = RadarRenderState(
@@ -128,9 +136,17 @@ fun RadarScreen(
         onSubmitReport = { coords, condition, note ->
             viewModel.submitReport(coords.latitude, coords.longitude, condition, note)
         },
+        onAlertSelected = { selectedAlertId = it },
     )
 
     RadarLocationReportsEffect(coordinates, viewModel::loadNearbyReports)
+    RadarAlertOverlaysEffect(
+        coordinates = coordinates,
+        enabled = settings.radarProvider.supportsNativePlayback,
+        isOffline = isOffline,
+        loadAlertOverlays = viewModel::loadAlertOverlays,
+        clearAlertOverlays = viewModel::clearAlertOverlays,
+    )
     RadarDisconnectOnDisposeEffect(viewModel::pausePlayback, viewModel::disconnectLightning)
     RadarPlaybackConnectionEffect(
         selectedLayer = selectedLayer,
@@ -151,6 +167,10 @@ fun RadarScreen(
     PredictiveBackScaffold(onBack = onBack) {
         RadarContentFrame(renderState, coordinates, actions)
         RadarReportSheet(showReportSheet, renderState.reportSubmitState, coordinates, actions)
+        RadarSelectedAlertSheet(
+            alert = radarState.alertOverlays.firstOrNull { it.id == selectedAlertId },
+            onDismiss = { selectedAlertId = null },
+        )
     }
 }
 
@@ -173,6 +193,7 @@ fun RadarTab(
 
     var showReportSheet by remember { mutableStateOf(false) }
     var selectedLayer by remember { mutableStateOf(RadarLayer.RADAR) }
+    var selectedAlertId by remember { mutableStateOf<String?>(null) }
     val coordinates = RadarCoordinates(latitude, longitude)
     val canSubmitReport = canOpenCommunityReport(isOffline, latitude, longitude)
     val renderState = RadarRenderState(
@@ -206,9 +227,17 @@ fun RadarTab(
         onSubmitReport = { coords, condition, note ->
             viewModel.submitReport(coords.latitude, coords.longitude, condition, note)
         },
+        onAlertSelected = { selectedAlertId = it },
     )
 
     RadarLocationReportsEffect(coordinates, viewModel::loadNearbyReports)
+    RadarAlertOverlaysEffect(
+        coordinates = coordinates,
+        enabled = settings.radarProvider.supportsNativePlayback,
+        isOffline = isOffline,
+        loadAlertOverlays = viewModel::loadAlertOverlays,
+        clearAlertOverlays = viewModel::clearAlertOverlays,
+    )
     RadarDisconnectOnDisposeEffect(viewModel::pausePlayback, viewModel::disconnectLightning)
     RadarPlaybackConnectionEffect(
         selectedLayer = selectedLayer,
@@ -228,6 +257,10 @@ fun RadarTab(
 
     RadarContentFrame(renderState, coordinates, actions)
     RadarReportSheet(showReportSheet, renderState.reportSubmitState, coordinates, actions)
+    RadarSelectedAlertSheet(
+        alert = radarState.alertOverlays.firstOrNull { it.id == selectedAlertId },
+        onDismiss = { selectedAlertId = null },
+    )
 }
 
 private data class RadarCoordinates(
@@ -258,6 +291,7 @@ private data class RadarActions(
     val onOpenReportSheet: () -> Unit,
     val onDismissReportSheet: () -> Unit,
     val onSubmitReport: (RadarCoordinates, ReportCondition, String) -> Unit,
+    val onAlertSelected: (String) -> Unit,
 )
 
 @Composable
@@ -268,6 +302,23 @@ private fun RadarLocationReportsEffect(
     LaunchedEffect(coordinates.latitude, coordinates.longitude) {
         if (coordinates.latitude != 0.0 && coordinates.longitude != 0.0) {
             loadNearbyReports(coordinates.latitude, coordinates.longitude)
+        }
+    }
+}
+
+@Composable
+private fun RadarAlertOverlaysEffect(
+    coordinates: RadarCoordinates,
+    enabled: Boolean,
+    isOffline: Boolean,
+    loadAlertOverlays: (Double, Double, Boolean) -> Unit,
+    clearAlertOverlays: () -> Unit,
+) {
+    LaunchedEffect(coordinates.latitude, coordinates.longitude, enabled, isOffline) {
+        if (!enabled || isOffline || coordinates.latitude == 0.0 && coordinates.longitude == 0.0) {
+            clearAlertOverlays()
+        } else {
+            loadAlertOverlays(coordinates.latitude, coordinates.longitude, false)
         }
     }
 }
@@ -381,6 +432,8 @@ private fun BoxScope.RadarNativeContent(
         overlayTileUrl = if (isRadarMode || isLightningMode) null else state.selectedLayer.tileUrlTemplate,
         lightningStrikes = if (showLightning) state.strikes else emptyList(),
         communityReports = state.nearbyReports,
+        alertOverlays = state.radarState.alertOverlays,
+        onAlertSelected = actions.onAlertSelected,
         onCameraMoveStarted = actions.onCameraMoveStarted,
         onCameraIdle = actions.onCameraIdle,
         modifier = Modifier.fillMaxSize(),
@@ -388,6 +441,8 @@ private fun BoxScope.RadarNativeContent(
     RadarTopControls(
         providerLabel = state.settings.radarProvider.label,
         selectedLayer = state.selectedLayer,
+        activeAlertCount = state.radarState.alertOverlays.size,
+        alertOverlayUnavailable = state.radarState.alertOverlayError != null,
         onLayerSelected = actions.onLayerSelected,
         onBack = actions.onBack,
         modifier = Modifier
@@ -425,6 +480,8 @@ private fun BoxScope.RadarWebContent(
     RadarTopControls(
         providerLabel = provider.label,
         selectedLayer = null,
+        activeAlertCount = 0,
+        alertOverlayUnavailable = false,
         onLayerSelected = null,
         onBack = onBack,
         modifier = Modifier
@@ -552,10 +609,27 @@ private fun RadarReportSheet(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RadarSelectedAlertSheet(
+    alert: WeatherAlert?,
+    onDismiss: () -> Unit,
+) {
+    if (alert == null) return
+
+    AlertDetailSheet(
+        alert = alert,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        onDismiss = onDismiss,
+    )
+}
+
 @Composable
 private fun RadarTopControls(
     providerLabel: String,
     selectedLayer: RadarLayer?,
+    activeAlertCount: Int,
+    alertOverlayUnavailable: Boolean,
     onLayerSelected: ((RadarLayer) -> Unit)?,
     onBack: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -607,7 +681,36 @@ private fun RadarTopControls(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
         }
+
+        RadarAlertOverlayBadge(
+            activeAlertCount = activeAlertCount,
+            alertOverlayUnavailable = alertOverlayUnavailable,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
     }
+}
+
+@Composable
+private fun RadarAlertOverlayBadge(
+    activeAlertCount: Int,
+    alertOverlayUnavailable: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val text = when {
+        alertOverlayUnavailable -> stringResource(R.string.radar_alert_overlay_unavailable)
+        activeAlertCount > 0 -> pluralStringResource(
+            R.plurals.radar_alert_overlay_count,
+            activeAlertCount,
+            activeAlertCount,
+        )
+        else -> null
+    } ?: return
+
+    RadarInfoBadge(
+        text = text,
+        tint = NimbusWarning,
+        modifier = modifier.widthIn(max = 240.dp),
+    )
 }
 
 @Composable
@@ -765,11 +868,12 @@ private val NWS_ALLOWED_HOST_PATTERNS = listOf(
 @Composable
 private fun RadarInfoBadge(
     text: String,
+    tint: Color = NimbusTextSecondary,
     modifier: Modifier = Modifier,
 ) {
     NimbusStatusBadge(
         text = text,
-        tint = NimbusTextSecondary,
+        tint = tint,
         modifier = modifier,
         maxLines = 1,
     )

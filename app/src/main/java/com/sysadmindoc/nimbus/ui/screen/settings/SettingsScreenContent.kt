@@ -1058,6 +1058,10 @@ private fun settingsImportWarningText(
         R.string.settings_transfer_warning_blank_locations,
         preview.skippedLocationCount,
     )
+    SettingsImportWarning.INVALID_COORDINATES -> stringResource(
+        R.string.settings_transfer_warning_invalid_locations,
+        preview.invalidLocationCount,
+    )
     SettingsImportWarning.DUPLICATE_LOCATIONS -> stringResource(
         R.string.settings_transfer_warning_duplicate_locations,
         preview.duplicateLocationCount,
