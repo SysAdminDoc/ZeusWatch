@@ -3,6 +3,7 @@ package com.sysadmindoc.nimbus.data.repository
 import com.sysadmindoc.nimbus.data.api.NwsAlertAdapter
 import com.sysadmindoc.nimbus.data.api.NwsAlertApi
 import com.sysadmindoc.nimbus.data.api.NwsAlertFeature
+import com.sysadmindoc.nimbus.data.api.NwsAlertGeometry
 import com.sysadmindoc.nimbus.data.api.NwsAlertProperties
 import com.sysadmindoc.nimbus.data.api.NwsAlertResponse
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
@@ -12,6 +13,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.*
@@ -22,6 +24,13 @@ import retrofit2.Response
 
 private fun httpException(code: Int): HttpException =
     HttpException(Response.error<Any>(code, "".toResponseBody("text/plain".toMediaType())))
+
+private fun geometry(type: String, coordinates: String): NwsAlertGeometry {
+    return NwsAlertGeometry(
+        type = type,
+        coordinates = Json.parseToJsonElement(coordinates),
+    )
+}
 
 class NwsAlertAdapterTest {
 
@@ -48,8 +57,10 @@ class NwsAlertAdapterTest {
         effective: String? = "2025-06-15T12:00:00-06:00",
         expires: String? = "2025-06-15T14:00:00-06:00",
         response: String? = "Shelter",
+        geometry: NwsAlertGeometry? = null,
     ) = NwsAlertFeature(
         id = id,
+        geometry = geometry,
         properties = NwsAlertProperties(
             event = event,
             headline = headline ?: "$event for Test County",
@@ -146,6 +157,97 @@ class NwsAlertAdapterTest {
         assertEquals("2025-01-10T06:00:00", alert.effective)
         assertEquals("2025-01-11T06:00:00", alert.expires)
         assertEquals("Prepare", alert.response)
+    }
+
+    @Test
+    fun getAlertsPreservesPolygonGeometryAndMarksPointCovered() = runTest {
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+            features = listOf(makeFeature(
+                geometry = geometry(
+                    type = "Polygon",
+                    coordinates = """
+                        [[[-105.10,39.60],[-104.80,39.60],[-104.80,39.90],[-105.10,39.90],[-105.10,39.60]]]
+                    """.trimIndent(),
+                ),
+            )),
+        )
+
+        val alert = adapter.getAlerts(39.7392, -104.9847).getOrThrow().first()
+
+        assertEquals(1, alert.geometry?.polygons?.size)
+        assertEquals(5, alert.geometry?.polygons?.first()?.points?.size)
+        assertTrue(alert.geometry!!.contains(39.7392, -104.9847))
+        assertEquals(true, alert.coversRequestedLocation)
+    }
+
+    @Test
+    fun getAlertsMarksPointOutsideGeometryWhenPolygonMisses() = runTest {
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+            features = listOf(makeFeature(
+                geometry = geometry(
+                    type = "Polygon",
+                    coordinates = """
+                        [[[-106.10,40.60],[-105.80,40.60],[-105.80,40.90],[-106.10,40.90],[-106.10,40.60]]]
+                    """.trimIndent(),
+                ),
+            )),
+        )
+
+        val alert = adapter.getAlerts(39.7392, -104.9847).getOrThrow().first()
+
+        assertEquals(false, alert.coversRequestedLocation)
+    }
+
+    @Test
+    fun getAlertsTreatsPolygonBoundaryAsCovered() = runTest {
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+            features = listOf(makeFeature(
+                geometry = geometry(
+                    type = "Polygon",
+                    coordinates = """
+                        [[[-105.10,39.60],[-104.80,39.60],[-104.80,39.90],[-105.10,39.90],[-105.10,39.60]]]
+                    """.trimIndent(),
+                ),
+            )),
+        )
+
+        val alert = adapter.getAlerts(39.60, -105.00).getOrThrow().first()
+
+        assertEquals(true, alert.coversRequestedLocation)
+    }
+
+    @Test
+    fun getAlertsParsesMultiPolygonGeometry() = runTest {
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+            features = listOf(makeFeature(
+                geometry = geometry(
+                    type = "MultiPolygon",
+                    coordinates = """
+                        [
+                          [[[-106.00,39.00],[-105.00,39.00],[-105.00,40.00],[-106.00,40.00],[-106.00,39.00]]],
+                          [[[-104.00,39.00],[-103.00,39.00],[-103.00,40.00],[-104.00,40.00],[-104.00,39.00]]]
+                        ]
+                    """.trimIndent(),
+                ),
+            )),
+        )
+
+        val alert = adapter.getAlerts(39.5, -103.5).getOrThrow().first()
+
+        assertEquals(2, alert.geometry?.polygons?.size)
+        assertEquals(true, alert.coversRequestedLocation)
+    }
+
+    @Test
+    fun getAlertsKeepsCoverageUnknownWhenGeometryIsMissing() = runTest {
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+            features = listOf(makeFeature()),
+        )
+
+        val alert = adapter.getAlerts(39.0, -104.0).getOrThrow().first()
+
+        assertNull(alert.geometry)
+        assertNull(alert.coversRequestedLocation)
     }
 
     // --- Severity mapping ---

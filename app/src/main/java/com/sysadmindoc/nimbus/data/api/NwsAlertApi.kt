@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.data.api
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -36,7 +37,14 @@ data class NwsAlertResponse(
 data class NwsAlertFeature(
     val id: String? = null,
     val type: String? = null,
+    val geometry: NwsAlertGeometry? = null,
     val properties: NwsAlertProperties? = null,
+)
+
+@Serializable
+data class NwsAlertGeometry(
+    val type: String? = null,
+    val coordinates: JsonElement? = null,
 )
 
 @Serializable

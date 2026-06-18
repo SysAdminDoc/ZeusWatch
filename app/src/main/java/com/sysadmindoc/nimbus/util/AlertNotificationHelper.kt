@@ -436,6 +436,10 @@ object AlertNotificationHelper {
         // Rich expanded content: headline + instruction summary
         val bigText = buildString {
             append(alert.headline)
+            alert.coverageText(context, locationName)?.let {
+                append("\n\n")
+                append(it)
+            }
             if (!alert.instruction.isNullOrBlank()) {
                 append("\n\n")
                 append(alert.instruction.take(300))

@@ -48,6 +48,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.coverageText
 import com.sysadmindoc.nimbus.util.labelRes
 import java.time.Duration
 import java.time.OffsetDateTime
@@ -83,7 +84,7 @@ fun AlertBanner(
         context.getString(
             R.string.alert_banner_item_cd,
             context.getString(alert.severity.labelRes),
-            alert.event,
+            listOfNotNull(alert.event, alert.coverageText(context)).joinToString(", "),
         )
     }
     val bannerContentDescription = context.getString(R.string.alert_banner_list_cd, alertDescription)
@@ -114,6 +115,7 @@ private fun AlertBannerItem(
     val bgColor = severityColor.copy(alpha = 0.12f)
     val severityLabel = context.getString(alert.severity.labelRes)
     val urgencyLabel = context.getString(alert.urgency.labelRes)
+    val coverageText = alert.coverageText(context)
 
     // Pulse border for extreme alerts
     val borderAlpha = if (alert.severity == AlertSeverity.EXTREME) {
@@ -189,6 +191,16 @@ private fun AlertBannerItem(
                             tint = NimbusTextTertiary,
                         )
                     }
+                }
+
+                coverageText?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = severityColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
 
                 Text(
