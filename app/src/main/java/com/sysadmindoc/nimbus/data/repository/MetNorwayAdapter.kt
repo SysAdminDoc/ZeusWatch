@@ -204,8 +204,14 @@ class MetNorwayForecastAdapter @Inject constructor(
         timeseries: List<MetTimeseriesEntry>,
         zone: ZoneId,
     ): List<DailyConditions> {
-        return timeseries.groupBy { entry -> parseZonedLocalDateTime(entry.time, zone)?.toLocalDate() }
-            .filterKeys { it != null }
+        return timeseries
+            .mapNotNull { entry ->
+                parseZonedLocalDateTime(entry.time, zone)?.toLocalDate()?.let { it to entry }
+            }
+            .groupBy(
+                keySelector = { it.first },
+                valueTransform = { it.second },
+            )
             .map { (date, dayEntries) ->
                 val temps = dayEntries.mapNotNull { it.data?.instant?.details?.airTemperature }
                 val winds = dayEntries.mapNotNull {
@@ -260,7 +266,7 @@ class MetNorwayForecastAdapter @Inject constructor(
                     .maxByOrNull { it.value }?.key ?: 0
 
                 DailyConditions(
-                    date = date!!,
+                    date = date,
                     weatherCode = WeatherCode.fromCode(dominantWmo),
                     temperatureHigh = temps.maxOrNull() ?: 0.0,
                     temperatureLow = temps.minOrNull() ?: 0.0,

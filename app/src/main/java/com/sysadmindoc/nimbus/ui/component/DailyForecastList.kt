@@ -680,8 +680,8 @@ private fun dailyHeaderSummary(
         ?: context.getString(R.string.forecast_later)
     val warmestTemp = warmest?.let { WeatherFormatter.formatTemperature(it.temperatureHigh, settings) } ?: "--"
 
-    return if ((wettest?.precipitationProbability ?: 0) >= 40) {
-        val wettestLabel = WeatherFormatter.formatRelativeDayLabel(context, wettest!!.date, referenceDate)
+    return if (wettest != null && wettest.precipitationProbability >= 40) {
+        val wettestLabel = WeatherFormatter.formatRelativeDayLabel(context, wettest.date, referenceDate)
         context.getString(R.string.forecast_daily_warm_rain, warmestLabel, warmestTemp, wettestLabel)
     } else {
         context.getString(R.string.forecast_daily_warm_steady, warmestLabel, warmestTemp)

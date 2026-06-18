@@ -2,6 +2,8 @@ package com.sysadmindoc.nimbus.sync
 
 import android.content.Context
 import android.util.Log
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.wearable.DataMap
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
@@ -139,7 +141,11 @@ class WearSyncManager @Inject constructor(
             throw cancelled
         } catch (e: Exception) {
             // Non-fatal — watch falls back to its own API calls
-            Log.w(TAG, "Failed to sync weather to watch", e)
+            if (e is ApiException && e.statusCode == CommonStatusCodes.API_NOT_CONNECTED) {
+                Log.d(TAG, "Wear OS sync unavailable on this device")
+            } else {
+                Log.w(TAG, "Failed to sync weather to watch", e)
+            }
         }
     }
 }

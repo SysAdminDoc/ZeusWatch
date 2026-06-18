@@ -73,7 +73,7 @@ class SettingsTransferManager @Inject constructor(
     private suspend fun applyImportPlan(plan: SettingsImportPlan): SettingsTransferResult {
         prefs.applyImportedSettings(plan.settings)
         prefs.setCustomAlertRules(plan.backup.customAlerts)
-        prefs.applyImportedLastLocation(plan.backup.lastLocation?.toSavedLocation())
+        prefs.applyImportedLastLocation(plan.backup.lastLocation?.toSavedLocationOrNull())
         locationRepository.replaceAll(plan.importedLocations)
         return SettingsTransferResult(
             savedLocationCount = plan.importedLocations.size,
@@ -92,6 +92,7 @@ data class SettingsImportPreview(
     val currentSavedLocationCount: Int,
     val savedLocationCount: Int,
     val skippedLocationCount: Int,
+    val invalidLocationCount: Int,
     val duplicateLocationCount: Int,
     val customAlertCount: Int,
     val cardCount: Int,
@@ -101,6 +102,7 @@ data class SettingsImportPreview(
 
 enum class SettingsImportWarning {
     BLANK_LOCATION_NAMES,
+    INVALID_COORDINATES,
     DUPLICATE_LOCATIONS,
 }
 
@@ -214,6 +216,7 @@ private fun SettingsBackup.toImportPlan(currentSavedLocationCount: Int): Setting
     val locationPlan = savedLocations.toImportLocationPlan()
     val warnings = buildList {
         if (locationPlan.skippedBlankCount > 0) add(SettingsImportWarning.BLANK_LOCATION_NAMES)
+        if (locationPlan.invalidCoordinateCount > 0) add(SettingsImportWarning.INVALID_COORDINATES)
         if (locationPlan.duplicateCount > 0) add(SettingsImportWarning.DUPLICATE_LOCATIONS)
     }
     val settings = settings.toSettings()
@@ -226,10 +229,11 @@ private fun SettingsBackup.toImportPlan(currentSavedLocationCount: Int): Setting
             currentSavedLocationCount = currentSavedLocationCount.coerceAtLeast(0),
             savedLocationCount = locationPlan.locations.size,
             skippedLocationCount = locationPlan.skippedBlankCount,
+            invalidLocationCount = locationPlan.invalidCoordinateCount,
             duplicateLocationCount = locationPlan.duplicateCount,
             customAlertCount = customAlerts.size,
             cardCount = settings.cardOrder.size,
-            hasLastLocation = lastLocation != null,
+            hasLastLocation = lastLocation?.hasValidCoordinates() == true,
             warnings = warnings,
         ),
     )
@@ -238,16 +242,22 @@ private fun SettingsBackup.toImportPlan(currentSavedLocationCount: Int): Setting
 private data class ImportLocationPlan(
     val locations: List<SavedLocationEntity>,
     val skippedBlankCount: Int,
+    val invalidCoordinateCount: Int,
     val duplicateCount: Int,
 )
 
 private fun List<SettingsBackupLocation>.toImportLocationPlan(): ImportLocationPlan {
     var skippedBlankCount = 0
+    var invalidCoordinateCount = 0
     var duplicateCount = 0
     val seen = LinkedHashSet<String>()
     val locations = mapNotNull { location ->
         if (location.name.isBlank()) {
             skippedBlankCount++
+            return@mapNotNull null
+        }
+        if (!location.hasValidCoordinates()) {
+            invalidCoordinateCount++
             return@mapNotNull null
         }
         val entity = location.toEntity()
@@ -260,6 +270,7 @@ private fun List<SettingsBackupLocation>.toImportLocationPlan(): ImportLocationP
     return ImportLocationPlan(
         locations = locations,
         skippedBlankCount = skippedBlankCount,
+        invalidCoordinateCount = invalidCoordinateCount,
         duplicateCount = duplicateCount,
     )
 }
@@ -403,17 +414,36 @@ fun SettingsBackupLocation.toEntity(): SavedLocationEntity = SavedLocationEntity
     timeZone = timeZone?.takeIf { it.toZoneIdOrNull() != null },
 )
 
+private fun SettingsBackupLocation.hasValidCoordinates(): Boolean =
+    latitude.isValidLatitude() && longitude.isValidLongitude()
+
 fun SavedLocation.toBackup(): SettingsBackupLastLocation = SettingsBackupLastLocation(
     latitude = latitude,
     longitude = longitude,
     name = name,
 )
 
+private fun SettingsBackupLastLocation.toSavedLocationOrNull(): SavedLocation? {
+    if (!hasValidCoordinates()) return null
+    return SavedLocation(
+        latitude = latitude,
+        longitude = longitude,
+        name = name,
+    )
+}
+
+private fun SettingsBackupLastLocation.hasValidCoordinates(): Boolean =
+    latitude.isValidLatitude() && longitude.isValidLongitude()
+
 fun SettingsBackupLastLocation.toSavedLocation(): SavedLocation = SavedLocation(
     latitude = latitude,
     longitude = longitude,
     name = name,
 )
+
+private fun Double.isValidLatitude(): Boolean = !isNaN() && !isInfinite() && this in -90.0..90.0
+
+private fun Double.isValidLongitude(): Boolean = !isNaN() && !isInfinite() && this in -180.0..180.0
 
 suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setTempUnit(settings.tempUnit)

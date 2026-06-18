@@ -85,13 +85,16 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         // in raw degree space.
         val lonScale = cos(Math.toRadians(lat))
         return features
-            .filter { (it.geometry?.coordinates?.size ?: 0) >= 2 }
+            .mapNotNull { feat ->
+                val coords = feat.geometry?.coordinates?.takeIf { it.size >= 2 } ?: return@mapNotNull null
+                feat to coords
+            }
             .minByOrNull { feat ->
-                val coords = feat.geometry!!.coordinates
+                val coords = feat.second
                 val fLon = coords[0]
                 val fLat = coords[1]
                 (fLat - lat).pow(2) + ((fLon - lon) * lonScale).pow(2)
-            }
+            }?.first
     }
 
     /**

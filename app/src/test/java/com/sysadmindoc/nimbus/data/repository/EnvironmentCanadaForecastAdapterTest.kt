@@ -36,10 +36,11 @@ class EnvironmentCanadaForecastAdapterTest {
         windKmh: Double = 15.0,
         forecast: List<EcccForecastEntry> = defaultForecast(),
         timestampUtc: String = "2026-04-24T12:00:00+00:00",
+        geometry: EcccGeometry? = EcccGeometry(type = "Point", coordinates = listOf(lon, lat)),
     ): EcccFeature = EcccFeature(
         id = "ecccTest",
         type = "Feature",
-        geometry = EcccGeometry(type = "Point", coordinates = listOf(lon, lat)),
+        geometry = geometry,
         properties = EcccProperties(
             cityEn = cityEn,
             nameEn = cityEn,
@@ -159,6 +160,23 @@ class EnvironmentCanadaForecastAdapterTest {
         val data = adapter.getWeather(60.0, -100.0, null).getOrThrow()
 
         assertEquals("EastCity", data.location.name)
+    }
+
+    @Test
+    fun `nearest city ignores malformed features without geometry`() = runTest {
+        val api = mockk<EnvironmentCanadaForecastApi>()
+        coEvery { api.getCityWeather(any(), any(), any(), any()) } returns EcccFeatureCollection(
+            type = "FeatureCollection",
+            features = listOf(
+                feature(lat = 43.70, lon = -79.40, cityEn = "BrokenCity", geometry = null),
+                feature(lat = 43.65, lon = -79.38, cityEn = "Toronto"),
+            ),
+        )
+        val adapter = EnvironmentCanadaForecastAdapter(api)
+
+        val data = adapter.getWeather(43.70, -79.40, null).getOrThrow()
+
+        assertEquals("Toronto", data.location.name)
     }
 
     @Test
