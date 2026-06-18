@@ -224,11 +224,15 @@
     <string name="alert_detail_urgency_badge">Urgencia %1$s</string>
     <string name="alert_detail_title">Detalles de alerta</string>
     <string name="alert_detail_issued_by">Emitida por</string>
+    <string name="alert_detail_coverage">Cobertura</string>
     <string name="alert_detail_areas">Zonas</string>
     <string name="alert_detail_effective">Vigente</string>
     <string name="alert_detail_expires">Caduca</string>
     <string name="alert_detail_meaning">Qué significa</string>
     <string name="alert_detail_recommended_action">Acción recomendada</string>
+    <string name="alert_coverage_covers_current">Cubre esta ubicación</string>
+    <string name="alert_coverage_covers_named">Cubre %1$s</string>
+    <string name="alert_coverage_nearby_polygon">Polígono cercano; revisa las zonas afectadas</string>
     <string name="alert_time_expired">Caducada</string>
     <string name="alert_time_days_hours_left">quedan %1$dd %2$dh</string>
     <string name="alert_time_hours_minutes_left">quedan %1$dh %2$dm</string>

@@ -1,8 +1,14 @@
 package com.sysadmindoc.nimbus.data.api
 
+import com.sysadmindoc.nimbus.data.model.AlertCoordinate
+import com.sysadmindoc.nimbus.data.model.AlertGeometry
+import com.sysadmindoc.nimbus.data.model.AlertPolygon
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import retrofit2.HttpException
 import java.util.Locale
 import javax.inject.Inject
@@ -31,6 +37,7 @@ class NwsAlertAdapter @Inject constructor(
             val alerts = response.features.mapNotNull { feature ->
                 val props = feature.properties ?: return@mapNotNull null
                 val event = props.event ?: return@mapNotNull null
+                val geometry = feature.geometry.toAlertGeometry()
                 WeatherAlert(
                     id = feature.id ?: props.alertId ?: "",
                     event = event,
@@ -45,6 +52,8 @@ class NwsAlertAdapter @Inject constructor(
                     effective = props.effective ?: props.onset,
                     expires = props.expires ?: props.ends,
                     response = props.response,
+                    geometry = geometry,
+                    coversRequestedLocation = geometry?.contains(lat, lon),
                 )
             }
             Result.success(alerts)
@@ -61,4 +70,25 @@ class NwsAlertAdapter @Inject constructor(
             Result.failure(e)
         }
     }
+}
+
+internal fun NwsAlertGeometry?.toAlertGeometry(): AlertGeometry? {
+    val coordinates = this?.coordinates as? JsonArray ?: return null
+    val polygons = when (type) {
+        "Polygon" -> listOfNotNull(parseAlertPolygon(coordinates))
+        "MultiPolygon" -> coordinates.mapNotNull { parseAlertPolygon(it as? JsonArray) }
+        else -> emptyList()
+    }
+    return polygons.takeIf { it.isNotEmpty() }?.let(::AlertGeometry)
+}
+
+private fun parseAlertPolygon(rawPolygon: JsonArray?): AlertPolygon? {
+    val outerRing = rawPolygon?.firstOrNull() as? JsonArray ?: return null
+    val points = outerRing.mapNotNull { coordinate ->
+        val pair = coordinate as? JsonArray ?: return@mapNotNull null
+        val longitude = pair.getOrNull(0)?.jsonPrimitive?.doubleOrNull ?: return@mapNotNull null
+        val latitude = pair.getOrNull(1)?.jsonPrimitive?.doubleOrNull ?: return@mapNotNull null
+        AlertCoordinate(latitude = latitude, longitude = longitude)
+    }
+    return AlertPolygon(points).takeIf { points.size >= 3 }
 }

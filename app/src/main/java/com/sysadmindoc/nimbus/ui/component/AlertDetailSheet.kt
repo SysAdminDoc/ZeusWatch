@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -42,6 +43,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusSurface
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.coverageText
 import com.sysadmindoc.nimbus.util.labelRes
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -62,6 +64,7 @@ fun AlertDetailSheet(
     val severityLabel = stringResource(alert.severity.labelRes)
     val urgencyLabel = stringResource(alert.urgency.labelRes)
     val alertContentDescription = stringResource(R.string.alert_detail_alert_cd, severityLabel)
+    val coverageText = alert.coverageText(LocalContext.current)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -154,6 +157,7 @@ fun AlertDetailSheet(
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 MetadataItem(stringResource(R.string.alert_detail_issued_by), alert.senderName)
+                coverageText?.let { MetadataItem(stringResource(R.string.alert_detail_coverage), it) }
                 MetadataItem(stringResource(R.string.alert_detail_areas), alert.areaDescription)
                 alert.effective?.let { MetadataItem(stringResource(R.string.alert_detail_effective), formatAlertTime(it)) }
                 alert.expires?.let { MetadataItem(stringResource(R.string.alert_detail_expires), formatAlertTime(it)) }
