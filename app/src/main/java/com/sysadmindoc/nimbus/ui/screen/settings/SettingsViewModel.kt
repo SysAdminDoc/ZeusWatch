@@ -218,8 +218,8 @@ class SettingsViewModel @Inject constructor(
         try {
             runCatching {
                 val raw = withContext(Dispatchers.IO) {
-                    appContext.contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
-                        reader.readText()
+                    appContext.contentResolver.openInputStream(uri)?.use { stream ->
+                        readSettingsBackupText(stream)
                     } ?: error("Could not open import file.")
                 }
                 val preview = withContext(Dispatchers.IO) {

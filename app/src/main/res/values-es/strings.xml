@@ -62,6 +62,7 @@
     <string name="widget_config_use_app_location">Usar ubicación de la app</string>
     <string name="widget_config_saved_locations">Ubicaciones guardadas</string>
     <string name="widget_config_saved_locations_desc">Elige un lugar específico cuando quieras un pronóstico dedicado en la pantalla de inicio.</string>
+    <string name="widget_config_select_location_cd">Usar %1$s para este widget</string>
 
     <!-- Custom alerts -->
     <string name="custom_alerts_title">Alertas personalizadas</string>
@@ -981,7 +982,7 @@
     <string name="settings_advanced_desc">Controles avanzados para caché y resolución de problemas de proveedores.</string>
     <string name="settings_cache_duration">Duración del caché</string>
     <string name="settings_transfer_title">Copia de ajustes</string>
-    <string name="settings_transfer_desc">Exporta preferencias, orden de tarjetas, alertas personalizadas y ubicaciones guardadas. No se incluyen claves API.</string>
+    <string name="settings_transfer_desc">Exporta preferencias, orden de tarjetas, alertas personalizadas, plantillas de resumen personalizadas y ubicaciones guardadas. No se incluyen claves API; las importaciones se limitan a 1 MB por seguridad.</string>
     <string name="settings_transfer_export">Exportar</string>
     <string name="settings_transfer_import">Importar</string>
     <string name="settings_transfer_status_title">Transferencia de ajustes</string>
@@ -999,7 +1000,7 @@
     <string name="settings_transfer_export_success">Ajustes exportados.</string>
     <string name="settings_transfer_export_error">Error al exportar. Revisa el acceso al almacenamiento e inténtalo de nuevo.</string>
     <string name="settings_transfer_import_success">Ajustes restaurados con %1$d ubicaciones guardadas y %2$d alertas personalizadas.</string>
-    <string name="settings_transfer_import_error">Error al importar. Elige un archivo de copia de ZeusWatch válido e inténtalo de nuevo.</string>
+    <string name="settings_transfer_import_error">Error al importar. Elige una copia de ZeusWatch válida menor de 1 MB e inténtalo de nuevo.</string>
     <string name="settings_minutes">%1$d minutos</string>
     <string name="settings_hours">%1$d horas</string>
     <string name="settings_hour">%1$d hora</string>
@@ -1060,7 +1061,7 @@
     <string name="settings_summary_ai_generated">Generado por IA (Gemini)</string>
     <string name="settings_summary_custom_template">Plantilla personalizada</string>
     <string name="settings_custom_template_label">Plantilla</string>
-    <string name="settings_custom_template_help">Variables: {condition} {time} {temp} {high} {low} {humidity} {wind} {wind_speed} {uv} {precip} {precip_max} {pressure} {dewpoint}</string>
+    <string name="settings_custom_template_help">Variables: {condition} {time} {temp} {high} {low} {humidity} {wind} {wind_speed} {uv} {precip} {precip_max} {pressure} {dewpoint}. Máximo 8.000 caracteres.</string>
     <string name="weather_source_open_meteo">Open-Meteo</string>
     <string name="weather_source_open_meteo_bom">Open-Meteo + BOM ACCESS-G</string>
     <string name="weather_source_nws">National Weather Service</string>

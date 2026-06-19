@@ -63,6 +63,7 @@
     <string name="widget_config_use_app_location">Use App Location</string>
     <string name="widget_config_saved_locations">Saved Locations</string>
     <string name="widget_config_saved_locations_desc">Choose a specific place when you want a dedicated home-screen forecast.</string>
+    <string name="widget_config_select_location_cd">Use %1$s for this widget</string>
 
     <!-- Custom alerts -->
     <string name="custom_alerts_title">Custom Alerts</string>
@@ -1009,7 +1010,7 @@
     <string name="settings_advanced_desc">Power-user controls for cache behavior and provider troubleshooting.</string>
     <string name="settings_cache_duration">Cache Duration</string>
     <string name="settings_transfer_title">Settings backup</string>
-    <string name="settings_transfer_desc">Export preferences, card layout, custom alerts, and saved locations. API keys are not included.</string>
+    <string name="settings_transfer_desc">Export preferences, card layout, custom alerts, custom summary templates, and saved locations. API keys are not included; imports are limited to 1 MB for safety.</string>
     <string name="settings_transfer_export">Export</string>
     <string name="settings_transfer_import">Import</string>
     <string name="settings_transfer_status_title">Settings transfer</string>
@@ -1027,7 +1028,7 @@
     <string name="settings_transfer_export_success">Settings exported.</string>
     <string name="settings_transfer_export_error">Export failed. Check storage access and try again.</string>
     <string name="settings_transfer_import_success">Settings restored with %1$d saved locations and %2$d custom alerts.</string>
-    <string name="settings_transfer_import_error">Import failed. Choose a valid ZeusWatch backup file and try again.</string>
+    <string name="settings_transfer_import_error">Import failed. Choose a valid ZeusWatch backup under 1 MB and try again.</string>
     <string name="settings_minutes">%1$d minutes</string>
     <string name="settings_hours">%1$d hours</string>
     <string name="settings_hour">%1$d hour</string>
@@ -1088,7 +1089,7 @@
     <string name="settings_summary_ai_generated">AI-Generated (Gemini)</string>
     <string name="settings_summary_custom_template">Custom Template</string>
     <string name="settings_custom_template_label">Template</string>
-    <string name="settings_custom_template_help">Variables: {condition} {time} {temp} {high} {low} {humidity} {wind} {wind_speed} {uv} {precip} {precip_max} {pressure} {dewpoint}</string>
+    <string name="settings_custom_template_help">Variables: {condition} {time} {temp} {high} {low} {humidity} {wind} {wind_speed} {uv} {precip} {precip_max} {pressure} {dewpoint}. Max 8,000 characters.</string>
     <string name="weather_source_open_meteo">Open-Meteo</string>
     <string name="weather_source_open_meteo_bom">Open-Meteo + BOM ACCESS-G</string>
     <string name="weather_source_nws">National Weather Service</string>

@@ -44,6 +44,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -67,7 +70,10 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -132,7 +138,13 @@ private fun WidgetConfigScreen(
     var locations by remember { mutableStateOf<List<SavedLocationEntity>>(emptyList()) }
 
     LaunchedEffect(Unit) {
-        locations = try { locationDao.getAll() } catch (_: Exception) { emptyList() }
+        locations = try {
+            withContext(Dispatchers.IO) { locationDao.getAll() }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            emptyList()
+        }
     }
 
     val selectableLocations = widgetSelectableLocations(locations)
@@ -221,6 +233,12 @@ private fun LocationOption(
     badge: String? = null,
     onClick: () -> Unit,
 ) {
+    val optionDescription = listOfNotNull(
+        name,
+        subtitle.takeIf { it.isNotBlank() },
+        badge?.takeIf { it.isNotBlank() },
+    ).joinToString(", ")
+    val selectLabel = stringResource(R.string.widget_config_select_location_cd, name)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -235,7 +253,14 @@ private fun LocationOption(
                 ),
             )
             .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
+            .clickable(
+                onClick = onClick,
+                role = Role.Button,
+                onClickLabel = selectLabel,
+            )
+            .semantics(mergeDescendants = true) {
+                contentDescription = optionDescription
+            }
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

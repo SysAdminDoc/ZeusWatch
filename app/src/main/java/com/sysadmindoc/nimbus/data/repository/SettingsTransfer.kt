@@ -6,12 +6,19 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToLong
 
 private const val SETTINGS_BACKUP_SCHEMA_VERSION = 1
+internal const val MAX_SETTINGS_BACKUP_BYTES = 1_048_576
+private const val MAX_SETTINGS_BACKUP_SAVED_LOCATIONS = 250
+private const val MAX_SETTINGS_BACKUP_CUSTOM_ALERTS = 100
+internal const val MAX_CUSTOM_SUMMARY_TEMPLATE_CHARS = 8_000
+private const val MAX_CUSTOM_ICON_PACK_ID_CHARS = 256
 
 private val settingsTransferJson = Json {
     ignoreUnknownKeys = true
@@ -148,6 +155,7 @@ data class SettingsBackupPreferences(
     val customIconPackId: String = "",
     val themeMode: String = ThemeMode.STATIC_DARK.name,
     val summaryStyle: String = SummaryStyle.AI_GENERATED.name,
+    val customSummaryTemplate: String = "",
     val disabledCards: Set<String> = DEFAULT_DISABLED_CARDS,
     val cardOrder: List<String> = DEFAULT_CARD_ORDER.map { it.name },
     val persistentWeatherNotif: Boolean = true,
@@ -204,10 +212,36 @@ data class SettingsBackupLastLocation(
 fun previewSettingsImport(rawJson: String, currentSavedLocationCount: Int = 0): SettingsImportPreview =
     parseSettingsBackup(rawJson).toImportPlan(currentSavedLocationCount).preview
 
+fun readSettingsBackupText(input: InputStream, maxBytes: Int = MAX_SETTINGS_BACKUP_BYTES): String {
+    require(maxBytes > 0) { "Backup size limit must be positive." }
+    val output = ByteArrayOutputStream()
+    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+    var totalBytes = 0
+    while (true) {
+        val read = input.read(buffer)
+        if (read == -1) break
+        totalBytes += read
+        require(totalBytes <= maxBytes) {
+            "Settings backup exceeds the ${maxBytes / 1024} KB import limit."
+        }
+        output.write(buffer, 0, read)
+    }
+    return String(output.toByteArray(), Charsets.UTF_8)
+}
+
 private fun parseSettingsBackup(rawJson: String): SettingsBackup {
+    require(rawJson.toByteArray(Charsets.UTF_8).size <= MAX_SETTINGS_BACKUP_BYTES) {
+        "Settings backup exceeds the ${MAX_SETTINGS_BACKUP_BYTES / 1024} KB import limit."
+    }
     val backup = settingsTransferJson.decodeFromString(SettingsBackup.serializer(), rawJson)
     require(backup.schemaVersion == SETTINGS_BACKUP_SCHEMA_VERSION) {
         "Unsupported settings backup version ${backup.schemaVersion}."
+    }
+    require(backup.savedLocations.size <= MAX_SETTINGS_BACKUP_SAVED_LOCATIONS) {
+        "Settings backup contains too many saved locations."
+    }
+    require(backup.customAlerts.size <= MAX_SETTINGS_BACKUP_CUSTOM_ALERTS) {
+        "Settings backup contains too many custom alerts."
     }
     return backup
 }
@@ -301,6 +335,7 @@ fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPrefere
     customIconPackId = customIconPackId,
     themeMode = themeMode.name,
     summaryStyle = summaryStyle.name,
+    customSummaryTemplate = customSummaryTemplate,
     disabledCards = disabledCards,
     cardOrder = cardOrder.map { it.name },
     persistentWeatherNotif = persistentWeatherNotif,
@@ -346,9 +381,10 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
     alertSourcePref = enumOrDefault(alertSourcePref, AlertSourcePreference.AUTO),
     radarProvider = enumOrDefault(radarProvider, RadarProvider.WINDY_WEBVIEW),
     iconStyle = enumOrDefault(iconStyle, IconStyle.METEOCONS),
-    customIconPackId = customIconPackId,
+    customIconPackId = customIconPackId.take(MAX_CUSTOM_ICON_PACK_ID_CHARS),
     themeMode = enumOrDefault(themeMode, ThemeMode.STATIC_DARK),
     summaryStyle = enumOrDefault(summaryStyle, SummaryStyle.AI_GENERATED),
+    customSummaryTemplate = customSummaryTemplate.take(MAX_CUSTOM_SUMMARY_TEMPLATE_CHARS),
     disabledCards = disabledCards.filter { runCatching { CardType.valueOf(it) }.isSuccess }.toSet(),
     cardOrder = parseCardOrder(cardOrder.joinToString(",")),
     persistentWeatherNotif = persistentWeatherNotif,
@@ -462,6 +498,7 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setCustomIconPackId(settings.customIconPackId)
     setThemeMode(settings.themeMode)
     setSummaryStyle(settings.summaryStyle)
+    setCustomSummaryTemplate(settings.customSummaryTemplate)
     setCardOrder(settings.cardOrder)
     settings.disabledCards.forEach { cardName ->
         runCatching { CardType.valueOf(cardName) }.getOrNull()?.let { card ->
