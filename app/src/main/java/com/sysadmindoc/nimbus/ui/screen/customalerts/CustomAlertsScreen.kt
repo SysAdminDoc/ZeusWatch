@@ -530,6 +530,13 @@ private fun RuleThresholdInput(
 ) {
     val displayUnit = displayUnitLabel(metric, settings)
     val thresholdUnitLabel = displayUnit.trim().ifBlank { stringResource(R.string.custom_alerts_threshold_uv) }
+    val thresholdFieldDescription = stringResource(
+        R.string.custom_alerts_threshold_field_cd,
+        stringResource(metric.labelRes),
+        thresholdUnitLabel,
+    )
+    val invalidThresholdState = stringResource(R.string.custom_alerts_threshold_invalid_state)
+    val showThresholdError = shouldShowThresholdError(metric, thresholdText, parsedThreshold)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             stringResource(R.string.custom_alerts_threshold_label, thresholdUnitLabel),
@@ -565,13 +572,19 @@ private fun RuleThresholdInput(
                 )
                 .border(
                     1.dp,
-                    if (shouldShowThresholdError(metric, thresholdText, parsedThreshold)) {
+                    if (showThresholdError) {
                         NimbusError.copy(alpha = 0.42f)
                     } else {
                         NimbusCardBorder
                     },
                     RoundedCornerShape(8.dp),
                 )
+                .semantics {
+                    contentDescription = thresholdFieldDescription
+                    if (showThresholdError) {
+                        stateDescription = invalidThresholdState
+                    }
+                }
                 .padding(horizontal = 12.dp, vertical = 12.dp),
         )
         RuleThresholdFeedback(
