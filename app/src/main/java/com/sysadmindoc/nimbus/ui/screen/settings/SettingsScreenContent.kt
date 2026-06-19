@@ -50,7 +50,9 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -90,6 +92,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
@@ -131,6 +134,7 @@ internal fun SettingsContent(
     notificationsPermissionGranted: Boolean = true,
     availableIconPacks: List<IconPack> = emptyList(),
     transferStatus: SettingsTransferStatus? = null,
+    transferInProgress: Boolean = false,
     pendingImportPreview: SettingsImportPreview? = null,
     actions: SettingsActions = SettingsActions(),
 ) {
@@ -182,6 +186,7 @@ internal fun SettingsContent(
                 availableIconPacks = availableIconPacks,
                 onNavigateToCustomAlerts = onNavigateToCustomAlerts,
                 transferStatus = transferStatus,
+                transferInProgress = transferInProgress,
                 pendingImportPreview = pendingImportPreview,
                 actions = actions,
             )
@@ -257,6 +262,7 @@ private fun SettingsCategoryContent(
     availableIconPacks: List<IconPack>,
     onNavigateToCustomAlerts: () -> Unit,
     transferStatus: SettingsTransferStatus?,
+    transferInProgress: Boolean,
     pendingImportPreview: SettingsImportPreview?,
     actions: SettingsActions,
 ) {
@@ -279,7 +285,7 @@ private fun SettingsCategoryContent(
         }
         SettingsCategory.ADVANCED -> {
             SettingsDataSourcesSection(settings, actions)
-            SettingsAdvancedSection(settings, transferStatus, pendingImportPreview, actions)
+            SettingsAdvancedSection(settings, transferStatus, transferInProgress, pendingImportPreview, actions)
             SettingsAboutSection()
         }
     }
@@ -895,6 +901,7 @@ private fun SettingsApiKeyFields(
 private fun SettingsAdvancedSection(
     settings: NimbusSettings,
     transferStatus: SettingsTransferStatus?,
+    transferInProgress: Boolean,
     pendingImportPreview: SettingsImportPreview?,
     actions: SettingsActions,
 ) {
@@ -931,18 +938,23 @@ private fun SettingsAdvancedSection(
             SettingsTransferButton(
                 label = stringResource(R.string.settings_transfer_export),
                 icon = Icons.Filled.FileUpload,
+                enabled = !transferInProgress,
                 modifier = Modifier.weight(1f),
                 onClick = actions.onExportSettings,
             )
             SettingsTransferButton(
                 label = stringResource(R.string.settings_transfer_import),
                 icon = Icons.Filled.FileDownload,
+                enabled = !transferInProgress,
                 modifier = Modifier.weight(1f),
                 onClick = actions.onImportSettings,
             )
         }
+        if (transferInProgress) {
+            SettingsTransferProgressCard()
+        }
         pendingImportPreview?.let { preview ->
-            SettingsImportPreviewCard(preview, actions)
+            SettingsImportPreviewCard(preview, actions, transferInProgress)
         }
         transferStatus?.let { status ->
             val statusMessage = settingsTransferStatusMessage(status)
@@ -950,7 +962,7 @@ private fun SettingsAdvancedSection(
             Spacer(modifier = Modifier.height(10.dp))
             InlineNoticeCard(
                 title = stringResource(R.string.settings_transfer_status_title),
-                message = statusMessage,
+                message = stringResource(R.string.settings_transfer_status_message, statusMessage),
                 icon = if (isSuccess) Icons.Filled.CheckCircle else Icons.Filled.ErrorOutline,
                 tint = if (isSuccess) NimbusSuccess else NimbusError,
                 liveRegion = LiveRegionMode.Polite,
@@ -958,6 +970,61 @@ private fun SettingsAdvancedSection(
                     onClick = actions.onClearTransferStatus,
                     role = Role.Button,
                 ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsTransferProgressCard() {
+    val workingTitle = stringResource(R.string.settings_transfer_working_title)
+    val workingMessage = stringResource(R.string.settings_transfer_working_message)
+    Spacer(modifier = Modifier.height(10.dp))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusBlueAccent.copy(alpha = 0.12f),
+                        NimbusCardBg,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusBlueAccent.copy(alpha = 0.24f), RoundedCornerShape(10.dp))
+            .semantics(mergeDescendants = true) {
+                contentDescription = "$workingTitle. $workingMessage"
+                this.liveRegion = LiveRegionMode.Polite
+            }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(NimbusBlueAccent.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = NimbusBlueAccent,
+                strokeWidth = 2.dp,
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = workingTitle,
+                style = MaterialTheme.typography.labelLarge,
+                color = NimbusTextPrimary,
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = workingMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
             )
         }
     }
@@ -979,6 +1046,7 @@ private fun settingsTransferStatusMessage(status: SettingsTransferStatus): Strin
 private fun SettingsImportPreviewCard(
     preview: SettingsImportPreview,
     actions: SettingsActions,
+    transferInProgress: Boolean,
 ) {
     Spacer(modifier = Modifier.height(10.dp))
     InlineNoticeCard(
@@ -1020,12 +1088,14 @@ private fun SettingsImportPreviewCard(
             label = stringResource(R.string.settings_transfer_preview_cancel),
             icon = Icons.Filled.Close,
             modifier = Modifier.weight(1f),
+            enabled = !transferInProgress,
             onClick = actions.onCancelSettingsImport,
         )
         SettingsTransferButton(
             label = stringResource(R.string.settings_transfer_preview_confirm),
             icon = Icons.Filled.FileDownload,
             modifier = Modifier.weight(1f),
+            enabled = !transferInProgress,
             onClick = actions.onConfirmSettingsImport,
         )
     }
@@ -1073,10 +1143,19 @@ private fun SettingsTransferButton(
     label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     Button(
         modifier = modifier.heightIn(min = 48.dp),
+        enabled = enabled,
+        shape = RoundedCornerShape(10.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = NimbusBlueAccent,
+            contentColor = NimbusTextPrimary,
+            disabledContainerColor = NimbusCardBorder.copy(alpha = 0.64f),
+            disabledContentColor = NimbusTextTertiary,
+        ),
         onClick = onClick,
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -1758,6 +1837,7 @@ private fun ApiKeyField(
     var text by remember(label) { mutableStateOf(value) }
     var isFocused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val fieldDescription = stringResource(R.string.settings_api_key_field_cd, label)
     // Latest value/callback for the onDispose commit below — the disposal
     // lambda is captured once, so direct captures would go stale.
     val currentValue by rememberUpdatedState(value)
@@ -1820,6 +1900,8 @@ private fun ApiKeyField(
                     commitValue()
                 }
                 isFocused = focusState.isFocused
+            }.semantics {
+                contentDescription = fieldDescription
             },
             decorationBox = { innerTextField ->
                 Box(

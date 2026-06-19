@@ -148,6 +148,7 @@ fun SettingsScreen(
 
     val availableIconPacks by viewModel.availableIconPacks.collectAsStateWithLifecycle()
     val transferStatus by viewModel.transferStatus.collectAsStateWithLifecycle()
+    val transferInProgress by viewModel.transferInProgress.collectAsStateWithLifecycle()
     val pendingImportPreview by viewModel.pendingImportPreview.collectAsStateWithLifecycle()
     val exportSettingsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -166,6 +167,7 @@ fun SettingsScreen(
         notificationsPermissionGranted = notificationsPermissionGranted,
         availableIconPacks = availableIconPacks,
         transferStatus = transferStatus,
+        transferInProgress = transferInProgress,
         pendingImportPreview = pendingImportPreview,
         actions = SettingsActions(
             onTempUnit = viewModel::setTempUnit,

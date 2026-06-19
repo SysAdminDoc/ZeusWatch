@@ -101,13 +101,13 @@ class MainScreenTest {
                     state = MainUiState(
                         isLoading = false,
                         weatherData = null,
-                        error = "Network error occurred",
+                        error = MainUiError(MainUiErrorKind.GENERIC),
                     ),
                 )
             }
         }
 
-        composeTestRule.onNodeWithText("Network error occurred").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Something went wrong. Please try again.").assertIsDisplayed()
         composeTestRule.onNodeWithText("Retry").assertIsDisplayed()
     }
 
@@ -119,7 +119,7 @@ class MainScreenTest {
                     state = MainUiState(
                         isLoading = false,
                         weatherData = null,
-                        error = "Location permission required to show weather.",
+                        error = MainUiError(MainUiErrorKind.LOCATION_PERMISSION_REQUIRED),
                     ),
                 )
             }

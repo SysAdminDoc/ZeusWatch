@@ -88,6 +88,8 @@
     <string name="custom_alerts_operator_chip">%1$s %2$s</string>
     <string name="custom_alerts_threshold_label">Threshold (%1$s)</string>
     <string name="custom_alerts_threshold_uv">UV</string>
+    <string name="custom_alerts_threshold_field_cd">%1$s threshold, %2$s</string>
+    <string name="custom_alerts_threshold_invalid_state">Invalid threshold</string>
     <string name="custom_alerts_invalid_threshold">Enter a numeric threshold to save this alert.</string>
     <string name="custom_alerts_negative_threshold">This threshold can\'t be negative. Enter zero or higher.</string>
     <string name="custom_alerts_deleted">Alert rule deleted</string>
@@ -812,6 +814,9 @@
     <string name="locations_use_current_location">Use My Location</string>
     <string name="locations_use_current_location_cd">Use current location, %1$s</string>
     <string name="locations_recent_searches">Recent Searches</string>
+    <string name="locations_remove_title">Remove %1$s?</string>
+    <string name="locations_remove_message">This removes %1$s from saved places. Widgets, alerts, and shortcuts that used it may need a new location.</string>
+    <string name="locations_remove_action">Remove</string>
 
     <!-- Compare -->
     <string name="compare_preparing_title">Preparing comparison</string>
@@ -1016,6 +1021,9 @@
     <string name="settings_transfer_warning_blank_locations">%1$d saved locations have blank names and will be skipped.</string>
     <string name="settings_transfer_warning_invalid_locations">%1$d saved locations have invalid coordinates and will be skipped.</string>
     <string name="settings_transfer_warning_duplicate_locations">%1$d duplicate saved locations will be skipped.</string>
+    <string name="settings_transfer_working_title">Processing settings backup</string>
+    <string name="settings_transfer_working_message">Keep ZeusWatch open while the settings file is being processed.</string>
+    <string name="settings_transfer_status_message">%1$s Tap to dismiss.</string>
     <string name="settings_transfer_export_success">Settings exported.</string>
     <string name="settings_transfer_export_error">Export failed. Check storage access and try again.</string>
     <string name="settings_transfer_import_success">Settings restored with %1$d saved locations and %2$d custom alerts.</string>
@@ -1032,6 +1040,7 @@
     <string name="settings_expand_section">Expand %1$s section</string>
     <string name="settings_source_selector_cd">%1$s, %2$s</string>
     <string name="settings_none">None</string>
+    <string name="settings_api_key_field_cd">%1$s field</string>
     <string name="settings_api_key_saved_hint">Stored on this device and saved when you leave the field</string>
     <string name="settings_enter_api_key">Enter API key...</string>
     <string name="settings_no_icon_packs">No icon packs installed. Place packs in assets/iconpacks/ or install an app with the com.sysadmindoc.nimbus.ICON_PACK intent.</string>

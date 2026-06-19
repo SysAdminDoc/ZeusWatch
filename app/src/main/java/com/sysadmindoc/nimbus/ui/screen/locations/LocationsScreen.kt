@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -54,6 +55,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -232,6 +234,7 @@ private fun LocationsList(
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
     var dragList by remember(saved) { mutableStateOf(saved) }
     var itemHeightsPx by remember(saved) { mutableStateOf<Map<Long, Int>>(emptyMap()) }
+    var pendingRemoval by remember { mutableStateOf<SavedLocationEntity?>(null) }
     val displayList = if (draggedIndex >= 0) dragList else saved
     val fallbackItemHeightPx = with(LocalDensity.current) { 62.dp.toPx() }
     val visibleSearchResults = filterDuplicateSearchResults(search.results, saved)
@@ -329,7 +332,7 @@ private fun LocationsList(
                     isDay = condition?.second ?: true,
                     onClick = { onLocationSelected(loc.id) },
                     onRemove = {
-                        if (!loc.isCurrentLocation) onRemoveLocation(loc.id)
+                        if (!loc.isCurrentLocation) pendingRemoval = loc
                     },
                     onForecastSourceSelected = { provider ->
                         onForecastSourceSelected(loc.id, provider)
@@ -398,6 +401,64 @@ private fun LocationsList(
 
         item { Spacer(modifier = Modifier.height(32.dp)) }
     }
+
+    pendingRemoval?.let { location ->
+        ConfirmRemoveLocationDialog(
+            location = location,
+            onDismiss = { pendingRemoval = null },
+            onConfirm = {
+                onRemoveLocation(location.id)
+                pendingRemoval = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun ConfirmRemoveLocationDialog(
+    location: SavedLocationEntity,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val locationName = if (location.isCurrentLocation) {
+        stringResource(R.string.common_my_location)
+    } else {
+        location.name
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(12.dp),
+        containerColor = NimbusCardBg,
+        titleContentColor = NimbusTextPrimary,
+        textContentColor = NimbusTextSecondary,
+        title = {
+            Text(
+                text = stringResource(R.string.locations_remove_title, locationName),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.locations_remove_message, locationName),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = stringResource(R.string.locations_remove_action),
+                    color = NimbusError,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
+    )
 }
 
 private fun LazyListScope.locationDiscoveryItems(

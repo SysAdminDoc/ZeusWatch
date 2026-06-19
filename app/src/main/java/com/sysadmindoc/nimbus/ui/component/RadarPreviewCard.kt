@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -93,6 +94,7 @@ private fun RadarPreviewMap(
     statusLabel: String?,
     statusTint: Color?,
 ) {
+    val hasTileContent = baseMapTileUrl != null || radarTileUrl != null
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -105,8 +107,18 @@ private fun RadarPreviewMap(
             baseMapTileUrl = baseMapTileUrl,
         )
         RadarPreviewGradient()
-        if (baseMapTileUrl == null && radarTileUrl == null) {
-            RadarPreviewEmptyState(modifier = Modifier.align(Alignment.Center))
+        if (hasTileContent) {
+            RadarPreviewCaption(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+            )
+        } else {
+            RadarPreviewEmptyState(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 26.dp),
+            )
         }
         RadarPreviewStatusBadge(
             hasRadarTile = radarTileUrl != null,
@@ -115,11 +127,6 @@ private fun RadarPreviewMap(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(14.dp),
-        )
-        RadarPreviewCaption(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
         )
     }
 }
@@ -188,12 +195,14 @@ private fun RadarPreviewEmptyState(modifier: Modifier = Modifier) {
             text = stringResource(R.string.radar_preview_empty_title),
             style = MaterialTheme.typography.titleSmall,
             color = NimbusTextPrimary,
+            textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(R.string.radar_preview_empty_message),
             style = MaterialTheme.typography.bodySmall,
             color = NimbusTextSecondary,
+            textAlign = TextAlign.Center,
         )
     }
 }

@@ -87,6 +87,8 @@
     <string name="custom_alerts_operator_chip">%1$s %2$s</string>
     <string name="custom_alerts_threshold_label">Umbral (%1$s)</string>
     <string name="custom_alerts_threshold_uv">UV</string>
+    <string name="custom_alerts_threshold_field_cd">Umbral de %1$s, %2$s</string>
+    <string name="custom_alerts_threshold_invalid_state">Umbral no válido</string>
     <string name="custom_alerts_invalid_threshold">Ingresa un umbral numérico para guardar esta alerta.</string>
     <string name="custom_alerts_negative_threshold">Este umbral no puede ser negativo. Ingresa cero o un valor mayor.</string>
     <string name="custom_alerts_deleted">Regla de alerta eliminada</string>
@@ -777,6 +779,9 @@
     <string name="locations_use_current_location">Usar mi ubicación</string>
     <string name="locations_use_current_location_cd">Usar ubicación actual, %1$s</string>
     <string name="locations_recent_searches">Búsquedas recientes</string>
+    <string name="locations_remove_title">¿Eliminar %1$s?</string>
+    <string name="locations_remove_message">Esto elimina %1$s de los lugares guardados. Los widgets, alertas y accesos directos que lo usaban podrían necesitar una nueva ubicación.</string>
+    <string name="locations_remove_action">Eliminar</string>
 
     <!-- Compare -->
     <string name="compare_preparing_title">Preparando comparación</string>
@@ -988,6 +993,9 @@
     <string name="settings_transfer_warning_blank_locations">%1$d ubicaciones guardadas tienen nombres vacíos y se omitirán.</string>
     <string name="settings_transfer_warning_invalid_locations">%1$d ubicaciones guardadas tienen coordenadas no válidas y se omitirán.</string>
     <string name="settings_transfer_warning_duplicate_locations">%1$d ubicaciones guardadas duplicadas se omitirán.</string>
+    <string name="settings_transfer_working_title">Procesando copia de ajustes</string>
+    <string name="settings_transfer_working_message">Mantén ZeusWatch abierto mientras se procesa el archivo de ajustes.</string>
+    <string name="settings_transfer_status_message">%1$s Toca para descartar.</string>
     <string name="settings_transfer_export_success">Ajustes exportados.</string>
     <string name="settings_transfer_export_error">Error al exportar. Revisa el acceso al almacenamiento e inténtalo de nuevo.</string>
     <string name="settings_transfer_import_success">Ajustes restaurados con %1$d ubicaciones guardadas y %2$d alertas personalizadas.</string>
@@ -1004,6 +1012,7 @@
     <string name="settings_expand_section">Expandir sección %1$s</string>
     <string name="settings_source_selector_cd">%1$s, %2$s</string>
     <string name="settings_none">Ninguno</string>
+    <string name="settings_api_key_field_cd">Campo de %1$s</string>
     <string name="settings_api_key_saved_hint">Guardado en este dispositivo al salir del campo</string>
     <string name="settings_enter_api_key">Ingresar clave API...</string>
     <string name="settings_no_icon_packs">No hay paquetes de iconos instalados. Coloca paquetes en assets/iconpacks/ o instala una app con el intent com.sysadmindoc.nimbus.ICON_PACK.</string>
