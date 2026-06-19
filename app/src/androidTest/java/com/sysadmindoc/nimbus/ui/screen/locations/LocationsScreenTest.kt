@@ -2,11 +2,15 @@ package com.sysadmindoc.nimbus.ui.screen.locations
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.testing.setContentWithAccessibilityChecks
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -84,7 +88,7 @@ class LocationsScreenTest {
         }
 
         // Current location shows actual name as subtitle
-        composeTestRule.onNodeWithText("Denver").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Denver")[0].assertIsDisplayed()
     }
 
     @Test
@@ -176,5 +180,30 @@ class LocationsScreenTest {
         composeTestRule.onNodeWithText("Locations").assertIsDisplayed()
         composeTestRule.onNodeWithText("Saved Locations").assertDoesNotExist()
         composeTestRule.onNodeWithText("Search Results").assertDoesNotExist()
+    }
+
+    @Test
+    fun locationsScreen_removeLocation_requiresConfirmation() {
+        var removedId: Long? = null
+
+        composeTestRule.setContentWithAccessibilityChecks {
+            NimbusTheme {
+                LocationsContent(
+                    saved = savedLocations,
+                    search = SearchState(),
+                    onBack = {},
+                    onRemoveLocation = { removedId = it },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithContentDescription("Remove New York").performClick()
+
+        composeTestRule.onNodeWithText("Remove New York?").assertIsDisplayed()
+        assertEquals(null, removedId)
+
+        composeTestRule.onNodeWithText("Remove").performClick()
+
+        assertEquals(2L, removedId)
     }
 }

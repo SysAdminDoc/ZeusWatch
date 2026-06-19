@@ -55,6 +55,9 @@ class SettingsViewModel @Inject constructor(
     private val _transferStatus = MutableStateFlow<SettingsTransferStatus?>(null)
     val transferStatus: StateFlow<SettingsTransferStatus?> = _transferStatus.asStateFlow()
 
+    private val _transferInProgress = MutableStateFlow(false)
+    val transferInProgress: StateFlow<Boolean> = _transferInProgress.asStateFlow()
+
     private val _pendingImportPreview = MutableStateFlow<SettingsImportPreview?>(null)
     val pendingImportPreview: StateFlow<SettingsImportPreview?> = _pendingImportPreview.asStateFlow()
     private var pendingImportRaw: String? = null
@@ -187,73 +190,100 @@ class SettingsViewModel @Inject constructor(
     fun setPirateWeatherApiKey(key: String) = viewModelScope.launch { prefs.setPirateWeatherApiKey(key) }
 
     fun exportSettings(uri: Uri) = viewModelScope.launch {
-        runCatching {
-            val json = withContext(Dispatchers.IO) { settingsTransferManager.exportJson() }
-            withContext(Dispatchers.IO) {
-                appContext.contentResolver.openOutputStream(uri, "wt")?.bufferedWriter()?.use { writer ->
-                    writer.write(json)
-                } ?: error("Could not open export file.")
-            }
-        }.fold(
-            onSuccess = { _transferStatus.value = SettingsTransferStatus.ExportSuccess },
-            onFailure = {
-                Log.w(TAG, "Failed to export settings", it)
-                _transferStatus.value = SettingsTransferStatus.ExportError
-            },
-        )
+        if (!beginTransfer()) return@launch
+        clearPendingImport()
+        try {
+            runCatching {
+                val json = withContext(Dispatchers.IO) { settingsTransferManager.exportJson() }
+                withContext(Dispatchers.IO) {
+                    appContext.contentResolver.openOutputStream(uri, "wt")?.bufferedWriter()?.use { writer ->
+                        writer.write(json)
+                    } ?: error("Could not open export file.")
+                }
+            }.fold(
+                onSuccess = { _transferStatus.value = SettingsTransferStatus.ExportSuccess },
+                onFailure = {
+                    Log.w(TAG, "Failed to export settings", it)
+                    _transferStatus.value = SettingsTransferStatus.ExportError
+                },
+            )
+        } finally {
+            _transferInProgress.value = false
+        }
     }
 
     fun importSettings(uri: Uri) = viewModelScope.launch {
-        runCatching {
-            val raw = withContext(Dispatchers.IO) {
-                appContext.contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
-                    reader.readText()
-                } ?: error("Could not open import file.")
-            }
-            val preview = withContext(Dispatchers.IO) {
-                settingsTransferManager.previewImportJson(raw)
-            }
-            pendingImportRaw = raw
-            _pendingImportPreview.value = preview
-            _transferStatus.value = null
-        }.fold(
-            onSuccess = {},
-            onFailure = {
-                Log.w(TAG, "Failed to preview settings import", it)
-                pendingImportRaw = null
-                _pendingImportPreview.value = null
-                _transferStatus.value = SettingsTransferStatus.ImportError
-            },
-        )
+        if (!beginTransfer()) return@launch
+        clearPendingImport()
+        try {
+            runCatching {
+                val raw = withContext(Dispatchers.IO) {
+                    appContext.contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
+                        reader.readText()
+                    } ?: error("Could not open import file.")
+                }
+                val preview = withContext(Dispatchers.IO) {
+                    settingsTransferManager.previewImportJson(raw)
+                }
+                pendingImportRaw = raw
+                _pendingImportPreview.value = preview
+            }.fold(
+                onSuccess = {},
+                onFailure = {
+                    Log.w(TAG, "Failed to preview settings import", it)
+                    pendingImportRaw = null
+                    _pendingImportPreview.value = null
+                    _transferStatus.value = SettingsTransferStatus.ImportError
+                },
+            )
+        } finally {
+            _transferInProgress.value = false
+        }
     }
 
     fun confirmPendingImport() = viewModelScope.launch {
         val raw = pendingImportRaw ?: return@launch
-        runCatching {
-            withContext(Dispatchers.IO) { settingsTransferManager.importJson(raw) }
-        }.fold(
-            onSuccess = { result ->
-                pendingImportRaw = null
-                _pendingImportPreview.value = null
-                _transferStatus.value = SettingsTransferStatus.ImportSuccess(
-                    savedLocationCount = result.savedLocationCount,
-                    customAlertCount = result.customAlertCount,
-                )
-            },
-            onFailure = {
-                Log.w(TAG, "Failed to import settings", it)
-                _transferStatus.value = SettingsTransferStatus.ImportError
-            },
-        )
+        if (!beginTransfer()) return@launch
+        try {
+            runCatching {
+                withContext(Dispatchers.IO) { settingsTransferManager.importJson(raw) }
+            }.fold(
+                onSuccess = { result ->
+                    pendingImportRaw = null
+                    _pendingImportPreview.value = null
+                    _transferStatus.value = SettingsTransferStatus.ImportSuccess(
+                        savedLocationCount = result.savedLocationCount,
+                        customAlertCount = result.customAlertCount,
+                    )
+                },
+                onFailure = {
+                    Log.w(TAG, "Failed to import settings", it)
+                    _transferStatus.value = SettingsTransferStatus.ImportError
+                },
+            )
+        } finally {
+            _transferInProgress.value = false
+        }
     }
 
     fun cancelPendingImport() {
-        pendingImportRaw = null
-        _pendingImportPreview.value = null
+        clearPendingImport()
     }
 
     fun clearTransferStatus() {
         _transferStatus.value = null
+    }
+
+    private fun beginTransfer(): Boolean {
+        if (_transferInProgress.value) return false
+        _transferInProgress.value = true
+        _transferStatus.value = null
+        return true
+    }
+
+    private fun clearPendingImport() {
+        pendingImportRaw = null
+        _pendingImportPreview.value = null
     }
 }
 
