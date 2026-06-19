@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import java.io.IOException
 
 private val Context.widgetLocationStore: DataStore<Preferences> by preferencesDataStore(
     name = "nimbus_widget_locations"
@@ -23,7 +25,7 @@ object WidgetLocationPrefs {
 
     /** Get the saved location ID for a widget, or null for default location. */
     suspend fun getLocationId(context: Context, appWidgetId: Int): Long? {
-        val prefs = context.widgetLocationStore.data.first()
+        val prefs = readWidgetLocationPreferences(context)
         val value = prefs[keyForWidget(appWidgetId)]
         return if (value == null || value == 0L) null else value
     }
@@ -44,7 +46,7 @@ object WidgetLocationPrefs {
 
     /** Get all widget-to-location mappings. Returns Map<appWidgetId, locationId>. */
     suspend fun getAllMappings(context: Context): Map<Int, Long> {
-        val prefs = context.widgetLocationStore.data.first()
+        val prefs = readWidgetLocationPreferences(context)
         return prefs.asMap().mapNotNull { (key, value) ->
             // removePrefix() returns the string unchanged when the prefix is
             // absent, so guard explicitly — otherwise any future non-widget key
@@ -57,4 +59,11 @@ object WidgetLocationPrefs {
             widgetId to locId
         }.toMap()
     }
+
+    private suspend fun readWidgetLocationPreferences(context: Context): Preferences =
+        context.widgetLocationStore.data
+            .catch { failure ->
+                if (failure is IOException) emit(emptyPreferences()) else throw failure
+            }
+            .first()
 }

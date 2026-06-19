@@ -5,17 +5,27 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.drawable.Drawable
 import android.util.Log
 import com.sysadmindoc.nimbus.data.model.IconMapping
 import com.sysadmindoc.nimbus.data.model.IconPack
 import com.sysadmindoc.nimbus.data.model.IconPackSource
 import dagger.hilt.android.qualifiers.ApplicationContext
-import org.json.JSONObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private val iconPackJson = Json {
+    ignoreUnknownKeys = true
+    isLenient = false
+}
 
 /**
  * Discovers and loads custom weather icon packs from bundled assets and external APKs.
@@ -105,7 +115,7 @@ class IconPackManager @Inject constructor(
         val filename = if (isDay) mapping.dayIcon else mapping.nightIcon
         return try {
             val stream = openIconStream(context, pack, filename) ?: return null
-            stream.use { BitmapFactory.decodeStream(it) }
+            stream.use { decodeIconBitmap(it) }
                 ?.also { bitmapCache[cacheKey(pack.id, wmoCode, isDay)] = it }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to load icon $filename from pack ${pack.id}", e)
@@ -127,8 +137,8 @@ class IconPackManager @Inject constructor(
         return dirs.mapNotNull { dir ->
             try {
                 val manifestPath = "$BUNDLED_ROOT/$dir/$MANIFEST_FILE"
-                val json = assets.open(manifestPath).bufferedReader().use { it.readText() }
-                parsePack(json, IconPackSource.Bundled(assetPath = "$BUNDLED_ROOT/$dir"))
+                val json = assets.open(manifestPath).use { readBoundedUtf8(it, IconPackLimits.MAX_MANIFEST_BYTES) }
+                parseIconPackManifest(json, IconPackSource.Bundled(assetPath = "$BUNDLED_ROOT/$dir"))
             } catch (e: Exception) {
                 Log.w(TAG, "Skipping bundled pack dir '$dir': ${e.message}")
                 null
@@ -151,8 +161,8 @@ class IconPackManager @Inject constructor(
                 val externalRes = pm.getResourcesForApplication(pkg)
                 // External packs store their manifest at assets/nimbus-iconpack/manifest.json
                 val stream = externalRes.assets.open("$EXTERNAL_ASSET_ROOT/$MANIFEST_FILE")
-                val json = stream.bufferedReader().use { it.readText() }
-                parsePack(json, IconPackSource.External(packageName = pkg))
+                val json = stream.use { readBoundedUtf8(it, IconPackLimits.MAX_MANIFEST_BYTES) }
+                parseIconPackManifest(json, IconPackSource.External(packageName = pkg))
             } catch (e: Exception) {
                 Log.w(TAG, "Skipping external pack '$pkg': ${e.message}")
                 null
@@ -164,31 +174,17 @@ class IconPackManager @Inject constructor(
     // Internal — manifest parsing
     // -------------------------------------------------------------------------
 
-    private fun parsePack(json: String, source: IconPackSource): IconPack {
-        val obj = JSONObject(json)
-        val id = obj.getString("id")
-        val name = obj.getString("name")
-        val author = obj.optString("author", "")
-        val format = obj.optString("format", "png")
-
-        val mappingsObj = obj.getJSONObject("mappings")
-        val mappings = mutableMapOf<Int, IconMapping>()
-        for (key in mappingsObj.keys()) {
-            val entry = mappingsObj.getJSONObject(key)
-            mappings[key.toInt()] = IconMapping(
-                dayIcon = entry.getString("day"),
-                nightIcon = entry.getString("night"),
-            )
+    private fun decodeIconBitmap(input: InputStream): Bitmap? {
+        val bytes = readBoundedBytes(input, IconPackLimits.MAX_ICON_BYTES)
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        if (bounds.outWidth > IconPackLimits.MAX_ICON_DIMENSION_PX ||
+            bounds.outHeight > IconPackLimits.MAX_ICON_DIMENSION_PX
+        ) {
+            return null
         }
-
-        return IconPack(
-            id = id,
-            name = name,
-            author = author,
-            format = format,
-            source = source,
-            mappings = mappings,
-        )
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
     }
 
     // -------------------------------------------------------------------------
@@ -208,4 +204,96 @@ class IconPackManager @Inject constructor(
             externalRes.assets.open("$EXTERNAL_ASSET_ROOT/$filename")
         }
     }
+}
+
+internal fun parseIconPackManifest(json: String, source: IconPackSource): IconPack {
+    require(json.toByteArray(Charsets.UTF_8).size <= IconPackLimits.MAX_MANIFEST_BYTES) {
+        "Icon-pack manifest is too large."
+    }
+    val obj = iconPackJson.parseToJsonElement(json).jsonObject
+    val id = obj.requiredTrimmedString("id")
+    val name = obj.requiredTrimmedString("name")
+    val author = obj.optTrimmedString("author")
+    val format = obj.optTrimmedString("format", "png").lowercase(Locale.ROOT)
+    require(format in IconPackLimits.SUPPORTED_BITMAP_FORMATS) {
+        "Icon-pack format '$format' is not supported."
+    }
+
+    val mappingsObj = obj["mappings"]?.jsonObject ?: error("Icon-pack manifest has no mappings.")
+    require(mappingsObj.size <= IconPackLimits.MAX_MAPPINGS) {
+        "Icon-pack manifest contains too many mappings."
+    }
+    val mappings = mutableMapOf<Int, IconMapping>()
+    for ((key, rawEntry) in mappingsObj) {
+        val code = key.toIntOrNull() ?: error("Invalid WMO code '$key'.")
+        require(code in 0..99) { "WMO code '$key' is outside the supported range." }
+        val entry = rawEntry.jsonObject
+        mappings[code] = IconMapping(
+            dayIcon = sanitizeIconFilename(entry.requiredTrimmedString("day")),
+            nightIcon = sanitizeIconFilename(entry.requiredTrimmedString("night")),
+        )
+    }
+    require(mappings.isNotEmpty()) { "Icon-pack manifest has no mappings." }
+
+    return IconPack(
+        id = id,
+        name = name,
+        author = author,
+        format = format,
+        source = source,
+        mappings = mappings,
+    )
+}
+
+private object IconPackLimits {
+    const val MAX_MANIFEST_BYTES = 128 * 1024
+    const val MAX_ICON_BYTES = 1024 * 1024
+    const val MAX_ICON_DIMENSION_PX = 512
+    const val MAX_TEXT_FIELD_CHARS = 96
+    const val MAX_FILENAME_CHARS = 160
+    const val MAX_MAPPINGS = 256
+    val SUPPORTED_BITMAP_FORMATS = setOf("png", "webp")
+}
+
+private fun JsonObject.requiredTrimmedString(name: String): String =
+    (this[name]?.jsonPrimitive?.contentOrNull ?: error("Icon-pack '$name' is missing.")).trim().also {
+        require(it.isNotEmpty()) { "Icon-pack '$name' must not be blank." }
+        require(it.length <= IconPackLimits.MAX_TEXT_FIELD_CHARS) {
+            "Icon-pack '$name' is too long."
+        }
+    }
+
+private fun JsonObject.optTrimmedString(name: String, defaultValue: String = ""): String =
+    (this[name]?.jsonPrimitive?.contentOrNull ?: defaultValue)
+        .trim()
+        .take(IconPackLimits.MAX_TEXT_FIELD_CHARS)
+
+private fun sanitizeIconFilename(raw: String): String {
+    val normalized = raw.trim().replace('\\', '/')
+    require(normalized.isNotEmpty()) { "Icon filename must not be blank." }
+    require(normalized.length <= IconPackLimits.MAX_FILENAME_CHARS) { "Icon filename is too long." }
+    require(!normalized.startsWith("/")) { "Icon filename must be relative." }
+    val segments = normalized.split('/')
+    require(segments.none { it.isBlank() || it == "." || it == ".." }) {
+        "Icon filename contains unsafe path segments."
+    }
+    return normalized
+}
+
+private fun readBoundedUtf8(input: InputStream, maxBytes: Int): String =
+    String(readBoundedBytes(input, maxBytes), Charsets.UTF_8)
+
+private fun readBoundedBytes(input: InputStream, maxBytes: Int): ByteArray {
+    require(maxBytes > 0) { "Byte limit must be positive." }
+    val output = ByteArrayOutputStream()
+    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+    var totalBytes = 0
+    while (true) {
+        val read = input.read(buffer)
+        if (read == -1) break
+        totalBytes += read
+        require(totalBytes <= maxBytes) { "Input exceeds the ${maxBytes / 1024} KB limit." }
+        output.write(buffer, 0, read)
+    }
+    return output.toByteArray()
 }

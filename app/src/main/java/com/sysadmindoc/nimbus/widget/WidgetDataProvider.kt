@@ -5,13 +5,16 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.io.IOException
 
 private val Context.widgetDataStore: DataStore<Preferences> by preferencesDataStore(name = "nimbus_widget_data")
 
@@ -55,7 +58,7 @@ object WidgetDataProvider {
     }
 
     suspend fun load(context: Context): WidgetWeatherData? {
-        val prefs = context.widgetDataStore.data.first()
+        val prefs = readWidgetPreferences(context)
         val location = prefs[KEY_LOCATION] ?: return null
         val hourlyJson = prefs[KEY_HOURLY_JSON]
         val dailyJson = prefs[KEY_DAILY_JSON]
@@ -107,7 +110,7 @@ object WidgetDataProvider {
     }
 
     suspend fun loadSavedCities(context: Context): List<WidgetSavedCity> {
-        val prefs = context.widgetDataStore.data.first()
+        val prefs = readWidgetPreferences(context)
         val cityJson = prefs[KEY_SAVED_CITIES_JSON] ?: return emptyList()
         return try {
             json.decodeFromString(WidgetSavedCityList.serializer(), cityJson).items
@@ -146,7 +149,7 @@ object WidgetDataProvider {
 
     /** Load weather data for a specific widget. Falls back to global data only for unpinned widgets. */
     suspend fun load(context: Context, appWidgetId: Int): WidgetWeatherData? {
-        val prefs = context.widgetDataStore.data.first()
+        val prefs = readWidgetPreferences(context)
         val isPinned = WidgetLocationPrefs.getLocationId(context, appWidgetId) != null
         val location = prefs[stringPreferencesKey(wKey(appWidgetId, "location"))]
             ?: return if (isPinned) null else load(context)
@@ -190,6 +193,13 @@ object WidgetDataProvider {
             prefs.remove(longPreferencesKey(wKey(appWidgetId, "updated")))
         }
     }
+
+    private suspend fun readWidgetPreferences(context: Context): Preferences =
+        context.widgetDataStore.data
+            .catch { failure ->
+                if (failure is IOException) emit(emptyPreferences()) else throw failure
+            }
+            .first()
 }
 
 data class WidgetWeatherData(
