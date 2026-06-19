@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.data.repository
 
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
+import java.io.ByteArrayInputStream
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -39,6 +40,36 @@ class SettingsTransferTest {
         assertFalse(encoded.contains("pirateWeatherApiKey"))
         assertTrue(encoded.contains(TempUnit.CELSIUS.name))
         assertTrue(encoded.contains("\"gadgetbridgeBroadcastEnabled\":true"))
+    }
+
+    @Test
+    fun `settings backup preserves custom summary template`() {
+        val template = "Start with {condition}, then mention {high} and {low}."
+        val backup = SettingsBackup(
+            settings = NimbusSettings(
+                summaryStyle = SummaryStyle.CUSTOM_TEMPLATE,
+                customSummaryTemplate = template,
+            ).toBackup(),
+        )
+
+        val encoded = json.encodeToString(backup)
+        val restored = backup.settings.toSettings()
+
+        assertTrue(encoded.contains("customSummaryTemplate"))
+        assertEquals(SummaryStyle.CUSTOM_TEMPLATE, restored.summaryStyle)
+        assertEquals(template, restored.customSummaryTemplate)
+    }
+
+    @Test
+    fun `backup reader rejects oversized imports before parsing`() {
+        val oversized = ByteArray(MAX_SETTINGS_BACKUP_BYTES + 1) { '{'.code.toByte() }
+
+        val result = runCatching {
+            readSettingsBackupText(ByteArrayInputStream(oversized))
+        }
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull()?.message.orEmpty().contains("import limit"))
     }
 
     @Test
@@ -136,6 +167,27 @@ class SettingsTransferTest {
 
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull()?.message.orEmpty().contains("Unsupported settings backup version 99"))
+    }
+
+    @Test
+    fun `import preview rejects excessive saved locations`() {
+        val raw = json.encodeToString(
+            SettingsBackup(
+                settings = NimbusSettings().toBackup(),
+                savedLocations = List(251) { index ->
+                    SettingsBackupLocation(
+                        name = "Location $index",
+                        latitude = 35.0 + index / 10_000.0,
+                        longitude = -90.0,
+                    )
+                },
+            ),
+        )
+
+        val result = runCatching { previewSettingsImport(raw) }
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull()?.message.orEmpty().contains("too many saved locations"))
     }
 
     @Test

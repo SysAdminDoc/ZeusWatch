@@ -373,12 +373,15 @@ private fun SettingsThemeAndSummaryControls(
             color = NimbusTextSecondary,
             modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
         )
-        var templateText by rememberSaveable { mutableStateOf(settings.customSummaryTemplate) }
+        var templateText by rememberSaveable(settings.customSummaryTemplate) {
+            mutableStateOf(settings.customSummaryTemplate)
+        }
         BasicTextField(
             value = templateText,
-            onValueChange = {
-                templateText = it
-                actions.onCustomSummaryTemplate(it)
+            onValueChange = { raw ->
+                val next = raw.take(MAX_CUSTOM_SUMMARY_TEMPLATE_CHARS)
+                templateText = next
+                actions.onCustomSummaryTemplate(next)
             },
             modifier = Modifier
                 .fillMaxWidth()
