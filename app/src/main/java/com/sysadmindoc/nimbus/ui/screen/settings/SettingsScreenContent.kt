@@ -1183,6 +1183,7 @@ private fun SettingsAboutSection() {
     ) {
         SettingInfo(stringResource(R.string.settings_version), com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME)
         SettingInfo(stringResource(R.string.settings_data_sources_title), stringResource(R.string.settings_data_sources_value))
+        SettingInfo(stringResource(R.string.settings_privacy_label), stringResource(R.string.settings_privacy_value))
         SettingInfo(stringResource(R.string.settings_license), "LGPL-3.0")
     }
 }

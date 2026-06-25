@@ -555,6 +555,21 @@ maintained locally in `RESEARCH.md`. Historical phase-1 research remains in
 
 ---
 
+## Privacy
+
+ZeusWatch collects **zero user data**. No analytics, no tracking, no telemetry, no location history, no advertising identifiers, no data shared with third parties.
+
+- **No accounts required.** The app works fully offline after the first forecast fetch.
+- **No network requests except weather data.** All API calls go directly to the configured weather services (Open-Meteo, RainViewer, etc.) — no intermediary servers.
+- **Community reports** (`standard` flavor only) use anonymous Firebase Auth with no personal identifiers. The `freenet` flavor has zero Firebase or Google dependency.
+- **API keys** (optional, user-provided) are encrypted on-device via Android Keystore + Tink AEAD and never leave the device.
+- **Cloud backup excluded.** Preferences, widget data, encrypted keys, and databases are excluded from Android cloud backup and device-to-device transfer via `data_extraction_rules.xml`.
+- **Crash reports** (ACRA) are opt-in, sent via email, and PII-redacted before dispatch.
+
+The `freenet` flavor contains no proprietary code and is suitable for F-Droid distribution.
+
+---
+
 ## License
 
 This project is licensed under the [GNU Lesser General Public License v3.0](LICENSE).
