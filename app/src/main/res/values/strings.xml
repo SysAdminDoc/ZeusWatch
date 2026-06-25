@@ -1036,6 +1036,8 @@
     <string name="settings_about_desc">Version and project details for support, trust, and troubleshooting.</string>
     <string name="settings_version">Version</string>
     <string name="settings_data_sources_value">Open-Meteo, NWS, and more</string>
+    <string name="settings_privacy_label">Privacy</string>
+    <string name="settings_privacy_value">No analytics, no tracking, no data collection. API keys are encrypted on-device and never leave your phone.</string>
     <string name="settings_license">License</string>
     <string name="settings_widget_troubleshoot_title">Widget not updating?</string>
     <string name="settings_widget_troubleshoot_desc">Some manufacturers restrict background work to save battery. Exempt ZeusWatch to keep widgets fresh.</string>

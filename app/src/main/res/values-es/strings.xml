@@ -1008,6 +1008,8 @@
     <string name="settings_about_desc">Versión y detalles del proyecto para soporte y confianza.</string>
     <string name="settings_version">Versión</string>
     <string name="settings_data_sources_value">Open-Meteo, NWS y más</string>
+    <string name="settings_privacy_label">Privacidad</string>
+    <string name="settings_privacy_value">Sin analíticas, sin rastreo, sin recopilación de datos. Las claves API se cifran en el dispositivo y nunca salen de tu teléfono.</string>
     <string name="settings_license">Licencia</string>
     <string name="settings_widget_troubleshoot_title">¿El widget no se actualiza?</string>
     <string name="settings_widget_troubleshoot_desc">Algunos fabricantes restringen el trabajo en segundo plano. Excluye ZeusWatch para mantener los widgets actualizados.</string>
