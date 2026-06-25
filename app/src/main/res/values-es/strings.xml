@@ -372,6 +372,13 @@
     <string name="current_trend_cooler">%1$d° más fresco</string>
     <string name="nowcast_legend_light">Ligera</string>
     <string name="nowcast_legend_heavy">Fuerte</string>
+    <string name="nowcast_intensity_none">Ninguna</string>
+    <string name="nowcast_intensity_light">Ligera</string>
+    <string name="nowcast_intensity_moderate">Moderada</string>
+    <string name="nowcast_intensity_heavy">Fuerte</string>
+    <string name="nowcast_timeline_starting">Lluvia %1$s en ~%2$d min</string>
+    <string name="nowcast_timeline_ending">Lluvia cesando a las %1$s</string>
+    <string name="nowcast_timeline_continuing">Lluvia %1$s continua</string>
     <string name="snowfall_per_hour">por hora</string>
     <string name="snowfall_depth">profundidad</string>
     <string name="snowfall_today_total">total de hoy</string>

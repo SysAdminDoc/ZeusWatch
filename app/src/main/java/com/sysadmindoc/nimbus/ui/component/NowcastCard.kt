@@ -14,8 +14,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -33,66 +35,50 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 
-/**
- * Rain-in-next-hour nowcasting card.
- * Shows a 60-minute bar chart of expected precipitation at 15-minute intervals.
- */
+private enum class PrecipIntensity(val color: Color, val labelRes: Int) {
+    NONE(Color(0xFF2A2A3A), R.string.nowcast_intensity_none),
+    LIGHT(Color(0xFF5B8DEF), R.string.nowcast_intensity_light),
+    MODERATE(Color(0xFF3A7BD5), R.string.nowcast_intensity_moderate),
+    HEAVY(Color(0xFF1B4F9E), R.string.nowcast_intensity_heavy),
+}
+
+private fun classifyIntensity(mmPer15min: Double): PrecipIntensity = when {
+    mmPer15min > 2.0 -> PrecipIntensity.HEAVY
+    mmPer15min > 0.5 -> PrecipIntensity.MODERATE
+    mmPer15min > 0.05 -> PrecipIntensity.LIGHT
+    else -> PrecipIntensity.NONE
+}
+
 @Composable
 fun NowcastCard(
     data: List<MinutelyPrecipitation>,
     referenceTime: LocalDateTime? = data.firstOrNull()?.time,
     modifier: Modifier = Modifier,
 ) {
-    // Filter to next ~90 minutes of data
     val filtered = remember(data, referenceTime) {
         val now = referenceTime ?: return@remember data.take(8)
         data.filter { it.time.isAfter(now.minusMinutes(5)) }
-            .take(8) // 8 x 15min = 2 hours
+            .take(8)
     }
 
     if (filtered.isEmpty()) return
-
-    val maxPrecip = filtered.maxOfOrNull { it.precipitation }?.coerceAtLeast(0.5) ?: return
     val hasRain = filtered.any { it.precipitation > 0.01 }
 
-    // Generate summary text
-    val summary = remember(filtered) {
-        val firstRainIdx = filtered.indexOfFirst { it.precipitation > 0.05 }
-        val lastRainIdx = filtered.indexOfLast { it.precipitation > 0.05 }
-        when {
-            firstRainIdx < 0 -> NowcastSummary(R.string.nowcast_summary_none)
-            firstRainIdx == 0 && lastRainIdx >= filtered.size - 1 -> NowcastSummary(R.string.nowcast_summary_continuing)
-            firstRainIdx == 0 -> NowcastSummary(R.string.nowcast_summary_ending, (lastRainIdx + 1) * 15)
-            else -> NowcastSummary(R.string.nowcast_summary_starting, firstRainIdx * 15)
-        }
-    }
-    val summaryText = if (summary.minutes != null) {
-        stringResource(summary.labelRes, summary.minutes)
-    } else {
-        stringResource(summary.labelRes)
-    }
-
+    val ref = referenceTime ?: filtered.first().time
     val settings = LocalUnitSettings.current
     val context = LocalContext.current
+
+    val narrative = remember(filtered, ref) {
+        buildNowcastNarrative(filtered, ref)
+    }
+    val narrativeText = narrative.toDisplayString(context, settings)
+
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
-    val peak = filtered.maxByOrNull { it.precipitation }
-    val peakTimeLabel = if (peak != null) {
-        WeatherFormatter.formatRelativeHourLabel(context, peak.time, referenceTime, settings)
-    } else {
-        null
-    }
-    val semanticSummary = if (peak != null && peak.precipitation > 0.0) {
-        stringResource(
-            R.string.nowcast_semantics_with_peak,
-            summaryText,
-            WeatherFormatter.formatPrecipitation(peak.precipitation, settings),
-            peakTimeLabel ?: "",
-        )
-    } else {
-        stringResource(R.string.nowcast_semantics, summaryText)
-    }
+
+    val semanticSummary = narrativeText
 
     WeatherCard(
         titleRes = R.string.card_type_nowcast,
@@ -101,7 +87,7 @@ fun NowcastCard(
         },
     ) {
         Text(
-            text = summaryText,
+            text = narrativeText,
             style = MaterialTheme.typography.bodyMedium,
             color = if (hasRain) NimbusRainBlue else NimbusTextSecondary,
         )
@@ -111,44 +97,42 @@ fun NowcastCard(
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp),
+                .height(36.dp),
         ) {
             val w = size.width
             val h = size.height
-            val barCount = filtered.size
-            val barGap = 4f
-            val barWidth = (w - barGap * (barCount - 1)) / barCount
+            val segCount = filtered.size
+            val segWidth = w / segCount
+            val barHeight = h - 16f
+            val cornerR = 6f
+
+            drawRoundRect(
+                color = PrecipIntensity.NONE.color,
+                topLeft = Offset(0f, 0f),
+                size = Size(w, barHeight),
+                cornerRadius = CornerRadius(cornerR, cornerR),
+            )
 
             filtered.forEachIndexed { i, entry ->
-                val barHeight = (entry.precipitation / maxPrecip * (h - 16f)).toFloat()
-                    .coerceAtLeast(2f)
-                val x = i * (barWidth + barGap)
-                val y = h - 16f - barHeight
-
-                val barColor = when {
-                    entry.precipitation > 2.0 -> NimbusRainBlue
-                    entry.precipitation > 0.5 -> NimbusBlueAccent.copy(alpha = 0.8f)
-                    entry.precipitation > 0.05 -> NimbusBlueAccent.copy(alpha = 0.5f)
-                    else -> NimbusTextTertiary.copy(alpha = 0.15f)
+                val intensity = classifyIntensity(entry.precipitation)
+                if (intensity != PrecipIntensity.NONE) {
+                    drawRect(
+                        color = intensity.color,
+                        topLeft = Offset(i * segWidth, 0f),
+                        size = Size(segWidth + 1f, barHeight),
+                    )
                 }
+            }
 
-                drawRect(
-                    color = barColor,
-                    topLeft = Offset(x, y),
-                    size = Size(barWidth, barHeight),
-                )
-
-                // Time labels every other bar. Minutes-aware: these are 15-minute
-                // buckets, so the hour-only label rendered duplicates ("4 PM, 4 PM").
+            filtered.forEachIndexed { i, entry ->
                 if (i % 2 == 0) {
                     val label = WeatherFormatter.formatClockTime(entry.time, settings)
                     val m = textMeasurer.measure(label, labelStyle)
-                    drawText(m, topLeft = Offset(x, h - 14f))
+                    drawText(m, topLeft = Offset(i * segWidth, barHeight + 2f))
                 }
             }
         }
 
-        // Legend
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -156,21 +140,31 @@ fun NowcastCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Canvas(modifier = Modifier.width(12.dp).height(8.dp)) {
-                drawRect(NimbusBlueAccent.copy(alpha = 0.5f), size = Size(size.width, size.height))
+                drawRect(PrecipIntensity.LIGHT.color, size = Size(size.width, size.height))
             }
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                stringResource(R.string.nowcast_legend_light),
+                stringResource(R.string.nowcast_intensity_light),
                 style = MaterialTheme.typography.labelSmall,
                 color = NimbusTextTertiary,
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Canvas(modifier = Modifier.width(12.dp).height(8.dp)) {
-                drawRect(NimbusRainBlue, size = Size(size.width, size.height))
+                drawRect(PrecipIntensity.MODERATE.color, size = Size(size.width, size.height))
             }
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                stringResource(R.string.nowcast_legend_heavy),
+                stringResource(R.string.nowcast_intensity_moderate),
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextTertiary,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Canvas(modifier = Modifier.width(12.dp).height(8.dp)) {
+                drawRect(PrecipIntensity.HEAVY.color, size = Size(size.width, size.height))
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                stringResource(R.string.nowcast_intensity_heavy),
                 style = MaterialTheme.typography.labelSmall,
                 color = NimbusTextTertiary,
             )
@@ -178,7 +172,75 @@ fun NowcastCard(
     }
 }
 
-private data class NowcastSummary(
-    val labelRes: Int,
-    val minutes: Int? = null,
+private data class NowcastNarrative(
+    val segments: List<NarrativeSegment>,
 )
+
+private data class NarrativeSegment(
+    val intensity: PrecipIntensity,
+    val startMinutes: Long,
+    val endMinutes: Long,
+    val startTime: LocalDateTime,
+    val endTime: LocalDateTime,
+)
+
+private fun buildNowcastNarrative(
+    data: List<MinutelyPrecipitation>,
+    ref: LocalDateTime,
+): NowcastNarrative {
+    if (data.isEmpty()) return NowcastNarrative(emptyList())
+    val segments = mutableListOf<NarrativeSegment>()
+    var currentIntensity = classifyIntensity(data[0].precipitation)
+    var segStart = data[0].time
+
+    for (i in 1 until data.size) {
+        val newIntensity = classifyIntensity(data[i].precipitation)
+        if (newIntensity != currentIntensity) {
+            segments += NarrativeSegment(
+                intensity = currentIntensity,
+                startMinutes = ChronoUnit.MINUTES.between(ref, segStart),
+                endMinutes = ChronoUnit.MINUTES.between(ref, data[i].time),
+                startTime = segStart,
+                endTime = data[i].time,
+            )
+            currentIntensity = newIntensity
+            segStart = data[i].time
+        }
+    }
+    val lastEntry = data.last()
+    segments += NarrativeSegment(
+        intensity = currentIntensity,
+        startMinutes = ChronoUnit.MINUTES.between(ref, segStart),
+        endMinutes = ChronoUnit.MINUTES.between(ref, lastEntry.time) + 15,
+        startTime = segStart,
+        endTime = lastEntry.time.plusMinutes(15),
+    )
+    return NowcastNarrative(segments)
+}
+
+private fun NowcastNarrative.toDisplayString(
+    context: android.content.Context,
+    settings: com.sysadmindoc.nimbus.data.repository.NimbusSettings,
+): String {
+    val hasRain = segments.any { it.intensity != PrecipIntensity.NONE }
+    if (!hasRain) return context.getString(R.string.nowcast_summary_none)
+
+    val firstRain = segments.firstOrNull { it.intensity != PrecipIntensity.NONE } ?: return context.getString(R.string.nowcast_summary_none)
+    val lastRain = segments.lastOrNull { it.intensity != PrecipIntensity.NONE } ?: firstRain
+
+    val intensityLabel = context.getString(firstRain.intensity.labelRes).lowercase()
+
+    return when {
+        firstRain.startMinutes <= 0 && lastRain == segments.last() -> {
+            context.getString(R.string.nowcast_timeline_continuing, intensityLabel)
+        }
+        firstRain.startMinutes <= 0 -> {
+            val endLabel = WeatherFormatter.formatClockTime(lastRain.endTime, settings)
+            context.getString(R.string.nowcast_timeline_ending, endLabel)
+        }
+        else -> {
+            val minutesUntil = firstRain.startMinutes
+            context.getString(R.string.nowcast_timeline_starting, intensityLabel, minutesUntil)
+        }
+    }
+}
