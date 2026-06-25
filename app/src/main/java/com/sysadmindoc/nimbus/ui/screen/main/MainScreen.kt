@@ -271,6 +271,7 @@ fun MainScreen(
         onNavigateToLocations = onNavigateToLocations,
         onNavigateToCompare = onNavigateToCompare,
         onLocationSelected = { index -> viewModel.onPageChanged(index) },
+        onHistoricalDateSelected = { date -> viewModel.selectHistoricalDate(date) },
     )
     val screenActions = MainScreenActions(
         content = contentActions,
