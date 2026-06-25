@@ -375,6 +375,13 @@
     <string name="current_trend_cooler">%1$d° cooler</string>
     <string name="nowcast_legend_light">Light</string>
     <string name="nowcast_legend_heavy">Heavy</string>
+    <string name="nowcast_intensity_none">None</string>
+    <string name="nowcast_intensity_light">Light</string>
+    <string name="nowcast_intensity_moderate">Moderate</string>
+    <string name="nowcast_intensity_heavy">Heavy</string>
+    <string name="nowcast_timeline_starting">%1$s rain starting in ~%2$d min</string>
+    <string name="nowcast_timeline_ending">Rain clearing by %1$s</string>
+    <string name="nowcast_timeline_continuing">%1$s rain continuing</string>
     <string name="snowfall_per_hour">per hour</string>
     <string name="snowfall_depth">depth</string>
     <string name="snowfall_today_total">today total</string>
