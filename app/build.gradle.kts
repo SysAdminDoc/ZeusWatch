@@ -220,7 +220,7 @@ dependencies {
     // Firebase (Phase 3.8 — Community Reports) — standard flavor only
     // NOTE: Requires google-services.json in app/ directory.
     // Configure at https://console.firebase.google.com and download the config file.
-    "standardImplementation"(platform("com.google.firebase:firebase-bom:34.3.0"))
+    "standardImplementation"(platform("com.google.firebase:firebase-bom:34.12.0"))
     "standardImplementation"("com.google.firebase:firebase-firestore")
     // Anonymous Authentication — binds community reports to an anonymous account
     // so Firestore rules can enforce ownerUid + server-side write-rate limiting
@@ -228,7 +228,7 @@ dependencies {
     "standardImplementation"("com.google.firebase:firebase-auth")
     // App Check attestation for the only user-writable backend surface.
     "standardImplementation"("com.google.firebase:firebase-appcheck-playintegrity")
-    debugImplementation("com.google.firebase:firebase-appcheck-debug")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug:18.0.0")
 
     // ACRA — crash reporting that works in both standard and freenet flavors
     // (no Google Play Services dependency). Core + mail sender so F-Droid
