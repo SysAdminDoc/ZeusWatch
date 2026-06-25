@@ -172,6 +172,32 @@ class WeatherRepository @Inject constructor(
         },
     )
 
+    suspend fun getKmaWeatherDirect(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = getOpenMeteoWeather(
+        latitude = latitude,
+        longitude = longitude,
+        locationName = locationName,
+        fetch = { forecastHours ->
+            weatherApi.getKmaForecast(latitude, longitude, forecastHours = forecastHours)
+        },
+    )
+
+    suspend fun getUkmoWeatherDirect(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = getOpenMeteoWeather(
+        latitude = latitude,
+        longitude = longitude,
+        locationName = locationName,
+        fetch = { forecastHours ->
+            weatherApi.getUkmoForecast(latitude, longitude, forecastHours = forecastHours)
+        },
+    )
+
     private suspend fun getOpenMeteoWeather(
         latitude: Double,
         longitude: Double,

@@ -27,6 +27,8 @@ class WeatherSourceManager @Inject constructor(
     private val prefs: UserPreferences,
     private val openMeteoAdapter: OpenMeteoForecastAdapter,
     private val openMeteoBomAdapter: OpenMeteoBomForecastAdapter,
+    private val openMeteoKmaAdapter: OpenMeteoKmaForecastAdapter,
+    private val openMeteoUkmoAdapter: OpenMeteoUkmoForecastAdapter,
     private val openMeteoMinutelyAdapter: OpenMeteoMinutelyAdapter,
     private val nwsAlertAdapter: AlertSourceManagerAdapter,
     private val openMeteoAqiAdapter: OpenMeteoAqiAdapter,
@@ -87,6 +89,8 @@ class WeatherSourceManager @Inject constructor(
     ): Result<WeatherData> = when (provider) {
         WeatherSourceProvider.OPEN_METEO -> openMeteoAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.OPEN_METEO_BOM -> openMeteoBomAdapter.getWeather(latitude, longitude, locationName)
+        WeatherSourceProvider.OPEN_METEO_KMA -> openMeteoKmaAdapter.getWeather(latitude, longitude, locationName)
+        WeatherSourceProvider.OPEN_METEO_UKMO -> openMeteoUkmoAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.OPEN_WEATHER_MAP -> owmForecastAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.PIRATE_WEATHER -> pirateWeatherAdapter.getWeather(latitude, longitude, locationName)
         WeatherSourceProvider.BRIGHT_SKY -> brightSkyForecastAdapter.getWeather(
@@ -327,6 +331,28 @@ class OpenMeteoBomForecastAdapter @Inject constructor(
         longitude: Double,
         locationName: String? = null,
     ): Result<WeatherData> = weatherRepository.get().getBomWeatherDirect(latitude, longitude, locationName)
+}
+
+@Singleton
+class OpenMeteoKmaForecastAdapter @Inject constructor(
+    private val weatherRepository: dagger.Lazy<WeatherRepository>,
+) {
+    suspend fun getWeather(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = weatherRepository.get().getKmaWeatherDirect(latitude, longitude, locationName)
+}
+
+@Singleton
+class OpenMeteoUkmoForecastAdapter @Inject constructor(
+    private val weatherRepository: dagger.Lazy<WeatherRepository>,
+) {
+    suspend fun getWeather(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = weatherRepository.get().getUkmoWeatherDirect(latitude, longitude, locationName)
 }
 
 /**

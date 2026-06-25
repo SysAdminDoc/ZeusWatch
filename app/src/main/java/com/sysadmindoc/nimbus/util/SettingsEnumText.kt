@@ -127,6 +127,8 @@ internal val WeatherSourceProvider.displayNameRes: Int
     get() = when (this) {
         WeatherSourceProvider.OPEN_METEO -> R.string.weather_source_open_meteo
         WeatherSourceProvider.OPEN_METEO_BOM -> R.string.weather_source_open_meteo_bom
+        WeatherSourceProvider.OPEN_METEO_KMA -> R.string.weather_source_open_meteo_kma
+        WeatherSourceProvider.OPEN_METEO_UKMO -> R.string.weather_source_open_meteo_ukmo
         WeatherSourceProvider.NWS -> R.string.weather_source_nws
         WeatherSourceProvider.OPEN_WEATHER_MAP -> R.string.weather_source_open_weather_map
         WeatherSourceProvider.PIRATE_WEATHER -> R.string.weather_source_pirate_weather
