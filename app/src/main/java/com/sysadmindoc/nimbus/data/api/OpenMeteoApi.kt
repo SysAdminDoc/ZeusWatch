@@ -50,6 +50,42 @@ interface OpenMeteoApi {
         @Query("forecast_hours") forecastHours: Int = 48,
     ): OpenMeteoResponse
 
+    /**
+     * Open-Meteo KMA (Korea Meteorological Administration) model proxy.
+     * Docs: https://open-meteo.com/en/docs/kma-api
+     */
+    @GET("kma")
+    suspend fun getKmaForecast(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("hourly") hourly: String = BOM_HOURLY_PARAMS,
+        @Query("daily") daily: String = BOM_DAILY_PARAMS,
+        @Query("temperature_unit") temperatureUnit: String = "celsius",
+        @Query("wind_speed_unit") windSpeedUnit: String = "kmh",
+        @Query("precipitation_unit") precipitationUnit: String = "mm",
+        @Query("timezone") timezone: String = "auto",
+        @Query("forecast_days") forecastDays: Int = 10,
+        @Query("forecast_hours") forecastHours: Int = 48,
+    ): OpenMeteoResponse
+
+    /**
+     * Open-Meteo UK Met Office (UKMO) model proxy.
+     * Docs: https://open-meteo.com/en/docs/ukmo-api
+     */
+    @GET("ukmo")
+    suspend fun getUkmoForecast(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("hourly") hourly: String = BOM_HOURLY_PARAMS,
+        @Query("daily") daily: String = BOM_DAILY_PARAMS,
+        @Query("temperature_unit") temperatureUnit: String = "celsius",
+        @Query("wind_speed_unit") windSpeedUnit: String = "kmh",
+        @Query("precipitation_unit") precipitationUnit: String = "mm",
+        @Query("timezone") timezone: String = "auto",
+        @Query("forecast_days") forecastDays: Int = 7,
+        @Query("forecast_hours") forecastHours: Int = 48,
+    ): OpenMeteoResponse
+
     @GET("forecast")
     suspend fun getMinutely15Forecast(
         @Query("latitude") latitude: Double,

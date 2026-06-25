@@ -29,6 +29,14 @@ enum class WeatherSourceProvider(
         displayName = "Open-Meteo + BOM ACCESS-G",
         supportedTypes = setOf(WeatherDataType.FORECAST),
     ),
+    OPEN_METEO_KMA(
+        displayName = "Open-Meteo + KMA",
+        supportedTypes = setOf(WeatherDataType.FORECAST),
+    ),
+    OPEN_METEO_UKMO(
+        displayName = "Open-Meteo + UK Met Office",
+        supportedTypes = setOf(WeatherDataType.FORECAST),
+    ),
     NWS(
         displayName = "National Weather Service",
         supportedTypes = setOf(WeatherDataType.ALERTS),

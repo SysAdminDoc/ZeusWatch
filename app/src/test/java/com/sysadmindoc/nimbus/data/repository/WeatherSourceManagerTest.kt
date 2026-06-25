@@ -17,6 +17,8 @@ class WeatherSourceManagerTest {
     private lateinit var prefs: UserPreferences
     private lateinit var openMeteoAdapter: OpenMeteoForecastAdapter
     private lateinit var openMeteoBomAdapter: OpenMeteoBomForecastAdapter
+    private lateinit var openMeteoKmaAdapter: OpenMeteoKmaForecastAdapter
+    private lateinit var openMeteoUkmoAdapter: OpenMeteoUkmoForecastAdapter
     private lateinit var openMeteoMinutelyAdapter: OpenMeteoMinutelyAdapter
     private lateinit var alertAdapter: AlertSourceManagerAdapter
     private lateinit var aqiAdapter: OpenMeteoAqiAdapter
@@ -61,6 +63,8 @@ class WeatherSourceManagerTest {
         prefs = mockk()
         openMeteoAdapter = mockk()
         openMeteoBomAdapter = mockk()
+        openMeteoKmaAdapter = mockk()
+        openMeteoUkmoAdapter = mockk()
         openMeteoMinutelyAdapter = mockk()
         alertAdapter = mockk()
         aqiAdapter = mockk()
@@ -78,6 +82,8 @@ class WeatherSourceManagerTest {
             prefs = prefs,
             openMeteoAdapter = openMeteoAdapter,
             openMeteoBomAdapter = openMeteoBomAdapter,
+            openMeteoKmaAdapter = openMeteoKmaAdapter,
+            openMeteoUkmoAdapter = openMeteoUkmoAdapter,
             openMeteoMinutelyAdapter = openMeteoMinutelyAdapter,
             nwsAlertAdapter = alertAdapter,
             openMeteoAqiAdapter = aqiAdapter,
@@ -347,6 +353,14 @@ class WeatherSourceManagerTest {
         assertTrue(
             "Open-Meteo BOM ACCESS-G should be present",
             forecastProviders.contains(WeatherSourceProvider.OPEN_METEO_BOM),
+        )
+        assertTrue(
+            "Open-Meteo KMA should be present",
+            forecastProviders.contains(WeatherSourceProvider.OPEN_METEO_KMA),
+        )
+        assertTrue(
+            "Open-Meteo UKMO should be present",
+            forecastProviders.contains(WeatherSourceProvider.OPEN_METEO_UKMO),
         )
         assertTrue(
             "MET Norway should be present once implemented",
