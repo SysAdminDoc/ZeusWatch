@@ -65,6 +65,8 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.screen.compare.CompareScreen
 import com.sysadmindoc.nimbus.ui.screen.customalerts.CustomAlertsScreen
 import com.sysadmindoc.nimbus.ui.screen.locations.LocationsScreen
+import com.sysadmindoc.nimbus.ui.screen.locations.LocationsViewModel
+import com.sysadmindoc.nimbus.ui.screen.locations.MapLocationPickerScreen
 import com.sysadmindoc.nimbus.ui.screen.main.MainScreen
 import com.sysadmindoc.nimbus.ui.screen.onboarding.OnboardingScreen
 import com.sysadmindoc.nimbus.ui.screen.onboarding.OnboardingViewModel
@@ -87,6 +89,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val RADAR = "radar/{lat}/{lon}"
     const val LOCATIONS = "locations"
+    const val LOCATION_PICKER = "location_picker"
     const val COMPARE = "compare"
     const val CUSTOM_ALERTS = "custom_alerts"
 
@@ -276,15 +279,23 @@ fun NimbusNavHost(
                 onBack = { navController.popBackStack() },
                 onLocationSelected = { id ->
                     navController.navigate(Routes.mainWithLocation(id)) {
-                        // Keep the start destination as the stack base and pop
-                        // everything above it (this screen + any previous
-                        // main/{locationId} entry). The old inclusive pop of
-                        // MAIN no-oped after the first pick — MAIN was already
-                        // gone — so repeat picks stacked stale location entries
-                        // that back-navigation then walked through.
                         popUpTo(Routes.MAIN)
                     }
                 },
+                onNavigateToMapPicker = { navController.navigate(Routes.LOCATION_PICKER) },
+            )
+        }
+        composable(Routes.LOCATION_PICKER) {
+            val locationsViewModel: LocationsViewModel = hiltViewModel()
+            MapLocationPickerScreen(
+                onLocationPicked = { lat, lon, name ->
+                    locationsViewModel.addMapPickedLocation(lat, lon, name) { id ->
+                        navController.navigate(Routes.mainWithLocation(id)) {
+                            popUpTo(Routes.MAIN)
+                        }
+                    }
+                },
+                onBack = { navController.popBackStack() },
             )
         }
         composable(Routes.COMPARE) {

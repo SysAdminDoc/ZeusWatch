@@ -709,6 +709,11 @@
     <string name="on_this_day_delta_warmer">%1$d%2$s más cálido</string>
     <string name="on_this_day_delta_cooler">%1$d%2$s más fresco</string>
     <string name="on_this_day_explore_dates">Explorar otras fechas</string>
+    <string name="map_picker_title">Elige una ubicación</string>
+    <string name="map_picker_hint">Toca cualquier punto del mapa</string>
+    <string name="map_picker_geocoding">Buscando ubicación…</string>
+    <string name="map_picker_save">Guardar ubicación</string>
+    <string name="map_picker_pick_on_map">Elegir en el mapa</string>
     <string name="severe_weather_potential_cd">Potencial de clima severo</string>
     <string name="severe_cape_stable">Estable</string>
     <string name="severe_cape_marginally_unstable">Marginalmente inestable</string>
