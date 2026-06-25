@@ -287,6 +287,7 @@ private fun SettingsCategoryContent(
             SettingsDataSourcesSection(settings, actions)
             SettingsAdvancedSection(settings, transferStatus, transferInProgress, pendingImportPreview, actions)
             SettingsAboutSection()
+            SettingsWidgetTroubleshootSection()
         }
     }
 }
@@ -1183,6 +1184,40 @@ private fun SettingsAboutSection() {
         SettingInfo(stringResource(R.string.settings_version), com.sysadmindoc.nimbus.BuildConfig.VERSION_NAME)
         SettingInfo(stringResource(R.string.settings_data_sources_title), stringResource(R.string.settings_data_sources_value))
         SettingInfo(stringResource(R.string.settings_license), "LGPL-3.0")
+    }
+}
+
+@Composable
+private fun SettingsWidgetTroubleshootSection() {
+    SettingSection(
+        title = stringResource(R.string.settings_widget_troubleshoot_title),
+        description = stringResource(R.string.settings_widget_troubleshoot_desc),
+        initiallyExpanded = false,
+    ) {
+        SettingInfo(
+            stringResource(R.string.settings_widget_troubleshoot_samsung_label),
+            stringResource(R.string.settings_widget_troubleshoot_samsung_value),
+        )
+        SettingInfo(
+            stringResource(R.string.settings_widget_troubleshoot_xiaomi_label),
+            stringResource(R.string.settings_widget_troubleshoot_xiaomi_value),
+        )
+        SettingInfo(
+            stringResource(R.string.settings_widget_troubleshoot_huawei_label),
+            stringResource(R.string.settings_widget_troubleshoot_huawei_value),
+        )
+        SettingInfo(
+            stringResource(R.string.settings_widget_troubleshoot_oneplus_label),
+            stringResource(R.string.settings_widget_troubleshoot_oneplus_value),
+        )
+        SettingInfo(
+            stringResource(R.string.settings_widget_troubleshoot_oppo_label),
+            stringResource(R.string.settings_widget_troubleshoot_oppo_value),
+        )
+        SettingInfo(
+            stringResource(R.string.settings_widget_troubleshoot_pixel_label),
+            stringResource(R.string.settings_widget_troubleshoot_pixel_value),
+        )
     }
 }
 
