@@ -145,6 +145,24 @@ class LocationsViewModel @Inject constructor(
         }
     }
 
+    fun addMapPickedLocation(
+        lat: Double,
+        lon: Double,
+        name: String,
+        onAdded: (Long) -> Unit = {},
+    ) {
+        viewModelScope.launch {
+            val result = GeocodingResult(
+                id = 0,
+                name = name,
+                latitude = lat,
+                longitude = lon,
+            )
+            val locationId = locationRepository.addLocation(result)
+            onAdded(locationId)
+        }
+    }
+
     fun removeLocation(id: Long) {
         viewModelScope.launch {
             locationRepository.removeLocation(id)

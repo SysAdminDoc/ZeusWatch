@@ -110,6 +110,7 @@ import com.sysadmindoc.nimbus.util.displayNameRes
 fun LocationsScreen(
     onBack: () -> Unit,
     onLocationSelected: (Long) -> Unit,
+    onNavigateToMapPicker: () -> Unit = {},
     viewModel: LocationsViewModel = hiltViewModel(),
 ) {
     val saved by viewModel.savedLocations.collectAsStateWithLifecycle()
@@ -142,6 +143,7 @@ fun LocationsScreen(
         onAlertSourceSelected = { locationId, provider ->
             viewModel.setAlertSource(locationId, provider)
         },
+        onNavigateToMapPicker = onNavigateToMapPicker,
     )
 }
 
@@ -162,6 +164,7 @@ internal fun LocationsContent(
     onCommitReorder: (List<Long>) -> Unit = {},
     onForecastSourceSelected: (Long, WeatherSourceProvider?) -> Unit = { _, _ -> },
     onAlertSourceSelected: (Long, WeatherSourceProvider?) -> Unit = { _, _ -> },
+    onNavigateToMapPicker: () -> Unit = {},
 ) {
     PredictiveBackScaffold(onBack = onBack) {
         val emptySubtitle = stringResource(R.string.locations_empty_subtitle)
@@ -195,7 +198,19 @@ internal fun LocationsContent(
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = stringResource(R.string.map_picker_pick_on_map),
+                style = MaterialTheme.typography.labelMedium,
+                color = NimbusBlueAccent,
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .clickable(onClick = onNavigateToMapPicker)
+                    .padding(vertical = 4.dp),
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
 
             LocationsList(
                 saved = saved,

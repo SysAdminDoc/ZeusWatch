@@ -711,6 +711,11 @@
     <string name="on_this_day_near_normal">near normal</string>
     <string name="on_this_day_delta_warmer">%1$d%2$s warmer</string>
     <string name="on_this_day_explore_dates">Explore other dates</string>
+    <string name="map_picker_title">Pick a location</string>
+    <string name="map_picker_hint">Tap anywhere on the map</string>
+    <string name="map_picker_geocoding">Looking up location…</string>
+    <string name="map_picker_save">Save location</string>
+    <string name="map_picker_pick_on_map">Pick on map</string>
     <string name="on_this_day_delta_cooler">%1$d%2$s cooler</string>
     <string name="severe_weather_potential_cd">Severe weather potential</string>
     <string name="severe_cape_stable">Stable</string>
