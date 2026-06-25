@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.ui.component
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,12 +14,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -53,12 +66,49 @@ import kotlin.math.min
  * network). Loading is handled upstream — if [data] is null and we are
  * still fetching, the card is not rendered at all.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnThisDayCard(
     data: OnThisDayData?,
     forecastHighC: Double?,
+    onDateSelected: ((LocalDate) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    if (showDatePicker && onDateSelected != null) {
+        val yesterday = LocalDate.now().minusDays(1)
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = yesterday.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDatePicker = false
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val selected = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneOffset.UTC)
+                                .toLocalDate()
+                            if (selected.isBefore(LocalDate.now())) {
+                                onDateSelected(selected)
+                            }
+                        }
+                    },
+                ) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
     val s = LocalUnitSettings.current
     val semanticDescription = if (data == null || data.priorYears.isEmpty()) {
         null
@@ -179,6 +229,18 @@ fun OnThisDayCard(
                     text = newestYear.toString(),
                     style = MaterialTheme.typography.labelSmall,
                     color = NimbusTextTertiary,
+                )
+            }
+
+            if (onDateSelected != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.on_this_day_explore_dates),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = NimbusBlueAccent,
+                    modifier = Modifier
+                        .clickable { showDatePicker = true }
+                        .padding(vertical = 4.dp),
                 )
             }
         }

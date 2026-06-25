@@ -174,6 +174,7 @@ internal data class MainContentActions(
     val onNavigateToLocations: () -> Unit,
     val onNavigateToCompare: () -> Unit,
     val onLocationSelected: (Int) -> Unit,
+    val onHistoricalDateSelected: ((java.time.LocalDate) -> Unit)? = null,
 )
 
 internal data class MainScreenActions(
@@ -729,6 +730,7 @@ private fun WeatherContent(
                     radarPreviewTileUrl = state.radarPreviewTileUrl,
                     radarBaseMapUrl = state.radarBaseMapUrl,
                     onNavigateToRadar = actions.onNavigateToRadar,
+                    onHistoricalDateSelected = actions.onHistoricalDateSelected,
                 ),
             )
 
@@ -1036,6 +1038,7 @@ private data class CardRenderContext(
     val radarPreviewTileUrl: String?,
     val radarBaseMapUrl: String?,
     val onNavigateToRadar: (Double, Double) -> Unit,
+    val onHistoricalDateSelected: ((java.time.LocalDate) -> Unit)? = null,
 )
 
 private val FORECAST_CARD_TYPES = setOf(
@@ -1392,6 +1395,7 @@ private fun RenderDetailCard(
         CardType.ON_THIS_DAY -> OnThisDayCard(
             data = context.state.onThisDay,
             forecastHighC = data.daily.firstOrNull()?.temperatureHigh,
+            onDateSelected = context.onHistoricalDateSelected,
             modifier = modifier,
         )
         CardType.AURORA_KP -> {

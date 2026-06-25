@@ -710,6 +710,7 @@
     <string name="on_this_day_sparkline_semantics">Prior-year highs for this date, ranging from %1$s to %2$s.</string>
     <string name="on_this_day_near_normal">near normal</string>
     <string name="on_this_day_delta_warmer">%1$d%2$s warmer</string>
+    <string name="on_this_day_explore_dates">Explore other dates</string>
     <string name="on_this_day_delta_cooler">%1$d%2$s cooler</string>
     <string name="severe_weather_potential_cd">Severe weather potential</string>
     <string name="severe_cape_stable">Stable</string>

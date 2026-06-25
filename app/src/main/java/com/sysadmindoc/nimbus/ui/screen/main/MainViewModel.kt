@@ -824,6 +824,21 @@ class MainViewModel @Inject constructor(
 
     // ── On This Day (historical same-date snapshot) ──────────────────────
 
+    fun selectHistoricalDate(date: java.time.LocalDate) {
+        viewModelScope.launch(defaultDispatcher) {
+            val weather = _uiState.value.weatherData ?: return@launch
+            val lat = weather.location.latitude
+            val lon = weather.location.longitude
+            try {
+                val data = onThisDayRepository.getOnThisDay(lat, lon, date)
+                _uiState.update { it.copy(onThisDay = data) }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                android.util.Log.w(TAG, "selectHistoricalDate failed: ${e.message}")
+            }
+        }
+    }
+
     private suspend fun fetchOnThisDay(
         lat: Double,
         lon: Double,
