@@ -397,7 +397,7 @@
     <string name="radar_loading_title">Cargando radar</string>
     <string name="radar_loading_message">Obteniendo los fotogramas de radar más recientes para esta zona.</string>
     <string name="radar_unavailable_title">Radar no disponible</string>
-    <string name="radar_unavailable_message">No pudimos cargar los fotogramas de radar ahora mismo.</string>
+    <string name="radar_unavailable_message">No pudimos cargar fotogramas de radar pasado compatibles de RainViewer ahora mismo. Inténtalo de nuevo o cambia de proveedor de radar.</string>
     <plurals name="radar_alert_overlay_count">
         <item quantity="one">%1$d zona de alerta</item>
         <item quantity="other">%1$d zonas de alerta</item>
@@ -408,7 +408,7 @@
     <string name="radar_offline_badge">Las tarjetas de pronóstico aún funcionan con datos en caché</string>
     <string name="radar_playback_title">Reproducción de radar</string>
     <string name="radar_playback_static">Estático</string>
-    <string name="radar_playback_forecast">Pronóstico</string>
+    <string name="radar_playback_forecast">Futuro</string>
     <string name="radar_playback_past">Pasado</string>
     <string name="radar_playback_no_frames">Sin fotogramas</string>
     <string name="radar_playback_unavailable">Animación no disponible</string>

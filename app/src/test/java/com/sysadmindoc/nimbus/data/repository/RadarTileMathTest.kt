@@ -47,5 +47,19 @@ class RadarTileMathTest {
         assert(urls.baseMapUrl.contains("basemaps.cartocdn.com"))
     }
 
+    @Test
+    fun `buildPreviewTileUrls clamps preview zoom to RainViewer public max`() {
+        val repo = RadarRepository(radarApiStub())
+        val urls = repo.buildPreviewTileUrls(
+            lat = 51.5,
+            lon = -0.12,
+            tileUrlTemplate = "https://tiles.example.com/{z}/{x}/{y}/radar.png",
+            zoom = 12,
+        )
+
+        assert(urls.radarTileUrl.contains("/7/")) { "RainViewer public tiles should not exceed zoom 7" }
+        assert(urls.baseMapUrl.contains("/7/")) { "preview basemap should use the clamped zoom" }
+    }
+
     private fun radarApiStub() = io.mockk.mockk<com.sysadmindoc.nimbus.data.api.RainViewerApi>()
 }

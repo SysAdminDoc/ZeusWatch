@@ -400,7 +400,7 @@
     <string name="radar_loading_title">Loading radar</string>
     <string name="radar_loading_message">Fetching the latest radar frames for this area.</string>
     <string name="radar_unavailable_title">Radar unavailable</string>
-    <string name="radar_unavailable_message">We couldn\'t load radar frames right now.</string>
+    <string name="radar_unavailable_message">We couldn\'t load supported RainViewer past radar frames right now. Try again or switch radar providers.</string>
     <plurals name="radar_alert_overlay_count">
         <item quantity="one">%1$d warning area</item>
         <item quantity="other">%1$d warning areas</item>
@@ -411,7 +411,7 @@
     <string name="radar_offline_badge">Forecast cards still work with cached data</string>
     <string name="radar_playback_title">Radar playback</string>
     <string name="radar_playback_static">Static</string>
-    <string name="radar_playback_forecast">Forecast</string>
+    <string name="radar_playback_forecast">Future</string>
     <string name="radar_playback_past">Past</string>
     <string name="radar_playback_no_frames">No frames</string>
     <string name="radar_playback_unavailable">Animation unavailable</string>
