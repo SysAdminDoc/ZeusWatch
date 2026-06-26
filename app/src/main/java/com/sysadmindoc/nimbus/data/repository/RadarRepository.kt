@@ -21,12 +21,13 @@ class RadarRepository @Inject constructor(
         tileUrlTemplate: String,
         zoom: Int = PREVIEW_ZOOM,
     ): RadarPreviewUrls {
-        val (tileX, tileY) = latLonToTile(lat, lon, zoom)
+        val supportedZoom = zoom.coerceIn(MIN_RAINVIEWER_TILE_ZOOM, RainViewerApi.MAX_TILE_ZOOM)
+        val (tileX, tileY) = latLonToTile(lat, lon, supportedZoom)
         val radarUrl = tileUrlTemplate
-            .replace("{z}", zoom.toString())
+            .replace("{z}", supportedZoom.toString())
             .replace("{x}", tileX.toString())
             .replace("{y}", tileY.toString())
-        val baseMapUrl = "https://basemaps.cartocdn.com/dark_all/$zoom/$tileX/$tileY@2x.png"
+        val baseMapUrl = "https://basemaps.cartocdn.com/dark_all/$supportedZoom/$tileX/$tileY@2x.png"
         return RadarPreviewUrls(radarUrl, baseMapUrl)
     }
 
@@ -36,6 +37,11 @@ class RadarRepository @Inject constructor(
             val radar = response.radar ?: return@withContext Result.failure(
                 Exception("No radar data available")
             )
+            if (radar.past.isEmpty()) {
+                return@withContext Result.failure(
+                    Exception("No supported RainViewer past radar frames available")
+                )
+            }
             val host = response.host
             val past = radar.past.map { frame ->
                 TimedTileUrl(
@@ -44,14 +50,7 @@ class RadarRepository @Inject constructor(
                     isPast = true,
                 )
             }
-            val forecast = radar.nowcast.map { frame ->
-                TimedTileUrl(
-                    timestamp = frame.time,
-                    tileUrl = RainViewerApi.buildTileUrl(frame.path, host),
-                    isPast = false,
-                )
-            }
-            Result.success(RadarFrameSet(past = past, forecast = forecast))
+            Result.success(RadarFrameSet(past = past, forecast = emptyList()))
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             Result.failure(e)
@@ -73,6 +72,7 @@ internal fun latLonToTile(lat: Double, lon: Double, zoom: Int): Pair<Int, Int> {
     return Pair(x, y)
 }
 
+private const val MIN_RAINVIEWER_TILE_ZOOM = 0
 private const val PREVIEW_ZOOM = 6
 
 @Stable

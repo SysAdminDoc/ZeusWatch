@@ -123,8 +123,8 @@ gh attestation verify SHA256SUMS.txt --repo SysAdminDoc/ZeusWatch
 | Feature | Description |
 |---------|-------------|
 | **Dual Radar Provider** | User-selectable: native MapLibre with RainViewer tiles, or Windy.com WebView embed |
-| **Animated Radar Playback** | Play/pause, frame slider, past/forecast labels, timestamp overlay (native mode) |
-| **Radar Preview Card** | Live RainViewer tile + CartoDB dark basemap on the Today tab |
+| **Animated Radar Playback** | Play/pause, frame slider, recent-past labels, timestamp overlay (native mode) |
+| **Radar Preview Card** | Recent RainViewer tile + CartoDB dark basemap on the Today tab |
 | **Radar Tab** | Full-screen radar in the bottom nav with provider-aware rendering |
 | **Map Layer Selector** | Overlay layers: Radar, Lightning, Satellite, Clouds |
 | **Active Warning Polygons** | Native radar renders NWS warning polygons with severity colors and tappable alert details |
@@ -297,7 +297,7 @@ All core APIs are free with no keys required:
 | [Open-Meteo Single Runs](https://open-meteo.com/en/docs/single-runs-api) | Optional forecast-evolution model-run comparison | No key required |
 | [Open-Meteo Geocoding](https://open-meteo.com/en/docs/geocoding-api) | Location search + reverse geocode | 10,000/day |
 | [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api) | AQI, pollutants, pollen (6 species), 5-day daily forecast | 10,000/day |
-| [RainViewer](https://www.rainviewer.com/api/weather-maps-api.html) | Radar tile images (past 2h + 30min forecast) | Fair use |
+| [RainViewer](https://www.rainviewer.com/api/weather-maps-api.html) | Radar tile images (past 2h, max zoom 7, Universal Blue) | Fair use |
 | [Windy.com](https://www.windy.com/) | Embedded interactive radar (WebView option) | Fair use |
 | [NWS Alerts](https://www.weather.gov/documentation/services-web-api) | US severe weather alerts | Fair use |
 | [MeteoAlarm](https://www.meteoalarm.org/) | EU severe weather alerts (31 countries) | Fair use |
