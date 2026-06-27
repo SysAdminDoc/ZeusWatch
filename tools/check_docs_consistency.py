@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Check for stale documentation references, forbidden planning files,
-and version/privacy metadata drift.
+release-process truth, and version/privacy metadata drift.
 
 Flags:
 - References to COMPLETED.md, TODO.md, PROJECT_CONTEXT.md in non-gitignored markdown
 - Forbidden planning filenames in the repo root
 - README privacy wording that references the pre-auth device ID model
+- Workflow-only release claims when no checked-in workflow files exist
 
 Exit 0 when clean, 1 when issues found.
 """
@@ -40,6 +41,24 @@ CHECKED_DIRS = [
 STALE_PRIVACY_PATTERNS = [
     re.compile(r"hashed\s+anonymous\s+device\s+[Ii][Dd]", re.IGNORECASE),
     re.compile(r"ANDROID_ID", re.IGNORECASE),
+]
+
+WORKFLOW_TRUTH_FILES = [
+    REPO_ROOT / "README.md",
+    REPO_ROOT / "docs" / "RELEASE.md",
+    REPO_ROOT / "ROADMAP.md",
+]
+
+WORKFLOW_CLAIM_PATTERNS = [
+    re.compile(r"https://github\.com/[^)\s]+/actions/workflows/[^)\s]+", re.IGNORECASE),
+    re.compile(r"\bGitHub Actions\b", re.IGNORECASE),
+    re.compile(r"\bDependabot\b", re.IGNORECASE),
+    re.compile(r"\brelease\.yml\b", re.IGNORECASE),
+    re.compile(r"\bbuild\.yml\b", re.IGNORECASE),
+    re.compile(r"\bgh\s+attestation\s+verify\b", re.IGNORECASE),
+    re.compile(r"\bartifact attestations?\b", re.IGNORECASE),
+    re.compile(r"\bdependency SBOM\b", re.IGNORECASE),
+    re.compile(r"\bCI\b", re.IGNORECASE),
 ]
 
 
@@ -82,6 +101,35 @@ def check_readme_privacy():
                 f"README.md: stale privacy wording '{match.group()}' "
                 "(community reports now use anonymous Firebase Auth UID, not device ID)"
             )
+    return issues
+
+
+def has_checked_in_workflows():
+    workflow_dir = REPO_ROOT / ".github" / "workflows"
+    if not workflow_dir.exists():
+        return False
+    return any(path.is_file() for path in workflow_dir.glob("*.yml")) or any(
+        path.is_file() for path in workflow_dir.glob("*.yaml")
+    )
+
+
+def check_release_workflow_truth():
+    if has_checked_in_workflows():
+        return []
+
+    issues = []
+    for path in WORKFLOW_TRUTH_FILES:
+        content = read_text(path)
+        if content is None:
+            continue
+        rel = path.relative_to(REPO_ROOT)
+        for pattern in WORKFLOW_CLAIM_PATTERNS:
+            for match in pattern.finditer(content):
+                line = content.count("\n", 0, match.start()) + 1
+                issues.append(
+                    f"{rel}:{line}: workflow-only release claim '{match.group()}' "
+                    "but no .github/workflows/*.yml files exist"
+                )
     return issues
 
 
@@ -272,6 +320,7 @@ def main():
     issues.extend(check_forbidden_files())
     issues.extend(check_stale_references())
     issues.extend(check_readme_privacy())
+    issues.extend(check_release_workflow_truth())
     issues.extend(check_version_sync())
     issues.extend(check_readme_inventory())
 

@@ -62,7 +62,7 @@ Fetch 24h temp + precip from 2-3 providers; render agreement/divergence badge. G
 Make cache provider-aware. Add normalized `WeatherDataCacheEntity` with `sourceProvider`, `savedLocationId`, schema version. Serve cached data immediately; refresh in background. Done when location-switch renders <100ms with cached data across all providers. Effort: medium.
 
 ### NX-7. Baseline Profiles + Macrobenchmark startup gate · **T-PERF**
-Add `:benchmark` module. CI asserts p95 cold start <1200ms. Effort: medium.
+Add `:benchmark` module. Local release verification asserts p95 cold start <1200ms. Effort: medium.
 
 ### NX-10. Localized condition strings from native services · **T-I18N**
 Prefer upstream localized alert/condition text when user locale matches. Effort: low-medium.
@@ -266,11 +266,11 @@ Open question: needs measurement.
 
 ### P3 — Polish & Future
 
-- [ ] P3 — WCAG 2.2 AA automated CI check · accessibility
-  Why: The European Accessibility Act (EAA) took effect June 28, 2025, making WCAG 2.2 AA legally required in the EU. ZeusWatch already has some accessibility support (TalkBack descriptions, `AccessibilityHelper`, Canvas semantics) but lacks automated CI enforcement. Compose UI tests with `compose-ui-test-junit4-accessibility` are partially enabled but not gating.
+- [ ] P3 — WCAG 2.2 AA automated local gate · accessibility
+  Why: The European Accessibility Act (EAA) took effect June 28, 2025, making WCAG 2.2 AA legally required in the EU. ZeusWatch already has some accessibility support (TalkBack descriptions, `AccessibilityHelper`, Canvas semantics) but lacks automated local release enforcement. Compose UI tests with `compose-ui-test-junit4-accessibility` are partially enabled but not gating.
   Evidence: European Accessibility Act enforcement date; WCAG 2.2 criteria (1.4.11 non-text contrast 3:1, 2.5.8 touch target 24px minimum); `compose-ui-test-junit4-accessibility` already in dependencies.
-  Touches: `.github/workflows/build.yml` (add accessibility assertion failure as CI gate), existing `androidTest` files (expand coverage to all screens), new `AccessibilityAuditTest.kt` for contrast and touch target checks.
-  Acceptance: CI fails on new WCAG 2.2 AA violations; all screens pass contrast and touch target checks; existing tests continue to pass.
+  Touches: local release verification command set, existing `androidTest` files (expand coverage to all screens), new `AccessibilityAuditTest.kt` for contrast and touch target checks.
+  Acceptance: Local accessibility verification fails on new WCAG 2.2 AA violations; all screens pass contrast and touch target checks; existing tests continue to pass.
   Complexity: M
 
 - [ ] P3 — Open-Meteo FlatBuffer SDK for large payload performance · **T-PERF**
@@ -528,13 +528,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 ## Research-Driven Additions
 
 ### P1
-
-- [ ] P1 — Make release verification truthful after workflow removal
-  Why: The repo no longer has GitHub Actions or Dependabot, but user-facing docs still advertise build badges, `release.yml`, SBOM uploads, artifact attestations, and CI gates that cannot run.
-  Evidence: `RESEARCH.md`; `.github/` is absent; commit `e6dba34`; `README.md:9`; `README.md:59-60`; `docs/RELEASE.md:42-45`; `docs/RELEASE.md:76-84`; `ROADMAP.md:272`; `tools/check_docs_consistency.py`.
-  Touches: `README.md`, `docs/RELEASE.md`, `tools/check_docs_consistency.py`, `ROADMAP.md` acceptance wording that names CI/workflows, `CHANGELOG.md`, `CLAUDE.md`, optional local release-verification script.
-  Acceptance: Documentation names exactly one working release verification path; nonexistent badges/workflows/attestation claims are removed or workflows are restored; docs consistency fails when workflow-specific claims exist without matching `.github/workflows/*.yml`; roadmap acceptance uses runnable local commands when no CI exists.
-  Complexity: M
 
 - [ ] P1 — Quarantine suspended Open-Meteo KMA source
   Why: ZeusWatch exposes KMA as a selectable forecast source, but Open-Meteo currently reports KMA updates suspended during the KIM model-source migration, so users can select a known-unavailable provider.
