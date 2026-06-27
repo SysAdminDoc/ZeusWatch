@@ -6,7 +6,6 @@
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white)
 ![Compose](https://img.shields.io/badge/Jetpack%20Compose-2025.04.01-4285F4?logo=jetpackcompose&logoColor=white)
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
-![Build](https://github.com/SysAdminDoc/zeuswatch/actions/workflows/build.yml/badge.svg)
 
 > A free, open-source Android weather app with a premium dark UI, 35 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, Environment Canada, and WMO SWIC.
 
@@ -52,12 +51,13 @@ Release APK signing certificate SHA-256:
 FB:03:10:AA:52:0F:6C:C6:EB:DA:04:61:71:9E:A9:22:40:EA:2B:4A:A1:D0:15:79:A9:D1:8A:F5:A9:5F:A7:CD
 ```
 
-For every release, verify the checksum file and GitHub artifact provenance:
+For every release, verify the checksum file and APK signatures locally:
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-gh attestation verify ZeusWatch-standard-arm64-v8a-vX.Y.Z.apk --repo SysAdminDoc/ZeusWatch
-gh attestation verify SHA256SUMS.txt --repo SysAdminDoc/ZeusWatch
+apksigner verify --verbose --print-certs ZeusWatch-standard-arm64-v8a-vX.Y.Z.apk
+apksigner verify --verbose --print-certs ZeusWatch-freenet-arm64-v8a-vX.Y.Z.apk
+apksigner verify --verbose --print-certs ZeusWatch-wear-vX.Y.Z.apk
 ```
 
 ---
