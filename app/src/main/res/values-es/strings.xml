@@ -1007,6 +1007,7 @@
     <string name="settings_transfer_warning_blank_locations">%1$d ubicaciones guardadas tienen nombres vacíos y se omitirán.</string>
     <string name="settings_transfer_warning_invalid_locations">%1$d ubicaciones guardadas tienen coordenadas no válidas y se omitirán.</string>
     <string name="settings_transfer_warning_duplicate_locations">%1$d ubicaciones guardadas duplicadas se omitirán.</string>
+    <string name="settings_transfer_warning_unavailable_sources">Algunas fuentes seleccionadas no están disponibles temporalmente y usarán la opción segura predeterminada.</string>
     <string name="settings_transfer_working_title">Procesando copia de ajustes</string>
     <string name="settings_transfer_working_message">Mantén ZeusWatch abierto mientras se procesa el archivo de ajustes.</string>
     <string name="settings_transfer_status_message">%1$s Toca para descartar.</string>

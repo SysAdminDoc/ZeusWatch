@@ -1140,6 +1140,9 @@ private fun settingsImportWarningText(
         R.string.settings_transfer_warning_duplicate_locations,
         preview.duplicateLocationCount,
     )
+    SettingsImportWarning.UNAVAILABLE_SOURCES -> stringResource(
+        R.string.settings_transfer_warning_unavailable_sources,
+    )
 }
 
 @Composable

@@ -32,6 +32,8 @@ enum class WeatherSourceProvider(
     OPEN_METEO_KMA(
         displayName = "Open-Meteo + KMA",
         supportedTypes = setOf(WeatherDataType.FORECAST),
+        // Open-Meteo has suspended KMA updates during its KIM model-source migration.
+        implementedTypes = emptySet(),
     ),
     OPEN_METEO_UKMO(
         displayName = "Open-Meteo + UK Met Office",

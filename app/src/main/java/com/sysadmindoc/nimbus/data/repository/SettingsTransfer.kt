@@ -111,6 +111,7 @@ enum class SettingsImportWarning {
     BLANK_LOCATION_NAMES,
     INVALID_COORDINATES,
     DUPLICATE_LOCATIONS,
+    UNAVAILABLE_SOURCES,
 }
 
 private data class SettingsImportSnapshot(
@@ -252,6 +253,7 @@ private fun SettingsBackup.toImportPlan(currentSavedLocationCount: Int): Setting
         if (locationPlan.skippedBlankCount > 0) add(SettingsImportWarning.BLANK_LOCATION_NAMES)
         if (locationPlan.invalidCoordinateCount > 0) add(SettingsImportWarning.INVALID_COORDINATES)
         if (locationPlan.duplicateCount > 0) add(SettingsImportWarning.DUPLICATE_LOCATIONS)
+        if (hasUnavailableSources()) add(SettingsImportWarning.UNAVAILABLE_SOURCES)
     }
     val settings = settings.toSettings()
     return SettingsImportPlan(
@@ -271,6 +273,26 @@ private fun SettingsBackup.toImportPlan(currentSavedLocationCount: Int): Setting
             warnings = warnings,
         ),
     )
+}
+
+private fun SettingsBackup.hasUnavailableSources(): Boolean =
+    settings.hasUnavailableSources() || savedLocations.any { it.hasUnavailableSources() }
+
+private fun SettingsBackupPreferences.hasUnavailableSources(): Boolean =
+    hasUnavailableSource(sourceForecast, WeatherDataType.FORECAST) ||
+        hasUnavailableSource(sourceForecastFallback, WeatherDataType.FORECAST) ||
+        hasUnavailableSource(sourceAlerts, WeatherDataType.ALERTS) ||
+        hasUnavailableSource(sourceAlertsFallback, WeatherDataType.ALERTS) ||
+        hasUnavailableSource(sourceAirQuality, WeatherDataType.AIR_QUALITY) ||
+        hasUnavailableSource(sourceMinutely, WeatherDataType.MINUTELY)
+
+private fun SettingsBackupLocation.hasUnavailableSources(): Boolean =
+    hasUnavailableSource(forecastSource, WeatherDataType.FORECAST) ||
+        hasUnavailableSource(alertSource, WeatherDataType.ALERTS)
+
+private fun hasUnavailableSource(name: String?, type: WeatherDataType): Boolean {
+    val provider = name?.let { runCatching { WeatherSourceProvider.valueOf(it) }.getOrNull() } ?: return false
+    return provider.supports(type) && !provider.isSelectableFor(type)
 }
 
 private data class ImportLocationPlan(

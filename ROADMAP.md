@@ -527,15 +527,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 
 ## Research-Driven Additions
 
-### P1
-
-- [ ] P1 — Quarantine suspended Open-Meteo KMA source
-  Why: ZeusWatch exposes KMA as a selectable forecast source, but Open-Meteo currently reports KMA updates suspended during the KIM model-source migration, so users can select a known-unavailable provider.
-  Evidence: `RESEARCH.md`; Open-Meteo KMA docs; `app/src/main/java/com/sysadmindoc/nimbus/data/repository/WeatherSource.kt`; `app/src/main/java/com/sysadmindoc/nimbus/data/api/OpenMeteoApi.kt`; `app/src/main/java/com/sysadmindoc/nimbus/data/repository/WeatherSourceManager.kt`; `app/src/main/java/com/sysadmindoc/nimbus/ui/screen/settings/SettingsScreenContent.kt`; `app/src/main/java/com/sysadmindoc/nimbus/ui/screen/locations/LocationsScreen.kt`.
-  Touches: `WeatherSource.kt`, `OpenMeteoApi.kt`, `WeatherSourceManager.kt`, Settings and Locations source dropdowns, `SettingsTransfer.kt`, provider contract tests, source labels/attribution strings, README source inventory.
-  Acceptance: KMA is hidden, disabled, or marked temporarily unavailable until a provider contract passes; stale imported KMA settings fall back to Open-Meteo with a visible reason; tests cover selector visibility, settings import, and fallback behavior; docs/source inventory reflects the unavailable state.
-  Complexity: S
-
 - [ ] P1 - Full selectable-provider contract matrix
   Why: KMA availability drift showed that a provider can be wired and documented while the upstream model is suspended; current smoke checks cover only five endpoints, not every selectable provider/model wrapper.
   Evidence: `RESEARCH.md`; `tools/check_provider_contracts.py`; `WeatherSourceProvider`; Open-Meteo KMA docs; `WeatherSourceManager.kt`.
