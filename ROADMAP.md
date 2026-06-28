@@ -535,3 +535,26 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
   Touches: `WeatherSource.kt`, `OpenMeteoApi.kt`, `WeatherSourceManager.kt`, Settings and Locations source dropdowns, `SettingsTransfer.kt`, provider contract tests, source labels/attribution strings, README source inventory.
   Acceptance: KMA is hidden, disabled, or marked temporarily unavailable until a provider contract passes; stale imported KMA settings fall back to Open-Meteo with a visible reason; tests cover selector visibility, settings import, and fallback behavior; docs/source inventory reflects the unavailable state.
   Complexity: S
+
+- [ ] P1 - Full selectable-provider contract matrix
+  Why: KMA availability drift showed that a provider can be wired and documented while the upstream model is suspended; current smoke checks cover only five endpoints, not every selectable provider/model wrapper.
+  Evidence: `RESEARCH.md`; `tools/check_provider_contracts.py`; `WeatherSourceProvider`; Open-Meteo KMA docs; `WeatherSourceManager.kt`.
+  Touches: `tools/check_provider_contracts.py`, `tools/check_provider_contracts_test.py`, `WeatherSource.kt`, provider metadata registry work in NX-20, release verification docs.
+  Acceptance: Every provider returned by `WeatherSourceProvider.forType()` has a low-rate live or cached contract check with docs URL, coverage coordinate, schema assertion, and unavailable-provider policy; release verification fails when a selectable provider has no contract entry.
+  Complexity: M
+
+- [ ] P1 - Local release provenance manifest
+  Why: Releases are now built and uploaded locally, so users need a machine-readable asset tying APK hashes, signing certificate, source commit, clean-tree state, toolchain versions, and verification commands to each release.
+  Evidence: `RESEARCH.md`; `docs/RELEASE.md`; README download verification currently covers `SHA256SUMS.txt` and APK signatures but not source/build provenance.
+  Touches: new release helper under `tools/`, `docs/RELEASE.md`, README verification section, release checklist.
+  Acceptance: Local release command emits `ZeusWatch-vX.Y.Z-provenance.json` beside `SHA256SUMS.txt`; it records commit SHA, dirty-tree false, Gradle/JDK/Android SDK versions, APK file names, SHA-256 hashes, signing cert SHA-256, and commands run; upload checklist requires both files.
+  Complexity: S
+
+### P2
+
+- [ ] P2 - WFF-equivalent Wear complication parity tests
+  Why: Android documents WFF weather expressions but no third-party publisher API, so ZeusWatch should harden the supported path: private phone-to-watch sync plus public complications that expose equivalent weather fields.
+  Evidence: `RESEARCH.md`; `docs/WFF_WEATHER_INTEROP.md`; Android WFF weather docs; `WearComplicationService.kt`; `SyncedWeatherStore.kt`.
+  Touches: `wear/src/main/java/com/sysadmindoc/nimbus/wear/complication/`, `wear/src/main/java/com/sysadmindoc/nimbus/wear/sync/`, `wear/src/test/java/com/sysadmindoc/nimbus/wear/complication/`, `docs/WFF_WEATHER_INTEROP.md`.
+  Acceptance: Tests cover temperature, condition, high/low, precipitation chance, UV, last-updated freshness, and fallback/no-data complication states; docs state that WFF publishing remains unavailable while complications are supported.
+  Complexity: M
