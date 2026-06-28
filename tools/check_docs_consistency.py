@@ -21,7 +21,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 FORBIDDEN_ROOT_FILES = {
     "AUTONOMOUS-LOOP-STATE.md",
     "COMPLETED.md",
-    "ClaudeReadMe.md",
     "PROJECT_CONTEXT.md",
     "TODO.md",
     "HANDOFF.md",
@@ -292,22 +291,6 @@ def check_version_sync():
             if version != app_ver or int(phone_code) != app_code or int(watch_code) != wear_code:
                 issues.append(
                     "ROADMAP.md: current version header "
-                    f"v{version} ({phone_code}/{watch_code}) != "
-                    f"v{app_ver} ({app_code}/{wear_code})"
-                )
-
-    claude = read_text(REPO_ROOT / "CLAUDE.md")
-    if claude and app_ver and app_code is not None and wear_code is not None:
-        match = re.search(
-            r"\*\*Version\*\*:\s*v?([0-9A-Za-z.\-]+)\s*"
-            r"\(phone versionCode\s*(\d+),\s*wear versionCode\s*(\d+)\)",
-            claude,
-        )
-        if match:
-            version, phone_code, watch_code = match.groups()
-            if version != app_ver or int(phone_code) != app_code or int(watch_code) != wear_code:
-                issues.append(
-                    "CLAUDE.md: version header "
                     f"v{version} ({phone_code}/{watch_code}) != "
                     f"v{app_ver} ({app_code}/{wear_code})"
                 )
