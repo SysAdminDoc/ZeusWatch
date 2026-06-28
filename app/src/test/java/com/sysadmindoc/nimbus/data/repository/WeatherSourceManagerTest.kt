@@ -154,6 +154,28 @@ class WeatherSourceManagerTest {
     }
 
     @Test
+    fun getWeatherNormalizesSuspendedKmaProviderToOpenMeteo() = runTest {
+        val settingsWithKma = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                forecast = WeatherSourceProvider.OPEN_METEO_KMA,
+                forecastFallback = WeatherSourceProvider.OPEN_METEO_KMA,
+            )
+        )
+        every { prefs.settings } returns flowOf(settingsWithKma)
+        coEvery { openMeteoAdapter.getWeather(any(), any(), any()) } returns Result.success(testWeatherData)
+
+        val result = manager.getWeather(37.56, 126.98, "Seoul")
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            openMeteoAdapter.getWeather(37.56, 126.98, "Seoul")
+        }
+        coVerify(exactly = 0) {
+            openMeteoKmaAdapter.getWeather(any(), any(), any())
+        }
+    }
+
+    @Test
     fun getWeatherUsesPerLocationForecastOverrideOverGlobalDefault() = runTest {
         coEvery { openMeteoBomAdapter.getWeather(any(), any(), any()) } returns Result.success(testWeatherData)
 
@@ -355,8 +377,8 @@ class WeatherSourceManagerTest {
             forecastProviders.contains(WeatherSourceProvider.OPEN_METEO_BOM),
         )
         assertTrue(
-            "Open-Meteo KMA should be present",
-            forecastProviders.contains(WeatherSourceProvider.OPEN_METEO_KMA),
+            "Open-Meteo KMA should stay hidden while upstream updates are suspended",
+            !forecastProviders.contains(WeatherSourceProvider.OPEN_METEO_KMA),
         )
         assertTrue(
             "Open-Meteo UKMO should be present",
@@ -370,6 +392,27 @@ class WeatherSourceManagerTest {
             "Environment Canada forecast should be present once implemented",
             forecastProviders.contains(WeatherSourceProvider.ENVIRONMENT_CANADA),
         )
+    }
+
+    @Test
+    fun fromStoredNameRejectsSuspendedKmaForecastProvider() {
+        assertNull(
+            WeatherSourceProvider.fromStoredName(
+                WeatherSourceProvider.OPEN_METEO_KMA.name,
+                WeatherDataType.FORECAST,
+            ),
+        )
+    }
+
+    @Test
+    fun sourceConfigNormalizesSuspendedKmaSelections() {
+        val normalized = SourceConfig(
+            forecast = WeatherSourceProvider.OPEN_METEO_KMA,
+            forecastFallback = WeatherSourceProvider.OPEN_METEO_KMA,
+        ).normalized()
+
+        assertEquals(WeatherSourceProvider.OPEN_METEO, normalized.forecast)
+        assertNull(normalized.forecastFallback)
     }
 
     @Test

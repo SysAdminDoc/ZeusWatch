@@ -1035,6 +1035,7 @@
     <string name="settings_transfer_warning_blank_locations">%1$d saved locations have blank names and will be skipped.</string>
     <string name="settings_transfer_warning_invalid_locations">%1$d saved locations have invalid coordinates and will be skipped.</string>
     <string name="settings_transfer_warning_duplicate_locations">%1$d duplicate saved locations will be skipped.</string>
+    <string name="settings_transfer_warning_unavailable_sources">Some source selections are temporarily unavailable and will use the safe default instead.</string>
     <string name="settings_transfer_working_title">Processing settings backup</string>
     <string name="settings_transfer_working_message">Keep ZeusWatch open while the settings file is being processed.</string>
     <string name="settings_transfer_status_message">%1$s Tap to dismiss.</string>

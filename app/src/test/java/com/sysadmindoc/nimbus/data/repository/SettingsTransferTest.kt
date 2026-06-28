@@ -128,6 +128,44 @@ class SettingsTransferTest {
     }
 
     @Test
+    fun `imported unavailable KMA sources fall back with preview warning`() {
+        val raw = json.encodeToString(
+            SettingsBackup(
+                settings = SettingsBackupPreferences(
+                    sourceForecast = WeatherSourceProvider.OPEN_METEO_KMA.name,
+                    sourceForecastFallback = WeatherSourceProvider.OPEN_METEO_KMA.name,
+                ),
+                savedLocations = listOf(
+                    SettingsBackupLocation(
+                        name = "Seoul",
+                        country = "KR",
+                        latitude = 37.5665,
+                        longitude = 126.9780,
+                        forecastSource = WeatherSourceProvider.OPEN_METEO_KMA.name,
+                    ),
+                ),
+            ),
+        )
+
+        val preview = previewSettingsImport(raw)
+        val restored = SettingsBackupPreferences(
+            sourceForecast = WeatherSourceProvider.OPEN_METEO_KMA.name,
+            sourceForecastFallback = WeatherSourceProvider.OPEN_METEO_KMA.name,
+        ).toSettings()
+        val entity = SettingsBackupLocation(
+            name = "Seoul",
+            latitude = 37.5665,
+            longitude = 126.9780,
+            forecastSource = WeatherSourceProvider.OPEN_METEO_KMA.name,
+        ).toEntity()
+
+        assertTrue(SettingsImportWarning.UNAVAILABLE_SOURCES in preview.warnings)
+        assertEquals(WeatherSourceProvider.OPEN_METEO, restored.sourceConfig.forecast)
+        assertNull(restored.sourceConfig.forecastFallback)
+        assertNull(entity.forecastSource)
+    }
+
+    @Test
     fun `saved location export preserves restored ordering metadata`() {
         val backup = SavedLocationEntity(
             id = 42,
