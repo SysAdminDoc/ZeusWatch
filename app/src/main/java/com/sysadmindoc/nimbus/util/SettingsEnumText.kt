@@ -139,6 +139,7 @@ internal val WeatherSourceProvider.displayNameRes: Int
         WeatherSourceProvider.MET_NORWAY -> R.string.weather_source_met_norway
         WeatherSourceProvider.ENVIRONMENT_CANADA -> R.string.weather_source_environment_canada
         WeatherSourceProvider.HKO -> R.string.weather_source_hko
+        WeatherSourceProvider.BMKG -> R.string.weather_source_bmkg
         WeatherSourceProvider.METEOALARM -> R.string.weather_source_meteoalarm
         WeatherSourceProvider.JMA -> R.string.weather_source_jma
     }

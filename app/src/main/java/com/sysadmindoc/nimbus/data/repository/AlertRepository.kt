@@ -44,7 +44,7 @@ data class AlertFetchResult(
  * alert source based on the user's location (country detection) and preferences.
  *
  * Supports NWS (US), MeteoAlarm/EUMETNET (Europe), JMA (Japan),
- * and Environment Canada (CA). Falls back gracefully when a source is
+ * Environment Canada (CA), and BMKG (ID). Falls back gracefully when a source is
  * unavailable or the country is not covered.
  */
 @Singleton

@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.di
 
+import com.sysadmindoc.nimbus.data.api.BmkgAlertAdapter
 import com.sysadmindoc.nimbus.data.repository.AlertSourceManagerAdapter
 import com.sysadmindoc.nimbus.data.repository.AlertSourceRequest
 import com.sysadmindoc.nimbus.data.repository.AlertSourcePreference
@@ -25,6 +26,7 @@ import com.sysadmindoc.nimbus.data.repository.PirateWeatherForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.WeatherDataType
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceAdapter
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider
+import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import dagger.MapKey
 import dagger.Module
@@ -260,6 +262,15 @@ object WeatherSourceAdapterModule {
             alertAdapter.getAlertsDetailed(request.latitude, request.longitude)
     }
 
+    @Provides
+    @Singleton
+    @IntoMap
+    @WeatherSourceKey(WeatherSourceProvider.BMKG)
+    fun provideBmkgAdapter(alertAdapter: BmkgAlertAdapter): WeatherSourceAdapter =
+        alertOnlyAdapter(WeatherSourceProvider.BMKG) { request ->
+            alertAdapter.getAlerts(request.latitude, request.longitude)
+        }
+
     private fun forecastOnlyAdapter(
         provider: WeatherSourceProvider,
         requiresForecastZone: Boolean = false,
@@ -269,6 +280,15 @@ object WeatherSourceAdapterModule {
         override val supportedTypes = setOf(WeatherDataType.FORECAST)
         override val requiresForecastZone = requiresForecastZone
         override suspend fun getForecast(request: ForecastSourceRequest) = fetch(request)
+    }
+
+    private fun alertOnlyAdapter(
+        provider: WeatherSourceProvider,
+        fetch: suspend (AlertSourceRequest) -> Result<List<WeatherAlert>>,
+    ): WeatherSourceAdapter = object : WeatherSourceAdapter {
+        override val provider = provider
+        override val supportedTypes = setOf(WeatherDataType.ALERTS)
+        override suspend fun getAlerts(request: AlertSourceRequest) = fetch(request)
     }
 
     private fun alertManagerAdapter(

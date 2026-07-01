@@ -1182,6 +1182,7 @@
     <string name="weather_source_met_norway">MET Norway</string>
     <string name="weather_source_environment_canada">Environment Canada</string>
     <string name="weather_source_hko">Hong Kong Observatory</string>
+    <string name="weather_source_bmkg">BMKG</string>
     <string name="weather_source_meteoalarm">MeteoAlarm (EUMETNET)</string>
     <string name="weather_source_jma">Japan Meteorological Agency</string>
     <string name="driving_alert_content_description">Alerta de conducción %1$s</string>

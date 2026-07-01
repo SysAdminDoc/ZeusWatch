@@ -5,6 +5,8 @@ import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFact
 import com.sysadmindoc.nimbus.data.api.AirQualityApi
 import com.sysadmindoc.nimbus.data.api.AlertSourceAdapter
 import com.sysadmindoc.nimbus.data.api.ApiCertificatePins
+import com.sysadmindoc.nimbus.data.api.BmkgAlertAdapter
+import com.sysadmindoc.nimbus.data.api.BmkgAlertApi
 import com.sysadmindoc.nimbus.data.api.BrightSkyApi
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertAdapter
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertApi
@@ -29,9 +31,9 @@ import com.sysadmindoc.nimbus.data.api.OpenMeteoArchiveApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoSingleRunApi
 import com.sysadmindoc.nimbus.data.api.OpenWeatherMapApi
 import com.sysadmindoc.nimbus.data.api.PirateWeatherApi
+import com.sysadmindoc.nimbus.data.api.PirateWeatherAlertAdapter
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import com.sysadmindoc.nimbus.data.api.RateLimitInterceptor
-import com.sysadmindoc.nimbus.data.api.PirateWeatherAlertAdapter
 import com.sysadmindoc.nimbus.data.api.WmoAlertAdapter
 import com.sysadmindoc.nimbus.data.api.WmoAlertApi
 import dagger.Module
@@ -316,6 +318,24 @@ object NetworkModule {
         return retrofit.create(HkoApi::class.java)
     }
 
+    private val bmkgRateLimiter = RateLimitInterceptor("bmkg", rate = 1.0, burst = 10)
+
+    @Provides
+    @Singleton
+    @Named("bmkg")
+    fun provideBmkgRetrofit(client: OkHttpClient): Retrofit {
+        val bmkgClient = client.newBuilder()
+            .addInterceptor(bmkgRateLimiter)
+            .build()
+        return buildRetrofit(BmkgAlertApi.BASE_URL, bmkgClient)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBmkgAlertApi(@Named("bmkg") retrofit: Retrofit): BmkgAlertApi {
+        return retrofit.create(BmkgAlertApi::class.java)
+    }
+
     @Provides
     @Singleton
     fun provideAlertAdapters(
@@ -323,10 +343,19 @@ object NetworkModule {
         meteoAlarmAdapter: MeteoAlarmAdapter,
         jmaAdapter: JmaAlertAdapter,
         ecccAdapter: EnvironmentCanadaAlertAdapter,
+        bmkgAdapter: BmkgAlertAdapter,
         wmoAdapter: WmoAlertAdapter,
         pirateWeatherAlertAdapter: PirateWeatherAlertAdapter,
     ): Set<@JvmSuppressWildcards AlertSourceAdapter> {
-        return setOf(nwsAdapter, meteoAlarmAdapter, jmaAdapter, ecccAdapter, wmoAdapter, pirateWeatherAlertAdapter)
+        return setOf(
+            nwsAdapter,
+            meteoAlarmAdapter,
+            jmaAdapter,
+            ecccAdapter,
+            bmkgAdapter,
+            wmoAdapter,
+            pirateWeatherAlertAdapter,
+        )
     }
 
     // --- WMO Severe Weather ---

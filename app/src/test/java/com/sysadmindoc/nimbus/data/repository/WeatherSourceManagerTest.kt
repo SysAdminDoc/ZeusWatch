@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.data.repository
 
+import com.sysadmindoc.nimbus.data.api.BmkgAlertAdapter
 import com.sysadmindoc.nimbus.data.model.*
 import com.sysadmindoc.nimbus.di.WeatherSourceAdapterModule
 import io.mockk.*
@@ -34,6 +35,7 @@ class WeatherSourceManagerTest {
     private lateinit var ecccForecastAdapter: EnvironmentCanadaForecastAdapter
     private lateinit var hkoForecastAdapter: HkoForecastAdapter
     private lateinit var hkoAlertAdapter: HkoAlertAdapter
+    private lateinit var bmkgAlertAdapter: BmkgAlertAdapter
     private lateinit var timeZoneResolver: LocationTimeZoneResolver
     private lateinit var providerHealthRepository: ProviderHealthRepository
     private lateinit var manager: WeatherSourceManager
@@ -84,6 +86,7 @@ class WeatherSourceManagerTest {
         ecccForecastAdapter = mockk()
         hkoForecastAdapter = mockk()
         hkoAlertAdapter = mockk()
+        bmkgAlertAdapter = mockk()
         timeZoneResolver = mockk()
         providerHealthRepository = mockk(relaxed = true)
         every { prefs.settings } returns flowOf(defaultSettings)
@@ -138,6 +141,9 @@ class WeatherSourceManagerTest {
         WeatherSourceProvider.HKO to WeatherSourceAdapterModule.provideHkoAdapter(
             hkoForecastAdapter,
             hkoAlertAdapter,
+        ),
+        WeatherSourceProvider.BMKG to WeatherSourceAdapterModule.provideBmkgAdapter(
+            bmkgAlertAdapter,
         ),
     )
 
@@ -544,6 +550,27 @@ class WeatherSourceManagerTest {
         }
     }
 
+    @Test
+    fun getAlertsDelegatesBmkgProviderToBmkgAdapter() = runTest {
+        val settingsWithBmkg = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                alerts = WeatherSourceProvider.BMKG,
+            )
+        )
+        every { prefs.settings } returns flowOf(settingsWithBmkg)
+        coEvery { bmkgAlertAdapter.getAlerts(any(), any()) } returns Result.success(emptyList())
+
+        val result = manager.getAlerts(-6.2, 106.8)
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            bmkgAlertAdapter.getAlerts(-6.2, 106.8)
+        }
+        coVerify(exactly = 0) {
+            alertAdapter.getAlerts(any(), any(), any(), any(), any())
+        }
+    }
+
     // ── Air Quality Tests ──
 
     @Test
@@ -668,6 +695,7 @@ class WeatherSourceManagerTest {
         assertTrue(alertProviders.contains(WeatherSourceProvider.NWS))
         assertTrue(alertProviders.contains(WeatherSourceProvider.ENVIRONMENT_CANADA))
         assertTrue(alertProviders.contains(WeatherSourceProvider.HKO))
+        assertTrue(alertProviders.contains(WeatherSourceProvider.BMKG))
         assertTrue(alertProviders.contains(WeatherSourceProvider.METEOALARM))
         assertTrue(alertProviders.contains(WeatherSourceProvider.JMA))
     }

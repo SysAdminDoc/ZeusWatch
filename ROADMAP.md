@@ -191,7 +191,6 @@ Open question: needs measurement.
 | 2 | DMI (Denmark/Greenland/Faroe) | Free/open, verify key flow | P1 | Forecast EDR. Queue after FMI. |
 | 3 | Meteo-France via Open-Meteo + Vigilance | None for forecast; JWT for Vigilance | P1 | Split: no-key first. |
 | 4 | HKO (Hong Kong) | None | P1/P2 | Compact regional win. |
-| 5 | BMKG (Indonesia) | None for CAP | P2 | Alert adapter first. |
 | 6 | KNMI (Netherlands) | API key | P2 | Optional user-key only after NX-20. |
 | 7 | CWA (Taiwan) | Free key | P2/P3 | Higher localization effort. |
 | 8 | SMHI (Sweden) | None | P2 | Revisit after FMI/DMI. |
@@ -377,14 +376,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 
 
 ### P3 — Polish & Future
-
-
-- [ ] P3 — BMKG (Indonesia) CAP alert adapter · **T-SOURCES**
-  Why: Indonesia (270M+ population) is the 4th most populous country with no weather alert coverage in ZeusWatch. BMKG publishes CAP XML alerts for all provinces down to district level — no API key required. ZeusWatch's alert stack already parses CAP XML for ECCC and NWS; adding BMKG is primarily a new `AlertSourceAdapter` implementation.
-  Evidence: BMKG CAP data at `data.bmkg.go.id` and GitHub `infoBMKG/data-cap`; Provider Expansion Priority table (rank 5, P2); existing `AlertSourceAdapter` interface and CAP XML parsing in `EnvironmentCanadaAlertAdapter`.
-  Touches: New `BmkgAlertAdapter.kt` implementing `AlertSourceAdapter`, new `BmkgAlertApi.kt` Retrofit interface (CAP XML endpoint), `AlertRepository.kt` (add BMKG to country-code dispatch), `NetworkModule.kt` (`@Named("bmkg")` Retrofit).
-  Acceptance: Users in Indonesia see BMKG severe weather alerts; alerts display with correct severity mapping; auto-detect via country code works; freenet flavor unaffected; tests cover CAP XML parsing for BMKG's specific element structure.
-  Complexity: M
 
 
 - [ ] P3 — Stacked multi-source forecast overlay on Compare screen · UX / **T-SOURCES**
