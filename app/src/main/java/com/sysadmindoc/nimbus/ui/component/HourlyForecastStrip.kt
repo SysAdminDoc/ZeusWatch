@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
@@ -76,6 +77,7 @@ private enum class HourlyTrendTab(@StringRes val labelRes: Int) {
 fun HourlyForecastStrip(
     hourly: List<HourlyConditions>,
     referenceTime: java.time.LocalDateTime? = hourly.firstOrNull()?.time,
+    confidenceBands: ConfidenceBandData? = null,
     modifier: Modifier = Modifier,
 ) {
     val s = LocalUnitSettings.current
@@ -99,6 +101,7 @@ fun HourlyForecastStrip(
         HourlyForecastDetailSheet(
             hour = hour,
             referenceTime = referenceTime,
+            confidenceBands = confidenceBands,
             onDismiss = { selectedHour = null },
         )
     }

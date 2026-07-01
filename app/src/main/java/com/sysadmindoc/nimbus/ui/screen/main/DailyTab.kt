@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.DailyConditions
+import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
 import com.sysadmindoc.nimbus.ui.component.DailyForecastDetailSheet
 import com.sysadmindoc.nimbus.ui.component.WeatherIcon
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -56,6 +57,7 @@ fun DailyTab(
     daily: List<DailyConditions>,
     locationName: String,
     referenceDate: LocalDate? = daily.firstOrNull()?.date,
+    confidenceBands: ConfidenceBandData? = null,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
 ) {
@@ -67,6 +69,7 @@ fun DailyTab(
         DailyForecastDetailSheet(
             day = day,
             referenceDate = referenceDate,
+            confidenceBands = confidenceBands,
             onDismiss = { selectedDay = null },
         )
     }

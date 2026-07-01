@@ -206,8 +206,12 @@ internal fun LocationsContent(
                 color = NimbusBlueAccent,
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
-                    .clickable(onClick = onNavigateToMapPicker)
-                    .padding(vertical = 4.dp),
+                    .heightIn(min = 48.dp)
+                    .clickable(
+                        onClick = onNavigateToMapPicker,
+                        role = Role.Button,
+                    )
+                    .padding(vertical = 14.dp),
             )
 
             Spacer(modifier = Modifier.height(6.dp))

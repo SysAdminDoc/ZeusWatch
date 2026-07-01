@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.DailyConditions
+import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
 import com.sysadmindoc.nimbus.data.repository.ForecastAccuracyData
 import com.sysadmindoc.nimbus.data.repository.ForecastDelta
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
@@ -78,6 +79,7 @@ fun DailyForecastList(
     daily: List<DailyConditions>,
     referenceDate: java.time.LocalDate? = daily.firstOrNull()?.date,
     forecastAccuracy: ForecastAccuracyData? = null,
+    confidenceBands: ConfidenceBandData? = null,
     modifier: Modifier = Modifier,
 ) {
     val s = LocalUnitSettings.current
@@ -102,6 +104,7 @@ fun DailyForecastList(
         DailyForecastDetailSheet(
             day = day,
             referenceDate = referenceDate,
+            confidenceBands = confidenceBands,
             onDismiss = { selectedDay = null },
         )
     }

@@ -601,6 +601,11 @@
     <string name="temperature_graph_uncertainty_low">banda estrecha, mayor confianza</string>
     <string name="temperature_graph_uncertainty_medium">banda moderada, revisa actualizaciones</string>
     <string name="temperature_graph_uncertainty_high">banda amplia, menor confianza</string>
+    <string name="forecast_uncertainty_label">Confianza del pronóstico</string>
+    <string name="forecast_uncertainty_hour_summary">Rango probable de %1$s a %2$s (%3$s de dispersión): %4$s.</string>
+    <string name="forecast_uncertainty_day_summary">Rango horario medio de %1$s a %2$s (%3$s de dispersión): %4$s.</string>
+    <string name="forecast_uncertainty_explainer">Es el rango del percentil 10 al 90 de las ejecuciones del modelo de conjunto. Un rango más amplio indica menor certeza.</string>
+    <string name="forecast_uncertainty_semantics">%1$s. %2$s %3$s</string>
     <string name="temperature_trend_warmer">subiendo</string>
     <string name="temperature_trend_cooler">bajando</string>
     <string name="temperature_trend_steady">estable</string>
