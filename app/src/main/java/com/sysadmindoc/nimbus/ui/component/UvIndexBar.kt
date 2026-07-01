@@ -76,6 +76,7 @@ fun UvIndexBar(
         uvIndex < 11 -> NimbusUvVeryHigh
         else -> NimbusUvExtreme
     }
+    val cue = ColorSafeRiskCues.uv(uvIndex)
 
     WeatherCard(
         titleRes = R.string.card_type_uv_index,
@@ -95,11 +96,15 @@ fun UvIndexBar(
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = level,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = levelColor,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = level,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = levelColor,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    ColorSafeCueBadge(cue = cue)
+                }
                 if (peakUvNote != null) {
                     Text(
                         text = peakUvNote,
@@ -144,6 +149,15 @@ fun UvIndexBar(
 
                     // Position marker
                     val markerX = (uvIndex.toFloat() / 12f).coerceIn(0f, 1f) * w
+                    ColorSafeRiskCues.uvBoundaryFractions.forEach { fraction ->
+                        val x = fraction.coerceIn(0f, 1f) * w
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.68f),
+                            start = Offset(x, 0f),
+                            end = Offset(x, h),
+                            strokeWidth = 1.5.dp.toPx(),
+                        )
+                    }
                     drawCircle(
                         color = Color.White,
                         radius = 7.dp.toPx(),

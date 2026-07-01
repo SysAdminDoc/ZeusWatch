@@ -70,6 +70,7 @@ fun PrecipitationChartCard(
         stringResource(R.string.precip_semantics_total, WeatherFormatter.formatPrecipitation(totalPrecip, s))
     } else null
     val semanticSummary = listOfNotNull(semanticBase, totalSemantic).joinToString(separator = " ")
+    val maxProbCue = ColorSafeRiskCues.precipitation(maxProb)
 
     WeatherCard(
         titleRes = R.string.card_type_precipitation_chart,
@@ -89,6 +90,9 @@ fun PrecipitationChartCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (maxProb > 0) NimbusRainBlue else NimbusTextSecondary,
                 )
+                if (maxProb > 0) {
+                    ColorSafeCueBadge(cue = maxProbCue)
+                }
                 if (totalPrecip > 0) {
                     Text(
                         text = stringResource(R.string.precip_total, WeatherFormatter.formatPrecipitation(totalPrecip, s)),
@@ -150,6 +154,20 @@ fun PrecipitationChartCard(
                             size = Size(barWidth, barH),
                             cornerRadius = CornerRadius(2.dp.toPx()),
                         )
+                        val stripes = ColorSafeRiskCues.precipitation(prob).ordinal.coerceAtLeast(1)
+                        val stripeGap = 4.dp.toPx()
+                        val stripeInset = 2.dp.toPx()
+                        repeat(stripes) { stripe ->
+                            val y = graphHeight - barH + stripeGap + (stripe * stripeGap)
+                            if (y < graphHeight - stripeGap) {
+                                drawLine(
+                                    color = Color.White.copy(alpha = 0.34f),
+                                    start = Offset(x + stripeInset, y),
+                                    end = Offset(x + barWidth - stripeInset, y),
+                                    strokeWidth = 1.dp.toPx(),
+                                )
+                            }
+                        }
 
                         // Precipitation amount overlay (darker tip)
                         if (precip > 0.1) {

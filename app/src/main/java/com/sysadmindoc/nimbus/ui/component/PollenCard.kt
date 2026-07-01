@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.PollenData
@@ -147,6 +149,7 @@ private fun PollenRow(label: String, levelLabel: String, reading: PollenReading)
         animationSpec = tween(600),
         label = "pollenBar",
     )
+    val cue = ColorSafeRiskCues.pollen(reading.level)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -180,12 +183,19 @@ private fun PollenRow(label: String, levelLabel: String, reading: PollenReading)
         Spacer(modifier = Modifier.width(8.dp))
 
         // Level label
-        Text(
-            levelLabel,
-            style = MaterialTheme.typography.labelSmall,
-            color = reading.level.color,
-            modifier = Modifier.width(56.dp),
-        )
+        Column(
+            modifier = Modifier.width(72.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
+            Text(
+                levelLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = reading.level.color,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            ColorSafeCueBadge(cue = cue)
+        }
     }
 }
 
