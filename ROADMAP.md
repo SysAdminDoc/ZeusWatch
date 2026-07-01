@@ -366,11 +366,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 ### P2 — Performance & Maintainability
 
 
-- [ ] P2 — Decompose `MainViewModel` orchestration · maintainability
-  Status: PARTIAL — tile math moved to `RadarRepository.buildPreviewTileUrls()` with tests. Remaining: extract `WeatherLoadCoordinator` for sub-fetch/derived-data orchestration.
-  Touches: `app/.../ui/screen/main/MainViewModel.kt` — extract orchestration classes so VM holds only UI state + intent handling.
-  Complexity: L
-
 ### P3 — Polish
 
 
