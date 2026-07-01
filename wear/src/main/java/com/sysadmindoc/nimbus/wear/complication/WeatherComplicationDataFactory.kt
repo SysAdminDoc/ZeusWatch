@@ -9,7 +9,9 @@ import androidx.wear.watchface.complications.data.RangedValueComplicationData
 import androidx.wear.watchface.complications.data.ShortTextComplicationData
 import androidx.wear.watchface.complications.data.SmallImage
 import androidx.wear.watchface.complications.data.SmallImageComplicationData
+import com.sysadmindoc.nimbus.wear.data.DataSource
 import com.sysadmindoc.nimbus.wear.data.WearWeatherData
+import kotlin.math.max
 
 object WeatherComplicationDataFactory {
 
@@ -81,3 +83,20 @@ data class WeatherComplicationCopy(
     val rangedContentDescription: String,
     val smallImageContentDescription: String,
 )
+
+object WeatherComplicationPayloadSelector {
+    fun select(
+        syncedData: WearWeatherData?,
+        syncedAtMs: Long,
+        fallbackData: WearWeatherData?,
+    ): WearWeatherData? = syncedData
+        ?.copy(dataSource = DataSource.PHONE_SYNC, syncedAtMs = syncedAtMs)
+        ?: fallbackData
+}
+
+object WeatherComplicationFreshness {
+    fun ageMinutes(nowMs: Long, updatedAtMs: Long): Long {
+        if (updatedAtMs <= 0L) return 0L
+        return max(0L, nowMs - updatedAtMs) / 60_000L
+    }
+}

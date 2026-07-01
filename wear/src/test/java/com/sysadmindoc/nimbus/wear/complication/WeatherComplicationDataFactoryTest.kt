@@ -9,9 +9,11 @@ import androidx.wear.watchface.complications.data.SmallImage
 import androidx.wear.watchface.complications.data.SmallImageComplicationData
 import androidx.wear.watchface.complications.data.SmallImageType
 import com.sysadmindoc.nimbus.wear.R
+import com.sysadmindoc.nimbus.wear.data.DataSource
 import com.sysadmindoc.nimbus.wear.data.WearWeatherData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -31,14 +33,17 @@ class WeatherComplicationDataFactoryTest {
         high = 74,
         low = 59,
         locationName = "Seattle",
+        precipChance = 80,
         uvIndex = 14,
         weatherCode = 61,
+        dataSource = DataSource.PHONE_SYNC,
+        syncedAtMs = 1_000L,
     )
     private val copy = WeatherComplicationCopy(
         shortText = "68\u00B0",
         shortContentDescription = "68 degrees, Rain",
-        longText = "68\u00B0 Rain",
-        longContentDescription = "68 degrees, Rain",
+        longText = "68\u00B0 Rain \u2022 80% rain \u2022 5m ago",
+        longContentDescription = "68 degrees, Rain, high 74, low 59, precipitation chance 80 percent, updated 5m ago",
         longTitle = "H:74\u00B0 L:59\u00B0",
         rangedText = "UV 14",
         rangedContentDescription = "UV Index 14",
@@ -80,12 +85,28 @@ class WeatherComplicationDataFactoryTest {
     @Test
     fun `long text includes high low title`() {
         val data = current(ComplicationType.LONG_TEXT) as LongTextComplicationData
-        val title = data.title!!.getTextAt(RuntimeEnvironment.getApplication().resources, Instant.EPOCH).toString()
+        val title = textOf(data.title)
 
         assertNotNull(data.text)
         assertNotNull(data.title)
         assertTrue(title.contains("H:74"))
         assertTrue(title.contains("L:59"))
+    }
+
+    @Test
+    fun `long text exposes temperature condition precip chance and freshness`() {
+        val data = current(ComplicationType.LONG_TEXT) as LongTextComplicationData
+        val text = textOf(data.text)
+        val contentDescription = textOf(data.contentDescription)
+
+        assertTrue(text.contains("68\u00B0"))
+        assertTrue(text.contains("Rain"))
+        assertTrue(text.contains("80% rain"))
+        assertTrue(text.contains("5m ago"))
+        assertTrue(contentDescription.contains("high 74"))
+        assertTrue(contentDescription.contains("low 59"))
+        assertTrue(contentDescription.contains("precipitation chance 80 percent"))
+        assertTrue(contentDescription.contains("updated 5m ago"))
     }
 
     @Test
@@ -95,6 +116,7 @@ class WeatherComplicationDataFactoryTest {
         assertEquals(12f, data.value, 0.01f)
         assertEquals(0f, data.min, 0.01f)
         assertEquals(12f, data.max, 0.01f)
+        assertEquals("UV Index 14", textOf(data.contentDescription))
     }
 
     @Test
@@ -104,9 +126,57 @@ class WeatherComplicationDataFactoryTest {
         assertSame(smallImage, data.smallImage)
     }
 
+    @Test
+    fun `payload selector preserves phone sync source and last updated timestamp`() {
+        val selected = WeatherComplicationPayloadSelector.select(
+            syncedData = weather,
+            syncedAtMs = 123_456L,
+            fallbackData = null,
+        )
+
+        assertNotNull(selected)
+        assertEquals(DataSource.PHONE_SYNC, selected!!.dataSource)
+        assertEquals(123_456L, selected.syncedAtMs)
+    }
+
+    @Test
+    fun `payload selector uses direct fallback when no phone sync is fresh`() {
+        val fallback = weather.copy(dataSource = DataSource.DIRECT_API, syncedAtMs = 99L)
+
+        val selected = WeatherComplicationPayloadSelector.select(
+            syncedData = null,
+            syncedAtMs = 0L,
+            fallbackData = fallback,
+        )
+
+        assertSame(fallback, selected)
+    }
+
+    @Test
+    fun `payload selector returns null for no-data state`() {
+        assertNull(
+            WeatherComplicationPayloadSelector.select(
+                syncedData = null,
+                syncedAtMs = 0L,
+                fallbackData = null,
+            ),
+        )
+    }
+
+    @Test
+    fun `freshness age clamps future timestamps and reports elapsed minutes`() {
+        assertEquals(0L, WeatherComplicationFreshness.ageMinutes(nowMs = 1_000L, updatedAtMs = 0L))
+        assertEquals(0L, WeatherComplicationFreshness.ageMinutes(nowMs = 1_000L, updatedAtMs = 2_000L))
+        assertEquals(5L, WeatherComplicationFreshness.ageMinutes(nowMs = 360_000L, updatedAtMs = 60_000L))
+        assertEquals(90L, WeatherComplicationFreshness.ageMinutes(nowMs = 5_460_000L, updatedAtMs = 60_000L))
+    }
+
     private fun preview(type: ComplicationType) =
         WeatherComplicationDataFactory.previewData(type, smallImage, previewCopy)
 
     private fun current(type: ComplicationType) =
         WeatherComplicationDataFactory.currentWeatherData(type, weather, smallImage, copy)
+
+    private fun textOf(text: androidx.wear.watchface.complications.data.ComplicationText?): String =
+        text!!.getTextAt(RuntimeEnvironment.getApplication().resources, Instant.EPOCH).toString()
 }

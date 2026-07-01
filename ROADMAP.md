@@ -510,14 +510,3 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
   Touches: `tools/check_docs_consistency.py`, onboarding strings, README, CLAUDE.md, `gradle/libs.versions.toml`, `CardConfig.kt`, `UserPreferences.kt` `RadarProvider`.
   Acceptance: The docs checker fails when onboarding card counts, radar provider inventory, dependency versions, or root version claims drift from source-of-truth code/manifests; current stale claims are corrected.
   Complexity: M
-
-## Research-Driven Additions
-
-### P2
-
-- [ ] P2 - WFF-equivalent Wear complication parity tests
-  Why: Android documents WFF weather expressions but no third-party publisher API, so ZeusWatch should harden the supported path: private phone-to-watch sync plus public complications that expose equivalent weather fields.
-  Evidence: `RESEARCH.md`; `docs/WFF_WEATHER_INTEROP.md`; Android WFF weather docs; `WearComplicationService.kt`; `SyncedWeatherStore.kt`.
-  Touches: `wear/src/main/java/com/sysadmindoc/nimbus/wear/complication/`, `wear/src/main/java/com/sysadmindoc/nimbus/wear/sync/`, `wear/src/test/java/com/sysadmindoc/nimbus/wear/complication/`, `docs/WFF_WEATHER_INTEROP.md`.
-  Acceptance: Tests cover temperature, condition, high/low, precipitation chance, UV, last-updated freshness, and fallback/no-data complication states; docs state that WFF publishing remains unavailable while complications are supported.
-  Complexity: M
