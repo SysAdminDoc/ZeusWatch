@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -85,6 +86,7 @@ fun RadarScreen(
     latitude: Double,
     longitude: Double,
     onBack: () -> Unit,
+    sharedRouteText: String? = null,
     viewModel: RadarViewModel = hiltViewModel(),
 ) {
     var resolvedLat by remember { mutableDoubleStateOf(latitude) }
@@ -100,6 +102,7 @@ fun RadarScreen(
     val strikes by viewModel.lightningStrikes.collectAsStateWithLifecycle()
     val nearbyReports by viewModel.nearbyReports.collectAsStateWithLifecycle()
     val reportSubmitState by viewModel.reportSubmitState.collectAsStateWithLifecycle()
+    val routePlannerState by viewModel.routePlannerState.collectAsStateWithLifecycle()
     val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
 
     var selectedLayer by remember { mutableStateOf(RadarLayer.RADAR) }
@@ -113,6 +116,7 @@ fun RadarScreen(
         strikes = strikes,
         nearbyReports = nearbyReports,
         reportSubmitState = reportSubmitState,
+        routePlannerState = routePlannerState,
         isOffline = isOffline,
         selectedLayer = selectedLayer,
         canSubmitReport = canSubmitReport,
@@ -139,8 +143,20 @@ fun RadarScreen(
             viewModel.submitReport(coords.latitude, coords.longitude, condition, note)
         },
         onAlertSelected = { selectedAlertId = it },
+        onOpenRoutePlanner = viewModel::openRoutePlanner,
+        onDismissRoutePlanner = viewModel::dismissRoutePlanner,
+        onRouteOriginChange = viewModel::updateRouteOrigin,
+        onRouteDestinationChange = viewModel::updateRouteDestination,
+        onRouteDepartureOffsetChange = viewModel::setRouteDepartureOffsetMinutes,
+        onPlanRoute = viewModel::planRouteWeather,
     )
 
+    LaunchedEffect(sharedRouteText) {
+        viewModel.applySharedRouteText(sharedRouteText)
+    }
+    LaunchedEffect(resolvedLat, resolvedLon) {
+        viewModel.setRouteFallbackOrigin(resolvedLat, resolvedLon)
+    }
     RadarLocationReportsEffect(coordinates, viewModel::loadNearbyReports)
     RadarAlertOverlaysEffect(
         coordinates = coordinates,
@@ -169,6 +185,15 @@ fun RadarScreen(
     PredictiveBackScaffold(onBack = onBack) {
         RadarContentFrame(renderState, coordinates, actions)
         RadarReportSheet(showReportSheet, renderState.reportSubmitState, coordinates, actions)
+        RouteWeatherPlannerSheet(
+            state = routePlannerState,
+            settings = settings,
+            onOriginChange = actions.onRouteOriginChange,
+            onDestinationChange = actions.onRouteDestinationChange,
+            onDepartureOffsetChange = actions.onRouteDepartureOffsetChange,
+            onPlanRoute = actions.onPlanRoute,
+            onDismiss = actions.onDismissRoutePlanner,
+        )
         RadarSelectedAlertSheet(
             alert = radarState.alertOverlays.firstOrNull { it.id == selectedAlertId },
             onDismiss = { selectedAlertId = null },
@@ -191,6 +216,7 @@ fun RadarTab(
     val strikes by viewModel.lightningStrikes.collectAsStateWithLifecycle()
     val nearbyReports by viewModel.nearbyReports.collectAsStateWithLifecycle()
     val reportSubmitState by viewModel.reportSubmitState.collectAsStateWithLifecycle()
+    val routePlannerState by viewModel.routePlannerState.collectAsStateWithLifecycle()
     val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
 
     var showReportSheet by remember { mutableStateOf(false) }
@@ -204,6 +230,7 @@ fun RadarTab(
         strikes = strikes,
         nearbyReports = nearbyReports,
         reportSubmitState = reportSubmitState,
+        routePlannerState = routePlannerState,
         isOffline = isOffline,
         selectedLayer = selectedLayer,
         canSubmitReport = canSubmitReport,
@@ -230,8 +257,17 @@ fun RadarTab(
             viewModel.submitReport(coords.latitude, coords.longitude, condition, note)
         },
         onAlertSelected = { selectedAlertId = it },
+        onOpenRoutePlanner = viewModel::openRoutePlanner,
+        onDismissRoutePlanner = viewModel::dismissRoutePlanner,
+        onRouteOriginChange = viewModel::updateRouteOrigin,
+        onRouteDestinationChange = viewModel::updateRouteDestination,
+        onRouteDepartureOffsetChange = viewModel::setRouteDepartureOffsetMinutes,
+        onPlanRoute = viewModel::planRouteWeather,
     )
 
+    LaunchedEffect(latitude, longitude) {
+        viewModel.setRouteFallbackOrigin(latitude, longitude)
+    }
     RadarLocationReportsEffect(coordinates, viewModel::loadNearbyReports)
     RadarAlertOverlaysEffect(
         coordinates = coordinates,
@@ -259,6 +295,15 @@ fun RadarTab(
 
     RadarContentFrame(renderState, coordinates, actions)
     RadarReportSheet(showReportSheet, renderState.reportSubmitState, coordinates, actions)
+    RouteWeatherPlannerSheet(
+        state = routePlannerState,
+        settings = settings,
+        onOriginChange = actions.onRouteOriginChange,
+        onDestinationChange = actions.onRouteDestinationChange,
+        onDepartureOffsetChange = actions.onRouteDepartureOffsetChange,
+        onPlanRoute = actions.onPlanRoute,
+        onDismiss = actions.onDismissRoutePlanner,
+    )
     RadarSelectedAlertSheet(
         alert = radarState.alertOverlays.firstOrNull { it.id == selectedAlertId },
         onDismiss = { selectedAlertId = null },
@@ -276,6 +321,7 @@ private data class RadarRenderState(
     val strikes: List<LightningStrike>,
     val nearbyReports: List<CommunityReport>,
     val reportSubmitState: ReportSubmitState,
+    val routePlannerState: RoutePlannerUiState,
     val isOffline: Boolean,
     val selectedLayer: RadarLayer,
     val canSubmitReport: Boolean,
@@ -294,6 +340,12 @@ private data class RadarActions(
     val onDismissReportSheet: () -> Unit,
     val onSubmitReport: (RadarCoordinates, ReportCondition, String) -> Unit,
     val onAlertSelected: (String) -> Unit,
+    val onOpenRoutePlanner: () -> Unit,
+    val onDismissRoutePlanner: () -> Unit,
+    val onRouteOriginChange: (String) -> Unit,
+    val onRouteDestinationChange: (String) -> Unit,
+    val onRouteDepartureOffsetChange: (Int) -> Unit,
+    val onPlanRoute: () -> Unit,
 )
 
 @Composable
@@ -400,6 +452,7 @@ private fun RadarContentFrame(
             .background(NimbusBackgroundGradient),
     ) {
         RadarMapSurface(state, coordinates, actions)
+        RadarRoutePlannerFab(state, actions)
         RadarReportFab(state, actions)
     }
 }
@@ -606,6 +659,38 @@ private fun BoxScope.RadarReportFab(
             .padding(end = 16.dp, bottom = radarFabBottomPadding(showPlaybackControls = playbackVisible)),
     ) {
         Icon(Icons.Filled.Add, contentDescription = null)
+    }
+}
+
+@Composable
+private fun BoxScope.RadarRoutePlannerFab(
+    state: RadarRenderState,
+    actions: RadarActions,
+) {
+    val routePlannerDescription = stringResource(R.string.route_planner_open_cd)
+    val playbackVisible =
+        state.settings.radarProvider.supportsNativePlayback &&
+            !state.isOffline &&
+            state.selectedLayer == RadarLayer.RADAR &&
+            state.radarState.frameSet != null
+    FloatingActionButton(
+        onClick = actions.onOpenRoutePlanner,
+        containerColor = NimbusBlueAccent.copy(alpha = if (state.routePlannerState.isSheetOpen) 1f else 0.95f),
+        contentColor = NimbusTextPrimary,
+        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .semantics { contentDescription = routePlannerDescription }
+            .padding(
+                end = 16.dp,
+                bottom = radarRoutePlannerFabBottomPadding(
+                    showPlaybackControls = playbackVisible,
+                    showReportFab = state.showReportFab,
+                ),
+            ),
+    ) {
+        Icon(Icons.Filled.DirectionsCar, contentDescription = null)
     }
 }
 
@@ -956,6 +1041,11 @@ internal fun radarTopControlsSpacing(showBackButton: Boolean): Dp {
 
 internal fun radarFabBottomPadding(showPlaybackControls: Boolean): Dp {
     return if (showPlaybackControls) 124.dp else 16.dp
+}
+
+internal fun radarRoutePlannerFabBottomPadding(showPlaybackControls: Boolean, showReportFab: Boolean): Dp {
+    val base = radarFabBottomPadding(showPlaybackControls)
+    return if (showReportFab) base + 64.dp else base
 }
 
 internal fun shouldShowRadarLoadingOverlay(

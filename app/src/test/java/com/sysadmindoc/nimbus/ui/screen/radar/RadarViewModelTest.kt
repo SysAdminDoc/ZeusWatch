@@ -17,6 +17,7 @@ import com.sysadmindoc.nimbus.data.repository.RadarProvider
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.TimedTileUrl
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
+import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
 import com.sysadmindoc.nimbus.util.ConnectivityObserver
 import io.mockk.coEvery
@@ -54,6 +55,7 @@ class RadarViewModelTest {
     private lateinit var communityReportRepository: CommunityReportSource
     private lateinit var weatherSourceManager: WeatherSourceManager
     private lateinit var locationRepository: LocationRepository
+    private lateinit var weatherRepository: WeatherRepository
     private lateinit var connectivityObserver: ConnectivityObserver
 
     @Before
@@ -66,6 +68,7 @@ class RadarViewModelTest {
         communityReportRepository = mockk(relaxed = true)
         weatherSourceManager = mockk(relaxed = true)
         locationRepository = mockk()
+        weatherRepository = mockk()
         connectivityObserver = mockk()
 
         every { prefs.settings } returns flowOf(NimbusSettings())
@@ -376,6 +379,30 @@ class RadarViewModelTest {
         }
     }
 
+    @Test
+    fun `applySharedRouteText opens planner and prefills route fields`() {
+        val viewModel = createViewModel()
+
+        viewModel.applySharedRouteText("Denver, CO to Boulder, CO")
+
+        val state = viewModel.routePlannerState.value
+        assertTrue(state.isSheetOpen)
+        assertEquals("Denver, CO", state.originQuery)
+        assertEquals("Boulder, CO", state.destinationQuery)
+        assertEquals(null, state.error)
+    }
+
+    @Test
+    fun `applySharedRouteText flags unreadable short route links`() {
+        val viewModel = createViewModel()
+
+        viewModel.applySharedRouteText("https://maps.app.goo.gl/abcdef")
+
+        val state = viewModel.routePlannerState.value
+        assertTrue(state.isSheetOpen)
+        assertEquals(RoutePlannerError.SHARED_ROUTE_UNREADABLE, state.error)
+    }
+
     private fun createViewModel(): RadarViewModel {
         return RadarViewModel(
             radarRepository = radarRepository,
@@ -384,6 +411,7 @@ class RadarViewModelTest {
             communityReportRepository = communityReportRepository,
             weatherSourceManager = weatherSourceManager,
             locationRepository = locationRepository,
+            weatherRepository = weatherRepository,
             connectivityObserver = connectivityObserver,
         )
     }

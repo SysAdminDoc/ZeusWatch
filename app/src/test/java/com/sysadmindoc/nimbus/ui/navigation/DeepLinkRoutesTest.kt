@@ -69,6 +69,14 @@ class DeepLinkRoutesTest {
     }
 
     @Test
+    fun `resolveZeusWatchDeepLinkRoute carries radar route text`() {
+        assertEquals(
+            "radar/0.0/0.0?route=Denver%20to%20Boulder",
+            resolveZeusWatchDeepLinkRoute(host = "radar", routeText = "Denver to Boulder"),
+        )
+    }
+
+    @Test
     fun `resolveZeusWatchDeepLinkRoute ignores unknown main targets`() {
         assertNull(resolveZeusWatchDeepLinkRoute(host = "main", target = "widgets"))
         assertNull(resolveZeusWatchDeepLinkRoute(host = "unknown"))

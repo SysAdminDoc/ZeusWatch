@@ -6,15 +6,20 @@ import android.util.Log
 import com.sysadmindoc.nimbus.data.api.BlitzortungService
 import com.sysadmindoc.nimbus.data.api.LightningStrike
 import com.sysadmindoc.nimbus.data.model.CommunityReport
+import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.ReportCondition
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.repository.CommunityReportSource
+import com.sysadmindoc.nimbus.data.repository.DrivingRoutePlanningException
+import com.sysadmindoc.nimbus.data.repository.DrivingRoutePlanningFailure
+import com.sysadmindoc.nimbus.data.repository.DrivingRouteWeatherPlan
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.RadarFrameSet
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.RadarProvider
 import com.sysadmindoc.nimbus.data.repository.TimedTileUrl
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
+import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
 import com.sysadmindoc.nimbus.util.ConnectivityObserver
 import com.sysadmindoc.nimbus.util.parseAlertInstant
@@ -32,6 +37,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.Stable
 import java.time.Instant
+import java.time.LocalDateTime
 import javax.inject.Inject
 
 private const val RADAR_FRAME_REFRESH_INTERVAL_MS = 5 * 60 * 1000L
@@ -47,6 +53,7 @@ class RadarViewModel @Inject constructor(
     private val communityReportRepository: CommunityReportSource,
     private val weatherSourceManager: WeatherSourceManager,
     private val locationRepository: LocationRepository,
+    private val weatherRepository: WeatherRepository,
     connectivityObserver: ConnectivityObserver,
 ) : ViewModel() {
 
@@ -72,13 +79,18 @@ class RadarViewModel @Inject constructor(
     private val _reportSubmitState = MutableStateFlow(ReportSubmitState())
     val reportSubmitState: StateFlow<ReportSubmitState> = _reportSubmitState.asStateFlow()
 
+    private val _routePlannerState = MutableStateFlow(RoutePlannerUiState())
+    val routePlannerState: StateFlow<RoutePlannerUiState> = _routePlannerState.asStateFlow()
+
     private var playbackJob: Job? = null
     private var frameLoadJob: Job? = null
     private var alertOverlayLoadJob: Job? = null
+    private var routePlanJob: Job? = null
     private var frameLoadProvider: RadarProvider? = null
     private var lastSuccessfulFrameLoadAtMillis: Long? = null
     private var lastFrameProvider: RadarProvider? = null
     private var lastAlertOverlayLoadKey: String? = null
+    private var routeFallbackOrigin: LocationInfo? = null
 
     fun loadFrames(
         provider: RadarProvider = RadarProvider.NATIVE_MAPLIBRE,
@@ -369,10 +381,84 @@ class RadarViewModel @Inject constructor(
         }
     }
 
+    fun setRouteFallbackOrigin(lat: Double, lon: Double) {
+        if (lat == 0.0 && lon == 0.0) return
+        routeFallbackOrigin = LocationInfo(
+            name = "Map center",
+            latitude = lat,
+            longitude = lon,
+        )
+    }
+
+    fun openRoutePlanner() {
+        _routePlannerState.update { it.copy(isSheetOpen = true, error = null) }
+    }
+
+    fun dismissRoutePlanner() {
+        routePlanJob?.cancel()
+        routePlanJob = null
+        _routePlannerState.update { it.copy(isSheetOpen = false, isPlanning = false) }
+    }
+
+    fun applySharedRouteText(sharedText: String?) {
+        val text = sharedText?.trim()?.takeIf { it.isNotBlank() } ?: return
+        val parsed = parseSharedRouteText(text)
+        _routePlannerState.update { state ->
+            state.copy(
+                originQuery = parsed.origin ?: state.originQuery,
+                destinationQuery = parsed.destination ?: state.destinationQuery,
+                isSheetOpen = true,
+                error = if (parsed.unreadable) RoutePlannerError.SHARED_ROUTE_UNREADABLE else null,
+            )
+        }
+    }
+
+    fun updateRouteOrigin(query: String) {
+        _routePlannerState.update { it.copy(originQuery = query, error = null) }
+    }
+
+    fun updateRouteDestination(query: String) {
+        _routePlannerState.update { it.copy(destinationQuery = query, error = null) }
+    }
+
+    fun setRouteDepartureOffsetMinutes(minutes: Int) {
+        _routePlannerState.update { it.copy(departureOffsetMinutes = minutes.coerceIn(0, 12 * 60)) }
+    }
+
+    fun planRouteWeather() {
+        val state = _routePlannerState.value
+        if (state.destinationQuery.isBlank()) {
+            _routePlannerState.update { it.copy(error = RoutePlannerError.DESTINATION_REQUIRED) }
+            return
+        }
+        routePlanJob?.cancel()
+        routePlanJob = viewModelScope.launch {
+            _routePlannerState.update { it.copy(isPlanning = true, error = null) }
+            val departureTime = LocalDateTime.now().plusMinutes(state.departureOffsetMinutes.toLong())
+            val result = weatherRepository.planDrivingRouteWeather(
+                originQuery = state.originQuery,
+                destinationQuery = state.destinationQuery,
+                departureTime = departureTime,
+                fallbackOrigin = routeFallbackOrigin,
+            )
+            _routePlannerState.update {
+                result.fold(
+                    onSuccess = { plan ->
+                        it.copy(isPlanning = false, plan = plan, error = null)
+                    },
+                    onFailure = { error ->
+                        it.copy(isPlanning = false, error = error.toRoutePlannerError())
+                    },
+                )
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         playbackJob?.cancel()
         alertOverlayLoadJob?.cancel()
+        routePlanJob?.cancel()
         blitzortungService.disconnect()
     }
 }
@@ -411,6 +497,26 @@ data class ReportSubmitState(
     val result: String? = null, // null = idle, "success" = done, any other value = failed
 )
 
+@Stable
+data class RoutePlannerUiState(
+    val originQuery: String = "",
+    val destinationQuery: String = "",
+    val departureOffsetMinutes: Int = 0,
+    val isSheetOpen: Boolean = false,
+    val isPlanning: Boolean = false,
+    val plan: DrivingRouteWeatherPlan? = null,
+    val error: RoutePlannerError? = null,
+)
+
+enum class RoutePlannerError {
+    DESTINATION_REQUIRED,
+    ORIGIN_REQUIRED,
+    ORIGIN_NOT_FOUND,
+    DESTINATION_NOT_FOUND,
+    WEATHER_UNAVAILABLE,
+    SHARED_ROUTE_UNREADABLE,
+}
+
 internal fun canAnimateRadarPlayback(frameSet: RadarFrameSet?): Boolean =
     (frameSet?.totalFrames ?: 0) > 1
 
@@ -439,6 +545,17 @@ internal fun WeatherAlert.isExpiredAt(now: Instant): Boolean {
 
 private fun alertOverlayLocationKey(lat: Double, lon: Double): String {
     return "%.3f,%.3f".format(java.util.Locale.US, lat, lon)
+}
+
+private fun Throwable.toRoutePlannerError(): RoutePlannerError {
+    val failure = (this as? DrivingRoutePlanningException)?.reason
+    return when (failure) {
+        DrivingRoutePlanningFailure.ORIGIN_REQUIRED -> RoutePlannerError.ORIGIN_REQUIRED
+        DrivingRoutePlanningFailure.DESTINATION_REQUIRED -> RoutePlannerError.DESTINATION_REQUIRED
+        DrivingRoutePlanningFailure.ORIGIN_NOT_FOUND -> RoutePlannerError.ORIGIN_NOT_FOUND
+        DrivingRoutePlanningFailure.DESTINATION_NOT_FOUND -> RoutePlannerError.DESTINATION_NOT_FOUND
+        DrivingRoutePlanningFailure.WEATHER_UNAVAILABLE, null -> RoutePlannerError.WEATHER_UNAVAILABLE
+    }
 }
 
 private fun Throwable.safeLogMessage(): String =

@@ -101,6 +101,22 @@ class RadarScreenLogicTest {
     }
 
     @Test
+    fun `radarRoutePlannerFabBottomPadding stacks above report and playback controls`() {
+        assertEquals(
+            16.dp,
+            radarRoutePlannerFabBottomPadding(showPlaybackControls = false, showReportFab = false),
+        )
+        assertEquals(
+            80.dp,
+            radarRoutePlannerFabBottomPadding(showPlaybackControls = false, showReportFab = true),
+        )
+        assertEquals(
+            188.dp,
+            radarRoutePlannerFabBottomPadding(showPlaybackControls = true, showReportFab = true),
+        )
+    }
+
+    @Test
     fun `report fab is hidden for embedded web radar to avoid third party map controls`() {
         assertTrue(
             shouldShowRadarReportFab(

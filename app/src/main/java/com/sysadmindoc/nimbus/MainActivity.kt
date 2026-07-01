@@ -26,6 +26,7 @@ import com.sysadmindoc.nimbus.ui.component.LocalAdaptiveLayout
 import com.sysadmindoc.nimbus.ui.component.LocalIconPackManager
 import com.sysadmindoc.nimbus.ui.navigation.DeepLinkRequest
 import com.sysadmindoc.nimbus.ui.navigation.NimbusNavHost
+import com.sysadmindoc.nimbus.ui.navigation.Routes
 import com.sysadmindoc.nimbus.ui.navigation.resolveZeusWatchDeepLinkRoute
 import com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
@@ -117,6 +118,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun resolveDeepLink(intent: Intent?): String? {
+        if (intent?.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true) {
+            val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+            if (sharedText != null) return Routes.radar(0.0, 0.0, sharedText)
+        }
+
         val uri = intent?.data ?: return null
         if (uri.scheme != "zeuswatch") return null
         return resolveZeusWatchDeepLinkRoute(
@@ -124,6 +132,7 @@ class MainActivity : ComponentActivity() {
             target = uri.getQueryParameter("target"),
             card = uri.getQueryParameter("card"),
             locationId = uri.getQueryParameter("locationId"),
+            routeText = uri.getQueryParameter("route") ?: uri.getQueryParameter("destination"),
         )
     }
 

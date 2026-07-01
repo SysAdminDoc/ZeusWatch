@@ -7,7 +7,7 @@
 ![Compose](https://img.shields.io/badge/Jetpack%20Compose-2025.04.01-4285F4?logo=jetpackcompose&logoColor=white)
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 
-> A free, open-source Android weather app with a premium dark UI, 35 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, LibreWXR, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, Hong Kong Observatory, and WMO SWIC.
+> A free, open-source Android weather app with a premium dark UI, 35 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, route weather planning, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, LibreWXR, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, Hong Kong Observatory, and WMO SWIC.
 
 <img width="1536" height="1024" alt="design" src="https://github.com/user-attachments/assets/dce70ccc-af71-48d8-8000-0b2935f45996" />
 
@@ -115,6 +115,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | **Multi-Location Alerts** | Monitors all saved locations by default, not just current GPS |
 | **Progress Nowcast Notifications** | Android 16+ nowcast alerts use ProgressStyle segments for dry/light/steady/heavy rain timelines, with BigText fallback on older devices |
 | **Driving Condition Alerts** | Black ice, fog, low visibility, hydroplaning, high wind, snow/ice — derived from forecast data |
+| **Route Weather Planner** | Enter or share a route from Radar, choose departure timing, and review waypoint precipitation, wind, visibility, ice, and alert risk without background tracking |
 | **Health Alerts** | Migraine triggers (pressure/temp swings, configurable threshold), respiratory (humidity extremes), arthritis (temp swing) |
 | **Haptic Feedback** | Severity-appropriate vibration patterns when alerts display |
 | **Expired Alert Filtering** | Skips alerts past their expiration timestamp |
@@ -129,6 +130,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | **Animated Radar Playback** | Play/pause, frame slider, recent-past labels, timestamp overlay (native mode) |
 | **Radar Preview Card** | Recent selected native radar tile + CartoDB dark basemap on the Today tab |
 | **Radar Tab** | Full-screen radar in the bottom nav with provider-aware rendering |
+| **Route Weather Overlay** | Radar includes a foreground route planner for sampled waypoint weather and risk timing |
 | **Map Layer Selector** | Overlay layers: Radar, Lightning, Satellite, Clouds |
 | **Active Warning Polygons** | Native radar renders NWS warning polygons with severity colors and tappable alert details |
 | **Lightning Strike Overlay** | Real-time global lightning data via Blitzortung WebSocket with GeoJSON rendering |
@@ -375,6 +377,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 │   │   ├── AirQualityRepository # AQI + pollen + 5-day daily forecast
 │   │   ├── LocationRepository   # Geocoding + Room + reordering
 │   │   ├── RadarRepository      # LibreWXR/RainViewer tile URLs + frame list
+│   │   ├── DrivingRouteWeatherPlan # Route waypoint weather/risk model
 │   │   └── CommunityReportRepo  # Firestore crowd-sourced reports
 │   └── location/                # GPS location provider, reverse geocoder
 ├── di/                          # Hilt modules (Network, Database)
@@ -399,7 +402,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 │   │   └── ...                  # 14 more components
 │   ├── screen/
 │   │   ├── main/                # Today/Hourly/Daily tabs + tablet two-pane
-│   │   ├── radar/               # Dual-provider radar + playback + layers
+│   │   ├── radar/               # Dual-provider radar + playback + layers + route weather planner
 │   │   ├── settings/            # Entry shell + extracted section/control composables
 │   │   ├── locations/           # Search + drag-to-reorder saved locations
 │   │   └── compare/             # Side-by-side weather comparison

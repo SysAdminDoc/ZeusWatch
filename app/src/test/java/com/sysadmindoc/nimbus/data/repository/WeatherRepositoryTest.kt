@@ -6,12 +6,15 @@ import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
 import com.sysadmindoc.nimbus.data.api.WeatherDao
 import com.sysadmindoc.nimbus.data.location.ReverseGeocoder
+import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import com.sysadmindoc.nimbus.data.model.CurrentWeather
 import com.sysadmindoc.nimbus.data.model.DailyWeather
+import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.HourlyWeather
 import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.OpenMeteoResponse
 import com.sysadmindoc.nimbus.data.model.WeatherCacheEntity
+import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -24,6 +27,7 @@ import kotlinx.serialization.json.Json
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDateTime
 
 class WeatherRepositoryTest {
 
@@ -112,6 +116,57 @@ class WeatherRepositoryTest {
         latitude = testLat,
         longitude = testLon,
         cachedAt = cachedAt,
+    )
+
+    private fun routeWeatherData() = WeatherData(
+        location = LocationInfo(
+            name = "Route point",
+            region = "Colorado",
+            country = "US",
+            latitude = testLat,
+            longitude = testLon,
+        ),
+        current = CurrentConditions(
+            temperature = 1.0,
+            feelsLike = -2.0,
+            humidity = 88,
+            weatherCode = WeatherCode.FREEZING_RAIN_LIGHT,
+            observationTime = LocalDateTime.of(2026, 1, 1, 8, 0),
+            isDay = true,
+            windSpeed = 54.0,
+            windDirection = 270,
+            windGusts = 72.0,
+            pressure = 1008.0,
+            uvIndex = 0.0,
+            visibility = 900.0,
+            dewPoint = -1.0,
+            cloudCover = 100,
+            precipitation = 1.2,
+            dailyHigh = 2.0,
+            dailyLow = -3.0,
+            sunrise = "07:15",
+            sunset = "16:45",
+        ),
+        hourly = listOf(
+            HourlyConditions(
+                time = LocalDateTime.of(2026, 1, 1, 8, 0),
+                temperature = 1.0,
+                feelsLike = -2.0,
+                weatherCode = WeatherCode.FREEZING_RAIN_LIGHT,
+                isDay = true,
+                precipitationProbability = 80,
+                precipitation = 1.2,
+                windSpeed = 54.0,
+                windDirection = 270,
+                humidity = 88,
+                uvIndex = 0.0,
+                cloudCover = 100,
+                visibility = 900.0,
+                windGusts = 72.0,
+            )
+        ),
+        daily = emptyList(),
+        lastUpdated = LocalDateTime.of(2026, 1, 1, 8, 0),
     )
 
     @Before
@@ -422,6 +477,128 @@ class WeatherRepositoryTest {
         assertEquals("US", data.location.country)
         assertEquals(testLat, data.location.latitude, 0.01)
         assertEquals(testLon, data.location.longitude, 0.01)
+    }
+
+    // --- planDrivingRouteWeather ---
+
+    @Test
+    fun planDrivingRouteWeatherSamplesForecastsAndEvaluatesWaypointRisk() = runTest {
+        val departure = LocalDateTime.of(2026, 1, 1, 8, 0)
+        coEvery {
+            geocodingApi.searchLocation("Denver", any(), any(), any())
+        } returns GeocodingResponse(
+            results = listOf(
+                GeocodingResult(
+                    id = 1,
+                    name = "Denver",
+                    latitude = 39.7392,
+                    longitude = -104.9903,
+                    country = "United States",
+                    admin1 = "Colorado",
+                    timezone = "America/Denver",
+                )
+            )
+        )
+        coEvery {
+            geocodingApi.searchLocation("Boulder", any(), any(), any())
+        } returns GeocodingResponse(
+            results = listOf(
+                GeocodingResult(
+                    id = 2,
+                    name = "Boulder",
+                    latitude = 40.0150,
+                    longitude = -105.2705,
+                    country = "United States",
+                    admin1 = "Colorado",
+                    timezone = "America/Denver",
+                )
+            )
+        )
+        coEvery {
+            sourceManager.getWeather(any(), any(), any(), any(), any())
+        } returns Result.success(routeWeatherData())
+        coEvery {
+            sourceManager.getAlertsDetailed(
+                latitude = any(),
+                longitude = any(),
+                sourceOverrides = any(),
+                includeMeteredSources = false,
+                countryHint = any(),
+            )
+        } returns AlertFetchResult(emptyList(), allAdaptersFailed = false, failedSources = emptyList())
+
+        val result = repository.planDrivingRouteWeather(
+            originQuery = "Denver",
+            destinationQuery = "Boulder",
+            departureTime = departure,
+        )
+
+        assertTrue(result.isSuccess)
+        val plan = result.getOrThrow()
+        assertEquals("Denver", plan.origin.name)
+        assertEquals("Boulder", plan.destination.name)
+        assertTrue(plan.waypoints.size >= 2)
+        assertEquals(departure, plan.waypoints.first().arrivalTime)
+        assertTrue(plan.waypoints.any { it.conditions.iceRisk })
+        assertTrue(plan.waypoints.any { it.risk == DrivingRouteRiskLevel.HIGH })
+    }
+
+    @Test
+    fun planDrivingRouteWeatherRetriesSharedCityStateRouteLabels() = runTest {
+        val departure = LocalDateTime.of(2026, 1, 1, 8, 0)
+        val fallbackOrigin = LocationInfo(
+            name = "Map center",
+            region = "Colorado",
+            country = "United States",
+            latitude = 39.7392,
+            longitude = -104.9903,
+        )
+        coEvery {
+            geocodingApi.searchLocation("Boulder, CO", any(), any(), any())
+        } returns GeocodingResponse(results = emptyList())
+        coEvery {
+            geocodingApi.searchLocation("Boulder Colorado", any(), any(), any())
+        } returns GeocodingResponse(
+            results = listOf(
+                GeocodingResult(
+                    id = 2,
+                    name = "Boulder",
+                    latitude = 40.0150,
+                    longitude = -105.2705,
+                    country = "United States",
+                    admin1 = "Colorado",
+                    timezone = "America/Denver",
+                )
+            )
+        )
+        coEvery {
+            sourceManager.getWeather(any(), any(), any(), any(), any())
+        } returns Result.success(routeWeatherData())
+        coEvery {
+            sourceManager.getAlertsDetailed(
+                latitude = any(),
+                longitude = any(),
+                sourceOverrides = any(),
+                includeMeteredSources = false,
+                countryHint = any(),
+            )
+        } returns AlertFetchResult(emptyList(), allAdaptersFailed = false, failedSources = emptyList())
+
+        val result = repository.planDrivingRouteWeather(
+            originQuery = "",
+            destinationQuery = "Boulder, CO",
+            departureTime = departure,
+            fallbackOrigin = fallbackOrigin,
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals("Boulder", result.getOrThrow().destination.name)
+        coVerify(exactly = 1) {
+            geocodingApi.searchLocation("Boulder, CO", any(), any(), any())
+        }
+        coVerify(exactly = 1) {
+            geocodingApi.searchLocation("Boulder Colorado", any(), any(), any())
+        }
     }
 
     // --- getWeatherOrCached (background-worker stale fallback) ---

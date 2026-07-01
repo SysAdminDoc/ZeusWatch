@@ -5,6 +5,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
+import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 
 /**
@@ -14,6 +15,36 @@ import com.sysadmindoc.nimbus.data.model.WeatherCode
 object DrivingConditionEvaluator {
 
     fun evaluate(current: CurrentConditions): List<DrivingAlert> {
+        return evaluate(
+            DrivingConditionSnapshot(
+                temperature = current.temperature,
+                precipitation = current.precipitation,
+                humidity = current.humidity,
+                weatherCode = current.weatherCode,
+                dewPoint = current.dewPoint,
+                visibility = current.visibility,
+                windGusts = current.windGusts,
+                windSpeed = current.windSpeed,
+            )
+        )
+    }
+
+    fun evaluate(hourly: HourlyConditions, fallbackCurrent: CurrentConditions? = null): List<DrivingAlert> {
+        return evaluate(
+            DrivingConditionSnapshot(
+                temperature = hourly.temperature,
+                precipitation = hourly.precipitation ?: 0.0,
+                humidity = hourly.humidity ?: fallbackCurrent?.humidity ?: 50,
+                weatherCode = hourly.weatherCode,
+                dewPoint = fallbackCurrent?.dewPoint,
+                visibility = hourly.visibility ?: fallbackCurrent?.visibility,
+                windGusts = hourly.windGusts ?: fallbackCurrent?.windGusts,
+                windSpeed = hourly.windSpeed ?: fallbackCurrent?.windSpeed ?: 0.0,
+            )
+        )
+    }
+
+    private fun evaluate(current: DrivingConditionSnapshot): List<DrivingAlert> {
         val alerts = mutableListOf<DrivingAlert>()
 
         // Black ice: temp near/below freezing + precipitation or high humidity
@@ -119,6 +150,17 @@ object DrivingConditionEvaluator {
         return alerts.sortedBy { it.severity.ordinal }
     }
 }
+
+private data class DrivingConditionSnapshot(
+    val temperature: Double,
+    val precipitation: Double,
+    val humidity: Int,
+    val weatherCode: WeatherCode,
+    val dewPoint: Double?,
+    val visibility: Double?,
+    val windGusts: Double?,
+    val windSpeed: Double,
+)
 
 @Stable
 data class DrivingAlert(
