@@ -164,6 +164,50 @@ class WidgetRefreshWorkerLogicTest {
         assertEquals(WeatherCode.CLEAR_SKY.code, city.weatherCode)
         assertTrue(city.isDay)
         assertTrue(city.updatedAt > 0L)
+        assertTrue(city.observedAt > 0L)
+        assertEquals("Open-Meteo", city.sourceProvider)
+    }
+
+    @Test
+    fun `buildWidgetWeatherData preserves app source observation time and cache age`() {
+        val location = savedLocation(id = 24L, name = "Boulder", sortOrder = 0)
+        val observationTime = LocalDateTime.of(2026, 4, 15, 12, 0)
+        val lastUpdated = observationTime.plusMinutes(3)
+        val baseWeather = weatherDataFor(location)
+        val weather = baseWeather.copy(
+            current = baseWeather.current.copy(observationTime = observationTime),
+            hourly = listOf(
+                HourlyConditions(
+                    time = observationTime,
+                    temperature = 20.0,
+                    feelsLike = null,
+                    weatherCode = WeatherCode.CLEAR_SKY,
+                    isDay = true,
+                    precipitationProbability = 0,
+                    precipitation = null,
+                    windSpeed = null,
+                    windDirection = null,
+                    humidity = null,
+                    uvIndex = null,
+                    cloudCover = null,
+                    visibility = null,
+                ),
+            ),
+            lastUpdated = lastUpdated,
+            sourceProvider = "Open-Meteo",
+        )
+
+        val widgetData = buildWidgetWeatherData(
+            weatherData = weather,
+            convertTemp = { celsius -> celsius * 9.0 / 5.0 + 32.0 },
+            displayLocationName = "Pinned Boulder",
+        )
+
+        assertEquals("Pinned Boulder", widgetData.locationName)
+        assertEquals("Open-Meteo", widgetData.sourceProvider)
+        assertEquals(observationTime.toEpochMillisForTest(), widgetData.observedAt)
+        assertEquals(lastUpdated.toEpochMillisForTest(), widgetData.updatedAt)
+        assertEquals("Now", widgetData.hourly.single().hour)
     }
 
     @Test
@@ -295,6 +339,10 @@ class WidgetRefreshWorkerLogicTest {
             hourly = emptyList(),
             daily = emptyList(),
             lastUpdated = LocalDateTime.of(2026, 4, 15, 12, 0),
+            sourceProvider = "Open-Meteo",
         )
     }
+
+    private fun LocalDateTime.toEpochMillisForTest(): Long =
+        atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
 }

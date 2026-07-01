@@ -86,6 +86,13 @@ private fun TempWidgetContent(
                     fontWeight = FontWeight.Bold,
                 ),
             )
+            strings.updatedLabel(data.updatedAt)?.let { label ->
+                WidgetMiniStatusBadge(
+                    text = label,
+                    onClick = widgetRefreshBadgeAction(),
+                    contentDescription = strings.updatedContentDescription(label),
+                )
+            }
         }
     }
 }

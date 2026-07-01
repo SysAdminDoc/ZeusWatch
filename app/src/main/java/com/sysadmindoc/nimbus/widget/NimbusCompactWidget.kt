@@ -80,14 +80,23 @@ private fun CompactWidgetContent(
 
             Spacer(modifier = GlanceModifier.width(8.dp))
 
-            Text(
-                text = "${data.temperature.toInt()}°",
-                style = TextStyle(
-                    color = WidgetTheme.textPrimary,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "${data.temperature.toInt()}°",
+                    style = TextStyle(
+                        color = WidgetTheme.textPrimary,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                )
+                strings.updatedLabel(data.updatedAt)?.let { label ->
+                    WidgetMiniStatusBadge(
+                        text = label,
+                        onClick = widgetRefreshBadgeAction(),
+                        contentDescription = strings.updatedContentDescription(label),
+                    )
+                }
+            }
 
             Spacer(modifier = GlanceModifier.defaultWeight())
 
