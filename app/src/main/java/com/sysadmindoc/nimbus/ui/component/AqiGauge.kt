@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,6 +47,7 @@ fun AqiGauge(
     val maxAqi = 300f
     val progress = (aqi.toFloat() / maxAqi).coerceIn(0f, 1f)
     val levelLabel = stringResource(level.labelRes)
+    val cue = ColorSafeRiskCues.aqi(level)
 
     val semanticLabel = stringResource(R.string.aqi_gauge_semantics, aqi, levelLabel)
     Box(
@@ -78,6 +80,29 @@ fun AqiGauge(
             )
 
             // Segmented colored arc — each AQI tier gets its own segment
+            ColorSafeRiskCues.aqiBoundaryFractions.forEach { fraction ->
+                val angle = Math.toRadians((startAngle + totalSweep * fraction).toDouble())
+                val cx = this.size.width / 2f
+                val cy = this.size.height / 2f
+                val outerRadius = (this.size.width - strokeWidth) / 2f + 2f
+                val innerRadius = outerRadius - 9f
+                val outer = Offset(
+                    x = cx + (outerRadius * cos(angle)).toFloat(),
+                    y = cy + (outerRadius * sin(angle)).toFloat(),
+                )
+                val inner = Offset(
+                    x = cx + (innerRadius * cos(angle)).toFloat(),
+                    y = cy + (innerRadius * sin(angle)).toFloat(),
+                )
+                drawLine(
+                    color = Color.White.copy(alpha = 0.62f),
+                    start = inner,
+                    end = outer,
+                    strokeWidth = 1.5f,
+                    cap = StrokeCap.Round,
+                )
+            }
+
             val segments = listOf(
                 AqiSegment(0f, 50f / maxAqi, Color(0xFF4CAF50)),     // Good
                 AqiSegment(50f / maxAqi, 100f / maxAqi, Color(0xFFFFEB3B)),   // Moderate
@@ -151,6 +176,7 @@ fun AqiGauge(
                 style = MaterialTheme.typography.labelSmall,
                 color = NimbusTextSecondary,
             )
+            ColorSafeCueBadge(cue = cue, modifier = Modifier.width(58.dp))
         }
     }
 }

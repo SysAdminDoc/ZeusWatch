@@ -413,13 +413,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 
 
 
-- [ ] P2 — Color-blind-safe palette verification · accessibility · extends NX-18
-  Why: Yr (Norwegian Met Office app) demonstrates that color-blind-safe weather palettes build user trust. ZeusWatch uses color as a primary information channel in AQI gauge, UV index bar, pollen bars, precipitation intensity, alert severity banners, driving condition severity, dew point comfort, and temperature graph. None have been verified for deuteranopia (red-green, 8% of males) or protanopia. European Accessibility Act enforcement (June 2025) includes color-as-sole-channel as a compliance requirement.
-  Evidence: Yr accessibility design documentation; WCAG 2.2 criterion 1.4.1 (Use of Color); EAA enforcement date June 28, 2025; EN 301 549 requirements; 8% male deuteranopia prevalence.
-  Touches: All color-coded components in `ui/component/` — `AqiGauge.kt`, `UvIndexBar.kt`, `PollenCard.kt`, `PrecipitationChartCard.kt`, `AlertBanner.kt`, `DrivingAlertCard.kt`, `HealthAlertCard.kt`, `DewPointComfort` section in `WeatherDetailsGrid.kt`, `TemperatureGraph.kt`. Add secondary visual channel (pattern, icon, text label) where color is currently sole differentiator.
-  Acceptance: All color-coded elements pass deuteranopia and protanopia simulation (Android developer options → Simulate color space); no information is conveyed by color alone; existing visual design remains cohesive for normal-vision users.
-  Complexity: M
-
 - [ ] P2 — HKO (Hong Kong) forecast and alert adapter · **T-SOURCES**
   Why: HKO offers 48 datasets via clean JSON REST at `data.weather.gov.hk/weatherAPI/` — no key, no registration, no XML parsing. Coverage includes 9-day forecast, rainfall nowcast, UV index, tropical cyclone tracking, and earthquake data. Free for commercial and non-commercial use. Compact regional win for 7.5M residents + travellers.
   Evidence: HKO Open Data API documentation (`data.weather.gov.hk`); Provider Expansion Priority table (rank 4, P1/P2); no existing roadmap item with implementation detail.
