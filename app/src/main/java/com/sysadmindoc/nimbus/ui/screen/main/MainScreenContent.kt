@@ -648,74 +648,24 @@ private fun WeatherContent(
                 .background(bgBrush)
                 .padding(bottom = 8.dp),
         ) {
-            item(key = "toolbar") {
-                WeatherToolbar(
-                    layout = layout,
-                    data = data,
-                    airQuality = airQuality,
-                    settings = settings,
-                    actions = actions,
-                    showShareMenu = showShareMenu,
-                    onShareMenuChange = { showShareMenu = it },
-                )
-            }
-
-            if (state.isOffline) {
-                item(key = "offline_banner") {
-                    InlineNoticeCard(
-                        title = stringResource(R.string.main_offline_mode_title),
-                        message = stringResource(R.string.main_offline_mode_message),
-                        icon = Icons.Filled.CloudOff,
-                        tint = NimbusWarning,
-                        modifier = Modifier.padding(horizontal = layout.contentPadding, vertical = 4.dp),
-                    )
-                }
-            }
-
-            if (hasLocationBar) {
-                item(key = "location_bar") {
-                    LocationSelectorBar(
-                        locations = state.savedLocations,
-                        currentIndex = state.currentPage,
-                        onSelected = actions.onLocationSelected,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    )
-                }
-            }
-
-            if (hasAlertBanner) {
-                item(key = "alert_banner") {
-                    WeatherAlertSection(
-                        alerts = alerts,
-                        onAlertClick = { selectedAlert = it },
-                        bannerModifier = Modifier.padding(horizontal = layout.contentPadding, vertical = 4.dp),
-                    )
-                }
-            }
-
-            item(key = "hero") {
-                WeatherHero(
-                    data = data,
-                    state = state,
-                    settings = settings,
-                )
-            }
-
-            item(key = "updated_row") {
-                WeatherUpdatedRow(
-                    layout = layout,
+            weatherHeaderItems(
+                state = state,
+                data = data,
+                airQuality = airQuality,
+                settings = settings,
+                actions = actions,
+                layout = layout,
+                updatedState = UpdatedWeatherRowState(
                     todayPrecipChance = todayPrecipChance,
                     updatedAgeMinutes = updatedAgeMinutes,
                     updatedAgo = updatedAgo,
-                    isCached = state.isCached,
-                    sourceProvider = data.sourceProvider,
-                    usedFallback = data.usedFallback,
-                )
-            }
-
-            item(key = "pre_cards_spacer") {
-                Spacer(modifier = Modifier.height(18.dp))
-            }
+                ),
+                shareMenuState = ShareMenuState(
+                    expanded = showShareMenu,
+                    onExpandedChange = { showShareMenu = it },
+                ),
+                onAlertClick = { selectedAlert = it },
+            )
 
             weatherCardItems(
                 visibleCards = visibleCards,
@@ -736,6 +686,98 @@ private fun WeatherContent(
 
             weatherFooterItem()
         }
+    }
+}
+
+private data class UpdatedWeatherRowState(
+    val todayPrecipChance: Int,
+    val updatedAgeMinutes: Long,
+    val updatedAgo: String,
+)
+
+private data class ShareMenuState(
+    val expanded: Boolean,
+    val onExpandedChange: (Boolean) -> Unit,
+)
+
+private fun LazyListScope.weatherHeaderItems(
+    state: MainUiState,
+    data: WeatherData,
+    airQuality: AirQualityData?,
+    settings: NimbusSettings,
+    actions: MainContentActions,
+    layout: AdaptiveLayoutInfo,
+    updatedState: UpdatedWeatherRowState,
+    shareMenuState: ShareMenuState,
+    onAlertClick: (WeatherAlert) -> Unit,
+) {
+    item(key = "toolbar") {
+        WeatherToolbar(
+            layout = layout,
+            data = data,
+            airQuality = airQuality,
+            settings = settings,
+            actions = actions,
+            showShareMenu = shareMenuState.expanded,
+            onShareMenuChange = shareMenuState.onExpandedChange,
+        )
+    }
+
+    if (state.isOffline) {
+        item(key = "offline_banner") {
+            InlineNoticeCard(
+                title = stringResource(R.string.main_offline_mode_title),
+                message = stringResource(R.string.main_offline_mode_message),
+                icon = Icons.Filled.CloudOff,
+                tint = NimbusWarning,
+                modifier = Modifier.padding(horizontal = layout.contentPadding, vertical = 4.dp),
+            )
+        }
+    }
+
+    if (state.savedLocations.size > 1) {
+        item(key = "location_bar") {
+            LocationSelectorBar(
+                locations = state.savedLocations,
+                currentIndex = state.currentPage,
+                onSelected = actions.onLocationSelected,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            )
+        }
+    }
+
+    if (state.alerts.isNotEmpty()) {
+        item(key = "alert_banner") {
+            WeatherAlertSection(
+                alerts = state.alerts,
+                onAlertClick = onAlertClick,
+                bannerModifier = Modifier.padding(horizontal = layout.contentPadding, vertical = 4.dp),
+            )
+        }
+    }
+
+    item(key = "hero") {
+        WeatherHero(
+            data = data,
+            state = state,
+            settings = settings,
+        )
+    }
+
+    item(key = "updated_row") {
+        WeatherUpdatedRow(
+            layout = layout,
+            todayPrecipChance = updatedState.todayPrecipChance,
+            updatedAgeMinutes = updatedState.updatedAgeMinutes,
+            updatedAgo = updatedState.updatedAgo,
+            isCached = state.isCached,
+            sourceProvider = data.sourceProvider,
+            usedFallback = data.usedFallback,
+        )
+    }
+
+    item(key = "pre_cards_spacer") {
+        Spacer(modifier = Modifier.height(18.dp))
     }
 }
 

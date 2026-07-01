@@ -502,13 +502,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 
 ### P1
 
-- [ ] P1 — Route alert-source country detection from selected location, not device timezone
-  Why: Safety alerts can route to the device country when Geocoder fails for a remote saved location, causing wrong-source or global-only alert coverage.
-  Evidence: `RESEARCH.md`; `AlertRepository.detectCountry()` falls back to `TimeZone.getDefault()`; `MainViewModel.fetchAlerts()` and `WeatherSourceManager.getAlertsDetailed()` pass only lat/lon; NWS/CAP regional alert APIs depend on correct country routing.
-  Touches: `AlertRepository.kt`, `WeatherSourceManager.kt`, `MainViewModel.kt`, `RadarViewModel.kt`, saved-location/location models, alert repository tests.
-  Acceptance: Tests cover US-device timezone with Geocoder failure for GB/FR/JP/CA coordinates; alert routing uses saved/API country hints before device timezone and never queries NWS solely because the device timezone is US.
-  Complexity: M
-
 - [ ] P1 — Geohash-backed community report geoquery
   Why: Current Firestore report lookup limits by latitude before client-side longitude filtering, so dense same-latitude reports can hide actually nearby reports and waste reads.
   Evidence: `RESEARCH.md`; `app/src/standard/java/com/sysadmindoc/nimbus/data/repository/CommunityReportRepository.kt`; `firestore.rules`; Firebase Firestore geoquery docs recommend geohash ranges for location queries.

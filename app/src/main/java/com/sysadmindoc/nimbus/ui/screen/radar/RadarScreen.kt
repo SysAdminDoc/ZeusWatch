@@ -144,7 +144,7 @@ fun RadarScreen(
         coordinates = coordinates,
         enabled = settings.radarProvider.supportsNativePlayback,
         isOffline = isOffline,
-        loadAlertOverlays = viewModel::loadAlertOverlays,
+        loadAlertOverlays = { lat, lon, force -> viewModel.loadAlertOverlays(lat, lon, force) },
         clearAlertOverlays = viewModel::clearAlertOverlays,
     )
     RadarDisconnectOnDisposeEffect(viewModel::pausePlayback, viewModel::disconnectLightning)
@@ -235,7 +235,7 @@ fun RadarTab(
         coordinates = coordinates,
         enabled = settings.radarProvider.supportsNativePlayback,
         isOffline = isOffline,
-        loadAlertOverlays = viewModel::loadAlertOverlays,
+        loadAlertOverlays = { lat, lon, force -> viewModel.loadAlertOverlays(lat, lon, force) },
         clearAlertOverlays = viewModel::clearAlertOverlays,
     )
     RadarDisconnectOnDisposeEffect(viewModel::pausePlayback, viewModel::disconnectLightning)

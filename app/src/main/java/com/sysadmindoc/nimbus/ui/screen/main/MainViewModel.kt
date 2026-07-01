@@ -170,6 +170,7 @@ class MainViewModel @Inject constructor(
     private var activeLocationId: Long? = null
     private var activeLocationName: String? = null
     private var activeSourceOverrides: SourceOverrides = SourceOverrides()
+    private var activeCountryHint: String? = null
     private var useGpsLocation: Boolean = true
     private val weatherRequestCounter = AtomicLong(0L)
 
@@ -270,16 +271,15 @@ class MainViewModel @Inject constructor(
                 // Compute recovery action OUTSIDE _uiState.update to avoid
                 // side effects in the CAS-retryable lambda.
                 val fallback = locations.firstOrNull { it.isCurrentLocation } ?: locations.firstOrNull()
+                val fallbackLocation = fallback?.takeUnless { it.isCurrentLocation }
                 val trackedLocationMissing = activeLocationId != null && locations.none { it.id == activeLocationId }
 
                 if (trackedLocationMissing) {
                     useGpsLocation = fallback?.isCurrentLocation != false
-                    activeLocationId = fallback?.takeUnless { it.isCurrentLocation }?.id
-                    activeLocationName = fallback?.takeUnless { it.isCurrentLocation }?.name
-                    activeSourceOverrides = fallback
-                        ?.takeUnless { it.isCurrentLocation }
-                        ?.sourceOverrides()
-                        ?: SourceOverrides()
+                    activeLocationId = fallbackLocation?.id
+                    activeLocationName = fallbackLocation?.name
+                    activeCountryHint = fallbackLocation.countryHint()
+                    activeSourceOverrides = fallbackLocation?.sourceOverrides() ?: SourceOverrides()
                 }
 
                 _uiState.update { state ->
@@ -301,6 +301,7 @@ class MainViewModel @Inject constructor(
                             recoveryLocation.latitude, recoveryLocation.longitude,
                             recoveryLocation.id, recoveryLocation.name,
                             sourceOverrides = recoveryLocation.sourceOverrides(),
+                            countryHint = recoveryLocation.countryHint(),
                         )
                         useGpsLocation -> loadWeather(clearDisplayedWeather = true)
                     }
@@ -339,12 +340,14 @@ class MainViewModel @Inject constructor(
             activeLocationId = null
             activeLocationName = null
             activeSourceOverrides = SourceOverrides()
+            activeCountryHint = null
             useGpsLocation = true
             loadWeather(clearDisplayedWeather = true)
         } else {
             activeLocationId = loc.id
             activeLocationName = loc.name
             activeSourceOverrides = loc.sourceOverrides()
+            activeCountryHint = loc.countryHint()
             useGpsLocation = false
             loadWeatherForCoords(
                 loc.latitude,
@@ -352,6 +355,7 @@ class MainViewModel @Inject constructor(
                 loc.id,
                 loc.name,
                 sourceOverrides = loc.sourceOverrides(),
+                countryHint = loc.countryHint(),
             )
         }
     }
@@ -372,6 +376,7 @@ class MainViewModel @Inject constructor(
                 activeLocationId = null
                 activeLocationName = null
                 activeSourceOverrides = SourceOverrides()
+                activeCountryHint = null
 
                 beginWeatherLoad(clearDisplayedWeather)
 
@@ -441,6 +446,7 @@ class MainViewModel @Inject constructor(
         locationId: Long? = activeLocationId,
         locationName: String? = activeLocationName,
         sourceOverrides: SourceOverrides = activeSourceOverrides,
+        countryHint: String? = activeCountryHint,
         requestId: Long = nextWeatherRequestId(),
     ) {
         val clearDisplayedWeather = shouldClearDisplayedWeatherFor(lat, lon)
@@ -450,8 +456,9 @@ class MainViewModel @Inject constructor(
             activeLocationId = locationId
             activeLocationName = locationName
             activeSourceOverrides = sourceOverrides
+            activeCountryHint = countryHint
             beginWeatherLoad(clearDisplayedWeather)
-            fetchWeather(lat, lon, locationName, sourceOverrides, requestId)
+            fetchWeather(lat, lon, locationName, sourceOverrides, countryHint, requestId)
         }
     }
 
@@ -460,6 +467,7 @@ class MainViewModel @Inject constructor(
         lon: Double,
         locationName: String? = activeLocationName,
         sourceOverrides: SourceOverrides = activeSourceOverrides,
+        countryHint: String? = activeCountryHint,
         requestId: Long,
     ) {
         try {
@@ -496,6 +504,8 @@ class MainViewModel @Inject constructor(
                         }
                     }
                     if (!isLatestWeatherRequest(requestId)) return@fold
+                    val alertCountryHint = countryHint ?: data.location.country.ifBlank { null }
+                    activeCountryHint = alertCountryHint
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -513,36 +523,7 @@ class MainViewModel @Inject constructor(
                     } catch (e: Exception) {
                         Log.w(TAG, "Wallpaper weather publish failed", e)
                     }
-                    // Run independent sub-fetches in parallel
-                    coroutineScope {
-                        launch { fetchAlerts(lat, lon, requestId, sourceOverrides) }
-                        launch { fetchAirQuality(lat, lon, requestId) }
-                        launch { fetchOnThisDay(lat, lon, data.current.observationTime?.toLocalDate(), requestId) }
-                        launch { fetchAstronomy(data, lat, lon, requestId) }
-                        launch { fetchRadarPreview(lat, lon, requestId) }
-                        launch { fetchNowcast(lat, lon, requestId) }
-                        if (_uiState.value.settings.isCardEnabled(CardType.FORECAST_EVOLUTION)) {
-                            launch { fetchForecastEvolution(lat, lon, requestId) }
-                        }
-                        if (_uiState.value.settings.isCardEnabled(CardType.AURORA_KP)) {
-                            launch { fetchAuroraKp(requestId) }
-                        }
-                        if (_uiState.value.settings.isCardEnabled(CardType.MARINE)) {
-                            launch { fetchMarine(lat, lon, requestId) }
-                        }
-                        if (_uiState.value.settings.isCardEnabled(CardType.FLOOD_RISK)) {
-                            launch { fetchFlood(lat, lon, requestId) }
-                        }
-                        if (_uiState.value.settings.showForecastAccuracy) {
-                            launch { fetchForecastAccuracy(lat, lon, requestId) }
-                        }
-                        if (_uiState.value.settings.showConfidenceBands) {
-                            launch { fetchConfidenceBands(lat, lon, requestId) }
-                        }
-                        if (_uiState.value.settings.isCardEnabled(CardType.CLIMATE_OUTLOOK)) {
-                            launch { fetchClimateOutlook(lat, lon, requestId) }
-                        }
-                    }
+                    fetchSupplementalWeatherData(lat, lon, requestId, sourceOverrides, alertCountryHint, data)
                     if (!isLatestWeatherRequest(requestId)) return@fold
                     // Sync to watch after all data is available
                     try {
@@ -594,14 +575,59 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    private suspend fun fetchSupplementalWeatherData(
+        lat: Double,
+        lon: Double,
+        requestId: Long,
+        sourceOverrides: SourceOverrides,
+        alertCountryHint: String?,
+        data: WeatherData,
+    ) {
+        coroutineScope {
+            launch { fetchAlerts(lat, lon, requestId, sourceOverrides, alertCountryHint) }
+            launch { fetchAirQuality(lat, lon, requestId) }
+            launch { fetchOnThisDay(lat, lon, data.current.observationTime?.toLocalDate(), requestId) }
+            launch { fetchAstronomy(data, lat, lon, requestId) }
+            launch { fetchRadarPreview(lat, lon, requestId) }
+            launch { fetchNowcast(lat, lon, requestId) }
+            if (_uiState.value.settings.isCardEnabled(CardType.FORECAST_EVOLUTION)) {
+                launch { fetchForecastEvolution(lat, lon, requestId) }
+            }
+            if (_uiState.value.settings.isCardEnabled(CardType.AURORA_KP)) {
+                launch { fetchAuroraKp(requestId) }
+            }
+            if (_uiState.value.settings.isCardEnabled(CardType.MARINE)) {
+                launch { fetchMarine(lat, lon, requestId) }
+            }
+            if (_uiState.value.settings.isCardEnabled(CardType.FLOOD_RISK)) {
+                launch { fetchFlood(lat, lon, requestId) }
+            }
+            if (_uiState.value.settings.showForecastAccuracy) {
+                launch { fetchForecastAccuracy(lat, lon, requestId) }
+            }
+            if (_uiState.value.settings.showConfidenceBands) {
+                launch { fetchConfidenceBands(lat, lon, requestId) }
+            }
+            if (_uiState.value.settings.isCardEnabled(CardType.CLIMATE_OUTLOOK)) {
+                launch { fetchClimateOutlook(lat, lon, requestId) }
+            }
+        }
+    }
+
     private suspend fun fetchAlerts(
         lat: Double,
         lon: Double,
         requestId: Long,
         sourceOverrides: SourceOverrides,
+        countryHint: String?,
     ) {
         try {
-            weatherSourceManager.getAlerts(lat, lon, sourceOverrides).fold(
+            weatherSourceManager.getAlerts(
+                lat,
+                lon,
+                sourceOverrides,
+                countryHint = countryHint,
+            ).fold(
                 onSuccess = {
                     if (isLatestWeatherRequest(requestId)) {
                         _uiState.update { s ->
@@ -1137,12 +1163,14 @@ class MainViewModel @Inject constructor(
             // out-id this refresh once the coroutine actually runs.
             val requestId = nextWeatherRequestId()
             val sourceOverrides = activeSourceOverrides
+            val countryHint = activeCountryHint
             viewModelScope.launch {
                 fetchWeather(
                     lat = lat,
                     lon = lon,
                     locationName = activeLocationName,
                     sourceOverrides = sourceOverrides,
+                    countryHint = countryHint,
                     requestId = requestId,
                 )
             }
@@ -1168,10 +1196,12 @@ class MainViewModel @Inject constructor(
             useGpsLocation = false
             activeLocationId = null
             activeSourceOverrides = SourceOverrides()
+            activeCountryHint = null
             loadWeatherForCoords(
                 lastLoc.latitude, lastLoc.longitude,
                 locationId = null, locationName = lastLoc.name,
                 sourceOverrides = SourceOverrides(),
+                countryHint = null,
                 requestId = requestId,
             )
         }
@@ -1198,6 +1228,7 @@ class MainViewModel @Inject constructor(
                         activeLocationId = null
                         activeLocationName = null
                         activeSourceOverrides = SourceOverrides()
+                        activeCountryHint = null
                         useGpsLocation = true
                         loadWeather(clearDisplayedWeather = true, requestId = requestId)
                     } else {
@@ -1207,6 +1238,7 @@ class MainViewModel @Inject constructor(
                             loc.id,
                             loc.name,
                             sourceOverrides = loc.sourceOverrides(),
+                            countryHint = loc.countryHint(),
                             requestId = requestId,
                         )
                     }
@@ -1214,6 +1246,7 @@ class MainViewModel @Inject constructor(
                     activeLocationId = null
                     activeLocationName = null
                     activeSourceOverrides = SourceOverrides()
+                    activeCountryHint = null
                     useGpsLocation = true
                     loadWeather(clearDisplayedWeather = true, requestId = requestId)
                 }
@@ -1271,6 +1304,8 @@ class MainViewModel @Inject constructor(
     private fun sameCoordinate(first: Double, second: Double, tolerance: Double = 0.0001): Boolean =
         abs(first - second) <= tolerance
 }
+
+private fun SavedLocationEntity?.countryHint(): String? = this?.country?.ifBlank { null }
 
 @Stable
 data class MainUiState(

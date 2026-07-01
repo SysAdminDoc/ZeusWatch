@@ -279,43 +279,12 @@ private fun LocationsList(
             )
         }
 
-        // Search results (shown when query active)
-        if (search.query.length >= 2) {
-            if (visibleSearchResults.isNotEmpty()) {
-                item {
-                    Text(
-                        stringResource(R.string.locations_search_results),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = NimbusTextTertiary,
-                        modifier = Modifier.padding(vertical = 4.dp),
-                    )
-                }
-                items(visibleSearchResults, key = { it.id }) { result ->
-                    SearchResultItem(
-                        result = result,
-                        onAdd = { onAddLocation(result) },
-                    )
-                }
-                item { Spacer(modifier = Modifier.height(12.dp)) }
-            } else if (searchEmptyMessage != null) {
-                item {
-                    LocationsCalloutCard(
-                        title = when {
-                            search.errorRes != null -> stringResource(R.string.locations_search_unavailable)
-                            search.results.isNotEmpty() -> stringResource(R.string.locations_already_saved_title)
-                            else -> stringResource(R.string.locations_no_matches_title)
-                        },
-                        message = searchEmptyMessage,
-                        icon = when {
-                            search.errorRes != null -> Icons.Filled.Close
-                            else -> Icons.Filled.Search
-                        },
-                        tint = if (search.errorRes != null) NimbusError else NimbusBlueAccent,
-                        modifier = Modifier.padding(vertical = 8.dp),
-                    )
-                }
-            }
-        }
+        locationSearchResultItems(
+            search = search,
+            visibleSearchResults = visibleSearchResults,
+            searchEmptyMessage = searchEmptyMessage,
+            onAddLocation = onAddLocation,
+        )
 
         // Saved locations
         if (saved.isNotEmpty()) {
@@ -654,6 +623,50 @@ private fun CurrentLocationQuickAction(
                 color = NimbusTextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+private fun LazyListScope.locationSearchResultItems(
+    search: SearchState,
+    visibleSearchResults: List<GeocodingResult>,
+    searchEmptyMessage: String?,
+    onAddLocation: (GeocodingResult) -> Unit,
+) {
+    if (search.query.length < 2) return
+
+    if (visibleSearchResults.isNotEmpty()) {
+        item {
+            Text(
+                stringResource(R.string.locations_search_results),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = NimbusTextTertiary,
+                modifier = Modifier.padding(vertical = 4.dp),
+            )
+        }
+        items(visibleSearchResults, key = { it.id }) { result ->
+            SearchResultItem(
+                result = result,
+                onAdd = { onAddLocation(result) },
+            )
+        }
+        item { Spacer(modifier = Modifier.height(12.dp)) }
+    } else if (searchEmptyMessage != null) {
+        item {
+            LocationsCalloutCard(
+                title = when {
+                    search.errorRes != null -> stringResource(R.string.locations_search_unavailable)
+                    search.results.isNotEmpty() -> stringResource(R.string.locations_already_saved_title)
+                    else -> stringResource(R.string.locations_no_matches_title)
+                },
+                message = searchEmptyMessage,
+                icon = when {
+                    search.errorRes != null -> Icons.Filled.Close
+                    else -> Icons.Filled.Search
+                },
+                tint = if (search.errorRes != null) NimbusError else NimbusBlueAccent,
+                modifier = Modifier.padding(vertical = 8.dp),
             )
         }
     }

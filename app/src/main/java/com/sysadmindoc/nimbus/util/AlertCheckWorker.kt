@@ -65,6 +65,7 @@ class AlertCheckWorker @AssistedInject constructor(
                         latitude = it.latitude,
                         longitude = it.longitude,
                         name = it.name,
+                        countryHint = it.country.ifBlank { null },
                         sourceOverrides = it.sourceOverrides(),
                     )
                 }
@@ -95,6 +96,7 @@ class AlertCheckWorker @AssistedInject constructor(
                 location.longitude,
                 location.sourceOverrides,
                 includeMeteredSources = false,
+                countryHint = location.countryHint,
             )
             val alerts = result.alerts
 
@@ -205,6 +207,7 @@ internal data class AlertCheckLocation(
     val latitude: Double,
     val longitude: Double,
     val name: String,
+    val countryHint: String? = null,
     val sourceOverrides: SourceOverrides = SourceOverrides(),
 )
 

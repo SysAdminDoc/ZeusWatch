@@ -9,6 +9,7 @@ import com.sysadmindoc.nimbus.data.model.CommunityReport
 import com.sysadmindoc.nimbus.data.model.ReportCondition
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.repository.CommunityReportSource
+import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.RadarFrameSet
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.RadarProvider
@@ -45,6 +46,7 @@ class RadarViewModel @Inject constructor(
     private val blitzortungService: BlitzortungService,
     private val communityReportRepository: CommunityReportSource,
     private val weatherSourceManager: WeatherSourceManager,
+    private val locationRepository: LocationRepository,
     connectivityObserver: ConnectivityObserver,
 ) : ViewModel() {
 
@@ -244,7 +246,7 @@ class RadarViewModel @Inject constructor(
     }
 
     /** Load active alert polygons for the native radar map. */
-    fun loadAlertOverlays(lat: Double, lon: Double, force: Boolean = false) {
+    fun loadAlertOverlays(lat: Double, lon: Double, force: Boolean = false, countryHint: String? = null) {
         if (lat == 0.0 && lon == 0.0) return
         val locationKey = alertOverlayLocationKey(lat, lon)
         if (!force && locationKey == lastAlertOverlayLoadKey && alertOverlayLoadJob?.isActive != true) {
@@ -256,10 +258,12 @@ class RadarViewModel @Inject constructor(
         alertOverlayLoadJob = viewModelScope.launch {
             val thisJob = coroutineContext[Job]
             try {
+                val resolvedCountryHint = countryHint ?: savedLocationCountryHint(lat, lon)
                 val result = weatherSourceManager.getAlertsDetailed(
                     latitude = lat,
                     longitude = lon,
                     includeMeteredSources = false,
+                    countryHint = resolvedCountryHint,
                 )
                 val polygonAlerts = result.alerts.filter { alert ->
                     alert.geometry != null && !alert.isExpiredAt(Instant.now())
@@ -287,6 +291,20 @@ class RadarViewModel @Inject constructor(
                     alertOverlayLoadJob = null
                 }
             }
+        }
+    }
+
+    private suspend fun savedLocationCountryHint(lat: Double, lon: Double): String? {
+        return try {
+            locationRepository.getAll()
+                .firstOrNull { location ->
+                    alertOverlayLocationKey(location.latitude, location.longitude) == alertOverlayLocationKey(lat, lon)
+                }
+                ?.country
+                ?.ifBlank { null }
+        } catch (e: Exception) {
+            Log.w("RadarViewModel", "Saved location country hint unavailable: ${e.safeLogMessage()}")
+            null
         }
     }
 

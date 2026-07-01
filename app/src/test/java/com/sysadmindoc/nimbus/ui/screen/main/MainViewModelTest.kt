@@ -128,7 +128,9 @@ class MainViewModelTest {
         every { locationRepository.savedLocations } returns savedLocationsFlow
         coEvery { alertRepository.getAlerts(any(), any()) } coAnswers { Result.success(emptyList()) }
         coEvery { airQualityRepository.getAirQuality(any(), any()) } coAnswers { Result.success(testAirQuality) }
-        coEvery { weatherSourceManager.getAlerts(any(), any()) } coAnswers { Result.success(emptyList()) }
+        coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any(), any()) } coAnswers {
+            Result.success(emptyList())
+        }
         coEvery { weatherSourceManager.getAirQuality(any(), any()) } coAnswers { Result.success(testAirQuality) }
         coEvery { weatherSourceManager.getMinutelyPrecipitation(any(), any()) } coAnswers { Result.success(emptyList()) }
         every { airQualityRepository.getAstronomy(any(), any(), any(), any(), any(), any()) } returns testAstronomy
@@ -504,7 +506,7 @@ class MainViewModelTest {
     fun `failed location change clears previous location scoped state`() = runTest {
         stubLocationSuccess()
         savedLocationsFlow.value = listOf(seattle)
-        coEvery { weatherSourceManager.getAlerts(any(), any()) } returns Result.success(
+        coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any(), any()) } returns Result.success(
             listOf(
                 WeatherAlert(
                     id = "alert-1",

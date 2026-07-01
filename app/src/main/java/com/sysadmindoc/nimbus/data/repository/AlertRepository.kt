@@ -55,6 +55,29 @@ class AlertRepository @Inject constructor(
 ) {
     companion object {
         private const val TAG = "AlertRepository"
+
+        private val COUNTRY_NAME_ALIASES = mapOf(
+            "britain" to "GB",
+            "england" to "GB",
+            "great britain" to "GB",
+            "northern ireland" to "GB",
+            "scotland" to "GB",
+            "uk" to "GB",
+            "united kingdom" to "GB",
+            "wales" to "GB",
+            "us" to "US",
+            "usa" to "US",
+            "united states" to "US",
+            "united states of america" to "US",
+            "america" to "US",
+            "czech republic" to "CZ",
+            "czechia" to "CZ",
+            "korea" to "KR",
+            "republic of korea" to "KR",
+            "south korea" to "KR",
+            "turkey" to "TR",
+            "turkiye" to "TR",
+        )
     }
 
     /**
@@ -66,18 +89,19 @@ class AlertRepository @Inject constructor(
      * 4. Sort by severity then urgency.
      */
     suspend fun getAlerts(latitude: Double, longitude: Double): Result<List<WeatherAlert>> =
-        getAlerts(latitude, longitude, preferenceOverride = null)
+        getAlerts(latitude, longitude, preferenceOverride = null, countryHint = null)
 
     suspend fun getAlerts(
         latitude: Double,
         longitude: Double,
         preferenceOverride: AlertSourcePreference? = null,
         includeMeteredSources: Boolean = true,
+        countryHint: String? = null,
     ): Result<List<WeatherAlert>> =
         withContext(Dispatchers.IO) {
             try {
                 val outcomes = collectOutcomes(
-                    latitude, longitude, preferenceOverride, includeMeteredSources,
+                    latitude, longitude, preferenceOverride, includeMeteredSources, countryHint,
                 )
                 Result.success(mergeAlerts(outcomes))
             } catch (e: Exception) {
@@ -101,11 +125,12 @@ class AlertRepository @Inject constructor(
         longitude: Double,
         preferenceOverride: AlertSourcePreference? = null,
         includeMeteredSources: Boolean = true,
+        countryHint: String? = null,
     ): AlertFetchResult =
         withContext(Dispatchers.IO) {
             try {
                 val outcomes = collectOutcomes(
-                    latitude, longitude, preferenceOverride, includeMeteredSources,
+                    latitude, longitude, preferenceOverride, includeMeteredSources, countryHint,
                 )
                 val attempted = outcomes.count { it.attempted }
                 val failedSources = outcomes.filter { it.failed }.map { it.sourceId }
@@ -138,10 +163,11 @@ class AlertRepository @Inject constructor(
         longitude: Double,
         preferenceOverride: AlertSourcePreference?,
         includeMeteredSources: Boolean,
+        countryHint: String?,
     ): List<AdapterOutcome> {
         val settings = prefs.settings.first()
         val pref = preferenceOverride ?: settings.alertSourcePref
-        val countryCode = detectCountry(latitude, longitude)
+        val countryCode = normalizeCountryHint(countryHint) ?: detectCountry(latitude, longitude)
 
         Log.d(TAG, "Detected country: $countryCode, alertSourcePref: $pref")
 
@@ -280,6 +306,30 @@ class AlertRepository @Inject constructor(
      * Detect ISO 3166-1 alpha-2 country code from coordinates using Android's Geocoder.
      * Returns null if geocoding is unavailable or fails.
      */
+    private fun normalizeCountryHint(countryHint: String?): String? {
+        val trimmed = countryHint?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        val alphaOnly = trimmed.filter { it.isLetter() }
+        if (alphaOnly.length == 2) {
+            return alphaOnly.uppercase(Locale.ROOT)
+        }
+        return countryNameToCode(trimmed)
+    }
+
+    private fun countryNameToCode(countryName: String): String? {
+        val normalized = normalizeCountryName(countryName)
+        COUNTRY_NAME_ALIASES[normalized]?.let { return it }
+        return Locale.getISOCountries().firstOrNull { code ->
+            val displayCountry = Locale.Builder().setRegion(code).build().getDisplayCountry(Locale.US)
+            normalizeCountryName(displayCountry) == normalized
+        }
+    }
+
+    private fun normalizeCountryName(value: String): String =
+        value.lowercase(Locale.US)
+            .replace("&", "and")
+            .replace(Regex("[^a-z0-9]+"), " ")
+            .trim()
+
     private suspend fun detectCountry(lat: Double, lon: Double): String? {
         return withContext(Dispatchers.IO) {
             try {
