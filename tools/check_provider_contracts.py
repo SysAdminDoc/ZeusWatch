@@ -36,6 +36,8 @@ COPENHAGEN_LATITUDE = "55.6761"
 COPENHAGEN_LONGITUDE = "12.5683"
 OTTAWA_LATITUDE = "45.4215"
 OTTAWA_LONGITUDE = "-75.6972"
+HONG_KONG_LATITUDE = "22.3027"
+HONG_KONG_LONGITUDE = "114.1772"
 
 JsonMap = dict[str, Any]
 Transport = Callable[[Request, float], tuple[int, dict[str, str], bytes]]
@@ -371,6 +373,28 @@ def provider_checks() -> list[ContractCheck]:
             response_format="text",
         ),
         ContractCheck(
+            key="hko-forecast",
+            name="Hong Kong Observatory 9-day forecast",
+            url="https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=en",
+            docs_url="https://www.hko.gov.hk/en/weatherAPI/doc/files/HKO_Open_Data_API_Documentation.pdf",
+            validator=validate_hko_forecast,
+            providers=("HKO",),
+            data_types=("FORECAST",),
+            coverage=f"Hong Kong ({HONG_KONG_LATITUDE},{HONG_KONG_LONGITUDE})",
+            schema_assertion="weatherForecast list with forecastDate, temperature, icon, and PSR fields",
+        ),
+        ContractCheck(
+            key="hko-warning-info",
+            name="Hong Kong Observatory warning information",
+            url="https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warningInfo&lang=en",
+            docs_url="https://www.hko.gov.hk/en/weatherAPI/doc/files/HKO_Open_Data_API_Documentation.pdf",
+            validator=validate_hko_warning_info,
+            providers=("HKO",),
+            data_types=("ALERTS",),
+            coverage=f"Hong Kong ({HONG_KONG_LATITUDE},{HONG_KONG_LONGITUDE})",
+            schema_assertion="empty no-alert object or details list with warningStatementCode/content entries",
+        ),
+        ContractCheck(
             key="meteoalarm-germany",
             name="MeteoAlarm Germany warnings",
             url="https://feeds.meteoalarm.org/api/v1/warnings/feeds-germany",
@@ -607,6 +631,50 @@ def validate_eccc_cap_index(data: Any) -> ValidationResult:
     if ".cap" not in data and "LAND/" not in data and "WATR/" not in data:
         return ValidationResult(False, "CAP index has no alert files or LAND/WATR directories")
     return ValidationResult(True, "current-day ECCC CAP index reachable")
+
+
+def validate_hko_forecast(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    forecasts = data.get("weatherForecast")
+    if not isinstance(forecasts, list) or not forecasts:
+        return ValidationResult(False, "weatherForecast must contain 9-day entries")
+    first = forecasts[0]
+    if not isinstance(first, dict):
+        return ValidationResult(False, "weatherForecast entries must be objects")
+    errors: list[str] = []
+    if not _non_empty_string(first.get("forecastDate")):
+        errors.append("forecastDate missing")
+    if not isinstance(first.get("forecastMaxtemp"), dict):
+        errors.append("forecastMaxtemp missing")
+    if not isinstance(first.get("forecastMintemp"), dict):
+        errors.append("forecastMintemp missing")
+    if not isinstance(first.get("ForecastIcon"), int):
+        errors.append("ForecastIcon missing")
+    if not _non_empty_string(first.get("PSR")):
+        errors.append("PSR missing")
+    if errors:
+        return ValidationResult(False, "; ".join(errors))
+    return ValidationResult(True, f"{len(forecasts)} HKO forecast days")
+
+
+def validate_hko_warning_info(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    details = data.get("details")
+    if details is None:
+        return ValidationResult(True, "no active HKO warnings")
+    if not isinstance(details, list):
+        return ValidationResult(False, "details must be a list when present")
+    if details:
+        first = details[0]
+        if not isinstance(first, dict):
+            return ValidationResult(False, "warning details must be objects")
+        if not _non_empty_string(first.get("warningStatementCode")):
+            return ValidationResult(False, "warningStatementCode missing")
+        if not isinstance(first.get("contents"), list):
+            return ValidationResult(False, "contents list missing")
+    return ValidationResult(True, f"{len(details)} HKO warning detail entries")
 
 
 def validate_meteoalarm_warnings(data: Any) -> ValidationResult:

@@ -69,6 +69,10 @@ enum class WeatherSourceProvider(
         displayName = "Environment Canada",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.ALERTS),
     ),
+    HKO(
+        displayName = "Hong Kong Observatory",
+        supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.ALERTS),
+    ),
     METEOALARM(
         displayName = "MeteoAlarm (EUMETNET)",
         supportedTypes = setOf(WeatherDataType.ALERTS),

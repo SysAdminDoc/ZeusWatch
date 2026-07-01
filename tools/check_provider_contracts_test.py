@@ -96,6 +96,34 @@ class ProviderContractTests(unittest.TestCase):
                 "<h1>Index of /today/alerts/cap/20260701</h1><a href=\"LAND/\">LAND/</a>"
             ).ok
         )
+        self.assertTrue(
+            contracts.validate_hko_forecast(
+                {
+                    "weatherForecast": [
+                        {
+                            "forecastDate": "20260702",
+                            "forecastMaxtemp": {"value": 33, "unit": "C"},
+                            "forecastMintemp": {"value": 28, "unit": "C"},
+                            "ForecastIcon": 62,
+                            "PSR": "Medium High",
+                        }
+                    ]
+                }
+            ).ok
+        )
+        self.assertTrue(contracts.validate_hko_warning_info({}).ok)
+        self.assertTrue(
+            contracts.validate_hko_warning_info(
+                {
+                    "details": [
+                        {
+                            "warningStatementCode": "WRAIN",
+                            "contents": ["Rainstorm warning is in force."],
+                        }
+                    ]
+                }
+            ).ok
+        )
         self.assertTrue(contracts.validate_meteoalarm_warnings({"warnings": [{"alert": {"info": []}}]}).ok)
         self.assertTrue(contracts.validate_jma_atom_feed("<feed><title>JMA</title><link href=\"x\" /></feed>").ok)
         self.assertTrue(
