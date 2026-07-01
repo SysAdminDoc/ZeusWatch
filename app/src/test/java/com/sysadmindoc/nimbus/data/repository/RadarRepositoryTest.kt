@@ -70,6 +70,15 @@ class RadarRepositoryTest {
         assertEquals("https://tiles.example.com/v2/radar/100/512/{z}/{x}/{y}/2/1_1.png", tileUrl)
     }
 
+    @Test
+    fun `RainViewer public policy documents degraded tile tier`() {
+        assertEquals(7, RainViewerApi.MAX_TILE_ZOOM)
+        assertEquals(2, RainViewerApi.UNIVERSAL_BLUE_COLOR_SCHEME)
+        assertEquals("png", RainViewerApi.PUBLIC_TILE_FORMAT)
+        assertFalse(RainViewerApi.SUPPORTS_PUBLIC_NOWCAST_TILES)
+        assertFalse(RainViewerApi.SUPPORTS_PUBLIC_SATELLITE_TILES)
+    }
+
     private class FakeRainViewerApi(
         private val response: RainViewerResponse,
     ) : RainViewerApi {

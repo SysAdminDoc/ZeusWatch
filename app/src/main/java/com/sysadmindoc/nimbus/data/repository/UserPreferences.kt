@@ -652,7 +652,7 @@ enum class RadarProvider(
     ),
     NATIVE_MAPLIBRE(
         label = "RainViewer Native",
-        summary = "Animated RainViewer frames with ZeusWatch playback, lightning, and overlays.",
+        summary = "Past-only RainViewer playback with max zoom 7, Universal Blue tiles, lightning, and overlays.",
         supportsNativePlayback = true,
     ),
     NWS_WEBVIEW(

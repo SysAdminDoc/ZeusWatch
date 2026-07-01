@@ -458,7 +458,7 @@ private fun BoxScope.RadarNativeContent(
 @Composable
 private fun RadarAttribution(modifier: Modifier = Modifier) {
     Text(
-        text = "Radar: RainViewer",
+        text = stringResource(R.string.radar_attribution_rainviewer_limited),
         color = NimbusTextPrimary.copy(alpha = 0.5f),
         fontSize = 9.sp,
         modifier = modifier.padding(start = 8.dp, bottom = 4.dp),
