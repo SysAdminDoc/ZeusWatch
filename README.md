@@ -54,11 +54,14 @@ FB:03:10:AA:52:0F:6C:C6:EB:DA:04:61:71:9E:A9:22:40:EA:2B:4A:A1:D0:15:79:A9:D1:8A
 For every release, verify the checksum file and APK signatures locally:
 
 ```bash
+cat ZeusWatch-vX.Y.Z-provenance.json
 sha256sum -c SHA256SUMS.txt
 apksigner verify --verbose --print-certs ZeusWatch-standard-arm64-v8a-vX.Y.Z.apk
 apksigner verify --verbose --print-certs ZeusWatch-freenet-arm64-v8a-vX.Y.Z.apk
 apksigner verify --verbose --print-certs ZeusWatch-wear-vX.Y.Z.apk
 ```
+
+The provenance JSON records the source commit, clean-tree state, toolchain versions, APK hashes, signing certificate SHA-256, and local verification commands used for the release.
 
 ---
 
@@ -481,6 +484,9 @@ Third-party icon packs are discoverable via:
 
 # Public provider contract checks — live or cached schema/availability smoke
 py -3 tools/check_provider_contracts.py
+
+# Release provenance manifest — after signed APKs and SHA256SUMS.txt exist
+py -3 tools/generate_release_provenance.py
 
 # Instrumented Compose UI tests — screen rendering, interactions
 ./gradlew connectedStandardDebugAndroidTest

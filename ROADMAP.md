@@ -513,13 +513,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 
 ## Research-Driven Additions
 
-- [ ] P1 - Local release provenance manifest
-  Why: Releases are now built and uploaded locally, so users need a machine-readable asset tying APK hashes, signing certificate, source commit, clean-tree state, toolchain versions, and verification commands to each release.
-  Evidence: `RESEARCH.md`; `docs/RELEASE.md`; README download verification currently covers `SHA256SUMS.txt` and APK signatures but not source/build provenance.
-  Touches: new release helper under `tools/`, `docs/RELEASE.md`, README verification section, release checklist.
-  Acceptance: Local release command emits `ZeusWatch-vX.Y.Z-provenance.json` beside `SHA256SUMS.txt`; it records commit SHA, dirty-tree false, Gradle/JDK/Android SDK versions, APK file names, SHA-256 hashes, signing cert SHA-256, and commands run; upload checklist requires both files.
-  Complexity: S
-
 ### P2
 
 - [ ] P2 - WFF-equivalent Wear complication parity tests
