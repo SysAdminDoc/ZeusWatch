@@ -20,6 +20,7 @@ class WeatherSourceManagerTest {
     private lateinit var openMeteoBomAdapter: OpenMeteoBomForecastAdapter
     private lateinit var openMeteoKmaAdapter: OpenMeteoKmaForecastAdapter
     private lateinit var openMeteoUkmoAdapter: OpenMeteoUkmoForecastAdapter
+    private lateinit var openMeteoDmiAdapter: OpenMeteoDmiForecastAdapter
     private lateinit var openMeteoMinutelyAdapter: OpenMeteoMinutelyAdapter
     private lateinit var alertAdapter: AlertSourceManagerAdapter
     private lateinit var aqiAdapter: OpenMeteoAqiAdapter
@@ -66,6 +67,7 @@ class WeatherSourceManagerTest {
         openMeteoBomAdapter = mockk()
         openMeteoKmaAdapter = mockk()
         openMeteoUkmoAdapter = mockk()
+        openMeteoDmiAdapter = mockk()
         openMeteoMinutelyAdapter = mockk()
         alertAdapter = mockk()
         aqiAdapter = mockk()
@@ -100,6 +102,9 @@ class WeatherSourceManagerTest {
         ),
         WeatherSourceProvider.OPEN_METEO_UKMO to WeatherSourceAdapterModule.provideOpenMeteoUkmoAdapter(
             openMeteoUkmoAdapter,
+        ),
+        WeatherSourceProvider.OPEN_METEO_DMI to WeatherSourceAdapterModule.provideOpenMeteoDmiAdapter(
+            openMeteoDmiAdapter,
         ),
         WeatherSourceProvider.NWS to WeatherSourceAdapterModule.provideNwsAlertAdapter(alertAdapter),
         WeatherSourceProvider.METEOALARM to WeatherSourceAdapterModule.provideMeteoAlarmAlertAdapter(alertAdapter),
@@ -176,6 +181,24 @@ class WeatherSourceManagerTest {
         assertTrue(result.isSuccess)
         coVerify(exactly = 1) {
             openMeteoBomAdapter.getWeather(-33.86, 151.21, "Sydney")
+        }
+    }
+
+    @Test
+    fun getWeatherDelegatesDmiProviderToOpenMeteoDmiAdapter() = runTest {
+        val settingsWithDmi = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                forecast = WeatherSourceProvider.OPEN_METEO_DMI,
+            )
+        )
+        every { prefs.settings } returns flowOf(settingsWithDmi)
+        coEvery { openMeteoDmiAdapter.getWeather(any(), any(), any()) } returns Result.success(testWeatherData)
+
+        val result = manager.getWeather(55.68, 12.57, "Copenhagen")
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            openMeteoDmiAdapter.getWeather(55.68, 12.57, "Copenhagen")
         }
     }
 
@@ -465,6 +488,10 @@ class WeatherSourceManagerTest {
         assertTrue(
             "Open-Meteo UKMO should be present",
             forecastProviders.contains(WeatherSourceProvider.OPEN_METEO_UKMO),
+        )
+        assertTrue(
+            "Open-Meteo DMI should be present",
+            forecastProviders.contains(WeatherSourceProvider.OPEN_METEO_DMI),
         )
         assertTrue(
             "MET Norway should be present once implemented",

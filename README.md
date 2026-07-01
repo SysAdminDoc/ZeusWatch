@@ -7,7 +7,7 @@
 ![Compose](https://img.shields.io/badge/Jetpack%20Compose-2025.04.01-4285F4?logo=jetpackcompose&logoColor=white)
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 
-> A free, open-source Android weather app with a premium dark UI, 35 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, Environment Canada, and WMO SWIC.
+> A free, open-source Android weather app with a premium dark UI, 35 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, and WMO SWIC.
 
 <img width="1536" height="1024" alt="design" src="https://github.com/user-attachments/assets/dce70ccc-af71-48d8-8000-0b2935f45996" />
 
@@ -139,10 +139,12 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | Source | Data Types | Region |
 |--------|------------|--------|
 | **Open-Meteo** | Forecast, AQI, Pollen, Minutely, Historical, Single Runs | Global |
+| **Open-Meteo Models** | BOM ACCESS-G, UK Met Office, DMI HARMONIE forecast sources | Australia, UK/North Atlantic, Northern Europe |
 | **NWS** | Alerts | United States |
 | **MeteoAlarm** | Alerts | 31 EU countries |
 | **JMA** | Alerts | Japan |
-| **Environment Canada** | Alerts | Canada |
+| **MET Norway** | Forecast | Global |
+| **Environment Canada** | Forecast, Alerts | Canada |
 | **WMO SWIC** | Alerts | Global fallback by country |
 | **OpenWeatherMap** | Forecast (fallback) | Global (API key) |
 | **Pirate Weather** | Forecast (fallback) | Global (API key) |
@@ -296,6 +298,7 @@ All core APIs are free with no keys required:
 | API | Purpose | Rate Limit |
 |-----|---------|------------|
 | [Open-Meteo Forecast](https://open-meteo.com/) | Current, hourly (48-72h), daily (16d), minutely_15 nowcasting | 10,000/day |
+| [Open-Meteo model forecasts](https://open-meteo.com/en/docs/dmi-api) | No-key regional model forecast sources: BOM ACCESS-G, UK Met Office, DMI HARMONIE | No key required |
 | [Open-Meteo Historical](https://open-meteo.com/en/docs/historical-weather-api) | Yesterday's weather for comparison | 10,000/day |
 | [Open-Meteo Single Runs](https://open-meteo.com/en/docs/single-runs-api) | Optional forecast-evolution model-run comparison | No key required |
 | [Open-Meteo Geocoding](https://open-meteo.com/en/docs/geocoding-api) | Location search + reverse geocode | 10,000/day |
@@ -307,6 +310,8 @@ All core APIs are free with no keys required:
 | [JMA](https://www.jma.go.jp/) | Japan severe weather alerts | Fair use |
 | [Environment Canada](https://weather.gc.ca/) | Canadian severe weather alerts | Fair use |
 | [WMO SWIC](https://severeweather.wmo.int/) | Global severe weather alert fallback | Fair use |
+| [MET Norway](https://api.met.no/weatherapi/locationforecast/2.0/documentation) | Forecast fallback | Fair use |
+| [Bright Sky](https://brightsky.dev/) | Germany forecast fallback | Fair use |
 | [Blitzortung](https://www.blitzortung.org/) | Real-time lightning strike data (WebSocket) | Fair use |
 | [Firebase Firestore](https://firebase.google.com/) | Community weather reports | Free tier |
 
@@ -316,7 +321,6 @@ Optional fallback sources (require API keys configured in Settings):
 |-----|---------|
 | [OpenWeatherMap](https://openweathermap.org/api) | Forecast fallback |
 | [Pirate Weather](https://pirateweather.net/) | Forecast fallback |
-| [Bright Sky](https://brightsky.dev/) | Germany forecast fallback |
 
 OpenWeatherMap and Pirate Weather keys are stored in an encrypted DataStore backed by Tink and Android Keystore. Existing plaintext keys migrate automatically on first launch.
 
@@ -522,7 +526,7 @@ Issues and PRs welcome. Please:
 - Unit settings flow via `CompositionLocalProvider(LocalUnitSettings provides ...)`. Standalone screens (Radar, Compare) read from their ViewModel's `prefs.settings` flow.
 - Card rendering is driven by `CardType` enum + `LazyColumn items()` in the main-screen content renderer. Add new cards by extending `CardType` and adding a render branch.
 - Weather-adaptive theming reads from `LocalWeatherThemeState` CompositionLocal.
-- Multi-source forecasts use `WeatherSourceManager` with adapter pattern — add new sources by implementing `WeatherSourceAdapter`.
+- Multi-source forecasts use `WeatherSourceManager` with Hilt `WeatherSourceAdapter` map bindings — add new sources by implementing an adapter and registry binding.
 - Alert sources use `AlertSourceAdapter` interface — auto-detected by country via Geocoder.
 - Current roadmap and research notes are maintained locally in `ROADMAP.md` and
   `RESEARCH.md`. Historical research lives in `docs/research-archive.md`.
@@ -556,7 +560,7 @@ maintained locally in `RESEARCH.md`. Historical phase-1 research remains in
 - Native MapLibre animated radar with layer selector
 - Real-time lightning strike overlay (Blitzortung WebSocket)
 - Live weather wallpaper with particle effects
-- Multi-source forecast fallback (6 providers)
+- Multi-source forecast fallback (9 selectable forecast sources)
 - International alert sources (NWS, MeteoAlarm, JMA, Environment Canada)
 - Community weather reports (Firebase Firestore)
 - Tablet two-pane layout

@@ -39,6 +39,10 @@ enum class WeatherSourceProvider(
         displayName = "Open-Meteo + UK Met Office",
         supportedTypes = setOf(WeatherDataType.FORECAST),
     ),
+    OPEN_METEO_DMI(
+        displayName = "Open-Meteo + DMI HARMONIE",
+        supportedTypes = setOf(WeatherDataType.FORECAST),
+    ),
     NWS(
         displayName = "National Weather Service",
         supportedTypes = setOf(WeatherDataType.ALERTS),

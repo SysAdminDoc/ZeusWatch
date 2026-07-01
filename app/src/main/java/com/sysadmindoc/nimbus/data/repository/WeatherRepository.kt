@@ -198,6 +198,19 @@ class WeatherRepository @Inject constructor(
         },
     )
 
+    suspend fun getDmiWeatherDirect(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = getOpenMeteoWeather(
+        latitude = latitude,
+        longitude = longitude,
+        locationName = locationName,
+        fetch = { forecastHours ->
+            weatherApi.getDmiForecast(latitude, longitude, forecastHours = forecastHours)
+        },
+    )
+
     private suspend fun getOpenMeteoWeather(
         latitude: Double,
         longitude: Double,

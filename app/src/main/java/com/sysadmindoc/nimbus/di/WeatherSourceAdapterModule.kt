@@ -11,6 +11,7 @@ import com.sysadmindoc.nimbus.data.repository.ForecastSourceRequest
 import com.sysadmindoc.nimbus.data.repository.MetNorwayForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoAqiAdapter
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoBomForecastAdapter
+import com.sysadmindoc.nimbus.data.repository.OpenMeteoDmiForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoKmaForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoMinutelyAdapter
@@ -88,6 +89,15 @@ object WeatherSourceAdapterModule {
     @WeatherSourceKey(WeatherSourceProvider.OPEN_METEO_UKMO)
     fun provideOpenMeteoUkmoAdapter(adapter: OpenMeteoUkmoForecastAdapter): WeatherSourceAdapter =
         forecastOnlyAdapter(WeatherSourceProvider.OPEN_METEO_UKMO) { request ->
+            adapter.getWeather(request.latitude, request.longitude, request.locationName)
+        }
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @WeatherSourceKey(WeatherSourceProvider.OPEN_METEO_DMI)
+    fun provideOpenMeteoDmiAdapter(adapter: OpenMeteoDmiForecastAdapter): WeatherSourceAdapter =
+        forecastOnlyAdapter(WeatherSourceProvider.OPEN_METEO_DMI) { request ->
             adapter.getWeather(request.latitude, request.longitude, request.locationName)
         }
 

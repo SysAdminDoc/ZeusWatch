@@ -319,6 +319,35 @@ class WeatherRepositoryTest {
         assertEquals(12.0, data.current.dailyLow, 0.01)
     }
 
+    @Test
+    fun getDmiWeatherDirectUsesDmiSeamlessModelAndMapsHourlyOnlyResponse() = runTest {
+        coEvery {
+            weatherApi.getDmiForecast(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } returns makeHourlyOnlyBomResponse()
+
+        val result = repository.getDmiWeatherDirect(55.68, 12.57, "Copenhagen")
+
+        assertTrue(result.isSuccess)
+        val data = result.getOrThrow()
+        assertEquals("Copenhagen", data.location.name)
+        assertEquals(18.5, data.current.temperature, 0.01)
+        coVerify(exactly = 1) {
+            weatherApi.getDmiForecast(
+                55.68,
+                12.57,
+                "dmi_seamless",
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+            )
+        }
+    }
+
     // --- getCachedWeather ---
 
     @Test
