@@ -320,16 +320,20 @@ class AlertRepositoryTest {
         }
     }
 
-    private fun makeGlobalAlert(id: String = "wmo-1") = WeatherAlert(
+    private fun makeGlobalAlert(
+        id: String = "wmo-1",
+        event: String = "Severe Thunderstorm",
+        senderName: String = "WMO SWIC",
+    ) = WeatherAlert(
         id = id,
-        event = "Severe Thunderstorm",
-        headline = "Severe Thunderstorm Warning",
+        event = event,
+        headline = "$event Warning",
         description = "Severe storms expected.",
         instruction = null,
         severity = AlertSeverity.SEVERE,
         urgency = AlertUrgency.IMMEDIATE,
         certainty = "Likely",
-        senderName = "WMO SWIC",
+        senderName = senderName,
         areaDescription = "Test Region",
         effective = null,
         expires = null,
@@ -366,6 +370,29 @@ class AlertRepositoryTest {
         assertEquals(1, result.getOrThrow().size)
         assertEquals("Tornado Warning", result.getOrThrow().first().event)
         coVerify(exactly = 0) { globalAdapter.getAlerts(any(), any()) }
+    }
+
+    @Test
+    fun `AUTO queries BMKG regional adapter for Indonesia`() = runTest {
+        val idAddress = mockk<Address>()
+        every { idAddress.countryCode } returns "ID"
+        every { anyConstructed<Geocoder>().getFromLocation(any(), any(), any()) } returns listOf(idAddress)
+
+        val bmkgAlert = makeGlobalAlert(id = "bmkg-alert", event = "Thunderstorm", senderName = "BMKG")
+        val bmkgAdapter = mockk<AlertSourceAdapter>()
+        every { bmkgAdapter.sourceId } returns "bmkg"
+        every { bmkgAdapter.displayName } returns "BMKG"
+        every { bmkgAdapter.supportedRegions } returns setOf("ID")
+        every { bmkgAdapter.isMetered } returns false
+        coEvery { bmkgAdapter.getAlerts(any(), any()) } returns Result.success(listOf(bmkgAlert))
+
+        val repo = AlertRepository(context, setOf(nwsAdapter, bmkgAdapter), prefs)
+        val result = repo.getAlerts(-6.2, 106.8)
+
+        assertTrue(result.isSuccess)
+        assertEquals(listOf("bmkg-alert"), result.getOrThrow().map { it.id })
+        coVerify(exactly = 1) { bmkgAdapter.getAlerts(-6.2, 106.8) }
+        coVerify(exactly = 0) { api.getActiveAlerts(any(), any(), any()) }
     }
 
     @Test

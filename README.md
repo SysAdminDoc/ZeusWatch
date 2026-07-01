@@ -7,7 +7,7 @@
 ![Compose](https://img.shields.io/badge/Jetpack%20Compose-2025.04.01-4285F4?logo=jetpackcompose&logoColor=white)
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 
-> A free, open-source Android weather app with a premium dark UI, 35 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, route weather planning, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, LibreWXR, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, Hong Kong Observatory, and WMO SWIC.
+> A free, open-source Android weather app with a premium dark UI, 35 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, route weather planning, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, LibreWXR, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, Hong Kong Observatory, BMKG, and WMO SWIC.
 
 <img width="1536" height="1024" alt="design" src="https://github.com/user-attachments/assets/dce70ccc-af71-48d8-8000-0b2935f45996" />
 
@@ -108,8 +108,8 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 
 | Feature | Description |
 |---------|-------------|
-| **Severe Weather Alerts** | Multi-source: NWS (US), MeteoAlarm (31 EU countries), JMA (Japan), Environment Canada, Hong Kong Observatory (selectable for HK), WMO SWIC (130+ countries global fallback), Pirate Weather (with API key) |
-| **Alert Source Preference** | Configurable country routing: Auto-detect, NWS only, MeteoAlarm, JMA, Environment Canada, All sources; Data Sources can also select Hong Kong Observatory |
+| **Severe Weather Alerts** | Multi-source: NWS (US), MeteoAlarm (31 EU countries), JMA (Japan), Environment Canada, Hong Kong Observatory (selectable for HK), BMKG (Indonesia), WMO SWIC (130+ countries global fallback), Pirate Weather (with API key) |
+| **Alert Source Preference** | Configurable country routing: Auto-detect, NWS only, MeteoAlarm, JMA, Environment Canada, All sources; Data Sources can also select Hong Kong Observatory and BMKG |
 | **4 Notification Channels** | Extreme (alarm sound, bypass DND), Severe (high), Moderate (default), Minor (low) |
 | **Alert Deduplication** | Tracks seen alert IDs so the same warning is never re-notified |
 | **Multi-Location Alerts** | Monitors all saved locations by default, not just current GPS |
@@ -148,6 +148,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | **MET Norway** | Forecast | Global |
 | **Environment Canada** | Forecast, Alerts | Canada |
 | **Hong Kong Observatory** | Forecast, Alerts | Hong Kong |
+| **BMKG** | Alerts | Indonesia |
 | **WMO SWIC** | Alerts | Global fallback by country |
 | **OpenWeatherMap** | Forecast (fallback) | Global (API key) |
 | **Pirate Weather** | Forecast (fallback) | Global (API key) |
@@ -192,7 +193,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Hourly Range** | 72 hours (default) / 48 hours |
 | **Notifications** | Alert notifications, persistent weather notification (default on), nowcasting alerts with Android 16 progress timelines, driving alerts, health alerts |
 | **Alert Severity** | Extreme only / Severe+ / Moderate+ / All |
-| **Alert Source** | Auto-detect / NWS / MeteoAlarm / JMA / Environment Canada / All, plus Hong Kong Observatory through Data Sources |
+| **Alert Source** | Auto-detect / NWS / MeteoAlarm / JMA / Environment Canada / All, plus Hong Kong Observatory and BMKG through Data Sources |
 | **Data Toggles** | Snowfall, CAPE, sunshine duration, golden hour, Beaufort colors, outdoor score, yesterday comparison |
 | **Health** | Migraine alerts with configurable pressure threshold (3.0/5.0/7.0/10.0 hPa/3h) |
 | **Haptics** | Vibration feedback for weather alerts |
@@ -315,6 +316,7 @@ All core APIs are free with no keys required:
 | [JMA](https://www.jma.go.jp/) | Japan severe weather alerts | Fair use |
 | [Environment Canada](https://weather.gc.ca/) | Canadian severe weather alerts | Fair use |
 | [Hong Kong Observatory](https://www.hko.gov.hk/en/weatherAPI/doc/files/HKO_Open_Data_API_Documentation.pdf) | Hong Kong current conditions, 9-day forecast, and weather warnings | Free open data |
+| [BMKG](https://data.bmkg.go.id/peringatan-dini-cuaca/) | Indonesian CAP nowcast weather alerts | No key required |
 | [WMO SWIC](https://severeweather.wmo.int/) | Global severe weather alert fallback | Fair use |
 | [MET Norway](https://api.met.no/weatherapi/locationforecast/2.0/documentation) | Forecast fallback | Fair use |
 | [Bright Sky](https://brightsky.dev/) | Germany forecast fallback | Fair use |
@@ -571,7 +573,7 @@ maintained locally in `RESEARCH.md`. Historical phase-1 research remains in
 - Real-time lightning strike overlay (Blitzortung WebSocket)
 - Live weather wallpaper with particle effects
 - Multi-source forecast fallback (10 selectable forecast sources)
-- International alert sources (NWS, MeteoAlarm, JMA, Environment Canada, Hong Kong Observatory)
+- International alert sources (NWS, MeteoAlarm, JMA, Environment Canada, Hong Kong Observatory, BMKG)
 - Community weather reports (Firebase Firestore)
 - Tablet two-pane layout
 - 22 crash/bug fixes, Crashlytics removed
@@ -601,5 +603,5 @@ Weather data provided by [Open-Meteo.com](https://open-meteo.com/) under [CC BY 
 Radar tiles by [LibreWXR](https://librewxr.net/) or [RainViewer](https://www.rainviewer.com/).
 Interactive radar by [Windy.com](https://www.windy.com/).
 Lightning data by [Blitzortung.org](https://www.blitzortung.org/).
-Alert data by [National Weather Service](https://www.weather.gov/), [MeteoAlarm](https://www.meteoalarm.org/), [JMA](https://www.jma.go.jp/), [Environment Canada](https://weather.gc.ca/), [Hong Kong Observatory](https://www.hko.gov.hk/), and [WMO SWIC](https://severeweather.wmo.int/).
+Alert data by [National Weather Service](https://www.weather.gov/), [MeteoAlarm](https://www.meteoalarm.org/), [JMA](https://www.jma.go.jp/), [Environment Canada](https://weather.gc.ca/), [Hong Kong Observatory](https://www.hko.gov.hk/), [BMKG](https://www.bmkg.go.id/), and [WMO SWIC](https://severeweather.wmo.int/).
 Animated icons by [Meteocons](https://github.com/basmilius/weather-icons) (MIT).
