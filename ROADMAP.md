@@ -513,13 +513,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 
 ## Research-Driven Additions
 
-- [ ] P1 - Full selectable-provider contract matrix
-  Why: KMA availability drift showed that a provider can be wired and documented while the upstream model is suspended; current smoke checks cover only five endpoints, not every selectable provider/model wrapper.
-  Evidence: `RESEARCH.md`; `tools/check_provider_contracts.py`; `WeatherSourceProvider`; Open-Meteo KMA docs; `WeatherSourceManager.kt`.
-  Touches: `tools/check_provider_contracts.py`, `tools/check_provider_contracts_test.py`, `WeatherSource.kt`, provider metadata registry work in NX-20, release verification docs.
-  Acceptance: Every provider returned by `WeatherSourceProvider.forType()` has a low-rate live or cached contract check with docs URL, coverage coordinate, schema assertion, and unavailable-provider policy; release verification fails when a selectable provider has no contract entry.
-  Complexity: M
-
 - [ ] P1 - Local release provenance manifest
   Why: Releases are now built and uploaded locally, so users need a machine-readable asset tying APK hashes, signing certificate, source commit, clean-tree state, toolchain versions, and verification commands to each release.
   Evidence: `RESEARCH.md`; `docs/RELEASE.md`; README download verification currently covers `SHA256SUMS.txt` and APK signatures but not source/build provenance.

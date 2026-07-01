@@ -43,16 +43,19 @@ class MeteoAlarmAdapter @Inject constructor(
      */
     suspend fun getAlertsForCountry(countryCode: String): Result<List<WeatherAlert>> {
         return try {
-            val response = meteoAlarmApi.getWarnings(countryCode.lowercase())
+            val feedSlug = countryCode.toMeteoAlarmFeedSlug() ?: return Result.success(emptyList())
+            val response = meteoAlarmApi.getWarnings(feedSlug)
             val alerts = response.warnings.flatMap { warning ->
-                warning.info.mapNotNull { info ->
+                val alertPayload = warning.alert
+                val warningInfo = alertPayload?.info?.takeIf { it.isNotEmpty() } ?: warning.info
+                warningInfo.mapNotNull { info ->
                     val event = info.event ?: return@mapNotNull null
                     val areaDesc = info.area
                         .mapNotNull { it.areaDesc }
                         .joinToString(", ")
                         .ifEmpty { "Unknown area" }
                     WeatherAlert(
-                        id = warning.identifier ?: "${sourceId}_${event}_${info.onset}",
+                        id = alertPayload?.identifier ?: warning.identifier ?: "${sourceId}_${event}_${info.onset}",
                         event = event,
                         headline = info.headline ?: event,
                         description = info.description ?: "",
@@ -60,7 +63,7 @@ class MeteoAlarmAdapter @Inject constructor(
                         severity = AlertSeverity.from(info.severity),
                         urgency = AlertUrgency.from(info.urgency),
                         certainty = info.certainty ?: "Unknown",
-                        senderName = info.senderName ?: warning.sender ?: displayName,
+                        senderName = info.senderName ?: alertPayload?.sender ?: warning.sender ?: displayName,
                         areaDescription = areaDesc,
                         effective = info.onset,
                         expires = info.expires,
@@ -72,5 +75,43 @@ class MeteoAlarmAdapter @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private fun String.toMeteoAlarmFeedSlug(): String? = METEOALARM_FEED_SLUGS[uppercase()]
+
+    private companion object {
+        val METEOALARM_FEED_SLUGS = mapOf(
+            "AT" to "austria",
+            "BE" to "belgium",
+            "BG" to "bulgaria",
+            "HR" to "croatia",
+            "CY" to "cyprus",
+            "CZ" to "czechia",
+            "DK" to "denmark",
+            "EE" to "estonia",
+            "FI" to "finland",
+            "FR" to "france",
+            "DE" to "germany",
+            "GR" to "greece",
+            "HU" to "hungary",
+            "IE" to "ireland",
+            "IT" to "italy",
+            "LV" to "latvia",
+            "LT" to "lithuania",
+            "LU" to "luxembourg",
+            "MT" to "malta",
+            "NL" to "netherlands",
+            "NO" to "norway",
+            "PL" to "poland",
+            "PT" to "portugal",
+            "RO" to "romania",
+            "RS" to "serbia",
+            "SK" to "slovakia",
+            "SI" to "slovenia",
+            "ES" to "spain",
+            "SE" to "sweden",
+            "CH" to "switzerland",
+            "GB" to "united-kingdom",
+        )
     }
 }

@@ -71,11 +71,15 @@ interface OpenMeteoApi {
     /**
      * Open-Meteo UK Met Office (UKMO) model proxy.
      * Docs: https://open-meteo.com/en/docs/ukmo-api
+     *
+     * UKMO now uses the regular Forecast API with a model selector rather than
+     * the older dedicated `/v1/ukmo` route.
      */
-    @GET("ukmo")
+    @GET("forecast")
     suspend fun getUkmoForecast(
         @Query("latitude") latitude: Double,
         @Query("longitude") longitude: Double,
+        @Query("models") models: String = "ukmo_seamless",
         @Query("hourly") hourly: String = BOM_HOURLY_PARAMS,
         @Query("daily") daily: String = BOM_DAILY_PARAMS,
         @Query("temperature_unit") temperatureUnit: String = "celsius",
