@@ -37,6 +37,7 @@ import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
 import org.maplibre.geojson.Polygon
 import com.sysadmindoc.nimbus.data.api.LightningStrike
+import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import com.sysadmindoc.nimbus.data.model.AlertPolygon
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.CommunityReport
@@ -61,6 +62,7 @@ fun RadarMapView(
     zoom: Double = 5.0,
     currentTileUrl: String?,
     previousTileUrl: String?,
+    radarMaxZoom: Int = RainViewerApi.MAX_TILE_ZOOM,
     overlayTileUrl: String? = null,
     lightningStrikes: List<LightningStrike> = emptyList(),
     communityReports: List<CommunityReport> = emptyList(),
@@ -110,9 +112,9 @@ fun RadarMapView(
     }
 
     // Update radar tile layer when frame changes
-    LaunchedEffect(currentTileUrl, previousTileUrl) {
+    LaunchedEffect(currentTileUrl, previousTileUrl, radarMaxZoom) {
         val style = styleRef ?: return@LaunchedEffect
-        updateRadarLayers(style, currentTileUrl, previousTileUrl)
+        updateRadarLayers(style, currentTileUrl, previousTileUrl, radarMaxZoom)
     }
 
     // Update overlay tile layer (temperature, wind, clouds, precipitation)
@@ -195,7 +197,7 @@ fun RadarMapView(
 
                         // Apply initial radar layer
                         if (currentTileUrl != null) {
-                            updateRadarLayers(style, currentTileUrl, null)
+                            updateRadarLayers(style, currentTileUrl, null, radarMaxZoom)
                         }
 
                         // Apply initial overlay layer
@@ -237,6 +239,7 @@ private fun updateRadarLayers(
     style: Style,
     currentUrl: String?,
     previousUrl: String?,
+    maxTileZoom: Int,
 ) {
     // Remove old layers that aren't current or previous
     val layersToKeep = mutableSetOf<String>()
@@ -268,7 +271,7 @@ private fun updateRadarLayers(
         if (style.getSource(curSourceId) == null) {
             val tileSet = TileSet("2.2.0", currentUrl).apply {
                 minZoom = 1f
-                maxZoom = 7f
+                maxZoom = maxTileZoom.toFloat()
             }
             style.addSource(RasterSource(curSourceId, tileSet, 512))
         }

@@ -75,33 +75,43 @@ class RadarViewModel @Inject constructor(
     private var playbackJob: Job? = null
     private var frameLoadJob: Job? = null
     private var alertOverlayLoadJob: Job? = null
+    private var frameLoadProvider: RadarProvider? = null
     private var lastSuccessfulFrameLoadAtMillis: Long? = null
+    private var lastFrameProvider: RadarProvider? = null
     private var lastAlertOverlayLoadKey: String? = null
 
-    fun loadFrames(force: Boolean = false) {
+    fun loadFrames(
+        provider: RadarProvider = RadarProvider.NATIVE_MAPLIBRE,
+        force: Boolean = false,
+    ) {
         val state = _uiState.value
+        val providerChanged = state.frameSet != null && lastFrameProvider != provider
+        val requestProviderChanged = frameLoadJob?.isActive == true && frameLoadProvider != provider
+        val forceLoad = force || providerChanged || requestProviderChanged
         if (!shouldLoadRadarFrames(
                 state = state,
                 isRequestInFlight = frameLoadJob?.isActive == true,
                 lastSuccessfulLoadAtMillis = lastSuccessfulFrameLoadAtMillis,
                 nowMillis = System.currentTimeMillis(),
-                force = force,
+                force = forceLoad,
             )
         ) {
             return
         }
-        if (force) {
+        if (forceLoad) {
             // A forced reload bypasses the in-flight guard above; cancel the
             // previous request so a stale response can't clobber newer state.
             frameLoadJob?.cancel()
         }
+        frameLoadProvider = provider
         frameLoadJob = viewModelScope.launch {
             val thisJob = coroutineContext[Job]
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                radarRepository.getRadarFrames().fold(
+                radarRepository.getRadarFrames(provider).fold(
                     onSuccess = { frameSet ->
                         lastSuccessfulFrameLoadAtMillis = System.currentTimeMillis()
+                        lastFrameProvider = provider
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -123,6 +133,7 @@ class RadarViewModel @Inject constructor(
                 // late must not null out a newer in-flight job's reference.
                 if (frameLoadJob === thisJob) {
                     frameLoadJob = null
+                    frameLoadProvider = null
                 }
             }
         }

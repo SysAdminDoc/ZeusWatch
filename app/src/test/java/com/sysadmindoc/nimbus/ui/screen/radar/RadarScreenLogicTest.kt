@@ -28,6 +28,14 @@ class RadarScreenLogicTest {
                 isOffline = false,
             )
         )
+        assertTrue(
+            shouldShowRadarLoadingOverlay(
+                provider = RadarProvider.LIBREWXR_NATIVE,
+                selectedLayer = RadarLayer.RADAR,
+                radarState = state,
+                isOffline = false,
+            )
+        )
         assertFalse(
             shouldShowRadarLoadingOverlay(
                 provider = RadarProvider.WINDY_WEBVIEW,
@@ -51,6 +59,14 @@ class RadarScreenLogicTest {
         assertTrue(
             shouldShowRadarErrorOverlay(
                 provider = RadarProvider.NATIVE_MAPLIBRE,
+                selectedLayer = RadarLayer.RADAR,
+                radarState = RadarUiState(isLoading = false, frameSet = null, error = "Network error"),
+                isOffline = false,
+            )
+        )
+        assertTrue(
+            shouldShowRadarErrorOverlay(
+                provider = RadarProvider.LIBREWXR_NATIVE,
                 selectedLayer = RadarLayer.RADAR,
                 radarState = RadarUiState(isLoading = false, frameSet = null, error = "Network error"),
                 isOffline = false,
@@ -90,6 +106,13 @@ class RadarScreenLogicTest {
             shouldShowRadarReportFab(
                 canSubmitReport = true,
                 provider = RadarProvider.NATIVE_MAPLIBRE,
+                embedded = true,
+            )
+        )
+        assertTrue(
+            shouldShowRadarReportFab(
+                canSubmitReport = true,
+                provider = RadarProvider.LIBREWXR_NATIVE,
                 embedded = true,
             )
         )

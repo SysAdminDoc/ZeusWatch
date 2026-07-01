@@ -901,7 +901,7 @@
     <string name="settings_display_title">Pantalla</string>
     <string name="settings_display_desc">Elige el estilo visual, iconografía y voz del pronóstico.</string>
     <string name="settings_radar_provider">Proveedor de radar</string>
-    <string name="settings_radar_hint">Windy es el valor predeterminado para nuevas instalaciones. RainViewer nativo mantiene la reproducción dentro de ZeusWatch, pero su feed público solo tiene radar pasado, zoom max. 7 y mosaicos Universal Blue. Las opciones NWS abren páginas oficiales de radar de EE. UU.</string>
+    <string name="settings_radar_hint">Windy es el valor predeterminado para nuevas instalaciones. LibreWXR nativo mantiene reproducción FOSS dentro de la app con más zoom, mosaicos Viper HD y nowcast. RainViewer nativo sigue como respaldo conservador con solo radar pasado, zoom max. 7 y mosaicos Universal Blue. Las opciones NWS abren páginas oficiales de radar de EE. UU.</string>
     <string name="settings_icon_style">Estilo de iconos</string>
     <string name="settings_theme_mode">Modo de tema</string>
     <string name="settings_summary_style">Estilo del resumen del clima</string>
@@ -1117,6 +1117,8 @@
     <string name="settings_radar_provider_windy_summary">Radar interactivo global de Windy.</string>
     <string name="settings_radar_provider_rainviewer">RainViewer nativo</string>
     <string name="settings_radar_provider_rainviewer_summary">Reproducción RainViewer solo de radar pasado con zoom max. 7, mosaicos PNG Universal Blue, rayos y capas.</string>
+    <string name="settings_radar_provider_librewxr">LibreWXR nativo</string>
+    <string name="settings_radar_provider_librewxr_summary">Reproducción FOSS de radar con zoom max. 12, mosaicos PNG Viper HD, nowcast, rayos y capas.</string>
     <string name="settings_radar_provider_nws">Radar NWS (EE. UU.)</string>
     <string name="settings_radar_provider_nws_summary">Radar interactivo oficial NOAA/NWS para regiones y estaciones de EE. UU.</string>
     <string name="settings_radar_provider_nws_lite">Radar NWS ligero (EE. UU.)</string>
@@ -1130,6 +1132,8 @@
     <string name="settings_summary_ai_generated">Generado por IA (Gemini)</string>
     <string name="settings_summary_custom_template">Plantilla personalizada</string>
     <string name="radar_attribution_rainviewer_limited">Radar: RainViewer \u2022 solo pasado \u2022 zoom max. 7 \u2022 Universal Blue</string>
+    <string name="radar_attribution_librewxr">Radar: LibreWXR \u2022 pasado + nowcast \u2022 zoom max. 12 \u2022 Viper HD</string>
+    <string name="radar_attribution_librewxr_fallback">Radar: LibreWXR no disponible \u2022 usando respaldo RainViewer \u2022 zoom max. 7</string>
     <string name="settings_custom_template_label">Plantilla</string>
     <string name="settings_custom_template_help">Variables: {condition} {time} {temp} {high} {low} {humidity} {wind} {wind_speed} {uv} {precip} {precip_max} {pressure} {dewpoint}. Máximo 8.000 caracteres.</string>
     <string name="weather_source_open_meteo">Open-Meteo</string>

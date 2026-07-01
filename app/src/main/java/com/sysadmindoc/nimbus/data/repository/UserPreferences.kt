@@ -655,6 +655,11 @@ enum class RadarProvider(
         summary = "Past-only RainViewer playback with max zoom 7, Universal Blue tiles, lightning, and overlays.",
         supportsNativePlayback = true,
     ),
+    LIBREWXR_NATIVE(
+        label = "LibreWXR Native",
+        summary = "FOSS radar playback with max zoom 12, Viper HD tiles, nowcast, lightning, and overlays.",
+        supportsNativePlayback = true,
+    ),
     NWS_WEBVIEW(
         label = "NWS Radar (US)",
         summary = "Official NOAA/NWS interactive radar for U.S. regions and stations.",

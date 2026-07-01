@@ -53,6 +53,7 @@ class UserPreferencesTest {
     fun radarProvidersExposeExpectedPlaybackCapabilities() {
         assertFalse(RadarProvider.WINDY_WEBVIEW.supportsNativePlayback)
         assertTrue(RadarProvider.NATIVE_MAPLIBRE.supportsNativePlayback)
+        assertTrue(RadarProvider.LIBREWXR_NATIVE.supportsNativePlayback)
         assertFalse(RadarProvider.NWS_WEBVIEW.supportsNativePlayback)
         assertFalse(RadarProvider.NWS_STANDARD_WEBVIEW.supportsNativePlayback)
     }

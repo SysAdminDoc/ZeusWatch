@@ -86,6 +86,7 @@ internal val RadarProvider.labelRes: Int
     get() = when (this) {
         RadarProvider.WINDY_WEBVIEW -> R.string.settings_radar_provider_windy
         RadarProvider.NATIVE_MAPLIBRE -> R.string.settings_radar_provider_rainviewer
+        RadarProvider.LIBREWXR_NATIVE -> R.string.settings_radar_provider_librewxr
         RadarProvider.NWS_WEBVIEW -> R.string.settings_radar_provider_nws
         RadarProvider.NWS_STANDARD_WEBVIEW -> R.string.settings_radar_provider_nws_lite
     }
@@ -95,6 +96,7 @@ internal val RadarProvider.summaryRes: Int
     get() = when (this) {
         RadarProvider.WINDY_WEBVIEW -> R.string.settings_radar_provider_windy_summary
         RadarProvider.NATIVE_MAPLIBRE -> R.string.settings_radar_provider_rainviewer_summary
+        RadarProvider.LIBREWXR_NATIVE -> R.string.settings_radar_provider_librewxr_summary
         RadarProvider.NWS_WEBVIEW -> R.string.settings_radar_provider_nws_summary
         RadarProvider.NWS_STANDARD_WEBVIEW -> R.string.settings_radar_provider_nws_lite_summary
     }

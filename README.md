@@ -7,7 +7,7 @@
 ![Compose](https://img.shields.io/badge/Jetpack%20Compose-2025.04.01-4285F4?logo=jetpackcompose&logoColor=white)
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 
-> A free, open-source Android weather app with a premium dark UI, 35 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, and WMO SWIC.
+> A free, open-source Android weather app with a premium dark UI, 35 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, LibreWXR, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, and WMO SWIC.
 
 <img width="1536" height="1024" alt="design" src="https://github.com/user-attachments/assets/dce70ccc-af71-48d8-8000-0b2935f45996" />
 
@@ -125,9 +125,9 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 
 | Feature | Description |
 |---------|-------------|
-| **Radar Providers** | User-selectable: Windy Radar WebView, RainViewer Native MapLibre playback with past-radar tiles (max zoom 7, Universal Blue), NWS Radar (US), or NWS Radar Lite (US) |
+| **Radar Providers** | User-selectable: Windy Radar WebView, LibreWXR Native MapLibre playback with nowcast tiles (max zoom 12, Viper HD), RainViewer Native MapLibre playback with past-radar tiles (max zoom 7, Universal Blue), NWS Radar (US), or NWS Radar Lite (US) |
 | **Animated Radar Playback** | Play/pause, frame slider, recent-past labels, timestamp overlay (native mode) |
-| **Radar Preview Card** | Recent RainViewer tile + CartoDB dark basemap on the Today tab |
+| **Radar Preview Card** | Recent selected native radar tile + CartoDB dark basemap on the Today tab |
 | **Radar Tab** | Full-screen radar in the bottom nav with provider-aware rendering |
 | **Map Layer Selector** | Overlay layers: Radar, Lightning, Satellite, Clouds |
 | **Active Warning Polygons** | Native radar renders NWS warning polygons with severity colors and tappable alert details |
@@ -174,7 +174,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 
 | Setting | Options |
 |---------|---------|
-| **Radar Provider** | Windy Radar / RainViewer Native / NWS Radar (US) / NWS Radar Lite (US) |
+| **Radar Provider** | Windy Radar / LibreWXR Native / RainViewer Native / NWS Radar (US) / NWS Radar Lite (US) |
 | **Icon Style** | Meteocons Animated (Lottie, default) / Material Icons / Custom Icon Packs |
 | **Theme Mode** | Static Dark / Weather Adaptive (accent colors shift: amber for sun, blue for rain, purple for storms) |
 | **Weather Summary** | AI-Generated (Gemini Nano, default) / Standard template |
@@ -257,8 +257,8 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 │  └────────────────┘ └──────────────────┘ └───────────────────────────┘  │
 │  ┌────────────┐ ┌───────────┐ ┌────────────┐ ┌────────────────┐        │
 │  │AirQuality  │ │LocationRepo│ │RadarRepo   │ │Community       │        │
-│  │Repo(AQ+   │ │(geocode+   │ │(RainViewer)│ │ReportRepo      │        │
-│  │pollen)    │ │Room+sort)  │ │            │ │(Firestore)     │        │
+│  │Repo(AQ+   │ │(geocode+   │ │(LibreWXR/  │ │ReportRepo      │        │
+│  │pollen)    │ │Room+sort)  │ │RainViewer) │ │(Firestore)     │        │
 │  └───────────┘ └────────────┘ └────────────┘ └────────────────┘        │
 │  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────────┐    │
 │  │WeatherSummary    │ │ClothingSuggestion│ │DrivingCondition      │    │
@@ -276,7 +276,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 │  │  Open-Meteo minutely_15        │  │ DataStore + encrypted keys    │   │
 │  │  Open-Meteo Historical         │  │  Units, display, cards,       │   │
 │  │  Open-Meteo Single Runs        │  │  notifications, health,       │   │
-│  │  RainViewer Radar Tiles        │  │  source defaults, haptics,    │   │
+│  │  LibreWXR / RainViewer Radar   │  │  source defaults, haptics,    │   │
 │  │  NWS / MeteoAlarm / JMA / ECCC │  │  seen alert IDs, widgets      │   │
 │  │  Blitzortung WebSocket         │  │  widget location prefs       │   │
 │  │  Firebase Firestore             │  │                               │   │
@@ -304,6 +304,7 @@ All core APIs are free with no keys required:
 | [Open-Meteo Single Runs](https://open-meteo.com/en/docs/single-runs-api) | Optional forecast-evolution model-run comparison | No key required |
 | [Open-Meteo Geocoding](https://open-meteo.com/en/docs/geocoding-api) | Location search + reverse geocode | 10,000/day |
 | [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api) | AQI, pollutants, pollen (6 species), 5-day daily forecast | 10,000/day |
+| [LibreWXR](https://librewxr.net/) | FOSS radar tile source with RainViewer-compatible metadata, Viper HD color scheme, max zoom 12, and nowcast frames | CC-BY-4.0 data |
 | [RainViewer](https://www.rainviewer.com/api/weather-maps-api.html) | Past radar tile images only (past 2h, max zoom 7, Universal Blue PNG; no nowcast/satellite) | Fair use |
 | [Windy.com](https://www.windy.com/) | Embedded interactive radar (WebView option) | Fair use |
 | [NWS Alerts](https://www.weather.gov/documentation/services-web-api) | US severe weather alerts | Fair use |
@@ -371,7 +372,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 │   │   ├── AlertRepository      # Country-auto-detecting multi-source alerts
 │   │   ├── AirQualityRepository # AQI + pollen + 5-day daily forecast
 │   │   ├── LocationRepository   # Geocoding + Room + reordering
-│   │   ├── RadarRepository      # RainViewer tile URLs + frame list
+│   │   ├── RadarRepository      # LibreWXR/RainViewer tile URLs + frame list
 │   │   └── CommunityReportRepo  # Firestore crowd-sourced reports
 │   └── location/                # GPS location provider, reverse geocoder
 ├── di/                          # Hilt modules (Network, Database)
@@ -589,7 +590,7 @@ The `freenet` flavor contains no proprietary code and is suitable for F-Droid di
 This project is licensed under the [GNU Lesser General Public License v3.0](LICENSE).
 
 Weather data provided by [Open-Meteo.com](https://open-meteo.com/) under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-Radar tiles by [RainViewer](https://www.rainviewer.com/).
+Radar tiles by [LibreWXR](https://librewxr.net/) or [RainViewer](https://www.rainviewer.com/).
 Interactive radar by [Windy.com](https://www.windy.com/).
 Lightning data by [Blitzortung.org](https://www.blitzortung.org/).
 Alert data by [National Weather Service](https://www.weather.gov/), [MeteoAlarm](https://www.meteoalarm.org/), [JMA](https://www.jma.go.jp/), [Environment Canada](https://weather.gc.ca/), and [WMO SWIC](https://severeweather.wmo.int/).
