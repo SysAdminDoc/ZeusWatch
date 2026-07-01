@@ -502,6 +502,9 @@ py -3 tools/generate_release_provenance.py
 # Instrumented Compose UI tests — screen rendering, interactions
 ./gradlew connectedStandardDebugAndroidTest
 
+# Accessibility release gate - WCAG contrast, touch targets, Compose checks
+./gradlew accessibilityGate
+
 # Firestore community-report rules tests
 npm install
 npm run test:firestore-rules
@@ -509,8 +512,8 @@ npm run test:firestore-rules
 
 | Suite | Framework | Coverage |
 |-------|-----------|----------|
-| Unit | JUnit 4 + MockK + Turbine + coroutines-test | WeatherFormatter (20), WeatherCode (12), Accessibility (12), AirQuality (14), Alerts (9), MainViewModel (10), LocationsViewModel (7) |
-| UI | Compose UI Test + JUnit4 + Hilt Testing | MainScreen (6), SettingsScreen (10), LocationsScreen (8) |
+| Unit | JUnit 4 + MockK + Turbine + coroutines-test | WeatherFormatter (20), WeatherCode (12), Accessibility contrast, AirQuality (14), Alerts (9), MainViewModel (10), LocationsViewModel (7) |
+| UI | Compose UI Test + JUnit4 + Hilt Testing | MainScreen, SettingsScreen, LocationsScreen, accessibility audit gate |
 | Firestore rules | Firebase Emulator + rules-unit-testing | Community report create/read validation, malformed/stale rejection, append-only delete/update denial |
 
 **180+ tests** across 14 test suites.
