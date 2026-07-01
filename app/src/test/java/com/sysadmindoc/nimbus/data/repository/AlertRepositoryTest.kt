@@ -288,7 +288,7 @@ class AlertRepositoryTest {
             val meteoAlarmApi = mockk<MeteoAlarmApi>()
             val meteoAlarmAdapter = MeteoAlarmAdapter(meteoAlarmApi)
             coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse()
-            coEvery { meteoAlarmApi.getWarnings("de") } returns MeteoAlarmResponse(
+            coEvery { meteoAlarmApi.getWarnings("germany") } returns MeteoAlarmResponse(
                 warnings = listOf(
                     MeteoAlarmWarning(
                         identifier = "de-1",
@@ -314,7 +314,7 @@ class AlertRepositoryTest {
             assertTrue(result.isSuccess)
             assertEquals(1, result.getOrThrow().size)
             assertEquals("Wind", result.getOrThrow().first().event)
-            coVerify(exactly = 1) { meteoAlarmApi.getWarnings("de") }
+            coVerify(exactly = 1) { meteoAlarmApi.getWarnings("germany") }
         } finally {
             TimeZone.setDefault(originalTimeZone)
         }

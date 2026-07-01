@@ -14,7 +14,7 @@ interface MeteoAlarmApi {
 
     @GET("api/v1/warnings/feeds-{country}")
     suspend fun getWarnings(
-        @Path("country") countryCode: String, // ISO 3166-1 alpha-2 lowercase
+        @Path("country") country: String, // MeteoAlarm feed slug, e.g. "germany"
     ): MeteoAlarmResponse
 
     companion object {
@@ -29,10 +29,20 @@ data class MeteoAlarmResponse(
 
 @Serializable
 data class MeteoAlarmWarning(
+    val alert: MeteoAlarmAlert? = null,
     val identifier: String? = null,
     val sender: String? = null,
     val sent: String? = null,
     @SerialName("msg_type") val msgType: String? = null,
+    val info: List<MeteoAlarmInfo> = emptyList(),
+)
+
+@Serializable
+data class MeteoAlarmAlert(
+    val identifier: String? = null,
+    val sender: String? = null,
+    val sent: String? = null,
+    val msgType: String? = null,
     val info: List<MeteoAlarmInfo> = emptyList(),
 )
 

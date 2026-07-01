@@ -479,6 +479,9 @@ Third-party icon packs are discoverable via:
 # Unit tests — formatters, models, repositories, ViewModels
 ./gradlew testStandardDebugUnitTest
 
+# Public provider contract checks — live or cached schema/availability smoke
+py -3 tools/check_provider_contracts.py
+
 # Instrumented Compose UI tests — screen rendering, interactions
 ./gradlew connectedStandardDebugAndroidTest
 

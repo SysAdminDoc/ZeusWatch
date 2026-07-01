@@ -6,14 +6,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +26,14 @@ USER_AGENT = "ZeusWatch ProviderContractSmoke/1.0 (https://github.com/SysAdminDo
 ACCEPT_HEADER = "application/json, application/geo+json;q=0.9, */*;q=0.1"
 NYC_LATITUDE = "40.7128"
 NYC_LONGITUDE = "-74.0060"
+SYDNEY_LATITUDE = "-33.8688"
+SYDNEY_LONGITUDE = "151.2093"
+LONDON_LATITUDE = "51.5072"
+LONDON_LONGITUDE = "-0.1276"
+BERLIN_LATITUDE = "52.5200"
+BERLIN_LONGITUDE = "13.4050"
+OTTAWA_LATITUDE = "45.4215"
+OTTAWA_LONGITUDE = "-75.6972"
 
 JsonMap = dict[str, Any]
 Transport = Callable[[Request, float], tuple[int, dict[str, str], bytes]]
@@ -40,9 +49,17 @@ class ValidationResult:
 class ContractCheck:
     key: str
     name: str
-    url: str
+    url: str | None
     docs_url: str
     validator: Callable[[Any], ValidationResult]
+    providers: tuple[str, ...] = ()
+    data_types: tuple[str, ...] = ()
+    coverage: str = ""
+    schema_assertion: str = ""
+    unavailable_policy: str = "Fail release verification on HTTP or schema drift; use a fresh cache only within the configured cache window."
+    response_format: str = "json"
+    required_env_vars: tuple[str, ...] = ()
+    policy_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -59,12 +76,17 @@ class FetchResult:
 class CheckResult:
     key: str
     name: str
-    url: str
+    url: str | None
     docs_url: str
     ok: bool
     status: int
     source: str
     message: str
+    providers: tuple[str, ...]
+    data_types: tuple[str, ...]
+    coverage: str
+    schema_assertion: str
+    unavailable_policy: str
 
     def to_report(self) -> JsonMap:
         return {
@@ -76,10 +98,19 @@ class CheckResult:
             "status": self.status,
             "source": self.source,
             "message": self.message,
+            "providers": list(self.providers),
+            "dataTypes": list(self.data_types),
+            "coverage": self.coverage,
+            "schemaAssertion": self.schema_assertion,
+            "unavailableProviderPolicy": self.unavailable_policy,
         }
 
 
 def provider_checks() -> list[ContractCheck]:
+    today = datetime.now(timezone.utc).date()
+    bright_sky_start = (today - timedelta(days=1)).isoformat()
+    bright_sky_end = (today + timedelta(days=1)).isoformat()
+    eccc_today = today.strftime("%Y%m%d")
     open_meteo_query = urlencode(
         {
             "latitude": NYC_LATITUDE,
@@ -90,6 +121,66 @@ def provider_checks() -> list[ContractCheck]:
             "forecast_days": "1",
             "forecast_hours": "1",
             "timezone": "UTC",
+        }
+    )
+    open_meteo_air_quality_query = urlencode(
+        {
+            "latitude": NYC_LATITUDE,
+            "longitude": NYC_LONGITUDE,
+            "current": "us_aqi,european_aqi,pm10,pm2_5,ozone",
+            "hourly": "us_aqi,pm2_5",
+            "forecast_days": "1",
+            "timezone": "UTC",
+        }
+    )
+    open_meteo_minutely_query = urlencode(
+        {
+            "latitude": NYC_LATITUDE,
+            "longitude": NYC_LONGITUDE,
+            "minutely_15": "precipitation",
+            "forecast_minutely_15": "24",
+            "timezone": "UTC",
+        }
+    )
+    open_meteo_bom_query = urlencode(
+        {
+            "latitude": SYDNEY_LATITUDE,
+            "longitude": SYDNEY_LONGITUDE,
+            "hourly": "temperature_2m,weather_code",
+            "daily": "weather_code,temperature_2m_max,temperature_2m_min",
+            "forecast_days": "1",
+            "forecast_hours": "1",
+            "timezone": "UTC",
+        }
+    )
+    open_meteo_ukmo_query = urlencode(
+        {
+            "latitude": LONDON_LATITUDE,
+            "longitude": LONDON_LONGITUDE,
+            "models": "ukmo_seamless",
+            "hourly": "temperature_2m,weather_code",
+            "daily": "weather_code,temperature_2m_max,temperature_2m_min",
+            "forecast_days": "1",
+            "forecast_hours": "1",
+            "timezone": "UTC",
+        }
+    )
+    bright_sky_forecast_query = urlencode(
+        {
+            "lat": BERLIN_LATITUDE,
+            "lon": BERLIN_LONGITUDE,
+            "date": bright_sky_start,
+            "last_date": bright_sky_end,
+            "tz": "Etc/UTC",
+        }
+    )
+    bright_sky_alert_query = urlencode({"lat": BERLIN_LATITUDE, "lon": BERLIN_LONGITUDE})
+    eccc_forecast_query = urlencode(
+        {
+            "bbox": "-75.9,45.2,-75.4,45.7",
+            "lang": "en",
+            "f": "json",
+            "limit": "10",
         }
     )
     nws_query = urlencode(
@@ -107,6 +198,8 @@ def provider_checks() -> list[ContractCheck]:
             url="https://severeweather.wmo.int/v2/json/wmo_member.json",
             docs_url="https://severeweather.wmo.int/about.html",
             validator=validate_wmo_members,
+            coverage="global metadata",
+            schema_assertion="top-level region list with member mid/name fields",
         ),
         ContractCheck(
             key="rainviewer-metadata",
@@ -114,6 +207,8 @@ def provider_checks() -> list[ContractCheck]:
             url="https://api.rainviewer.com/public/weather-maps.json",
             docs_url="https://www.rainviewer.com/api/weather-maps-api.html",
             validator=validate_rainviewer_metadata,
+            coverage="global radar metadata",
+            schema_assertion="generated timestamp, tile host, and at least one radar.past frame",
         ),
         ContractCheck(
             key="open-meteo-forecast",
@@ -121,6 +216,67 @@ def provider_checks() -> list[ContractCheck]:
             url=f"https://api.open-meteo.com/v1/forecast?{open_meteo_query}",
             docs_url="https://open-meteo.com/en/docs",
             validator=validate_open_meteo_forecast,
+            providers=("OPEN_METEO",),
+            data_types=("FORECAST",),
+            coverage=f"New York, US ({NYC_LATITUDE},{NYC_LONGITUDE})",
+            schema_assertion="current, hourly, and daily forecast blocks are present",
+        ),
+        ContractCheck(
+            key="open-meteo-air-quality",
+            name="Open-Meteo air quality",
+            url=f"https://air-quality-api.open-meteo.com/v1/air-quality?{open_meteo_air_quality_query}",
+            docs_url="https://open-meteo.com/en/docs/air-quality-api",
+            validator=validate_open_meteo_air_quality,
+            providers=("OPEN_METEO",),
+            data_types=("AIR_QUALITY",),
+            coverage=f"New York, US ({NYC_LATITUDE},{NYC_LONGITUDE})",
+            schema_assertion="current AQI/pollutants and hourly AQI time series are present",
+        ),
+        ContractCheck(
+            key="open-meteo-minutely",
+            name="Open-Meteo 15-minute precipitation",
+            url=f"https://api.open-meteo.com/v1/forecast?{open_meteo_minutely_query}",
+            docs_url="https://open-meteo.com/en/docs",
+            validator=validate_open_meteo_minutely,
+            providers=("OPEN_METEO",),
+            data_types=("MINUTELY",),
+            coverage=f"New York, US ({NYC_LATITUDE},{NYC_LONGITUDE})",
+            schema_assertion="minutely_15 precipitation time series is present",
+        ),
+        ContractCheck(
+            key="open-meteo-bom",
+            name="Open-Meteo BOM ACCESS-G forecast",
+            url=f"https://api.open-meteo.com/v1/bom?{open_meteo_bom_query}",
+            docs_url="https://open-meteo.com/en/docs/bom-api",
+            validator=validate_open_meteo_model_forecast,
+            providers=("OPEN_METEO_BOM",),
+            data_types=("FORECAST",),
+            coverage=f"Sydney, AU ({SYDNEY_LATITUDE},{SYDNEY_LONGITUDE})",
+            schema_assertion="model endpoint returns hourly and daily forecast blocks",
+        ),
+        ContractCheck(
+            key="open-meteo-ukmo",
+            name="Open-Meteo UK Met Office forecast",
+            url=f"https://api.open-meteo.com/v1/forecast?{open_meteo_ukmo_query}",
+            docs_url="https://open-meteo.com/en/docs/ukmo-api",
+            validator=validate_open_meteo_model_forecast,
+            providers=("OPEN_METEO_UKMO",),
+            data_types=("FORECAST",),
+            coverage=f"London, UK ({LONDON_LATITUDE},{LONDON_LONGITUDE})",
+            schema_assertion="Forecast API with models=ukmo_seamless returns hourly and daily blocks",
+        ),
+        ContractCheck(
+            key="open-meteo-kma-quarantine",
+            name="Open-Meteo KMA quarantine policy",
+            url=None,
+            docs_url="https://open-meteo.com/en/docs/kma-api",
+            validator=validate_policy_only,
+            providers=("OPEN_METEO_KMA",),
+            data_types=("FORECAST",),
+            coverage="South Korea model wrapper",
+            schema_assertion="provider remains non-selectable while upstream KMA/KIM updates are suspended",
+            unavailable_policy="OPEN_METEO_KMA is intentionally absent from WeatherSourceProvider.forType() until a live KMA contract passes.",
+            policy_only=True,
         ),
         ContractCheck(
             key="nws-active-alerts",
@@ -128,13 +284,128 @@ def provider_checks() -> list[ContractCheck]:
             url=f"https://api.weather.gov/alerts/active?{nws_query}",
             docs_url="https://www.weather.gov/documentation/services-web-api",
             validator=validate_nws_alerts,
+            providers=("NWS",),
+            data_types=("ALERTS",),
+            coverage=f"New York, US ({NYC_LATITUDE},{NYC_LONGITUDE})",
+            schema_assertion="FeatureCollection with a features list",
         ),
         ContractCheck(
-            key="met-no-compact",
-            name="MET Norway compact forecast",
-            url=f"https://api.met.no/weatherapi/locationforecast/2.0/compact?{met_no_query}",
+            key="met-no-complete",
+            name="MET Norway complete forecast",
+            url=f"https://api.met.no/weatherapi/locationforecast/2.0/complete?{met_no_query}",
             docs_url="https://api.met.no/weatherapi/locationforecast/2.0/documentation",
             validator=validate_met_no_compact,
+            providers=("MET_NORWAY",),
+            data_types=("FORECAST",),
+            coverage=f"New York, US ({NYC_LATITUDE},{NYC_LONGITUDE})",
+            schema_assertion="GeoJSON Feature with forecast timeseries and air temperature",
+        ),
+        ContractCheck(
+            key="bright-sky-forecast",
+            name="Bright Sky forecast",
+            url=f"https://api.brightsky.dev/weather?{bright_sky_forecast_query}",
+            docs_url="https://brightsky.dev/docs/",
+            validator=validate_bright_sky_weather,
+            providers=("BRIGHT_SKY",),
+            data_types=("FORECAST",),
+            coverage=f"Berlin, DE ({BERLIN_LATITUDE},{BERLIN_LONGITUDE})",
+            schema_assertion="weather array with timestamped DWD entries",
+        ),
+        ContractCheck(
+            key="bright-sky-alerts",
+            name="Bright Sky alerts",
+            url=f"https://api.brightsky.dev/alerts?{bright_sky_alert_query}",
+            docs_url="https://brightsky.dev/docs/",
+            validator=validate_bright_sky_alerts,
+            providers=("BRIGHT_SKY",),
+            data_types=("ALERTS",),
+            coverage=f"Berlin, DE ({BERLIN_LATITUDE},{BERLIN_LONGITUDE})",
+            schema_assertion="alerts array is present even when no active alerts exist",
+        ),
+        ContractCheck(
+            key="environment-canada-forecast",
+            name="Environment Canada forecast",
+            url=f"https://api.weather.gc.ca/collections/citypageweather-realtime/items?{eccc_forecast_query}",
+            docs_url="https://eccc-msc.github.io/open-data/msc-data/citypageweather/readme_citypageweather_en/",
+            validator=validate_eccc_feature_collection,
+            providers=("ENVIRONMENT_CANADA",),
+            data_types=("FORECAST",),
+            coverage=f"Ottawa, CA ({OTTAWA_LATITUDE},{OTTAWA_LONGITUDE})",
+            schema_assertion="GeoJSON FeatureCollection with nearby city weather features",
+        ),
+        ContractCheck(
+            key="environment-canada-alert-cap-index",
+            name="Environment Canada CAP alert index",
+            url=f"https://dd.weather.gc.ca/today/alerts/cap/{eccc_today}/",
+            docs_url="https://eccc-msc.github.io/open-data/msc-data/alerts/readme_alerts-datamart_en/",
+            validator=validate_eccc_cap_index,
+            providers=("ENVIRONMENT_CANADA",),
+            data_types=("ALERTS",),
+            coverage="Canada CAP datamart current-day index",
+            schema_assertion="current-day CAP index is reachable and exposes alert directories/files",
+            response_format="text",
+        ),
+        ContractCheck(
+            key="meteoalarm-germany",
+            name="MeteoAlarm Germany warnings",
+            url="https://feeds.meteoalarm.org/api/v1/warnings/feeds-germany",
+            docs_url="https://feeds.meteoalarm.org/",
+            validator=validate_meteoalarm_warnings,
+            providers=("METEOALARM",),
+            data_types=("ALERTS",),
+            coverage=f"Germany feed slug ({BERLIN_LATITUDE},{BERLIN_LONGITUDE})",
+            schema_assertion="warnings array with nested alert payload when active warnings exist",
+        ),
+        ContractCheck(
+            key="jma-extra-xml",
+            name="JMA extra warnings feed",
+            url="https://www.data.jma.go.jp/developer/xml/feed/extra.xml",
+            docs_url="https://www.data.jma.go.jp/developer/",
+            validator=validate_jma_atom_feed,
+            providers=("JMA",),
+            data_types=("ALERTS",),
+            coverage="Japan high-frequency warnings feed",
+            schema_assertion="Atom XML feed with title and entry/link structure",
+            response_format="text",
+        ),
+        ContractCheck(
+            key="openweathermap-forecast-alerts",
+            name="OpenWeatherMap forecast and alerts",
+            url="https://api.openweathermap.org/data/3.0/onecall?lat=40.7128&lon=-74.0060&appid={api_key}&units=metric&exclude=minutely",
+            docs_url="https://openweathermap.org/api/one-call-3",
+            validator=validate_owm_onecall,
+            providers=("OPEN_WEATHER_MAP",),
+            data_types=("FORECAST", "ALERTS"),
+            coverage=f"New York, US ({NYC_LATITUDE},{NYC_LONGITUDE})",
+            schema_assertion="One Call response includes current, hourly, daily, and optional alerts",
+            unavailable_policy="If OPENWEATHERMAP_API_KEY or OWM_API_KEY is unset, live validation is skipped but the key-required provider remains covered by this contract.",
+            required_env_vars=("OPENWEATHERMAP_API_KEY", "OWM_API_KEY"),
+        ),
+        ContractCheck(
+            key="openweathermap-air-quality",
+            name="OpenWeatherMap air pollution",
+            url="https://api.openweathermap.org/data/2.5/air_pollution?lat=40.7128&lon=-74.0060&appid={api_key}",
+            docs_url="https://openweathermap.org/api/air-pollution",
+            validator=validate_owm_air_pollution,
+            providers=("OPEN_WEATHER_MAP",),
+            data_types=("AIR_QUALITY",),
+            coverage=f"New York, US ({NYC_LATITUDE},{NYC_LONGITUDE})",
+            schema_assertion="air_pollution response includes list[0].main.aqi",
+            unavailable_policy="If OPENWEATHERMAP_API_KEY or OWM_API_KEY is unset, live validation is skipped but the key-required provider remains covered by this contract.",
+            required_env_vars=("OPENWEATHERMAP_API_KEY", "OWM_API_KEY"),
+        ),
+        ContractCheck(
+            key="pirate-weather-forecast",
+            name="Pirate Weather forecast",
+            url="https://api.pirateweather.net/forecast/{api_key}/40.7128,-74.0060?units=si&exclude=minutely",
+            docs_url="https://docs.pirateweather.net/en/latest/API/",
+            validator=validate_pirate_weather,
+            providers=("PIRATE_WEATHER",),
+            data_types=("FORECAST",),
+            coverage=f"New York, US ({NYC_LATITUDE},{NYC_LONGITUDE})",
+            schema_assertion="forecast response includes currently, hourly, and daily blocks",
+            unavailable_policy="If PIRATE_WEATHER_API_KEY is unset, live validation is skipped but the key-required provider remains covered by this contract.",
+            required_env_vars=("PIRATE_WEATHER_API_KEY",),
         ),
     ]
 
@@ -210,6 +481,49 @@ def validate_open_meteo_forecast(data: Any) -> ValidationResult:
     return ValidationResult(True, "current, hourly, and daily forecast blocks present")
 
 
+def validate_open_meteo_model_forecast(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    errors: list[str] = []
+    if not _has_non_empty_time_series(data.get("hourly")):
+        errors.append("hourly.time missing or empty")
+    if not _has_non_empty_time_series(data.get("daily")):
+        errors.append("daily.time missing or empty")
+    if errors:
+        return ValidationResult(False, "; ".join(errors))
+    return ValidationResult(True, "hourly and daily model forecast blocks present")
+
+
+def validate_open_meteo_air_quality(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    current = data.get("current")
+    hourly = data.get("hourly")
+    errors: list[str] = []
+    if not isinstance(current, dict):
+        errors.append("current object missing")
+    elif "us_aqi" not in current and "european_aqi" not in current:
+        errors.append("current AQI fields missing")
+    if not _has_non_empty_time_series(hourly):
+        errors.append("hourly.time missing or empty")
+    elif not isinstance(hourly.get("us_aqi"), list):
+        errors.append("hourly.us_aqi missing")
+    if errors:
+        return ValidationResult(False, "; ".join(errors))
+    return ValidationResult(True, "current AQI and hourly AQI series present")
+
+
+def validate_open_meteo_minutely(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    minutely = data.get("minutely_15")
+    if not _has_non_empty_time_series(minutely):
+        return ValidationResult(False, "minutely_15.time missing or empty")
+    if not isinstance(minutely.get("precipitation"), list):
+        return ValidationResult(False, "minutely_15.precipitation missing")
+    return ValidationResult(True, f"{len(minutely['time'])} minutely precipitation buckets")
+
+
 def validate_nws_alerts(data: Any) -> ValidationResult:
     if not isinstance(data, dict):
         return ValidationResult(False, "expected a JSON object")
@@ -223,6 +537,124 @@ def validate_nws_alerts(data: Any) -> ValidationResult:
         if not isinstance(first, dict) or not isinstance(first.get("properties"), dict):
             return ValidationResult(False, "alert features must include a properties object")
     return ValidationResult(True, f"{len(features)} active alert features")
+
+
+def validate_bright_sky_weather(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    weather = data.get("weather")
+    if not isinstance(weather, list) or not weather:
+        return ValidationResult(False, "weather must contain at least one entry")
+    first = weather[0]
+    if not isinstance(first, dict) or not _non_empty_string(first.get("timestamp")):
+        return ValidationResult(False, "weather[0].timestamp missing")
+    return ValidationResult(True, f"{len(weather)} Bright Sky weather entries")
+
+
+def validate_bright_sky_alerts(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    alerts = data.get("alerts")
+    if not isinstance(alerts, list):
+        return ValidationResult(False, "alerts must be a list")
+    return ValidationResult(True, f"{len(alerts)} Bright Sky alerts")
+
+
+def validate_eccc_feature_collection(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    if data.get("type") != "FeatureCollection":
+        return ValidationResult(False, "type must be FeatureCollection")
+    features = data.get("features")
+    if not isinstance(features, list) or not features:
+        return ValidationResult(False, "features must contain nearby city weather entries")
+    first = features[0]
+    if not isinstance(first, dict) or not isinstance(first.get("properties"), dict):
+        return ValidationResult(False, "features[0].properties missing")
+    return ValidationResult(True, f"{len(features)} ECCC city weather features")
+
+
+def validate_eccc_cap_index(data: Any) -> ValidationResult:
+    if not isinstance(data, str):
+        return ValidationResult(False, "expected text/html index")
+    if "Index of /today/alerts/cap/" not in data:
+        return ValidationResult(False, "CAP index title missing")
+    if ".cap" not in data and "LAND/" not in data and "WATR/" not in data:
+        return ValidationResult(False, "CAP index has no alert files or LAND/WATR directories")
+    return ValidationResult(True, "current-day ECCC CAP index reachable")
+
+
+def validate_meteoalarm_warnings(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    warnings = data.get("warnings")
+    if not isinstance(warnings, list):
+        return ValidationResult(False, "warnings must be a list")
+    if warnings:
+        first = warnings[0]
+        if not isinstance(first, dict):
+            return ValidationResult(False, "warning entries must be objects")
+        alert = first.get("alert")
+        if alert is not None and not isinstance(alert, dict):
+            return ValidationResult(False, "warning.alert must be an object when present")
+    return ValidationResult(True, f"{len(warnings)} MeteoAlarm warnings")
+
+
+def validate_jma_atom_feed(data: Any) -> ValidationResult:
+    if not isinstance(data, str):
+        return ValidationResult(False, "expected Atom XML text")
+    if "<feed" not in data or "<title>" not in data:
+        return ValidationResult(False, "Atom feed/title missing")
+    if "<entry>" not in data and "<link" not in data:
+        return ValidationResult(False, "Atom feed has no entries or links")
+    return ValidationResult(True, "JMA Atom feed reachable")
+
+
+def validate_owm_onecall(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    errors: list[str] = []
+    if not isinstance(data.get("current"), dict):
+        errors.append("current object missing")
+    if not isinstance(data.get("hourly"), list):
+        errors.append("hourly list missing")
+    if not isinstance(data.get("daily"), list):
+        errors.append("daily list missing")
+    if errors:
+        return ValidationResult(False, "; ".join(errors))
+    return ValidationResult(True, "current, hourly, and daily One Call blocks present")
+
+
+def validate_owm_air_pollution(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    items = data.get("list")
+    if not isinstance(items, list) or not items:
+        return ValidationResult(False, "list must contain pollution entries")
+    main = items[0].get("main") if isinstance(items[0], dict) else None
+    if not isinstance(main, dict) or "aqi" not in main:
+        return ValidationResult(False, "list[0].main.aqi missing")
+    return ValidationResult(True, f"{len(items)} air pollution entries")
+
+
+def validate_pirate_weather(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    errors: list[str] = []
+    if not isinstance(data.get("currently"), dict):
+        errors.append("currently object missing")
+    if not isinstance(data.get("hourly"), dict):
+        errors.append("hourly object missing")
+    if not isinstance(data.get("daily"), dict):
+        errors.append("daily object missing")
+    if errors:
+        return ValidationResult(False, "; ".join(errors))
+    return ValidationResult(True, "currently, hourly, and daily blocks present")
+
+
+def validate_policy_only(data: Any) -> ValidationResult:
+    del data
+    return ValidationResult(True, "policy-only contract")
 
 
 def validate_met_no_compact(data: Any) -> ValidationResult:
@@ -254,8 +686,20 @@ def run_check(
     force_refresh: bool,
     transport: Transport = None,
 ) -> CheckResult:
+    if check.policy_only:
+        return _check_result(check, True, 0, "policy", check.unavailable_policy)
+    url = _resolve_check_url(check)
+    if url is None:
+        env_names = " or ".join(check.required_env_vars)
+        return _check_result(
+            check,
+            True,
+            0,
+            "credential-policy",
+            f"live check skipped because {env_names} is not set; {check.unavailable_policy}",
+        )
     fetch = fetch_json(
-        check.url,
+        url,
         cache_dir=cache_dir,
         timeout_seconds=timeout_seconds,
         max_cache_age_seconds=max_cache_age_seconds,
@@ -264,21 +708,61 @@ def run_check(
     )
     source = fetch.cache_state if fetch.from_cache else "live"
     if fetch.error is not None:
-        return CheckResult(check.key, check.name, check.url, check.docs_url, False, fetch.status, source, fetch.error)
+        return _check_result(check, False, fetch.status, source, fetch.error, url=url)
     if fetch.body is None:
-        return CheckResult(check.key, check.name, check.url, check.docs_url, False, fetch.status, source, "empty response body")
+        return _check_result(check, False, fetch.status, source, "empty response body", url=url)
     if fetch.status < 200 or fetch.status >= 300:
         excerpt = fetch.body.decode("utf-8", errors="replace").strip().replace("\n", " ")[:180]
         message = f"HTTP {fetch.status}"
         if excerpt:
             message = f"{message}: {excerpt}"
-        return CheckResult(check.key, check.name, check.url, check.docs_url, False, fetch.status, source, message)
-    try:
-        data = json.loads(fetch.body.decode("utf-8"))
-    except json.JSONDecodeError as exc:
-        return CheckResult(check.key, check.name, check.url, check.docs_url, False, fetch.status, source, f"invalid JSON: {exc}")
+        return _check_result(check, False, fetch.status, source, message, url=url)
+    if check.response_format == "text":
+        data = fetch.body.decode("utf-8", errors="replace")
+    else:
+        try:
+            data = json.loads(fetch.body.decode("utf-8"))
+        except json.JSONDecodeError as exc:
+            return _check_result(check, False, fetch.status, source, f"invalid JSON: {exc}", url=url)
     validation = check.validator(data)
-    return CheckResult(check.key, check.name, check.url, check.docs_url, validation.ok, fetch.status, source, validation.message)
+    return _check_result(check, validation.ok, fetch.status, source, validation.message, url=url)
+
+
+def _check_result(
+    check: ContractCheck,
+    ok: bool,
+    status: int,
+    source: str,
+    message: str,
+    *,
+    url: str | None = None,
+) -> CheckResult:
+    return CheckResult(
+        key=check.key,
+        name=check.name,
+        url=check.url if url is None else url,
+        docs_url=check.docs_url,
+        ok=ok,
+        status=status,
+        source=source,
+        message=message,
+        providers=check.providers,
+        data_types=check.data_types,
+        coverage=check.coverage,
+        schema_assertion=check.schema_assertion,
+        unavailable_policy=check.unavailable_policy,
+    )
+
+
+def _resolve_check_url(check: ContractCheck) -> str | None:
+    if check.url is None:
+        return None
+    if not check.required_env_vars:
+        return check.url
+    api_key = next((os.environ[name] for name in check.required_env_vars if os.environ.get(name)), None)
+    if api_key is None:
+        return None
+    return check.url.replace("{api_key}", quote(api_key, safe=""))
 
 
 def fetch_json(

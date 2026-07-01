@@ -28,7 +28,7 @@ class MeteoAlarmAdapterTest {
 
     @Test
     fun `single warning with one info block maps all fields correctly`() = runTest {
-        coEvery { api.getWarnings("de") } returns MeteoAlarmResponse(
+        coEvery { api.getWarnings("germany") } returns MeteoAlarmResponse(
             warnings = listOf(
                 MeteoAlarmWarning(
                     identifier = "de-2026-001",
@@ -73,18 +73,52 @@ class MeteoAlarmAdapterTest {
     }
 
     @Test
-    fun `country code is lowercased before API call`() = runTest {
-        // Adapter calls meteoAlarmApi.getWarnings(countryCode.lowercase())
-        coEvery { api.getWarnings("fr") } returns MeteoAlarmResponse(warnings = emptyList())
+    fun `country code maps to feed slug before API call`() = runTest {
+        coEvery { api.getWarnings("france") } returns MeteoAlarmResponse(warnings = emptyList())
 
         val result = adapter.getAlertsForCountry("FR") // uppercase input
         assertTrue(result.isSuccess)
-        // If the mock returned the response, lowercase was correctly applied
+        // If the mock returned the response, feed-slug mapping was correctly applied
+    }
+
+    @Test
+    fun `nested alert payload from current MeteoAlarm feed maps correctly`() = runTest {
+        coEvery { api.getWarnings("germany") } returns MeteoAlarmResponse(
+            warnings = listOf(
+                MeteoAlarmWarning(
+                    alert = MeteoAlarmAlert(
+                        identifier = "nested-de-001",
+                        sender = "opendata@dwd.de",
+                        info = listOf(
+                            MeteoAlarmInfo(
+                                event = "strong heat",
+                                severity = "Minor",
+                                urgency = "Immediate",
+                                certainty = "Likely",
+                                headline = "Official WARNING of STRONG HEAT",
+                                area = listOf(MeteoAlarmArea(areaDesc = "Kreis Amberg-Sulzbach")),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val alert = adapter.getAlertsForCountry("DE").getOrThrow().single()
+
+        assertEquals("nested-de-001", alert.id)
+        assertEquals("strong heat", alert.event)
+        assertEquals("Official WARNING of STRONG HEAT", alert.headline)
+        assertEquals(AlertSeverity.MINOR, alert.severity)
+        assertEquals(AlertUrgency.IMMEDIATE, alert.urgency)
+        assertEquals("Likely", alert.certainty)
+        assertEquals("opendata@dwd.de", alert.senderName)
+        assertEquals("Kreis Amberg-Sulzbach", alert.areaDescription)
     }
 
     @Test
     fun `warning with null identifier uses synthetic id`() = runTest {
-        coEvery { api.getWarnings("it") } returns MeteoAlarmResponse(
+        coEvery { api.getWarnings("italy") } returns MeteoAlarmResponse(
             warnings = listOf(
                 MeteoAlarmWarning(
                     identifier = null,
@@ -106,7 +140,7 @@ class MeteoAlarmAdapterTest {
 
     @Test
     fun `info with null event is skipped`() = runTest {
-        coEvery { api.getWarnings("es") } returns MeteoAlarmResponse(
+        coEvery { api.getWarnings("spain") } returns MeteoAlarmResponse(
             warnings = listOf(
                 MeteoAlarmWarning(
                     identifier = "es-001",
@@ -125,7 +159,7 @@ class MeteoAlarmAdapterTest {
 
     @Test
     fun `multiple info blocks in one warning produce multiple alerts`() = runTest {
-        coEvery { api.getWarnings("nl") } returns MeteoAlarmResponse(
+        coEvery { api.getWarnings("netherlands") } returns MeteoAlarmResponse(
             warnings = listOf(
                 MeteoAlarmWarning(
                     identifier = "nl-multi",
@@ -147,7 +181,7 @@ class MeteoAlarmAdapterTest {
 
     @Test
     fun `multiple area descriptions are joined with comma`() = runTest {
-        coEvery { api.getWarnings("no") } returns MeteoAlarmResponse(
+        coEvery { api.getWarnings("norway") } returns MeteoAlarmResponse(
             warnings = listOf(
                 MeteoAlarmWarning(
                     identifier = "no-001",
@@ -171,7 +205,7 @@ class MeteoAlarmAdapterTest {
 
     @Test
     fun `area with all null areaDesc falls back to Unknown area`() = runTest {
-        coEvery { api.getWarnings("gr") } returns MeteoAlarmResponse(
+        coEvery { api.getWarnings("greece") } returns MeteoAlarmResponse(
             warnings = listOf(
                 MeteoAlarmWarning(
                     identifier = "gr-001",
@@ -192,7 +226,7 @@ class MeteoAlarmAdapterTest {
 
     @Test
     fun `severity minor maps to AlertSeverity MINOR`() = runTest {
-        coEvery { api.getWarnings("se") } returns MeteoAlarmResponse(
+        coEvery { api.getWarnings("sweden") } returns MeteoAlarmResponse(
             warnings = listOf(
                 MeteoAlarmWarning(
                     identifier = "se-001",
@@ -206,7 +240,7 @@ class MeteoAlarmAdapterTest {
 
     @Test
     fun `severity extreme maps to AlertSeverity EXTREME`() = runTest {
-        coEvery { api.getWarnings("pt") } returns MeteoAlarmResponse(
+        coEvery { api.getWarnings("portugal") } returns MeteoAlarmResponse(
             warnings = listOf(
                 MeteoAlarmWarning(
                     identifier = "pt-001",
@@ -220,7 +254,7 @@ class MeteoAlarmAdapterTest {
 
     @Test
     fun `empty warning list returns empty success`() = runTest {
-        coEvery { api.getWarnings("at") } returns MeteoAlarmResponse(warnings = emptyList())
+        coEvery { api.getWarnings("austria") } returns MeteoAlarmResponse(warnings = emptyList())
 
         val result = adapter.getAlertsForCountry("AT")
         assertTrue(result.isSuccess)
@@ -229,7 +263,7 @@ class MeteoAlarmAdapterTest {
 
     @Test
     fun `senderName falls back to warning sender when info senderName is null`() = runTest {
-        coEvery { api.getWarnings("be") } returns MeteoAlarmResponse(
+        coEvery { api.getWarnings("belgium") } returns MeteoAlarmResponse(
             warnings = listOf(
                 MeteoAlarmWarning(
                     identifier = "be-001",
@@ -251,7 +285,7 @@ class MeteoAlarmAdapterTest {
 
     @Test
     fun `senderName falls back to displayName when both warning sender and info senderName are null`() = runTest {
-        coEvery { api.getWarnings("lu") } returns MeteoAlarmResponse(
+        coEvery { api.getWarnings("luxembourg") } returns MeteoAlarmResponse(
             warnings = listOf(
                 MeteoAlarmWarning(
                     identifier = "lu-001",
