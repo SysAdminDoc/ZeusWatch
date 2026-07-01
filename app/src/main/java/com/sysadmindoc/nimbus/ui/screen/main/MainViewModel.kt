@@ -1,6 +1,5 @@
 package com.sysadmindoc.nimbus.ui.screen.main
 
-import android.content.Context
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -9,79 +8,45 @@ import com.sysadmindoc.nimbus.BuildConfig
 import com.sysadmindoc.nimbus.data.location.LocationProvider
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.AstronomyData
-import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.util.ClothingSuggestion
-import com.sysadmindoc.nimbus.util.ClothingSuggestionEvaluator
 import com.sysadmindoc.nimbus.util.DrivingAlert
-import com.sysadmindoc.nimbus.util.DrivingConditionEvaluator
 import com.sysadmindoc.nimbus.util.HealthAlert
-import com.sysadmindoc.nimbus.util.HealthAlertEvaluator
 import com.sysadmindoc.nimbus.util.PetSafetyAlert
-import com.sysadmindoc.nimbus.util.PetSafetyEvaluator
 import com.sysadmindoc.nimbus.util.ConnectivityObserver
-import com.sysadmindoc.nimbus.util.GadgetbridgeWeatherBroadcaster
 import com.sysadmindoc.nimbus.util.WeatherFormatter
-import com.sysadmindoc.nimbus.util.SummaryEngine
-import com.sysadmindoc.nimbus.util.WeatherSummaryEngine
-import com.sysadmindoc.nimbus.data.api.RainViewerApi
-import com.sysadmindoc.nimbus.data.repository.AirQualityRepository
-import com.sysadmindoc.nimbus.data.repository.AlertRepository
 import com.sysadmindoc.nimbus.data.repository.AuroraKpData
-import com.sysadmindoc.nimbus.data.repository.AuroraRepository
 import com.sysadmindoc.nimbus.data.repository.FloodData
-import com.sysadmindoc.nimbus.data.repository.FloodRepository
 import com.sysadmindoc.nimbus.data.repository.MarineData
-import com.sysadmindoc.nimbus.data.repository.MarineRepository
 import com.sysadmindoc.nimbus.util.ActivityIndex
-import com.sysadmindoc.nimbus.util.ActivityIndexEvaluator
 import com.sysadmindoc.nimbus.data.repository.CardType
 import com.sysadmindoc.nimbus.data.repository.ClimateOutlookData
-import com.sysadmindoc.nimbus.data.repository.ClimateRepository
 import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
-import com.sysadmindoc.nimbus.data.repository.ConfidenceBandRepository
 import com.sysadmindoc.nimbus.data.repository.ForecastAccuracyData
-import com.sysadmindoc.nimbus.data.repository.ForecastAccuracyRepository
 import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionData
-import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionRepository
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
-import com.sysadmindoc.nimbus.data.repository.OnThisDayRepository
-import com.sysadmindoc.nimbus.data.repository.SummaryStyle
 import com.sysadmindoc.nimbus.data.repository.SourceOverrides
-import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
-import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
 import com.sysadmindoc.nimbus.data.repository.sourceOverrides
-import com.sysadmindoc.nimbus.data.repository.toZoneIdOrNull
-import com.sysadmindoc.nimbus.sync.WearSyncManager
-import com.sysadmindoc.nimbus.di.DefaultDispatcher
-import com.sysadmindoc.nimbus.wallpaper.WeatherWallpaperService
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.withContext
 import androidx.compose.runtime.Stable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.math.abs
 import java.util.concurrent.atomic.AtomicLong
@@ -108,28 +73,12 @@ data class MainUiError(
 )
 
 data class MainViewModelDependencies @Inject constructor(
-    @ApplicationContext val appContext: Context,
     val repository: WeatherRepository,
-    val alertRepository: AlertRepository,
-    val airQualityRepository: AirQualityRepository,
-    val weatherSourceManager: WeatherSourceManager,
-    val radarRepository: RadarRepository,
     val locationRepository: LocationRepository,
     val locationProvider: LocationProvider,
     val prefs: UserPreferences,
-    val summaryEngine: SummaryEngine,
     val connectivityObserver: ConnectivityObserver,
-    val onThisDayRepository: OnThisDayRepository,
-    val forecastEvolutionRepository: ForecastEvolutionRepository,
-    val forecastAccuracyRepository: ForecastAccuracyRepository,
-    val confidenceBandRepository: ConfidenceBandRepository,
-    val auroraRepository: AuroraRepository,
-    val marineRepository: MarineRepository,
-    val floodRepository: FloodRepository,
-    val climateRepository: ClimateRepository,
-    val wearSyncManager: WearSyncManager,
-    val gadgetbridgeBroadcaster: GadgetbridgeWeatherBroadcaster,
-    @DefaultDispatcher val defaultDispatcher: CoroutineDispatcher,
+    val weatherLoadCoordinator: WeatherLoadCoordinator,
 )
 
 @HiltViewModel
@@ -137,28 +86,12 @@ class MainViewModel @Inject constructor(
     dependencies: MainViewModelDependencies,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    private val appContext = dependencies.appContext
     private val repository = dependencies.repository
-    private val alertRepository = dependencies.alertRepository
-    private val airQualityRepository = dependencies.airQualityRepository
-    private val weatherSourceManager = dependencies.weatherSourceManager
-    private val radarRepository = dependencies.radarRepository
     private val locationRepository = dependencies.locationRepository
     private val locationProvider = dependencies.locationProvider
     private val prefs = dependencies.prefs
-    private val summaryEngine = dependencies.summaryEngine
     private val connectivityObserver = dependencies.connectivityObserver
-    private val onThisDayRepository = dependencies.onThisDayRepository
-    private val forecastEvolutionRepository = dependencies.forecastEvolutionRepository
-    private val forecastAccuracyRepository = dependencies.forecastAccuracyRepository
-    private val confidenceBandRepository = dependencies.confidenceBandRepository
-    private val auroraRepository = dependencies.auroraRepository
-    private val marineRepository = dependencies.marineRepository
-    private val floodRepository = dependencies.floodRepository
-    private val climateRepository = dependencies.climateRepository
-    private val wearSyncManager = dependencies.wearSyncManager
-    private val gadgetbridgeBroadcaster = dependencies.gadgetbridgeBroadcaster
-    private val defaultDispatcher = dependencies.defaultDispatcher
+    private val weatherLoadCoordinator = dependencies.weatherLoadCoordinator
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
@@ -192,7 +125,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    // ── Settings ─────────────────────────────────────────────────────────
+    // Settings
 
     private fun observeSettings() {
         viewModelScope.launch {
@@ -210,14 +143,21 @@ class MainViewModel @Inject constructor(
                     handleForecastEvolutionSettingChange(prior, settings)
                 }
                 // Derived data (summary, golden hour, driving/health alerts)
-                // bakes units and thresholds in at compute time — recompute it
+                // bakes units and thresholds in at compute time - recompute it
                 // when a relevant setting changes, otherwise it stays stale
                 // until the next fetch. Skipped before the first fetch and when
                 // the changed fields don't feed the derived computation.
                 if (prior != null && derivedSettingsChanged(prior, settings)) {
                     val data = _uiState.value.weatherData ?: return@collect
                     try {
-                        computeDerivedData(data, weatherRequestCounter.get())
+                        weatherLoadCoordinator.recomputeDerivedData(
+                            data = data,
+                            requestId = weatherRequestCounter.get(),
+                            scope = viewModelScope,
+                            currentState = { _uiState.value },
+                            updateState = ::updateUiState,
+                            isLatestRequest = ::isLatestWeatherRequest,
+                        )
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         Log.w(TAG, "Derived weather recomputation failed", e)
@@ -227,7 +167,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    /** True when a settings change affects [computeDerivedData] output. */
+    /** True when a settings change affects coordinator-derived output. */
     private fun derivedSettingsChanged(old: NimbusSettings, new: NimbusSettings): Boolean =
         old.tempUnit != new.tempUnit ||
             old.windUnit != new.windUnit ||
@@ -249,7 +189,15 @@ class MainViewModel @Inject constructor(
                 val lat = activeLatitude ?: return
                 val lon = activeLongitude ?: return
                 val requestId = weatherRequestCounter.get()
-                viewModelScope.launch { fetchForecastEvolution(lat, lon, requestId) }
+                viewModelScope.launch {
+                    weatherLoadCoordinator.fetchForecastEvolution(
+                        lat = lat,
+                        lon = lon,
+                        requestId = requestId,
+                        updateState = ::updateUiState,
+                        isLatestRequest = ::isLatestWeatherRequest,
+                    )
+                }
             }
             wasEnabled && !isEnabled -> {
                 _uiState.update {
@@ -263,7 +211,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    // ── Saved Locations (for HorizontalPager) ────────────────────────────
+    // Saved locations for HorizontalPager
 
     private fun observeSavedLocations() {
         viewModelScope.launch {
@@ -360,12 +308,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    // ── Weather Loading ──────────────────────────────────────────────────
+    // Weather loading
 
     fun loadWeather(
         clearDisplayedWeather: Boolean = false,
         // Default is evaluated in the caller's frame, so the id is allocated
-        // synchronously — a queued stale intent can't out-id a newer one.
+        // synchronously - a queued stale intent cannot out-id a newer one.
         requestId: Long = nextWeatherRequestId(),
     ) {
         viewModelScope.launch {
@@ -516,44 +464,22 @@ class MainViewModel @Inject constructor(
                             isCached = false,
                         )
                     }
-                    // Publish the condition to the live wallpaper; never let a
-                    // wallpaper failure break the fetch.
-                    try {
-                        WeatherWallpaperService.publishWeatherCode(appContext, data.current.weatherCode.code)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Wallpaper weather publish failed", e)
-                    }
-                    fetchSupplementalWeatherData(lat, lon, requestId, sourceOverrides, alertCountryHint, data)
-                    if (!isLatestWeatherRequest(requestId)) return@fold
-                    // Sync to watch after all data is available
-                    try {
-                        wearSyncManager.syncWeather(
+                    weatherLoadCoordinator.finishSuccessfulWeatherLoad(
+                        completion = WeatherLoadCompletion(
+                            lat = lat,
+                            lon = lon,
+                            requestId = requestId,
                             data = data,
-                            alerts = _uiState.value.alerts,
-                            airQuality = _uiState.value.airQuality,
-                        )
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Wear sync failed", e)
-                    }
-                    if (_uiState.value.settings.gadgetbridgeBroadcastEnabled) {
-                        try {
-                            gadgetbridgeBroadcaster.broadcast(data)
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Gadgetbridge broadcast failed", e)
-                        }
-                    }
-                    // Yesterday comparison must complete before derived data computation
-                    try {
-                        fetchYesterdayComparison(lat, lon, requestId)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Yesterday comparison failed", e)
-                    }
-                    if (!isLatestWeatherRequest(requestId)) return@fold
-                    try {
-                        computeDerivedData(data, requestId)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Derived weather computation failed", e)
-                    }
+                            sourceOverrides = sourceOverrides,
+                            alertCountryHint = alertCountryHint,
+                        ),
+                        callbacks = WeatherLoadCallbacks(
+                            scope = viewModelScope,
+                            currentState = { _uiState.value },
+                            updateState = ::updateUiState,
+                            isLatestRequest = ::isLatestWeatherRequest,
+                        ),
+                    )
                 },
                 onFailure = { e ->
                     if (!isLatestWeatherRequest(requestId)) return@fold
@@ -575,523 +501,15 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private suspend fun fetchSupplementalWeatherData(
-        lat: Double,
-        lon: Double,
-        requestId: Long,
-        sourceOverrides: SourceOverrides,
-        alertCountryHint: String?,
-        data: WeatherData,
-    ) {
-        coroutineScope {
-            launch { fetchAlerts(lat, lon, requestId, sourceOverrides, alertCountryHint) }
-            launch { fetchAirQuality(lat, lon, requestId) }
-            launch { fetchOnThisDay(lat, lon, data.current.observationTime?.toLocalDate(), requestId) }
-            launch { fetchAstronomy(data, lat, lon, requestId) }
-            launch { fetchRadarPreview(lat, lon, requestId) }
-            launch { fetchNowcast(lat, lon, requestId) }
-            if (_uiState.value.settings.isCardEnabled(CardType.FORECAST_EVOLUTION)) {
-                launch { fetchForecastEvolution(lat, lon, requestId) }
-            }
-            if (_uiState.value.settings.isCardEnabled(CardType.AURORA_KP)) {
-                launch { fetchAuroraKp(requestId) }
-            }
-            if (_uiState.value.settings.isCardEnabled(CardType.MARINE)) {
-                launch { fetchMarine(lat, lon, requestId) }
-            }
-            if (_uiState.value.settings.isCardEnabled(CardType.FLOOD_RISK)) {
-                launch { fetchFlood(lat, lon, requestId) }
-            }
-            if (_uiState.value.settings.showForecastAccuracy) {
-                launch { fetchForecastAccuracy(lat, lon, requestId) }
-            }
-            if (_uiState.value.settings.showConfidenceBands) {
-                launch { fetchConfidenceBands(lat, lon, requestId) }
-            }
-            if (_uiState.value.settings.isCardEnabled(CardType.CLIMATE_OUTLOOK)) {
-                launch { fetchClimateOutlook(lat, lon, requestId) }
-            }
-        }
-    }
-
-    private suspend fun fetchAlerts(
-        lat: Double,
-        lon: Double,
-        requestId: Long,
-        sourceOverrides: SourceOverrides,
-        countryHint: String?,
-    ) {
-        try {
-            weatherSourceManager.getAlerts(
-                lat,
-                lon,
-                sourceOverrides,
-                countryHint = countryHint,
-            ).fold(
-                onSuccess = {
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { s ->
-                            s.copy(
-                                alerts = it.toImmutableList(),
-                                alertsUpdatedAt = LocalDateTime.now(),
-                                alertsFetchFailed = false,
-                            )
-                        }
-                    }
-                },
-                onFailure = {
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { s ->
-                            s.copy(
-                                alerts = persistentListOf(),
-                                alertsFetchFailed = true,
-                            )
-                        }
-                    }
-                }
-            )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            if (isLatestWeatherRequest(requestId)) {
-                _uiState.update {
-                    it.copy(
-                        alerts = persistentListOf(),
-                        alertsFetchFailed = true,
-                    )
-                }
-            }
-        }
-    }
-
-    private suspend fun fetchAirQuality(lat: Double, lon: Double, requestId: Long) {
-        try {
-            weatherSourceManager.getAirQuality(lat, lon).fold(
-                onSuccess = {
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { s ->
-                            s.copy(
-                                airQuality = it,
-                                airQualityUpdatedAt = LocalDateTime.now(),
-                                airQualityFetchFailed = false,
-                            )
-                        }
-                    }
-                },
-                onFailure = {
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { s ->
-                            s.copy(
-                                airQuality = null,
-                                airQualityFetchFailed = true,
-                            )
-                        }
-                    }
-                }
-            )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w(TAG, "fetchAirQuality failed", e)
-            if (isLatestWeatherRequest(requestId)) {
-                _uiState.update {
-                    it.copy(
-                        airQuality = null,
-                        airQualityFetchFailed = true,
-                    )
-                }
-            }
-        }
-    }
-
-    private fun fetchAstronomy(data: WeatherData, lat: Double, lon: Double, requestId: Long) {
-        try {
-            val astronomy = airQualityRepository.getAstronomy(
-                sunrise = data.current.sunrise,
-                sunset = data.current.sunset,
-                latitude = lat,
-                longitude = lon,
-                zoneId = data.location.timeZone.toZoneIdOrNull() ?: ZoneId.systemDefault(),
-                referenceTime = data.current.observationTime,
-            )
-            if (isLatestWeatherRequest(requestId)) {
-                _uiState.update { it.copy(astronomy = astronomy) }
-            }
-        } catch (e: Exception) { Log.w(TAG, "fetchAstronomy failed", e) }
-    }
-
-    private suspend fun fetchRadarPreview(lat: Double, lon: Double, requestId: Long) {
-        try {
-            val radarProvider = _uiState.value.settings.radarProvider
-            radarRepository.getRadarFrames(radarProvider).fold(
-                onSuccess = { frameSet ->
-                    val latestFrame = frameSet.past.lastOrNull()
-                    if (latestFrame == null) {
-                        if (isLatestWeatherRequest(requestId)) {
-                            _uiState.update { it.copy(radarPreviewFetchFailed = true) }
-                        }
-                        return@fold
-                    }
-                    val preview = radarRepository.buildPreviewTileUrls(
-                        lat = lat,
-                        lon = lon,
-                        tileUrlTemplate = latestFrame.tileUrl,
-                        maxTileZoom = frameSet.maxTileZoom,
-                    )
-                    val radarUrl = preview.radarTileUrl
-                    val baseUrl = preview.baseMapUrl
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update {
-                            it.copy(
-                                radarPreviewTileUrl = radarUrl,
-                                radarBaseMapUrl = baseUrl,
-                                radarPreviewUpdatedAt = LocalDateTime.now(),
-                                radarPreviewFetchFailed = false,
-                            )
-                        }
-                    }
-                },
-                onFailure = {
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { it.copy(radarPreviewFetchFailed = true) }
-                    }
-                }
-            )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w(TAG, "fetchRadarPreview failed", e)
-            if (isLatestWeatherRequest(requestId)) {
-                _uiState.update { it.copy(radarPreviewFetchFailed = true) }
-            }
-        }
-    }
-
-    // ── Nowcast (minutely precipitation) ────────────────────────────────
-
-    private suspend fun fetchNowcast(lat: Double, lon: Double, requestId: Long) {
-        try {
-            repository.getMinutelyPrecipitation(lat, lon).fold(
-                onSuccess = { data ->
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { it.copy(nowcastData = data.toImmutableList()) }
-                    }
-                },
-                onFailure = { Log.w(TAG, "fetchNowcast failed: ${it.message}") }
-            )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w(TAG, "fetchNowcast failed", e)
-        }
-    }
-
-    private suspend fun fetchForecastEvolution(lat: Double, lon: Double, requestId: Long) {
-        if (!isLatestWeatherRequest(requestId)) return
-        _uiState.update {
-            it.copy(
-                isForecastEvolutionLoading = true,
-                forecastEvolutionUnavailable = false,
-                forecastEvolution = null,
-            )
-        }
-        forecastEvolutionRepository.getForecastEvolution(lat, lon).fold(
-            onSuccess = { evolution ->
-                if (isLatestWeatherRequest(requestId)) {
-                    _uiState.update {
-                        it.copy(
-                            forecastEvolution = evolution,
-                            isForecastEvolutionLoading = false,
-                            forecastEvolutionUnavailable = false,
-                        )
-                    }
-                }
-            },
-            onFailure = { e ->
-                if (isLatestWeatherRequest(requestId)) {
-                    Log.w(TAG, "Forecast evolution unavailable", e)
-                    _uiState.update {
-                        it.copy(
-                            forecastEvolution = null,
-                            isForecastEvolutionLoading = false,
-                            forecastEvolutionUnavailable = true,
-                        )
-                    }
-                }
-            },
-        )
-    }
-
-    // ── Forecast Accuracy (Previous Runs comparison) ──────────────────────
-
-    private suspend fun fetchForecastAccuracy(lat: Double, lon: Double, requestId: Long) {
-        try {
-            forecastAccuracyRepository.getForecastAccuracy(lat, lon).fold(
-                onSuccess = { data ->
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { it.copy(forecastAccuracy = data) }
-                    }
-                },
-                onFailure = { Log.d(TAG, "Forecast accuracy unavailable: ${it.message}") },
-            )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.d(TAG, "fetchForecastAccuracy failed", e)
-        }
-    }
-
-    // ── Confidence Bands (Ensemble spread) ────────────────────────────────
-
-    private suspend fun fetchConfidenceBands(lat: Double, lon: Double, requestId: Long) {
-        try {
-            confidenceBandRepository.getConfidenceBands(lat, lon).fold(
-                onSuccess = { data ->
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { it.copy(confidenceBands = data) }
-                    }
-                },
-                onFailure = { Log.d(TAG, "Confidence bands unavailable: ${it.message}") },
-            )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.d(TAG, "fetchConfidenceBands failed", e)
-        }
-    }
-
-    // ── On This Day (historical same-date snapshot) ──────────────────────
-
     fun selectHistoricalDate(date: java.time.LocalDate) {
-        viewModelScope.launch(defaultDispatcher) {
+        viewModelScope.launch {
             val weather = _uiState.value.weatherData ?: return@launch
-            val lat = weather.location.latitude
-            val lon = weather.location.longitude
-            try {
-                val data = onThisDayRepository.getOnThisDay(lat, lon, date)
-                _uiState.update { it.copy(onThisDay = data) }
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                android.util.Log.w(TAG, "selectHistoricalDate failed: ${e.message}")
-            }
+            weatherLoadCoordinator.selectHistoricalDate(date, weather, ::updateUiState)
         }
     }
 
-    private suspend fun fetchOnThisDay(
-        lat: Double,
-        lon: Double,
-        referenceDate: LocalDate?,
-        requestId: Long,
-    ) {
-        try {
-            val data = onThisDayRepository.getOnThisDay(lat, lon, referenceDate ?: LocalDate.now())
-            if (isLatestWeatherRequest(requestId)) {
-                _uiState.update { it.copy(onThisDay = data) }
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w(TAG, "fetchOnThisDay failed: ${e.message}")
-            // Keep any previously cached state; only overwrite with null on first try.
-            if (isLatestWeatherRequest(requestId) && _uiState.value.onThisDay == null) {
-                _uiState.update { it.copy(onThisDay = null) }
-            }
-        }
-    }
-
-    // ── Marine ──────────────────────────────────────────────────────────
-
-    private suspend fun fetchMarine(lat: Double, lon: Double, requestId: Long) {
-        try {
-            marineRepository.getMarine(lat, lon).fold(
-                onSuccess = { data ->
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { it.copy(marineData = data) }
-                    }
-                },
-                onFailure = { Log.d(TAG, "fetchMarine: no marine data (expected for inland locations)") },
-            )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.d(TAG, "fetchMarine failed", e)
-        }
-    }
-
-    // ── Flood Risk ──────────────────────────────────────────────────────
-
-    private suspend fun fetchFlood(lat: Double, lon: Double, requestId: Long) {
-        try {
-            floodRepository.getFlood(lat, lon).fold(
-                onSuccess = { data ->
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { it.copy(floodData = data) }
-                    }
-                },
-                onFailure = { Log.d(TAG, "fetchFlood: no flood data") },
-            )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.d(TAG, "fetchFlood failed", e)
-        }
-    }
-
-    // ── Climate Outlook ──────────────────────────────────────────────────
-
-    private suspend fun fetchClimateOutlook(lat: Double, lon: Double, requestId: Long) {
-        try {
-            climateRepository.getClimateOutlook(lat, lon).fold(
-                onSuccess = { data ->
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { it.copy(climateOutlook = data) }
-                    }
-                },
-                onFailure = { Log.d(TAG, "fetchClimateOutlook: no climate data") },
-            )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.d(TAG, "fetchClimateOutlook failed", e)
-        }
-    }
-
-    // ── Aurora / Kp Index ─────────────────────────────────────────────────
-
-    private suspend fun fetchAuroraKp(requestId: Long) {
-        try {
-            auroraRepository.getKpIndex().fold(
-                onSuccess = { data ->
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { it.copy(auroraKpData = data) }
-                    }
-                },
-                onFailure = { Log.w(TAG, "fetchAuroraKp failed: ${it.message}") },
-            )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w(TAG, "fetchAuroraKp failed", e)
-        }
-    }
-
-    // ── Yesterday Comparison ──────────────────────────────────────────────
-
-    private suspend fun fetchYesterdayComparison(lat: Double, lon: Double, requestId: Long) {
-        try {
-            repository.getYesterdayWeather(lat, lon).fold(
-                onSuccess = { yesterday ->
-                    val high = yesterday?.temperatureHigh
-                    if (isLatestWeatherRequest(requestId)) {
-                        _uiState.update { it.copy(yesterdayHigh = high) }
-                    }
-                },
-                onFailure = { Log.w(TAG, "fetchYesterdayComparison failed: ${it.message}") }
-            )
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.w(TAG, "fetchYesterdayComparison failed", e)
-        }
-    }
-
-    // ── Derived Computations (summary, scores, alerts) ────────────────────
-
-    private suspend fun computeDerivedData(data: WeatherData, requestId: Long) {
-        val settings = _uiState.value.settings
-        val currentState = _uiState.value
-        val derived = withContext(defaultDispatcher) {
-            val templateSummary = WeatherSummaryEngine.generate(
-                current = data.current,
-                today = data.daily.firstOrNull(),
-                hourly = data.hourly,
-                yesterdayHigh = currentState.yesterdayHigh,
-                s = settings,
-                context = appContext,
-            )
-
-            val outdoorBreakdown = WeatherFormatter.outdoorActivityScore(
-                tempCelsius = data.current.temperature,
-                humidity = data.current.humidity,
-                windKmh = data.current.windSpeed,
-                uvIndex = data.current.uvIndex,
-                precipProbability = data.daily.firstOrNull()?.precipitationProbability ?: 0,
-                aqi = currentState.airQuality?.usAqi,
-            )
-
-            val drivingAlerts = if (settings.drivingAlerts) {
-                DrivingConditionEvaluator.evaluate(data.current)
-            } else {
-                persistentListOf()
-            }
-
-            val healthAlerts = if (settings.healthAlertsEnabled) {
-                HealthAlertEvaluator.evaluate(
-                    hourly = data.hourly,
-                    pressureThresholdHpa = settings.migrainePressureThreshold,
-                    enableMigraine = settings.migraineAlerts,
-                )
-            } else {
-                persistentListOf()
-            }
-
-            val clothingSuggestions = ClothingSuggestionEvaluator.evaluate(data.current)
-            val petSafetyAlerts = PetSafetyEvaluator.evaluate(data.current)
-
-            val activityIndices = if (settings.isCardEnabled(CardType.ACTIVITY_INDEX)) {
-                ActivityIndexEvaluator.evaluate(
-                    current = data.current,
-                    precipProbability = data.daily.firstOrNull()?.precipitationProbability ?: 0,
-                    aqi = currentState.airQuality?.usAqi,
-                )
-            } else {
-                emptyList()
-            }
-
-            val goldenHour = WeatherFormatter.goldenHourTimes(
-                data.current.sunrise, data.current.sunset, settings,
-            )
-
-            DerivedWeatherState(
-                weatherSummary = templateSummary,
-                outdoorScore = outdoorBreakdown,
-                drivingAlerts = drivingAlerts.toImmutableList(),
-                healthAlerts = healthAlerts.toImmutableList(),
-                clothingSuggestions = clothingSuggestions.toImmutableList(),
-                petSafetyAlerts = petSafetyAlerts.toImmutableList(),
-                goldenHourTimes = goldenHour,
-                activityIndices = activityIndices.toImmutableList(),
-            )
-        }
-
-        if (!isLatestWeatherRequest(requestId)) return
-
-        // Single state update — triggers one recomposition instead of many
-        _uiState.update {
-            it.copy(
-                weatherSummary = derived.weatherSummary,
-                outdoorScore = derived.outdoorScore,
-                drivingAlerts = derived.drivingAlerts,
-                healthAlerts = derived.healthAlerts,
-                clothingSuggestions = derived.clothingSuggestions,
-                petSafetyAlerts = derived.petSafetyAlerts,
-                goldenHourTimes = derived.goldenHourTimes,
-                activityIndices = derived.activityIndices,
-            )
-        }
-
-        // If AI style is selected, launch async generation and update when ready
-        if (settings.summaryStyle == SummaryStyle.AI_GENERATED && summaryEngine.isAvailable()) {
-            viewModelScope.launch {
-                val aiSummary = withContext(defaultDispatcher) {
-                    WeatherSummaryEngine.generateWithStyle(
-                        current = data.current,
-                        today = data.daily.firstOrNull(),
-                        hourly = data.hourly,
-                        yesterdayHigh = _uiState.value.yesterdayHigh,
-                        s = settings,
-                        aiEngine = summaryEngine,
-                        context = appContext,
-                    )
-                }
-                if (isLatestWeatherRequest(requestId)) {
-                    _uiState.update { it.copy(weatherSummary = aiSummary) }
-                }
-            }
-        }
-
-        // Persistent weather notification
-        if (settings.persistentWeatherNotif && isLatestWeatherRequest(requestId)) {
-            com.sysadmindoc.nimbus.util.WeatherNotificationHelper.showOrUpdate(appContext, data, settings)
-        }
+    private fun updateUiState(transform: (MainUiState) -> MainUiState) {
+        _uiState.update(transform)
     }
 
     private fun userFriendlyError(error: Throwable?): MainUiError {
@@ -1112,7 +530,7 @@ class MainViewModel @Inject constructor(
 
     /**
      * Falls back to cached weather. When [lat]/[lon] are provided (a fetch for
-     * a specific location failed), only that location's cache is consulted —
+     * a specific location failed), only that location's cache is consulted -
      * never [UserPreferences.lastLocation], which may point at a different
      * place and would render the wrong location's weather. The lastLocation
      * fallback is reserved for the no-coords paths (missing permission, GPS
@@ -1360,17 +778,6 @@ data class MainUiState(
     val confidenceBands: ConfidenceBandData? = null,
     val climateOutlook: ClimateOutlookData? = null,
     val lastSeenVersionCode: Int = BuildConfig.VERSION_CODE,
-)
-
-private data class DerivedWeatherState(
-    val weatherSummary: String,
-    val outdoorScore: WeatherFormatter.OutdoorScoreBreakdown?,
-    val drivingAlerts: ImmutableList<DrivingAlert>,
-    val healthAlerts: ImmutableList<HealthAlert>,
-    val clothingSuggestions: ImmutableList<ClothingSuggestion>,
-    val petSafetyAlerts: ImmutableList<PetSafetyAlert>,
-    val goldenHourTimes: Pair<String, String>?,
-    val activityIndices: ImmutableList<ActivityIndex>,
 )
 
 private fun MainUiState.clearLocationScopedData(): MainUiState = copy(

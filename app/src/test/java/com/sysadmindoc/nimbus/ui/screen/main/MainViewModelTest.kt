@@ -28,7 +28,6 @@ class MainViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher(TestCoroutineScheduler())
 
     private lateinit var weatherRepository: WeatherRepository
-    private lateinit var alertRepository: AlertRepository
     private lateinit var airQualityRepository: AirQualityRepository
     private lateinit var weatherSourceManager: WeatherSourceManager
     private lateinit var radarRepository: RadarRepository
@@ -99,7 +98,6 @@ class MainViewModelTest {
         Dispatchers.setMain(testDispatcher)
 
         weatherRepository = mockk()
-        alertRepository = mockk()
         airQualityRepository = mockk()
         weatherSourceManager = mockk()
         radarRepository = mockk()
@@ -126,13 +124,10 @@ class MainViewModelTest {
         coEvery { prefs.saveBackgroundAlertLocation(any(), any(), any()) } returns mockk()
         coEvery { locationRepository.ensureCurrentLocation(any(), any(), any()) } returns Unit
         every { locationRepository.savedLocations } returns savedLocationsFlow
-        coEvery { alertRepository.getAlerts(any(), any()) } coAnswers { Result.success(emptyList()) }
-        coEvery { airQualityRepository.getAirQuality(any(), any()) } coAnswers { Result.success(testAirQuality) }
         coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any(), any()) } coAnswers {
             Result.success(emptyList())
         }
         coEvery { weatherSourceManager.getAirQuality(any(), any()) } coAnswers { Result.success(testAirQuality) }
-        coEvery { weatherSourceManager.getMinutelyPrecipitation(any(), any()) } coAnswers { Result.success(emptyList()) }
         every { airQualityRepository.getAstronomy(any(), any(), any(), any(), any(), any()) } returns testAstronomy
         coEvery { onThisDayRepository.getOnThisDay(any(), any(), any()) } returns null
         coEvery { forecastEvolutionRepository.getForecastEvolution(any(), any(), any()) } returns Result.failure(
@@ -178,28 +173,34 @@ class MainViewModelTest {
     private fun createViewModel(savedState: SavedStateHandle = SavedStateHandle()): MainViewModel {
         return MainViewModel(
             dependencies = MainViewModelDependencies(
-                appContext = mockk(relaxed = true),
                 repository = weatherRepository,
-                alertRepository = alertRepository,
-                airQualityRepository = airQualityRepository,
-                weatherSourceManager = weatherSourceManager,
-                radarRepository = radarRepository,
                 locationRepository = locationRepository,
                 locationProvider = locationProvider,
                 prefs = prefs,
-                summaryEngine = summaryEngine,
                 connectivityObserver = connectivityObserver,
-                onThisDayRepository = onThisDayRepository,
-                forecastEvolutionRepository = forecastEvolutionRepository,
-                forecastAccuracyRepository = mockk(relaxed = true),
-                confidenceBandRepository = mockk(relaxed = true),
-                auroraRepository = mockk(relaxed = true),
-                marineRepository = mockk(relaxed = true),
-                floodRepository = mockk(relaxed = true),
-                climateRepository = mockk(relaxed = true),
-                wearSyncManager = wearSyncManager,
-                gadgetbridgeBroadcaster = mockk(relaxed = true),
-                defaultDispatcher = testDispatcher,
+                weatherLoadCoordinator = WeatherLoadCoordinator(
+                    core = WeatherLoadCoreDependencies(
+                        appContext = mockk(relaxed = true),
+                        repository = weatherRepository,
+                        weatherSourceManager = weatherSourceManager,
+                        radarRepository = radarRepository,
+                        airQualityRepository = airQualityRepository,
+                        summaryEngine = summaryEngine,
+                        wearSyncManager = wearSyncManager,
+                        gadgetbridgeBroadcaster = mockk(relaxed = true),
+                        defaultDispatcher = testDispatcher,
+                    ),
+                    optionalRepositories = WeatherLoadOptionalRepositories(
+                        onThisDayRepository = onThisDayRepository,
+                        forecastEvolutionRepository = forecastEvolutionRepository,
+                        forecastAccuracyRepository = mockk(relaxed = true),
+                        confidenceBandRepository = mockk(relaxed = true),
+                        auroraRepository = mockk(relaxed = true),
+                        marineRepository = mockk(relaxed = true),
+                        floodRepository = mockk(relaxed = true),
+                        climateRepository = mockk(relaxed = true),
+                    ),
+                ),
             ),
             savedStateHandle = savedState,
         )
