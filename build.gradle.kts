@@ -43,3 +43,9 @@ tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
         txt.required.set(false)
     }
 }
+
+tasks.register("accessibilityGate") {
+    group = "verification"
+    description = "Runs WCAG contrast unit tests and Compose accessibility checks on Android."
+    dependsOn(":app:testStandardDebugUnitTest", ":app:connectedStandardDebugAndroidTest")
+}

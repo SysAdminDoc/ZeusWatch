@@ -252,13 +252,6 @@ Open question: needs measurement.
 
 ### P3 — Polish & Future
 
-- [ ] P3 — WCAG 2.2 AA automated local gate · accessibility
-  Why: The European Accessibility Act (EAA) took effect June 28, 2025, making WCAG 2.2 AA legally required in the EU. ZeusWatch already has some accessibility support (TalkBack descriptions, `AccessibilityHelper`, Canvas semantics) but lacks automated local release enforcement. Compose UI tests with `compose-ui-test-junit4-accessibility` are partially enabled but not gating.
-  Evidence: European Accessibility Act enforcement date; WCAG 2.2 criteria (1.4.11 non-text contrast 3:1, 2.5.8 touch target 24px minimum); `compose-ui-test-junit4-accessibility` already in dependencies.
-  Touches: local release verification command set, existing `androidTest` files (expand coverage to all screens), new `AccessibilityAuditTest.kt` for contrast and touch target checks.
-  Acceptance: Local accessibility verification fails on new WCAG 2.2 AA violations; all screens pass contrast and touch target checks; existing tests continue to pass.
-  Complexity: M
-
 - [ ] P3 — Open-Meteo FlatBuffer SDK for large payload performance · **T-PERF**
   Why: Open-Meteo's FlatBuffer format avoids JSON parsing overhead for large payloads (historical data, hourly arrays). The SDK (`com.open-meteo:sdk`) is at v1.26.0 on Maven Central. The high-level Kotlin wrapper library is stalled, but the generated FlatBuffer classes work directly with `&format=flatbuffers`.
   Evidence: Open-Meteo SDK releases (github.com/open-meteo/sdk); `open-meteo-api-kotlin` stalled at v0.1.0 due to KMP FlatBuffers limitation.
