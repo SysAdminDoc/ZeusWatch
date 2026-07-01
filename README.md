@@ -164,7 +164,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Daily** | 4x2 | Five-day outlook rows with high/low and condition icons |
 
 - Per-widget location configuration via config activity
-- Tap-to-refresh (when data is null) and tap-to-open (when loaded)
+- Tap-to-refresh from freshness badges and empty states; tap widget body to open the app when loaded
 - Proactive background caching for all saved locations
 - Material You theming with `GlanceTheme`
 

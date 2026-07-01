@@ -431,35 +431,14 @@ class WidgetRefreshWorker @AssistedInject constructor(
         weatherData: WeatherData,
         convertTemp: (Double) -> Double,
         displayLocationName: String = weatherData.location.name,
-    ): WidgetWeatherData {
-        val locationToday = weatherData.daily.firstOrNull()?.date
-            ?: weatherData.hourly.firstOrNull()?.time?.toLocalDate()
-        return WidgetWeatherData(
-            locationName = displayLocationName,
-            temperature = convertTemp(weatherData.current.temperature),
-            feelsLike = convertTemp(weatherData.current.feelsLike),
-            high = convertTemp(weatherData.current.dailyHigh),
-            low = convertTemp(weatherData.current.dailyLow),
-            weatherCode = weatherData.current.weatherCode.code,
-            isDay = weatherData.current.isDay,
-            humidity = weatherData.current.humidity,
-            windSpeed = weatherData.current.windSpeed,
-            hourly = buildWidgetHourlyItems(
-                hourly = weatherData.hourly,
-                referenceTime = weatherData.current.observationTime,
-                nowLabel = applicationContext.getString(R.string.common_now),
-                convertTemp = convertTemp,
-            ),
-            daily = buildWidgetDailyItems(
-                daily = weatherData.daily,
-                today = locationToday,
-                todayLabel = applicationContext.getString(R.string.today),
-                tomorrowLabel = applicationContext.getString(R.string.widget_tomorrow_short),
-                convertTemp = convertTemp,
-            ),
-            updatedAt = weatherData.lastUpdated.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(),
-        )
-    }
+    ): WidgetWeatherData = buildWidgetWeatherData(
+        weatherData = weatherData,
+        convertTemp = convertTemp,
+        displayLocationName = displayLocationName,
+        nowLabel = applicationContext.getString(R.string.common_now),
+        todayLabel = applicationContext.getString(R.string.today),
+        tomorrowLabel = applicationContext.getString(R.string.widget_tomorrow_short),
+    )
 
     private fun locationKey(latitude: Double, longitude: Double): String {
         return widgetLocationKey(latitude, longitude)
@@ -648,12 +627,56 @@ internal fun buildWidgetSavedCity(
         weatherCode = weatherData?.current?.weatherCode?.code,
         isDay = weatherData?.current?.isDay ?: true,
         updatedAt = weatherData?.lastUpdated
-            ?.atZone(java.time.ZoneId.systemDefault())
-            ?.toInstant()
-            ?.toEpochMilli()
+            ?.toWidgetEpochMillis()
             ?: 0L,
+        observedAt = weatherData?.current?.observationTime
+            ?.toWidgetEpochMillis()
+            ?: 0L,
+        sourceProvider = weatherData?.sourceProvider,
     )
 }
+
+internal fun buildWidgetWeatherData(
+    weatherData: WeatherData,
+    convertTemp: (Double) -> Double,
+    displayLocationName: String = weatherData.location.name,
+    nowLabel: String = "Now",
+    todayLabel: String = "Today",
+    tomorrowLabel: String = "Tmrw",
+): WidgetWeatherData {
+    val locationToday = weatherData.daily.firstOrNull()?.date
+        ?: weatherData.hourly.firstOrNull()?.time?.toLocalDate()
+    return WidgetWeatherData(
+        locationName = displayLocationName,
+        temperature = convertTemp(weatherData.current.temperature),
+        feelsLike = convertTemp(weatherData.current.feelsLike),
+        high = convertTemp(weatherData.current.dailyHigh),
+        low = convertTemp(weatherData.current.dailyLow),
+        weatherCode = weatherData.current.weatherCode.code,
+        isDay = weatherData.current.isDay,
+        humidity = weatherData.current.humidity,
+        windSpeed = weatherData.current.windSpeed,
+        hourly = buildWidgetHourlyItems(
+            hourly = weatherData.hourly,
+            referenceTime = weatherData.current.observationTime,
+            nowLabel = nowLabel,
+            convertTemp = convertTemp,
+        ),
+        daily = buildWidgetDailyItems(
+            daily = weatherData.daily,
+            today = locationToday,
+            todayLabel = todayLabel,
+            tomorrowLabel = tomorrowLabel,
+            convertTemp = convertTemp,
+        ),
+        updatedAt = weatherData.lastUpdated.toWidgetEpochMillis(),
+        observedAt = weatherData.current.observationTime?.toWidgetEpochMillis() ?: 0L,
+        sourceProvider = weatherData.sourceProvider,
+    )
+}
+
+private fun java.time.LocalDateTime.toWidgetEpochMillis(): Long =
+    atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
 
 /**
  * Background refresh is skipped only when the battery is critically low AND

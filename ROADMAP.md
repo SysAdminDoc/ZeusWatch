@@ -425,12 +425,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
   Acceptance: Users in DMI coverage can select DMI forecasts via the no-key Open-Meteo DMI path; the adapter routes through the metadata registry; fallback and attribution work; tests cover coordinates inside/outside coverage and metric-unit mapping.
   Complexity: M
 
-- [ ] P2 — Widget/app freshness parity contract for all eight widgets
-  Why: Widgets are a major distribution surface and stale-widget mismatch is a visible competitor pain; ZeusWatch now has eight widget receivers while docs/tests still reflect the older four-widget mental model in places.
-  Evidence: `AndroidManifest.xml` registers eight `Nimbus*WidgetReceiver` classes; `WidgetRefreshWorker.kt` updates all eight; README widget table/source tree still list four; WeatherMaster issues #792 and #876 report app/widget data divergence.
-  Touches: `WidgetRefreshWorker.kt`, `WidgetDataProvider`, all `Nimbus*Widget.kt` classes, widget tests, README widget docs, docs consistency gate.
-  Acceptance: A single contract test verifies every widget receiver reads the same source, observation time, cache age, and manual-refresh result as the app for a fake forecast; README/docs list all eight widget surfaces.
-  Complexity: M
 
 ## Research-Driven Additions (2026-06-25)
 

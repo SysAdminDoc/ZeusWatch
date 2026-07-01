@@ -38,6 +38,8 @@ object WidgetDataProvider {
     private val KEY_HOURLY_JSON = stringPreferencesKey("w_hourly")
     private val KEY_DAILY_JSON = stringPreferencesKey("w_daily")
     private val KEY_UPDATED_AT = longPreferencesKey("w_updated")
+    private val KEY_OBSERVED_AT = longPreferencesKey("w_observed")
+    private val KEY_SOURCE_PROVIDER = stringPreferencesKey("w_source_provider")
     private val KEY_SAVED_CITIES_JSON = stringPreferencesKey("w_saved_cities")
 
     suspend fun save(context: Context, data: WidgetWeatherData) {
@@ -53,7 +55,13 @@ object WidgetDataProvider {
             prefs[KEY_WIND_SPEED] = data.windSpeed
             prefs[KEY_HOURLY_JSON] = json.encodeToString(WidgetHourlyList.serializer(), WidgetHourlyList(data.hourly))
             prefs[KEY_DAILY_JSON] = json.encodeToString(WidgetDailyList.serializer(), WidgetDailyList(data.daily))
-            prefs[KEY_UPDATED_AT] = System.currentTimeMillis()
+            prefs[KEY_UPDATED_AT] = data.updatedAt.takeIf { it > 0L } ?: System.currentTimeMillis()
+            prefs[KEY_OBSERVED_AT] = data.observedAt
+            if (data.sourceProvider.isNullOrBlank()) {
+                prefs.remove(KEY_SOURCE_PROVIDER)
+            } else {
+                prefs[KEY_SOURCE_PROVIDER] = data.sourceProvider
+            }
         }
     }
 
@@ -80,6 +88,8 @@ object WidgetDataProvider {
                 try { json.decodeFromString(WidgetDailyList.serializer(), it).items } catch (_: Exception) { emptyList() }
             } ?: emptyList(),
             updatedAt = prefs[KEY_UPDATED_AT] ?: 0L,
+            observedAt = prefs[KEY_OBSERVED_AT] ?: 0L,
+            sourceProvider = prefs[KEY_SOURCE_PROVIDER],
         )
     }
 
@@ -97,6 +107,8 @@ object WidgetDataProvider {
             prefs.remove(KEY_HOURLY_JSON)
             prefs.remove(KEY_DAILY_JSON)
             prefs.remove(KEY_UPDATED_AT)
+            prefs.remove(KEY_OBSERVED_AT)
+            prefs.remove(KEY_SOURCE_PROVIDER)
         }
     }
 
@@ -143,7 +155,14 @@ object WidgetDataProvider {
             prefs[doublePreferencesKey(wKey(appWidgetId, "wind"))] = data.windSpeed
             prefs[stringPreferencesKey(wKey(appWidgetId, "hourly"))] = json.encodeToString(WidgetHourlyList.serializer(), WidgetHourlyList(data.hourly))
             prefs[stringPreferencesKey(wKey(appWidgetId, "daily"))] = json.encodeToString(WidgetDailyList.serializer(), WidgetDailyList(data.daily))
-            prefs[longPreferencesKey(wKey(appWidgetId, "updated"))] = System.currentTimeMillis()
+            prefs[longPreferencesKey(wKey(appWidgetId, "updated"))] = data.updatedAt.takeIf { it > 0L } ?: System.currentTimeMillis()
+            prefs[longPreferencesKey(wKey(appWidgetId, "observed"))] = data.observedAt
+            val sourceProviderKey = stringPreferencesKey(wKey(appWidgetId, "source_provider"))
+            if (data.sourceProvider.isNullOrBlank()) {
+                prefs.remove(sourceProviderKey)
+            } else {
+                prefs[sourceProviderKey] = data.sourceProvider
+            }
         }
     }
 
@@ -174,6 +193,8 @@ object WidgetDataProvider {
                 try { json.decodeFromString(WidgetDailyList.serializer(), it).items } catch (_: Exception) { emptyList() }
             } ?: emptyList(),
             updatedAt = prefs[longPreferencesKey(wKey(appWidgetId, "updated"))] ?: 0L,
+            observedAt = prefs[longPreferencesKey(wKey(appWidgetId, "observed"))] ?: 0L,
+            sourceProvider = prefs[stringPreferencesKey(wKey(appWidgetId, "source_provider"))],
         )
     }
 
@@ -191,6 +212,8 @@ object WidgetDataProvider {
             prefs.remove(stringPreferencesKey(wKey(appWidgetId, "hourly")))
             prefs.remove(stringPreferencesKey(wKey(appWidgetId, "daily")))
             prefs.remove(longPreferencesKey(wKey(appWidgetId, "updated")))
+            prefs.remove(longPreferencesKey(wKey(appWidgetId, "observed")))
+            prefs.remove(stringPreferencesKey(wKey(appWidgetId, "source_provider")))
         }
     }
 
@@ -215,6 +238,8 @@ data class WidgetWeatherData(
     val hourly: List<WidgetHourly>,
     val daily: List<WidgetDaily>,
     val updatedAt: Long = 0L,
+    val observedAt: Long = 0L,
+    val sourceProvider: String? = null,
 )
 
 @Serializable
@@ -245,6 +270,8 @@ data class WidgetSavedCity(
     val weatherCode: Int? = null,
     val isDay: Boolean = true,
     val updatedAt: Long = 0L,
+    val observedAt: Long = 0L,
+    val sourceProvider: String? = null,
 )
 
 @Serializable

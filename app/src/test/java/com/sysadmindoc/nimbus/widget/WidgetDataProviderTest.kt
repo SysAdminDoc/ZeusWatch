@@ -28,6 +28,8 @@ class WidgetDataProviderTest {
             hourly = emptyList(),
             daily = emptyList(),
             updatedAt = 1000L,
+            observedAt = 900L,
+            sourceProvider = "Open-Meteo",
         )
 
         assertEquals("Denver", data.locationName)
@@ -40,6 +42,8 @@ class WidgetDataProviderTest {
         assertEquals(35, data.humidity)
         assertEquals(15.0, data.windSpeed, 0.01)
         assertEquals(1000L, data.updatedAt)
+        assertEquals(900L, data.observedAt)
+        assertEquals("Open-Meteo", data.sourceProvider)
     }
 
     @Test
@@ -59,6 +63,8 @@ class WidgetDataProviderTest {
         )
 
         assertEquals(0L, data.updatedAt)
+        assertEquals(0L, data.observedAt)
+        assertNull(data.sourceProvider)
     }
 
     // --- WidgetHourly items ---
@@ -204,6 +210,8 @@ class WidgetDataProviderTest {
             weatherCode = 1,
             isDay = true,
             updatedAt = 1000L,
+            observedAt = 900L,
+            sourceProvider = "Open-Meteo",
         )
 
         assertEquals(42L, city.locationId)
@@ -214,6 +222,8 @@ class WidgetDataProviderTest {
         assertEquals(1, city.weatherCode)
         assertTrue(city.isDay)
         assertEquals(1000L, city.updatedAt)
+        assertEquals(900L, city.observedAt)
+        assertEquals("Open-Meteo", city.sourceProvider)
     }
 
     // --- Temperature conversion simulation ---

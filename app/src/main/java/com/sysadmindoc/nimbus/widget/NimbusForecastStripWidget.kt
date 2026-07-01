@@ -94,6 +94,13 @@ private fun ForecastStripContent(
                     "${data.temperature.toInt()}\u00B0",
                     style = WidgetTheme.tempSmall,
                 )
+                strings.updatedLabel(data.updatedAt)?.let { label ->
+                    WidgetMiniStatusBadge(
+                        text = label,
+                        onClick = widgetRefreshBadgeAction(),
+                        contentDescription = strings.updatedContentDescription(label),
+                    )
+                }
             }
 
             Spacer(modifier = GlanceModifier.width(6.dp))

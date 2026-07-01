@@ -187,6 +187,35 @@ fun WidgetStatusBadge(
     }
 }
 
+@Composable
+fun WidgetMiniStatusBadge(
+    text: String,
+    modifier: GlanceModifier = GlanceModifier,
+    onClick: Action? = null,
+    contentDescription: String? = null,
+) {
+    val base = modifier
+        .cornerRadius(6.dp)
+        .background(widgetAccentContainerColor())
+        .padding(horizontal = 6.dp, vertical = 2.dp)
+    val withSemantics = if (contentDescription != null) {
+        base.semantics { this.contentDescription = contentDescription }
+    } else {
+        base
+    }
+    val final = if (onClick != null) withSemantics.clickable(onClick) else withSemantics
+    Box(
+        modifier = final,
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = widgetStatusStyle().copy(fontSize = 9.sp),
+            maxLines = 1,
+        )
+    }
+}
+
 /**
  * Convenience factory for a freshness badge that forces an immediate
  * refresh when tapped. Prefer over plain [WidgetStatusBadge] on data-loaded
