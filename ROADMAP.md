@@ -355,7 +355,7 @@ Items found during the v1.23.0 deep audit that need design decisions or larger w
 - [ ] P3 — IMD (India) forecast and alert adapter · **T-SOURCES**
   Why: India (1.4B population) is absent from ZeusWatch's Provider Expansion Priority table. IMD offers a REST/JSON API (`api.imd.gov.in`) with 14 endpoints covering city/district/state 7-day forecasts, marine bulletins, and river basin precipitation. Requires free API key registration.
   Evidence: api.imd.gov.in documentation; IMD open data initiative (2024).
-  Touches: New `ImdApi` Retrofit interface + `ImdForecastAdapter` + `@Named("imd")` Retrofit in `NetworkModule`. Add IMD to `WeatherSourceManager` dispatch and Provider Expansion table. API key field in Settings (conditional display like OWM/PW).
+  Touches: New `ImdApi` Retrofit interface + `ImdForecastAdapter` + `@Named("imd")` Retrofit in `NetworkModule`. Add IMD to the `WeatherSourceAdapterModule` registry and Provider Expansion table. API key field in Settings (conditional display like OWM/PW).
   Acceptance: Users with an IMD key see Indian-region forecasts from IMD; alerts surface via IMD's warning system; freenet flavor unaffected.
   Complexity: M
 
@@ -374,7 +374,7 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 ### P3 — Polish
 
 
-> Cross-references (already tracked, reinforced by this audit): **Baseline Profile / Macrobenchmark startup gate = NX-7** (still unstarted — no `:baselineprofile` module, plugin not applied; recommend pulling forward, it is the single biggest cold-start win for a card-heavy Compose app). Provider-metadata registry = **NX-20** (the `@IntoMap` P2 above is its natural first step). Provider-aware cache = **NX-6** (prereq for the stale-cache P1). Already-fixed since the v1.21.x audit and intentionally **not** re-listed: Firestore world-delete vector, alert-worker total-failure retry, and the `WeatherParticles` lifecycle `derivedStateOf` bug (now uses `currentStateAsState()`).
+> Cross-references (already tracked, reinforced by this audit): **Baseline Profile / Macrobenchmark startup gate = NX-7** (still unstarted — no `:baselineprofile` module, plugin not applied; recommend pulling forward, it is the single biggest cold-start win for a card-heavy Compose app). Provider-metadata registry = **NX-20** (`WeatherSourceAdapterModule` is the first shipped registry slice; metadata remains). Provider-aware cache = **NX-6** (prereq for the stale-cache P1). Already-fixed since the v1.21.x audit and intentionally **not** re-listed: Firestore world-delete vector, alert-worker total-failure retry, and the `WeatherParticles` lifecycle `derivedStateOf` bug (now uses `currentStateAsState()`).
 
 ## Research-Driven Additions
 
@@ -413,7 +413,7 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 - [ ] P2 — DMI forecast adapter through the provider registry
   Why: DMI covers Denmark, Greenland, Faroe, and nearby Nordic weather with high-resolution HARMONIE/AROME data; use Open-Meteo's no-key DMI endpoint first and keep official DMI EDR behind the provider metadata/auth decision.
   Evidence: Provider priority table lists DMI but no actionable item; DMI Forecast Data docs; Open-Meteo DMI API documents 2 km updates every 3 hours and up to 15-day combined forecasts.
-  Touches: provider metadata registry item NX-20, `WeatherSourceProvider`, `WeatherSourceManager.kt`, `NetworkModule.kt`, Open-Meteo/DMI adapter tests, Settings labels, attribution strings.
+  Touches: provider metadata registry item NX-20, `WeatherSourceProvider`, `WeatherSourceAdapterModule.kt`, `NetworkModule.kt`, Open-Meteo/DMI adapter tests, Settings labels, attribution strings.
   Acceptance: Users in DMI coverage can select DMI forecasts via the no-key Open-Meteo DMI path; the adapter routes through the metadata registry; fallback and attribution work; tests cover coordinates inside/outside coverage and metric-unit mapping.
   Complexity: M
 
@@ -448,7 +448,7 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 - [ ] P2 — HKO (Hong Kong) forecast and alert adapter · **T-SOURCES**
   Why: HKO offers 48 datasets via clean JSON REST at `data.weather.gov.hk/weatherAPI/` — no key, no registration, no XML parsing. Coverage includes 9-day forecast, rainfall nowcast, UV index, tropical cyclone tracking, and earthquake data. Free for commercial and non-commercial use. Compact regional win for 7.5M residents + travellers.
   Evidence: HKO Open Data API documentation (`data.weather.gov.hk`); Provider Expansion Priority table (rank 4, P1/P2); no existing roadmap item with implementation detail.
-  Touches: New `HkoApi.kt` Retrofit interface + `HkoForecastAdapter.kt` + response models. `WeatherSourceManager.kt` dispatch (or `@IntoMap` if NX-20 lands first). `NetworkModule.kt` (`@Named("hko")` Retrofit). Settings labels and attribution. freenet-compatible (no proprietary deps).
+  Touches: New `HkoApi.kt` Retrofit interface + `HkoForecastAdapter.kt` + response models. `WeatherSourceAdapterModule.kt` registry binding. `NetworkModule.kt` (`@Named("hko")` Retrofit). Settings labels and attribution. freenet-compatible (no proprietary deps).
   Acceptance: Users can select HKO as forecast source for Hong Kong locations; current conditions, 9-day forecast, and alerts surface correctly; fallback to Open-Meteo works; tests cover JSON parsing and metric-unit mapping.
   Complexity: M
 
