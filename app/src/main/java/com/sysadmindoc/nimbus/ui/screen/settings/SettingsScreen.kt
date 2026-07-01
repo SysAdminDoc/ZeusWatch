@@ -147,6 +147,7 @@ fun SettingsScreen(
     }
 
     val availableIconPacks by viewModel.availableIconPacks.collectAsStateWithLifecycle()
+    val providerHealth by viewModel.providerHealth.collectAsStateWithLifecycle(initialValue = ProviderHealthSnapshot())
     val transferStatus by viewModel.transferStatus.collectAsStateWithLifecycle()
     val transferInProgress by viewModel.transferInProgress.collectAsStateWithLifecycle()
     val pendingImportPreview by viewModel.pendingImportPreview.collectAsStateWithLifecycle()
@@ -160,12 +161,18 @@ fun SettingsScreen(
     ) { uri ->
         if (uri != null) viewModel.importSettings(uri)
     }
+    val exportDiagnosticsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        if (uri != null) viewModel.exportProviderDiagnostics(uri)
+    }
     SettingsContent(
         settings = settings,
         onBack = onBack,
         onNavigateToCustomAlerts = onNavigateToCustomAlerts,
         notificationsPermissionGranted = notificationsPermissionGranted,
         availableIconPacks = availableIconPacks,
+        providerHealth = providerHealth,
         transferStatus = transferStatus,
         transferInProgress = transferInProgress,
         pendingImportPreview = pendingImportPreview,
@@ -246,6 +253,7 @@ fun SettingsScreen(
             onPirateWeatherApiKey = viewModel::setPirateWeatherApiKey,
             onExportSettings = { exportSettingsLauncher.launch("zeuswatch-settings.json") },
             onImportSettings = { importSettingsLauncher.launch(arrayOf("application/json", "text/*")) },
+            onExportProviderDiagnostics = { exportDiagnosticsLauncher.launch("zeuswatch-source-health.txt") },
             onConfirmSettingsImport = viewModel::confirmPendingImport,
             onCancelSettingsImport = viewModel::cancelPendingImport,
             onClearTransferStatus = viewModel::clearTransferStatus,

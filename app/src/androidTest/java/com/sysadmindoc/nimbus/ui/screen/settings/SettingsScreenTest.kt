@@ -9,11 +9,17 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.sysadmindoc.nimbus.BuildConfig
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.ProviderFailureReason
+import com.sysadmindoc.nimbus.data.repository.ProviderHealthEntry
+import com.sysadmindoc.nimbus.data.repository.ProviderHealthSnapshot
 import com.sysadmindoc.nimbus.data.repository.TempUnit
+import com.sysadmindoc.nimbus.data.repository.WeatherDataType
+import com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider
 import com.sysadmindoc.nimbus.data.repository.WindUnit
 import com.sysadmindoc.nimbus.testing.setContentWithAccessibilityChecks
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -177,6 +183,45 @@ class SettingsScreenTest {
         clickCategory("Forecast")
         composeTestRule.onNodeWithText("12-hour").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("24-hour").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun settingsScreen_showsProviderHealthAndExportAction() {
+        var exportClicked = false
+        val health = ProviderHealthSnapshot(
+            entries = listOf(
+                ProviderHealthEntry(
+                    type = WeatherDataType.FORECAST,
+                    provider = WeatherSourceProvider.OPEN_METEO,
+                    lastSuccessEpochMs = System.currentTimeMillis() - 5 * 60_000L,
+                    lastFailureEpochMs = System.currentTimeMillis() - 15 * 60_000L,
+                    lastFailureReason = ProviderFailureReason.HTTP_429,
+                    lastCacheAgeMinutes = 5,
+                ),
+            ),
+        )
+
+        composeTestRule.setContentWithAccessibilityChecks {
+            NimbusTheme {
+                SettingsContent(
+                    settings = NimbusSettings(),
+                    providerHealth = health,
+                    onBack = {},
+                    actions = SettingsActions(
+                        onExportProviderDiagnostics = { exportClicked = true },
+                    ),
+                )
+            }
+        }
+
+        clickCategory("Advanced")
+        composeTestRule.onNode(hasText("Data Sources") and hasClickAction()).performScrollTo().performClick()
+        composeTestRule.onNodeWithText("Source health").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Forecast - Open-Meteo").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Failure class: HTTP 429").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Export diagnostics").performScrollTo().performClick()
+
+        assertTrue(exportClicked)
     }
 
     @Test

@@ -393,13 +393,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 
 ### P2 — Forecast Trust And Source Depth
 
-- [ ] P2 — Provider health history and diagnostics export
-  Why: Source fallback is a core trust feature, but users cannot inspect last success, last failure, cache age, quota/rate-limit failures, or a support-ready source-health snapshot.
-  Evidence: `AlertFetchResult.failedSources` is transient; `WeatherSourceManager.kt` logs primary/fallback failures; Settings has provider selectors but no durable source-health panel; competitor/community issues repeatedly cite stale or wrong provider data.
-  Touches: `WeatherSourceManager.kt`, `AlertRepository.kt`, `WeatherRepository.kt`, `UserPreferences.kt` or Room diagnostics table, Settings advanced/data-source section, settings export/support text.
-  Acceptance: Settings shows per-provider last success, last failure reason class, last cache age, and active fallback state without telemetry; users can export a redacted diagnostics bundle for support.
-  Complexity: M
-
 ## Research-Driven Additions (2026-06-25)
 
 ### P1 — Security & Trust

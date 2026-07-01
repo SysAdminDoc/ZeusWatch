@@ -133,6 +133,7 @@ internal fun SettingsContent(
     onNavigateToCustomAlerts: () -> Unit = {},
     notificationsPermissionGranted: Boolean = true,
     availableIconPacks: List<IconPack> = emptyList(),
+    providerHealth: ProviderHealthSnapshot = ProviderHealthSnapshot(),
     transferStatus: SettingsTransferStatus? = null,
     transferInProgress: Boolean = false,
     pendingImportPreview: SettingsImportPreview? = null,
@@ -185,9 +186,12 @@ internal fun SettingsContent(
                 notificationsPermissionGranted = notificationsPermissionGranted,
                 availableIconPacks = availableIconPacks,
                 onNavigateToCustomAlerts = onNavigateToCustomAlerts,
-                transferStatus = transferStatus,
-                transferInProgress = transferInProgress,
-                pendingImportPreview = pendingImportPreview,
+                supportState = SettingsSupportState(
+                    providerHealth = providerHealth,
+                    transferStatus = transferStatus,
+                    transferInProgress = transferInProgress,
+                    pendingImportPreview = pendingImportPreview,
+                ),
                 actions = actions,
             )
 
@@ -249,9 +253,17 @@ internal data class SettingsActions(
     val onPirateWeatherApiKey: (String) -> Unit = {},
     val onExportSettings: () -> Unit = {},
     val onImportSettings: () -> Unit = {},
+    val onExportProviderDiagnostics: () -> Unit = {},
     val onConfirmSettingsImport: () -> Unit = {},
     val onCancelSettingsImport: () -> Unit = {},
     val onClearTransferStatus: () -> Unit = {},
+)
+
+private data class SettingsSupportState(
+    val providerHealth: ProviderHealthSnapshot,
+    val transferStatus: SettingsTransferStatus?,
+    val transferInProgress: Boolean,
+    val pendingImportPreview: SettingsImportPreview?,
 )
 
 @Composable
@@ -261,9 +273,7 @@ private fun SettingsCategoryContent(
     notificationsPermissionGranted: Boolean,
     availableIconPacks: List<IconPack>,
     onNavigateToCustomAlerts: () -> Unit,
-    transferStatus: SettingsTransferStatus?,
-    transferInProgress: Boolean,
-    pendingImportPreview: SettingsImportPreview?,
+    supportState: SettingsSupportState,
     actions: SettingsActions,
 ) {
     when (selectedCategory) {
@@ -284,8 +294,19 @@ private fun SettingsCategoryContent(
             SettingsAccessibilitySection(settings, actions)
         }
         SettingsCategory.ADVANCED -> {
-            SettingsDataSourcesSection(settings, actions)
-            SettingsAdvancedSection(settings, transferStatus, transferInProgress, pendingImportPreview, actions)
+            SettingsDataSourcesSection(
+                settings,
+                supportState.providerHealth,
+                supportState.transferInProgress,
+                actions,
+            )
+            SettingsAdvancedSection(
+                settings,
+                supportState.transferStatus,
+                supportState.transferInProgress,
+                supportState.pendingImportPreview,
+                actions,
+            )
             SettingsAboutSection()
             SettingsWidgetTroubleshootSection()
         }
@@ -840,6 +861,8 @@ private fun SettingsVisualEffectsSection(
 @Composable
 private fun SettingsDataSourcesSection(
     settings: NimbusSettings,
+    providerHealth: ProviderHealthSnapshot,
+    transferInProgress: Boolean,
     actions: SettingsActions,
 ) {
     SettingSection(
@@ -867,6 +890,11 @@ private fun SettingsDataSourcesSection(
             actions.onGadgetbridgeBroadcastEnabled,
         )
         SettingsApiKeyFields(settings, actions)
+        ProviderHealthPanel(
+            snapshot = providerHealth,
+            transferInProgress = transferInProgress,
+            actions = actions,
+        )
     }
 }
 
@@ -899,6 +927,140 @@ private fun SettingsApiKeyFields(
     if (needsPirateKey) {
         ApiKeyField(stringResource(R.string.settings_pirate_key), settings.pirateWeatherApiKey, actions.onPirateWeatherApiKey)
     }
+}
+
+@Composable
+private fun ProviderHealthPanel(
+    snapshot: ProviderHealthSnapshot,
+    transferInProgress: Boolean,
+    actions: SettingsActions,
+) {
+    val entries = remember(snapshot.entries) {
+        snapshot.entries.sortedWith(
+            compareBy<ProviderHealthEntry> { it.type.ordinal }.thenBy { it.provider.name },
+        )
+    }
+    val nowEpochMs = remember { System.currentTimeMillis() }
+
+    Spacer(modifier = Modifier.height(12.dp))
+    Text(
+        text = stringResource(R.string.settings_provider_health_title),
+        style = MaterialTheme.typography.bodySmall,
+        color = NimbusTextSecondary,
+        modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+    )
+    Text(
+        text = stringResource(R.string.settings_provider_health_desc),
+        style = MaterialTheme.typography.bodySmall,
+        color = NimbusTextTertiary,
+        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+    )
+    if (entries.isEmpty()) {
+        Text(
+            text = stringResource(R.string.settings_provider_health_empty),
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+        )
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            entries.forEach { entry ->
+                ProviderHealthRow(entry, nowEpochMs)
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    SettingsTransferButton(
+        label = stringResource(R.string.settings_provider_health_export),
+        icon = Icons.Filled.FileUpload,
+        enabled = !transferInProgress,
+        modifier = Modifier.fillMaxWidth(),
+        onClick = actions.onExportProviderDiagnostics,
+    )
+}
+
+@Composable
+private fun ProviderHealthRow(
+    entry: ProviderHealthEntry,
+    nowEpochMs: Long,
+) {
+    val typeLabel = providerHealthTypeLabel(entry.type)
+    val providerLabel = stringResource(entry.provider.displayNameRes)
+    val successLabel = providerHealthRelativeTime(
+        entry.lastSuccessEpochMs,
+        nowEpochMs,
+        emptyRes = R.string.settings_provider_health_no_success,
+    )
+    val failureLabel = providerHealthRelativeTime(
+        entry.lastFailureEpochMs,
+        nowEpochMs,
+        emptyRes = R.string.settings_provider_health_no_failure,
+    )
+    val failureClass = entry.lastFailureReason?.let { stringResource(it.labelRes) }
+        ?: stringResource(R.string.settings_provider_health_none)
+    val cacheAge = entry.lastCacheAgeMinutes?.let { cacheDurationLabel(it.toInt()) }
+        ?: stringResource(R.string.settings_provider_health_no_cache)
+    val fallbackState = if (entry.activeFallback) {
+        val fallbackFrom = entry.fallbackFromProvider?.let { stringResource(it.displayNameRes) }
+            ?: stringResource(R.string.settings_provider_health_primary)
+        stringResource(R.string.settings_provider_health_fallback_active, fallbackFrom)
+    } else {
+        stringResource(R.string.settings_provider_health_fallback_inactive)
+    }
+    val description = stringResource(
+        R.string.settings_provider_health_row_cd,
+        typeLabel,
+        providerLabel,
+        successLabel,
+        failureLabel,
+        failureClass,
+        cacheAge,
+        fallbackState,
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.42f),
+                        NimbusCardBg,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
+            .semantics(mergeDescendants = true) {
+                contentDescription = description
+            }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_provider_health_row_title, typeLabel, providerLabel),
+            style = MaterialTheme.typography.bodyMedium,
+            color = NimbusTextPrimary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        ProviderHealthLine(stringResource(R.string.settings_provider_health_last_success, successLabel))
+        ProviderHealthLine(stringResource(R.string.settings_provider_health_last_failure, failureLabel))
+        ProviderHealthLine(stringResource(R.string.settings_provider_health_failure_class, failureClass))
+        ProviderHealthLine(stringResource(R.string.settings_provider_health_cache_age, cacheAge))
+        ProviderHealthLine(stringResource(R.string.settings_provider_health_fallback_state, fallbackState))
+    }
+}
+
+@Composable
+private fun ProviderHealthLine(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = NimbusTextSecondary,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable
@@ -1038,6 +1200,8 @@ private fun SettingsTransferProgressCard() {
 private fun settingsTransferStatusMessage(status: SettingsTransferStatus): String = when (status) {
     SettingsTransferStatus.ExportSuccess,
     SettingsTransferStatus.ExportError,
+    SettingsTransferStatus.DiagnosticsExportSuccess,
+    SettingsTransferStatus.DiagnosticsExportError,
     SettingsTransferStatus.ImportError -> stringResource(status.messageRes)
     is SettingsTransferStatus.ImportSuccess -> stringResource(
         status.messageRes,
@@ -1177,6 +1341,42 @@ private fun cacheDurationLabel(minutes: Int): String = when {
     minutes == 60 -> stringResource(R.string.settings_hour, 1)
     else -> stringResource(R.string.settings_hours, minutes / 60)
 }
+
+@Composable
+private fun providerHealthTypeLabel(type: WeatherDataType): String = stringResource(
+    when (type) {
+        WeatherDataType.FORECAST -> R.string.settings_provider_health_type_forecast
+        WeatherDataType.ALERTS -> R.string.settings_provider_health_type_alerts
+        WeatherDataType.AIR_QUALITY -> R.string.settings_provider_health_type_air_quality
+        WeatherDataType.MINUTELY -> R.string.settings_provider_health_type_minutely
+    },
+)
+
+@Composable
+private fun providerHealthRelativeTime(
+    epochMs: Long?,
+    nowEpochMs: Long,
+    @StringRes emptyRes: Int,
+): String {
+    epochMs ?: return stringResource(emptyRes)
+    val minutes = ((nowEpochMs - epochMs).coerceAtLeast(0L) / 60_000L).toInt()
+    return when {
+        minutes < 1 -> stringResource(R.string.settings_provider_health_just_now)
+        minutes < 60 -> stringResource(R.string.settings_provider_health_minutes_ago, minutes)
+        minutes < 1_440 -> stringResource(R.string.settings_provider_health_hours_ago, minutes / 60)
+        else -> stringResource(R.string.settings_provider_health_days_ago, minutes / 1_440)
+    }
+}
+
+private val ProviderFailureReason.labelRes: Int
+    get() = when (this) {
+        ProviderFailureReason.TIMEOUT -> R.string.settings_provider_health_reason_timeout
+        ProviderFailureReason.HTTP_429 -> R.string.settings_provider_health_reason_http_429
+        ProviderFailureReason.HTTP_5XX -> R.string.settings_provider_health_reason_http_5xx
+        ProviderFailureReason.NETWORK -> R.string.settings_provider_health_reason_network
+        ProviderFailureReason.UNSUPPORTED -> R.string.settings_provider_health_reason_unsupported
+        ProviderFailureReason.UNKNOWN -> R.string.settings_provider_health_reason_unknown
+    }
 
 @Composable
 private fun SettingsAboutSection() {

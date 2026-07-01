@@ -150,7 +150,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | **Pirate Weather** | Forecast (fallback) | Global (API key) |
 | **Bright Sky** | Forecast (fallback) | Germany |
 
-The `WeatherSourceManager` supports primary + fallback source per data type with automatic failover. Sources are configurable globally in Settings, and saved locations can override forecast and alert providers from the Locations screen.
+The `WeatherSourceManager` supports primary + fallback source per data type with automatic failover. Sources are configurable globally in Settings, saved locations can override forecast and alert providers from the Locations screen, and Settings > Data Sources shows local provider health with a redacted diagnostics export for support.
 
 ### Widgets (Jetpack Glance)
 
@@ -195,6 +195,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Haptics** | Vibration feedback for weather alerts |
 | **Weather Particles** | Rain, snow, and sun ray animations on/off |
 | **Cache TTL** | Configurable: 15 / 30 / 60 / 120 minutes |
+| **Source Diagnostics** | Local provider success/failure history, cache age, active fallback state, and redacted support export |
 
 ### More
 

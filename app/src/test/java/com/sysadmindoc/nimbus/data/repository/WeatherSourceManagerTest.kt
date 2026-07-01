@@ -33,6 +33,7 @@ class WeatherSourceManagerTest {
     private lateinit var metNorwayForecastAdapter: MetNorwayForecastAdapter
     private lateinit var ecccForecastAdapter: EnvironmentCanadaForecastAdapter
     private lateinit var timeZoneResolver: LocationTimeZoneResolver
+    private lateinit var providerHealthRepository: ProviderHealthRepository
     private lateinit var manager: WeatherSourceManager
 
     private val testWeatherData = WeatherData(
@@ -80,11 +81,13 @@ class WeatherSourceManagerTest {
         metNorwayForecastAdapter = mockk()
         ecccForecastAdapter = mockk()
         timeZoneResolver = mockk()
+        providerHealthRepository = mockk(relaxed = true)
         every { prefs.settings } returns flowOf(defaultSettings)
         manager = WeatherSourceManager(
             prefs = prefs,
             adapters = weatherSourceAdapters(),
             timeZoneResolver = timeZoneResolver,
+            providerHealthRepository = providerHealthRepository,
         )
     }
 
@@ -139,6 +142,16 @@ class WeatherSourceManagerTest {
         val result = manager.getWeather(40.0, -74.0)
         assertTrue(result.isSuccess)
         assertEquals("Test City", result.getOrNull()?.location?.name)
+        coVerify(exactly = 1) {
+            providerHealthRepository.recordSuccess(
+                type = WeatherDataType.FORECAST,
+                provider = WeatherSourceProvider.OPEN_METEO,
+                cacheAgeMinutes = any(),
+                activeFallback = false,
+                fallbackFromProvider = null,
+                nowEpochMs = any(),
+            )
+        }
     }
 
     @Test
@@ -155,6 +168,15 @@ class WeatherSourceManagerTest {
         val result = manager.getWeather(40.0, -74.0)
         // Since fallback == primary, it returns the original failure
         assertTrue(result.isFailure)
+        coVerify(exactly = 1) {
+            providerHealthRepository.recordFailure(
+                type = WeatherDataType.FORECAST,
+                provider = WeatherSourceProvider.OPEN_METEO,
+                exception = any(),
+                clearActiveFallback = true,
+                nowEpochMs = any(),
+            )
+        }
     }
 
     @Test
@@ -164,6 +186,52 @@ class WeatherSourceManagerTest {
         val result = manager.getWeather(40.0, -74.0)
         assertTrue(result.isFailure)
         assertEquals("Network error", result.exceptionOrNull()?.message)
+        coVerify(exactly = 1) {
+            providerHealthRepository.recordFailure(
+                type = WeatherDataType.FORECAST,
+                provider = WeatherSourceProvider.OPEN_METEO,
+                exception = any(),
+                clearActiveFallback = true,
+                nowEpochMs = any(),
+            )
+        }
+    }
+
+    @Test
+    fun getWeatherRecordsFallbackAsActiveWhenPrimaryFailsAndFallbackSucceeds() = runTest {
+        val settingsWithFallback = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                forecast = WeatherSourceProvider.OPEN_METEO,
+                forecastFallback = WeatherSourceProvider.OPEN_METEO_BOM,
+            )
+        )
+        every { prefs.settings } returns flowOf(settingsWithFallback)
+        coEvery { openMeteoAdapter.getWeather(any(), any(), any()) } returns Result.failure(Exception("Primary failed"))
+        coEvery { openMeteoBomAdapter.getWeather(any(), any(), any()) } returns Result.success(testWeatherData)
+
+        val result = manager.getWeather(40.0, -74.0)
+
+        assertTrue(result.isSuccess)
+        assertTrue(result.getOrNull()?.usedFallback == true)
+        coVerify(exactly = 1) {
+            providerHealthRepository.recordFailure(
+                type = WeatherDataType.FORECAST,
+                provider = WeatherSourceProvider.OPEN_METEO,
+                exception = any(),
+                clearActiveFallback = false,
+                nowEpochMs = any(),
+            )
+        }
+        coVerify(exactly = 1) {
+            providerHealthRepository.recordSuccess(
+                type = WeatherDataType.FORECAST,
+                provider = WeatherSourceProvider.OPEN_METEO_BOM,
+                cacheAgeMinutes = any(),
+                activeFallback = true,
+                fallbackFromProvider = WeatherSourceProvider.OPEN_METEO,
+                nowEpochMs = any(),
+            )
+        }
     }
 
     @Test
@@ -292,6 +360,16 @@ class WeatherSourceManagerTest {
         coVerify(exactly = 1) {
             alertAdapter.getAlerts(40.0, -74.0, null, includeMeteredSources = true, countryHint = null)
         }
+        coVerify(exactly = 1) {
+            providerHealthRepository.recordSuccess(
+                type = WeatherDataType.ALERTS,
+                provider = WeatherSourceProvider.NWS,
+                cacheAgeMinutes = null,
+                activeFallback = false,
+                fallbackFromProvider = null,
+                nowEpochMs = any(),
+            )
+        }
     }
 
     @Test
@@ -362,6 +440,15 @@ class WeatherSourceManagerTest {
 
         val result = manager.getAlerts(40.0, -74.0)
         assertTrue(result.isFailure)
+        coVerify(exactly = 1) {
+            providerHealthRepository.recordFailure(
+                type = WeatherDataType.ALERTS,
+                provider = WeatherSourceProvider.NWS,
+                exception = any(),
+                clearActiveFallback = true,
+                nowEpochMs = any(),
+            )
+        }
     }
 
     @Test
