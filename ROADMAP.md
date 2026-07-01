@@ -248,13 +248,6 @@ Open question: needs measurement.
 
 [Moved to Roadmap_Blocked.md: Android 17 MetricStyle (needs compileSdk 37), Compose Grid (needs BOM 2026.04.01)]
 
-- [ ] P2 — ProtoLayout Material3 tile upgrade · **T-WEAR**
-  Why: ProtoLayout 1.4.0 adds `Material3TileService` with automatic `MaterialScope`, inlined `ImageResource`, ambient mode awareness, and Lottie animation support for weather icons. Direct upgrade for `WeatherTileService` that currently uses the older ProtoLayout API.
-  Evidence: Wear ProtoLayout 1.4.0 release notes; M3 Expressive for Wear OS blog post.
-  Touches: `wear/.../tile/WeatherTileService.kt`, `wear/.../tile/WeatherTileRequestRunner.kt` — migrate to `Material3TileService` with suspend function returning layout + resources. Add Lottie weather icon support. `wear/build.gradle.kts` (bump protolayout dependency).
-  Acceptance: Weather tile renders with M3 Expressive styling; animated weather icons on tiles; ambient mode works correctly; tile refresh time unchanged.
-  Complexity: M
-
 [Moved to Roadmap_Blocked.md: Glance widget picker previews (needs Glance 1.2.0 stable)]
 
 - [ ] P2 — RainViewer free tier limitations documentation and Rainbow.ai evaluation · **T-SOURCES**
