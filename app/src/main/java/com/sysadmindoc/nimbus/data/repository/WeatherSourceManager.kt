@@ -127,13 +127,14 @@ class WeatherSourceManager @Inject constructor(
         longitude: Double,
         sourceOverrides: SourceOverrides = SourceOverrides(),
         includeMeteredSources: Boolean = true,
+        countryHint: String? = null,
     ): Result<List<WeatherAlert>> {
         val config = prefs.settings.first().sourceConfig.withOverrides(sourceOverrides)
         val primary = config.alerts
         val fallback = config.alertsFallback
 
         val result = withRetry {
-            getAlertsFrom(primary, latitude, longitude, includeMeteredSources)
+            getAlertsFrom(primary, latitude, longitude, includeMeteredSources, countryHint)
         }
         if (result.isSuccess) return result
 
@@ -141,7 +142,7 @@ class WeatherSourceManager @Inject constructor(
 
         if (fallback != null && fallback != primary) {
             val fallbackResult = withRetry {
-                getAlertsFrom(fallback, latitude, longitude, includeMeteredSources)
+                getAlertsFrom(fallback, latitude, longitude, includeMeteredSources, countryHint)
             }
             if (fallbackResult.isSuccess) return fallbackResult
             Log.w(TAG, "Fallback alert source ${fallback.displayName} also failed", fallbackResult.exceptionOrNull())
@@ -161,18 +162,25 @@ class WeatherSourceManager @Inject constructor(
         longitude: Double,
         sourceOverrides: SourceOverrides = SourceOverrides(),
         includeMeteredSources: Boolean = true,
+        countryHint: String? = null,
     ): AlertFetchResult {
         val config = prefs.settings.first().sourceConfig.withOverrides(sourceOverrides)
         val primary = config.alerts
         val fallback = config.alertsFallback
 
-        val primaryResult = getAlertsDetailedFrom(primary, latitude, longitude, includeMeteredSources)
+        val primaryResult = getAlertsDetailedFrom(primary, latitude, longitude, includeMeteredSources, countryHint)
         if (!primaryResult.allAdaptersFailed) return primaryResult
 
         Log.w(TAG, "Primary alert source ${primary.displayName} failed, trying fallback")
 
         if (fallback != null && fallback != primary) {
-            val fallbackResult = getAlertsDetailedFrom(fallback, latitude, longitude, includeMeteredSources)
+            val fallbackResult = getAlertsDetailedFrom(
+                fallback,
+                latitude,
+                longitude,
+                includeMeteredSources,
+                countryHint,
+            )
             if (!fallbackResult.allAdaptersFailed) return fallbackResult
             Log.w(TAG, "Fallback alert source ${fallback.displayName} also failed")
         }
@@ -185,6 +193,7 @@ class WeatherSourceManager @Inject constructor(
         latitude: Double,
         longitude: Double,
         includeMeteredSources: Boolean,
+        countryHint: String?,
     ): AlertFetchResult = when (provider) {
         WeatherSourceProvider.NWS,
         WeatherSourceProvider.METEOALARM,
@@ -198,6 +207,7 @@ class WeatherSourceManager @Inject constructor(
                 longitude = longitude,
                 preferenceOverride = override,
                 includeMeteredSources = includeMeteredSources,
+                countryHint = countryHint,
             )
         }
         WeatherSourceProvider.OPEN_WEATHER_MAP ->
@@ -222,6 +232,7 @@ class WeatherSourceManager @Inject constructor(
         latitude: Double,
         longitude: Double,
         includeMeteredSources: Boolean,
+        countryHint: String?,
     ): Result<List<WeatherAlert>> = when (provider) {
         WeatherSourceProvider.NWS,
         WeatherSourceProvider.METEOALARM,
@@ -241,6 +252,7 @@ class WeatherSourceManager @Inject constructor(
                 longitude = longitude,
                 preferenceOverride = override,
                 includeMeteredSources = includeMeteredSources,
+                countryHint = countryHint,
             )
         }
         WeatherSourceProvider.OPEN_WEATHER_MAP -> owmAlertAdapter.getAlerts(latitude, longitude)
@@ -381,11 +393,13 @@ class AlertSourceManagerAdapter @Inject constructor(
         longitude: Double,
         preferenceOverride: AlertSourcePreference? = null,
         includeMeteredSources: Boolean = true,
+        countryHint: String? = null,
     ): Result<List<WeatherAlert>> = alertRepository.getAlerts(
         latitude = latitude,
         longitude = longitude,
         preferenceOverride = preferenceOverride,
         includeMeteredSources = includeMeteredSources,
+        countryHint = countryHint,
     )
 
     suspend fun getAlertsDetailed(
@@ -393,11 +407,13 @@ class AlertSourceManagerAdapter @Inject constructor(
         longitude: Double,
         preferenceOverride: AlertSourcePreference? = null,
         includeMeteredSources: Boolean = true,
+        countryHint: String? = null,
     ): AlertFetchResult = alertRepository.getAlertsDetailed(
         latitude = latitude,
         longitude = longitude,
         preferenceOverride = preferenceOverride,
         includeMeteredSources = includeMeteredSources,
+        countryHint = countryHint,
     )
 }
 

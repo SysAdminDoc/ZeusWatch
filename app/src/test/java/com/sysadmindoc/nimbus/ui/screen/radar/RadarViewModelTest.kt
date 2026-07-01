@@ -6,9 +6,11 @@ import com.sysadmindoc.nimbus.data.model.AlertGeometry
 import com.sysadmindoc.nimbus.data.model.AlertPolygon
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AlertUrgency
+import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.repository.AlertFetchResult
 import com.sysadmindoc.nimbus.data.repository.CommunityReportSource
+import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.RadarFrameSet
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
@@ -50,6 +52,7 @@ class RadarViewModelTest {
     private lateinit var blitzortungService: BlitzortungService
     private lateinit var communityReportRepository: CommunityReportSource
     private lateinit var weatherSourceManager: WeatherSourceManager
+    private lateinit var locationRepository: LocationRepository
     private lateinit var connectivityObserver: ConnectivityObserver
 
     @Before
@@ -61,6 +64,7 @@ class RadarViewModelTest {
         blitzortungService = mockk(relaxed = true)
         communityReportRepository = mockk(relaxed = true)
         weatherSourceManager = mockk(relaxed = true)
+        locationRepository = mockk()
         connectivityObserver = mockk()
 
         every { prefs.settings } returns flowOf(NimbusSettings())
@@ -68,8 +72,9 @@ class RadarViewModelTest {
         every { blitzortungService.recentStrikes } returns MutableStateFlow(emptyList())
         every { connectivityObserver.isOnline } returns flowOf(true)
         every { communityReportRepository.deviceId } returns "test-device"
+        coEvery { locationRepository.getAll() } returns emptyList()
         coEvery {
-            weatherSourceManager.getAlertsDetailed(any(), any(), any(), includeMeteredSources = false)
+            weatherSourceManager.getAlertsDetailed(any(), any(), any(), includeMeteredSources = false, countryHint = null)
         } returns AlertFetchResult(emptyList(), allAdaptersFailed = false, failedSources = emptyList())
         justRun { blitzortungService.connect() }
         justRun { blitzortungService.disconnect() }
@@ -245,7 +250,7 @@ class RadarViewModelTest {
         val polygonAlert = weatherAlert(id = "polygon", geometry = alertGeometry())
         val textOnlyAlert = weatherAlert(id = "text-only", geometry = null)
         coEvery {
-            weatherSourceManager.getAlertsDetailed(39.0, -104.0, any(), includeMeteredSources = false)
+            weatherSourceManager.getAlertsDetailed(39.0, -104.0, any(), includeMeteredSources = false, countryHint = null)
         } returns AlertFetchResult(
             alerts = listOf(polygonAlert, textOnlyAlert),
             allAdaptersFailed = false,
@@ -263,7 +268,7 @@ class RadarViewModelTest {
     @Test
     fun `loadAlertOverlays drops expired polygon alerts`() = runTest(scheduler) {
         coEvery {
-            weatherSourceManager.getAlertsDetailed(39.0, -104.0, any(), includeMeteredSources = false)
+            weatherSourceManager.getAlertsDetailed(39.0, -104.0, any(), includeMeteredSources = false, countryHint = null)
         } returns AlertFetchResult(
             alerts = listOf(
                 weatherAlert(
@@ -286,7 +291,7 @@ class RadarViewModelTest {
     @Test
     fun `loadAlertOverlays marks total provider outage without treating it as clear`() = runTest(scheduler) {
         coEvery {
-            weatherSourceManager.getAlertsDetailed(39.0, -104.0, any(), includeMeteredSources = false)
+            weatherSourceManager.getAlertsDetailed(39.0, -104.0, any(), includeMeteredSources = false, countryHint = null)
         } returns AlertFetchResult(
             alerts = emptyList(),
             allAdaptersFailed = true,
@@ -301,6 +306,42 @@ class RadarViewModelTest {
         assertEquals(listOf("nws"), viewModel.uiState.value.alertOverlayFailedSources)
     }
 
+    @Test
+    fun `loadAlertOverlays forwards saved location country hint`() = runTest(scheduler) {
+        coEvery { locationRepository.getAll() } returns listOf(
+            SavedLocationEntity(
+                id = 42L,
+                name = "London",
+                country = "United Kingdom",
+                latitude = 51.5074,
+                longitude = -0.1278,
+            )
+        )
+        coEvery {
+            weatherSourceManager.getAlertsDetailed(
+                latitude = 51.5074,
+                longitude = -0.1278,
+                sourceOverrides = any(),
+                includeMeteredSources = false,
+                countryHint = "United Kingdom",
+            )
+        } returns AlertFetchResult(emptyList(), allAdaptersFailed = false, failedSources = emptyList())
+        val viewModel = createViewModel()
+
+        viewModel.loadAlertOverlays(51.5074, -0.1278)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            weatherSourceManager.getAlertsDetailed(
+                latitude = 51.5074,
+                longitude = -0.1278,
+                sourceOverrides = any(),
+                includeMeteredSources = false,
+                countryHint = "United Kingdom",
+            )
+        }
+    }
+
     private fun createViewModel(): RadarViewModel {
         return RadarViewModel(
             radarRepository = radarRepository,
@@ -308,6 +349,7 @@ class RadarViewModelTest {
             blitzortungService = blitzortungService,
             communityReportRepository = communityReportRepository,
             weatherSourceManager = weatherSourceManager,
+            locationRepository = locationRepository,
             connectivityObserver = connectivityObserver,
         )
     }

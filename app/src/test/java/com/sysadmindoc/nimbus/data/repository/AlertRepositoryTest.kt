@@ -452,6 +452,50 @@ class AlertRepositoryTest {
 
     // ── getAlertsDetailed: outage vs. all-clear (safety-of-life) ──────────
 
+    @Test
+    fun `country hint prevents device timezone from routing remote location to NWS`() = runTest {
+        val originalTimeZone = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("America/New_York"))
+        try {
+            every { anyConstructed<Geocoder>().getFromLocation(any(), any(), any()) } throws RuntimeException("Geocoder unavailable")
+            coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+                features = listOf(makeFeature())
+            )
+
+            val result = repository.getAlerts(
+                latitude = 51.5,
+                longitude = -0.1,
+                countryHint = "United Kingdom",
+            )
+
+            assertTrue(result.isSuccess)
+            assertTrue(result.getOrThrow().isEmpty())
+            coVerify(exactly = 0) { api.getActiveAlerts(any(), any(), any()) }
+        } finally {
+            TimeZone.setDefault(originalTimeZone)
+        }
+    }
+
+    @Test
+    fun `country hint is used before geocoder country`() = runTest {
+        val jpAddress = mockk<Address>()
+        every { jpAddress.countryCode } returns "JP"
+        every { anyConstructed<Geocoder>().getFromLocation(any(), any(), any()) } returns listOf(jpAddress)
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+            features = listOf(makeFeature())
+        )
+
+        val result = repository.getAlerts(
+            latitude = 39.7,
+            longitude = -104.9,
+            countryHint = "US",
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrThrow().size)
+        coVerify(exactly = 1) { api.getActiveAlerts(any(), any(), any()) }
+    }
+
     private fun fakeAdapter(
         id: String,
         result: Result<List<WeatherAlert>>? = null,

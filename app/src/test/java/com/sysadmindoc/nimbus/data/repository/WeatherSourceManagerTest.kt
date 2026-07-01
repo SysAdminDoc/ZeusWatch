@@ -233,7 +233,7 @@ class WeatherSourceManagerTest {
                 areaDescription = "Test County", effective = null, expires = null, response = null,
             )
         )
-        coEvery { alertAdapter.getAlerts(any(), any(), any(), any()) } returns Result.success(alerts)
+        coEvery { alertAdapter.getAlerts(any(), any(), any(), any(), any()) } returns Result.success(alerts)
 
         val result = manager.getAlerts(40.0, -74.0)
         assertTrue(result.isSuccess)
@@ -241,7 +241,7 @@ class WeatherSourceManagerTest {
         // NWS is the built-in default alert source — it passes no override so
         // AlertRepository honors the Settings alert-source preference.
         coVerify(exactly = 1) {
-            alertAdapter.getAlerts(40.0, -74.0, null, includeMeteredSources = true)
+            alertAdapter.getAlerts(40.0, -74.0, null, includeMeteredSources = true, countryHint = null)
         }
     }
 
@@ -253,19 +253,25 @@ class WeatherSourceManagerTest {
             )
         )
         every { prefs.settings } returns flowOf(settingsWithMeteoAlarm)
-        coEvery { alertAdapter.getAlerts(any(), any(), any(), any()) } returns Result.success(emptyList())
+        coEvery { alertAdapter.getAlerts(any(), any(), any(), any(), any()) } returns Result.success(emptyList())
 
         val result = manager.getAlerts(52.5, 13.4)
 
         assertTrue(result.isSuccess)
         coVerify(exactly = 1) {
-            alertAdapter.getAlerts(52.5, 13.4, AlertSourcePreference.METEOALARM_ONLY, includeMeteredSources = true)
+            alertAdapter.getAlerts(
+                52.5,
+                13.4,
+                AlertSourcePreference.METEOALARM_ONLY,
+                includeMeteredSources = true,
+                countryHint = null,
+            )
         }
     }
 
     @Test
     fun getAlertsUsesPerLocationAlertOverrideOverGlobalDefault() = runTest {
-        coEvery { alertAdapter.getAlerts(any(), any(), any(), any()) } returns Result.success(emptyList())
+        coEvery { alertAdapter.getAlerts(any(), any(), any(), any(), any()) } returns Result.success(emptyList())
 
         val result = manager.getAlerts(
             latitude = 52.5,
@@ -275,13 +281,19 @@ class WeatherSourceManagerTest {
 
         assertTrue(result.isSuccess)
         coVerify(exactly = 1) {
-            alertAdapter.getAlerts(52.5, 13.4, AlertSourcePreference.METEOALARM_ONLY, includeMeteredSources = true)
+            alertAdapter.getAlerts(
+                52.5,
+                13.4,
+                AlertSourcePreference.METEOALARM_ONLY,
+                includeMeteredSources = true,
+                countryHint = null,
+            )
         }
     }
 
     @Test
     fun getAlertsCanExcludeMeteredAlertSources() = runTest {
-        coEvery { alertAdapter.getAlerts(any(), any(), any(), any()) } returns Result.success(emptyList())
+        coEvery { alertAdapter.getAlerts(any(), any(), any(), any(), any()) } returns Result.success(emptyList())
 
         val result = manager.getAlerts(
             latitude = 40.0,
@@ -291,13 +303,13 @@ class WeatherSourceManagerTest {
 
         assertTrue(result.isSuccess)
         coVerify(exactly = 1) {
-            alertAdapter.getAlerts(40.0, -74.0, null, includeMeteredSources = false)
+            alertAdapter.getAlerts(40.0, -74.0, null, includeMeteredSources = false, countryHint = null)
         }
     }
 
     @Test
     fun getAlertsReturnsFailureWhenSourceFailsNoFallback() = runTest {
-        coEvery { alertAdapter.getAlerts(any(), any(), any(), any()) } returns Result.failure(Exception("NWS down"))
+        coEvery { alertAdapter.getAlerts(any(), any(), any(), any(), any()) } returns Result.failure(Exception("NWS down"))
 
         val result = manager.getAlerts(40.0, -74.0)
         assertTrue(result.isFailure)
@@ -311,13 +323,41 @@ class WeatherSourceManagerTest {
             )
         )
         every { prefs.settings } returns flowOf(settingsWithCanada)
-        coEvery { alertAdapter.getAlerts(any(), any(), any(), any()) } returns Result.success(emptyList())
+        coEvery { alertAdapter.getAlerts(any(), any(), any(), any(), any()) } returns Result.success(emptyList())
 
         val result = manager.getAlerts(43.7, -79.4)
 
         assertTrue(result.isSuccess)
         coVerify(exactly = 1) {
-            alertAdapter.getAlerts(43.7, -79.4, AlertSourcePreference.ECCC_ONLY, includeMeteredSources = true)
+            alertAdapter.getAlerts(
+                43.7,
+                -79.4,
+                AlertSourcePreference.ECCC_ONLY,
+                includeMeteredSources = true,
+                countryHint = null,
+            )
+        }
+    }
+
+    @Test
+    fun getAlertsForwardsCountryHintToInternationalAdapter() = runTest {
+        coEvery { alertAdapter.getAlerts(any(), any(), any(), any(), any()) } returns Result.success(emptyList())
+
+        val result = manager.getAlerts(
+            latitude = 51.5,
+            longitude = -0.1,
+            countryHint = "United Kingdom",
+        )
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            alertAdapter.getAlerts(
+                51.5,
+                -0.1,
+                null,
+                includeMeteredSources = true,
+                countryHint = "United Kingdom",
+            )
         }
     }
 
