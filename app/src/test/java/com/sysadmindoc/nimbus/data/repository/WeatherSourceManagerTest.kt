@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.data.repository
 
 import com.sysadmindoc.nimbus.data.model.*
+import com.sysadmindoc.nimbus.di.WeatherSourceAdapterModule
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -80,24 +81,49 @@ class WeatherSourceManagerTest {
         every { prefs.settings } returns flowOf(defaultSettings)
         manager = WeatherSourceManager(
             prefs = prefs,
-            openMeteoAdapter = openMeteoAdapter,
-            openMeteoBomAdapter = openMeteoBomAdapter,
-            openMeteoKmaAdapter = openMeteoKmaAdapter,
-            openMeteoUkmoAdapter = openMeteoUkmoAdapter,
-            openMeteoMinutelyAdapter = openMeteoMinutelyAdapter,
-            nwsAlertAdapter = alertAdapter,
-            openMeteoAqiAdapter = aqiAdapter,
-            owmForecastAdapter = owmForecastAdapter,
-            owmAlertAdapter = owmAlertAdapter,
-            owmAqiAdapter = owmAqiAdapter,
-            pirateWeatherAdapter = pirateWeatherAdapter,
-            brightSkyForecastAdapter = brightSkyForecastAdapter,
-            brightSkyAlertAdapter = brightSkyAlertAdapter,
-            metNorwayForecastAdapter = metNorwayForecastAdapter,
-            ecccForecastAdapter = ecccForecastAdapter,
+            adapters = weatherSourceAdapters(),
             timeZoneResolver = timeZoneResolver,
         )
     }
+
+    private fun weatherSourceAdapters(): Map<WeatherSourceProvider, WeatherSourceAdapter> = mapOf(
+        WeatherSourceProvider.OPEN_METEO to WeatherSourceAdapterModule.provideOpenMeteoAdapter(
+            openMeteoAdapter,
+            aqiAdapter,
+            openMeteoMinutelyAdapter,
+        ),
+        WeatherSourceProvider.OPEN_METEO_BOM to WeatherSourceAdapterModule.provideOpenMeteoBomAdapter(
+            openMeteoBomAdapter,
+        ),
+        WeatherSourceProvider.OPEN_METEO_KMA to WeatherSourceAdapterModule.provideOpenMeteoKmaAdapter(
+            openMeteoKmaAdapter,
+        ),
+        WeatherSourceProvider.OPEN_METEO_UKMO to WeatherSourceAdapterModule.provideOpenMeteoUkmoAdapter(
+            openMeteoUkmoAdapter,
+        ),
+        WeatherSourceProvider.NWS to WeatherSourceAdapterModule.provideNwsAlertAdapter(alertAdapter),
+        WeatherSourceProvider.METEOALARM to WeatherSourceAdapterModule.provideMeteoAlarmAlertAdapter(alertAdapter),
+        WeatherSourceProvider.JMA to WeatherSourceAdapterModule.provideJmaAlertAdapter(alertAdapter),
+        WeatherSourceProvider.OPEN_WEATHER_MAP to WeatherSourceAdapterModule.provideOwmAdapter(
+            owmForecastAdapter,
+            owmAlertAdapter,
+            owmAqiAdapter,
+        ),
+        WeatherSourceProvider.PIRATE_WEATHER to WeatherSourceAdapterModule.providePirateWeatherAdapter(
+            pirateWeatherAdapter,
+        ),
+        WeatherSourceProvider.BRIGHT_SKY to WeatherSourceAdapterModule.provideBrightSkyAdapter(
+            brightSkyForecastAdapter,
+            brightSkyAlertAdapter,
+        ),
+        WeatherSourceProvider.MET_NORWAY to WeatherSourceAdapterModule.provideMetNorwayAdapter(
+            metNorwayForecastAdapter,
+        ),
+        WeatherSourceProvider.ENVIRONMENT_CANADA to WeatherSourceAdapterModule.provideEnvironmentCanadaAdapter(
+            ecccForecastAdapter,
+            alertAdapter,
+        ),
+    )
 
     // ── Forecast Tests ──
 
@@ -404,6 +430,22 @@ class WeatherSourceManagerTest {
     }
 
     // ── Source Config Tests ──
+
+    @Test
+    fun registryCoversEverySelectableProviderType() {
+        val registry = weatherSourceAdapters()
+
+        WeatherDataType.entries.forEach { type ->
+            WeatherSourceProvider.forType(type).forEach { provider ->
+                val adapter = registry[provider]
+                assertNotNull("${provider.name} is missing a WeatherSourceAdapter binding", adapter)
+                assertTrue(
+                    "${provider.name} adapter does not advertise ${type.name}",
+                    type in requireNotNull(adapter).supportedTypes,
+                )
+            }
+        }
+    }
 
     @Test
     fun forTypeReturnsOnlyImplementedForecastProviders() {

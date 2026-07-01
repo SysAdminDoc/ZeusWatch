@@ -366,14 +366,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 ### P2 — Performance & Maintainability
 
 
-- [ ] P2 — `WeatherSourceManager`: replace parallel `when(provider)` dispatch with a Hilt `@IntoMap` adapter registry · maintainability · extends NX-20
-  Status: STILL APPLIES.
-  Why: `WeatherSourceManager.kt:26-42` injects 14 adapters (`@Suppress("LongParameterList")`) and dispatches via four parallel `when(provider)` blocks (`getForecastFrom:87`, `getAlertsFrom:149`, `getAirQualityFrom:192`, `getMinutelyFrom:214`). Adding a provider means editing the enum, the constructor, and up to four `when`s. Dovetails with NX-20's provider-metadata registry.
-  Evidence: `WeatherSourceManager.kt:26-42` (fan-in), `:87/:149/:192/:214` (parallel dispatch).
-  Touches: `app/.../data/repository/WeatherSourceManager.kt` — define a capability-bearing `WeatherSourceAdapter` interface, bind adapters with Hilt `@IntoMap`/`@Provider`, inject `Map<Provider, Adapter>`, loop instead of switch. Removes the constructor fan-in.
-  Acceptance: adding a provider is one `@IntoMap` binding + metadata, no `when` edits; existing `WeatherSourceManagerTest` routing/fallback cases pass.
-  Complexity: M
-
 - [ ] P2 — Decompose `MainViewModel` orchestration · maintainability
   Status: PARTIAL — tile math moved to `RadarRepository.buildPreviewTileUrls()` with tests. Remaining: extract `WeatherLoadCoordinator` for sub-fetch/derived-data orchestration.
   Touches: `app/.../ui/screen/main/MainViewModel.kt` — extract orchestration classes so VM holds only UI state + intent handling.
