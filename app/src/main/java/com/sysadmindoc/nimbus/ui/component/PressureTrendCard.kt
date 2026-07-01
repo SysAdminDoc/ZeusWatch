@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
@@ -64,6 +66,7 @@ fun PressureTrendCard(
 
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     val firstPressure = data.first().second
     val lastPressure = data.last().second
@@ -148,7 +151,7 @@ fun PressureTrendCard(
             // Pressure line
             val path = Path()
             val points = data.mapIndexed { i, (_, p) ->
-                val x = i * stepX
+                val x = rtlCanvasX(i * stepX, w, isRtl)
                 val y = (graphH * (1.0 - (p - minP) / range)).toFloat()
                 Offset(x, y)
             }
@@ -177,7 +180,7 @@ fun PressureTrendCard(
                     val label = WeatherFormatter.formatRelativeHourLabel(context, data[i].first, referenceTime, s)
                     val m = textMeasurer.measure(label, labelStyle)
                     drawText(m, topLeft = Offset(
-                        (points[i].x - m.size.width / 2f).coerceIn(0f, w - m.size.width),
+                        centeredCanvasLabelLeft(points[i].x, m.size.width.toFloat(), w),
                         graphH + 2.dp.toPx(),
                     ))
                 }

@@ -339,13 +339,6 @@ Items found during the v1.23.0 deep audit that need design decisions or larger w
 
 ### P2 — Product Differentiation
 
-- [ ] P2 — RTL layout support · **T-I18N** / accessibility
-  Why: Arabic, Hebrew, Persian, and Urdu (820M+ speakers combined) are among the most-requested FOSS locales. Weather UIs have unique RTL challenges: left-anchored temperature graphs, LTR timeline scrubbers, hour-label progression, wind compass orientation, and radar playback controls all assume LTR. Without explicit RTL support, adding Arabic/Hebrew translations produces a broken layout.
-  Evidence: Breezy Weather community translation requests (Arabic is top-3 requested); European Accessibility Act enforcement (EAA, June 2025) includes locale-appropriate presentation; Compose `LayoutDirection` support is built-in but requires explicit handling for Canvas components.
-  Touches: All Canvas-drawn components in `ui/component/` (TemperatureGraph, PressureTrendCard, WindTrendCard, PrecipitationChartCard, CloudCoverCard, VisibilityCard, HourlyForecastStrip, SunMoonArc), `ui/screen/radar/RadarScreen.kt` (playback controls), `ui/screen/main/MainScreen.kt` (LazyColumn card ordering). Add `values-ar/strings.xml` and `values-he/strings.xml` as first RTL locales.
-  Acceptance: All screens render correctly in forced-RTL mode (developer options); Canvas charts mirror axis/label orientation; no text clipping or overlap; at least one RTL locale (Arabic) has translated strings.
-  Complexity: L
-
 
 [Moved to Roadmap_Blocked.md: Wear OS 7 compatibility pass (needs Wear OS 7 SDK availability)]
 

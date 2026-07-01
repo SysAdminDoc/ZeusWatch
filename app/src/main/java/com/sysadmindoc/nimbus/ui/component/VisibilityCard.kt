@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
@@ -158,6 +160,7 @@ private fun VisibilityScaleBar(
 ) {
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 8.sp)
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     // Scale thresholds in km
     val thresholds = listOf(0.0, 1.0, 4.0, 10.0, 20.0, 40.0, 50.0)
@@ -179,8 +182,8 @@ private fun VisibilityScaleBar(
         for (i in 0 until 6) {
             val startFrac = (thresholds[i] / maxKm).toFloat()
             val endFrac = (thresholds[i + 1] / maxKm).toFloat()
-            val startX = w * startFrac
             val segW = w * (endFrac - startFrac)
+            val startX = rtlCanvasRectLeft(w * startFrac, segW, w, isRtl)
 
             drawRoundRect(
                 color = colors[i].copy(alpha = 0.35f),
@@ -194,13 +197,16 @@ private fun VisibilityScaleBar(
             val measured = textMeasurer.measure(label, labelStyle)
             drawText(
                 measured,
-                topLeft = Offset(startX + segW / 2 - measured.size.width / 2, barY + barH + 4.dp.toPx()),
+                topLeft = Offset(
+                    centeredCanvasLabelLeft(startX + segW / 2f, measured.size.width.toFloat(), w),
+                    barY + barH + 4.dp.toPx(),
+                ),
             )
         }
 
         // Current position indicator
         val posFrac = (currentKm.coerceIn(0.0, 50.0) / maxKm).toFloat()
-        val posX = w * posFrac
+        val posX = rtlCanvasX(w * posFrac, w, isRtl)
         drawCircle(
             color = Color.White,
             radius = 7.dp.toPx(),
@@ -224,6 +230,7 @@ private fun VisibilityTrendChart(
     val timePattern = if (settings.timeFormat == com.sysadmindoc.nimbus.data.repository.TimeFormat.TWENTY_FOUR_HOUR) "HH" else "ha"
     val timeFmt = DateTimeFormatter.ofPattern(timePattern)
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     Canvas(modifier = modifier) {
         val w = size.width
@@ -233,7 +240,7 @@ private fun VisibilityTrendChart(
         val maxVis = 50000f // 50km in meters
 
         val points = hours.mapIndexed { i, hr ->
-            val x = (i.toFloat() / (hours.size - 1).coerceAtLeast(1)) * w
+            val x = rtlCanvasX((i.toFloat() / (hours.size - 1).coerceAtLeast(1)) * w, w, isRtl)
             val vis = (hr.visibility ?: 0.0).toFloat().coerceIn(0f, maxVis)
             val y = chartH * (1f - vis / maxVis)
             Offset(x, y)
@@ -264,10 +271,10 @@ private fun VisibilityTrendChart(
             if (i % 4 == 0) {
                 val label = hr.time.format(timeFmt).lowercase()
                 val measured = textMeasurer.measure(label, labelStyle)
-                val x = (i.toFloat() / (hours.size - 1).coerceAtLeast(1)) * w
+                val x = rtlCanvasX((i.toFloat() / (hours.size - 1).coerceAtLeast(1)) * w, w, isRtl)
                 drawText(
                     measured,
-                    topLeft = Offset(x - measured.size.width / 2, chartH + 2.dp.toPx()),
+                    topLeft = Offset(centeredCanvasLabelLeft(x, measured.size.width.toFloat(), w), chartH + 2.dp.toPx()),
                 )
             }
         }

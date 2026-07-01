@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
@@ -67,6 +69,7 @@ fun SunArc(
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 10.sp)
     val twilightColor = Color(0xFF1A237E).copy(alpha = 0.25f)
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     val sunriseLabel = WeatherFormatter.formatTime(sunrise, settings)
     val sunsetLabel = WeatherFormatter.formatTime(sunset, settings)
@@ -94,6 +97,7 @@ fun SunArc(
                     horizonY = h * 0.80f,
                     arcRadius = w * 0.42f,
                     centerX = w / 2f,
+                    isRtl = isRtl,
                 )
 
                 onDrawBehind {
@@ -132,6 +136,7 @@ private data class SunArcLayout(
     val horizonY: Float,
     val arcRadius: Float,
     val centerX: Float,
+    val isRtl: Boolean,
 )
 
 private fun parseSunArcTimes(
@@ -218,8 +223,13 @@ private fun DrawScope.drawTwilightZones(
     val twilightStroke = Stroke(width = 14f, cap = StrokeCap.Round)
     val arcSize = Size(layout.arcRadius * 2, layout.arcRadius * 2)
     val topLeft = Offset(layout.centerX - layout.arcRadius, layout.horizonY - layout.arcRadius)
-    drawArc(twilightColor, 180f, dawnSweep, false, topLeft, arcSize, style = twilightStroke)
-    drawArc(twilightColor, -dawnSweep, dawnSweep, false, topLeft, arcSize, style = twilightStroke)
+    if (layout.isRtl) {
+        drawArc(twilightColor, 0f, -dawnSweep, false, topLeft, arcSize, style = twilightStroke)
+        drawArc(twilightColor, 180f, dawnSweep, false, topLeft, arcSize, style = twilightStroke)
+    } else {
+        drawArc(twilightColor, 180f, dawnSweep, false, topLeft, arcSize, style = twilightStroke)
+        drawArc(twilightColor, -dawnSweep, dawnSweep, false, topLeft, arcSize, style = twilightStroke)
+    }
 }
 
 private fun DrawScope.drawHorizonLine(layout: SunArcLayout) {
@@ -241,8 +251,8 @@ private fun DrawScope.drawSunTrack(
     val topLeft = Offset(layout.centerX - layout.arcRadius, layout.horizonY - layout.arcRadius)
     drawArc(
         color = NimbusSunYellow.copy(alpha = 0.2f),
-        startAngle = 180f,
-        sweepAngle = 180f,
+        startAngle = if (layout.isRtl) 0f else 180f,
+        sweepAngle = if (layout.isRtl) -180f else 180f,
         useCenter = false,
         topLeft = topLeft,
         size = arcSize,
@@ -255,8 +265,8 @@ private fun DrawScope.drawSunTrack(
     if (isDaylight) {
         drawArc(
             color = NimbusSunYellow.copy(alpha = 0.6f),
-            startAngle = 180f,
-            sweepAngle = sunProgress * 180f,
+            startAngle = if (layout.isRtl) 0f else 180f,
+            sweepAngle = if (layout.isRtl) sunProgress * -180f else sunProgress * 180f,
             useCenter = false,
             topLeft = topLeft,
             size = arcSize,
@@ -273,7 +283,7 @@ private fun DrawScope.drawSunPosition(
     if (!isDaylight) return
     val angle = PI.toFloat() * (1f - sunProgress)
     val center = Offset(
-        x = layout.centerX + layout.arcRadius * cos(angle),
+        x = rtlCanvasX(layout.centerX + layout.arcRadius * cos(angle), layout.width, layout.isRtl),
         y = layout.horizonY - layout.arcRadius * sin(angle),
     )
     drawCircle(NimbusSunYellow.copy(alpha = 0.15f), radius = 16f, center = center)
@@ -289,8 +299,8 @@ private fun DrawScope.drawMoonTrack(
     val moonArcRadius = layout.arcRadius * 0.75f
     drawArc(
         color = NimbusMoonBlue.copy(alpha = 0.15f),
-        startAngle = 180f,
-        sweepAngle = 180f,
+        startAngle = if (layout.isRtl) 0f else 180f,
+        sweepAngle = if (layout.isRtl) -180f else 180f,
         useCenter = false,
         topLeft = Offset(layout.centerX - moonArcRadius, layout.horizonY - moonArcRadius),
         size = Size(moonArcRadius * 2, moonArcRadius * 2),
@@ -303,7 +313,7 @@ private fun DrawScope.drawMoonTrack(
     if (moonState.isUp) {
         val moonAngle = PI.toFloat() * (1f - moonState.progress)
         val center = Offset(
-            x = layout.centerX + moonArcRadius * cos(moonAngle),
+            x = rtlCanvasX(layout.centerX + moonArcRadius * cos(moonAngle), layout.width, layout.isRtl),
             y = layout.horizonY - moonArcRadius * sin(moonAngle),
         )
         drawCircle(NimbusMoonBlue.copy(alpha = 0.2f), radius = 10f, center = center)
@@ -320,10 +330,27 @@ private fun DrawScope.drawSunArcLabels(
     twilightLabel: String?,
 ) {
     val riseM = textMeasurer.measure(sunriseLabel, labelStyle)
-    drawText(riseM, topLeft = Offset(layout.width * 0.05f, layout.horizonY + 4f))
+    drawText(
+        riseM,
+        topLeft = Offset(
+            rtlCanvasRectLeft(layout.width * 0.05f, riseM.size.width.toFloat(), layout.width, layout.isRtl),
+            layout.horizonY + 4f,
+        ),
+    )
 
     val setM = textMeasurer.measure(sunsetLabel, labelStyle)
-    drawText(setM, topLeft = Offset(layout.width * 0.95f - setM.size.width, layout.horizonY + 4f))
+    drawText(
+        setM,
+        topLeft = Offset(
+            rtlCanvasRectLeft(
+                left = layout.width * 0.95f - setM.size.width,
+                rectWidth = setM.size.width.toFloat(),
+                canvasWidth = layout.width,
+                isRtl = layout.isRtl,
+            ),
+            layout.horizonY + 4f,
+        ),
+    )
 
     if (twilightLabel != null) {
         val label = textMeasurer.measure(
