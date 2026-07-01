@@ -32,6 +32,8 @@ LONDON_LATITUDE = "51.5072"
 LONDON_LONGITUDE = "-0.1276"
 BERLIN_LATITUDE = "52.5200"
 BERLIN_LONGITUDE = "13.4050"
+COPENHAGEN_LATITUDE = "55.6761"
+COPENHAGEN_LONGITUDE = "12.5683"
 OTTAWA_LATITUDE = "45.4215"
 OTTAWA_LONGITUDE = "-75.6972"
 
@@ -165,6 +167,18 @@ def provider_checks() -> list[ContractCheck]:
             "timezone": "UTC",
         }
     )
+    open_meteo_dmi_query = urlencode(
+        {
+            "latitude": COPENHAGEN_LATITUDE,
+            "longitude": COPENHAGEN_LONGITUDE,
+            "models": "dmi_seamless",
+            "hourly": "temperature_2m,weather_code",
+            "daily": "weather_code,temperature_2m_max,temperature_2m_min",
+            "forecast_days": "1",
+            "forecast_hours": "1",
+            "timezone": "UTC",
+        }
+    )
     bright_sky_forecast_query = urlencode(
         {
             "lat": BERLIN_LATITUDE,
@@ -264,6 +278,17 @@ def provider_checks() -> list[ContractCheck]:
             data_types=("FORECAST",),
             coverage=f"London, UK ({LONDON_LATITUDE},{LONDON_LONGITUDE})",
             schema_assertion="Forecast API with models=ukmo_seamless returns hourly and daily blocks",
+        ),
+        ContractCheck(
+            key="open-meteo-dmi",
+            name="Open-Meteo DMI HARMONIE forecast",
+            url=f"https://api.open-meteo.com/v1/forecast?{open_meteo_dmi_query}",
+            docs_url="https://open-meteo.com/en/docs/dmi-api",
+            validator=validate_open_meteo_model_forecast,
+            providers=("OPEN_METEO_DMI",),
+            data_types=("FORECAST",),
+            coverage=f"Copenhagen, DK ({COPENHAGEN_LATITUDE},{COPENHAGEN_LONGITUDE})",
+            schema_assertion="Forecast API with models=dmi_seamless returns hourly and daily blocks",
         ),
         ContractCheck(
             key="open-meteo-kma-quarantine",

@@ -410,14 +410,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
   Acceptance: Settings shows per-provider last success, last failure reason class, last cache age, and active fallback state without telemetry; users can export a redacted diagnostics bundle for support.
   Complexity: M
 
-- [ ] P2 — DMI forecast adapter through the provider registry
-  Why: DMI covers Denmark, Greenland, Faroe, and nearby Nordic weather with high-resolution HARMONIE/AROME data; use Open-Meteo's no-key DMI endpoint first and keep official DMI EDR behind the provider metadata/auth decision.
-  Evidence: Provider priority table lists DMI but no actionable item; DMI Forecast Data docs; Open-Meteo DMI API documents 2 km updates every 3 hours and up to 15-day combined forecasts.
-  Touches: provider metadata registry item NX-20, `WeatherSourceProvider`, `WeatherSourceAdapterModule.kt`, `NetworkModule.kt`, Open-Meteo/DMI adapter tests, Settings labels, attribution strings.
-  Acceptance: Users in DMI coverage can select DMI forecasts via the no-key Open-Meteo DMI path; the adapter routes through the metadata registry; fallback and attribution work; tests cover coordinates inside/outside coverage and metric-unit mapping.
-  Complexity: M
-
-
 ## Research-Driven Additions (2026-06-25)
 
 ### P1 — Security & Trust

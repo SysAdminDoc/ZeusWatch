@@ -332,6 +332,17 @@ class OpenMeteoUkmoForecastAdapter @Inject constructor(
     ): Result<WeatherData> = weatherRepository.get().getUkmoWeatherDirect(latitude, longitude, locationName)
 }
 
+@Singleton
+class OpenMeteoDmiForecastAdapter @Inject constructor(
+    private val weatherRepository: dagger.Lazy<WeatherRepository>,
+) {
+    suspend fun getWeather(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = weatherRepository.get().getDmiWeatherDirect(latitude, longitude, locationName)
+}
+
 /**
  * Adapter wrapping the existing Open-Meteo minutely precipitation logic.
  */

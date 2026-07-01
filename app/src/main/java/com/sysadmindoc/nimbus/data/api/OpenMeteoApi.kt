@@ -90,6 +90,25 @@ interface OpenMeteoApi {
         @Query("forecast_hours") forecastHours: Int = 48,
     ): OpenMeteoResponse
 
+    /**
+     * Open-Meteo DMI HARMONIE AROME model proxy.
+     * Docs: https://open-meteo.com/en/docs/dmi-api
+     */
+    @GET("forecast")
+    suspend fun getDmiForecast(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("models") models: String = "dmi_seamless",
+        @Query("hourly") hourly: String = BOM_HOURLY_PARAMS,
+        @Query("daily") daily: String = BOM_DAILY_PARAMS,
+        @Query("temperature_unit") temperatureUnit: String = "celsius",
+        @Query("wind_speed_unit") windSpeedUnit: String = "kmh",
+        @Query("precipitation_unit") precipitationUnit: String = "mm",
+        @Query("timezone") timezone: String = "auto",
+        @Query("forecast_days") forecastDays: Int = 15,
+        @Query("forecast_hours") forecastHours: Int = 48,
+    ): OpenMeteoResponse
+
     @GET("forecast")
     suspend fun getMinutely15Forecast(
         @Query("latitude") latitude: Double,
