@@ -7,6 +7,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.util.withRetry
 import kotlinx.coroutines.flow.first
+import java.time.Duration
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,6 +27,7 @@ class WeatherSourceManager @Inject constructor(
     private val prefs: UserPreferences,
     private val adapters: Map<WeatherSourceProvider, @JvmSuppressWildcards WeatherSourceAdapter>,
     private val timeZoneResolver: LocationTimeZoneResolver,
+    private val providerHealthRepository: ProviderHealthRepository,
 ) {
 
     // ── Forecast ────────────────────────────────────────────────────────
@@ -45,9 +47,20 @@ class WeatherSourceManager @Inject constructor(
             getForecastFrom(primary, latitude, longitude, locationName, locationTimeZone)
         }
         if (result.isSuccess) {
+            providerHealthRepository.recordSuccess(
+                type = WeatherDataType.FORECAST,
+                provider = primary,
+                cacheAgeMinutes = result.getOrNull()?.cacheAgeMinutes(),
+            )
             return result.map { it.copy(sourceProvider = primary.displayName) }
         }
 
+        providerHealthRepository.recordFailure(
+            type = WeatherDataType.FORECAST,
+            provider = primary,
+            exception = result.exceptionOrNull(),
+            clearActiveFallback = fallback == null || fallback == primary,
+        )
         Log.w(TAG, "Primary forecast source ${primary.displayName} failed, trying fallback", result.exceptionOrNull())
 
         if (fallback != null && fallback != primary) {
@@ -55,10 +68,23 @@ class WeatherSourceManager @Inject constructor(
                 getForecastFrom(fallback, latitude, longitude, locationName, locationTimeZone)
             }
             if (fallbackResult.isSuccess) {
+                providerHealthRepository.recordSuccess(
+                    type = WeatherDataType.FORECAST,
+                    provider = fallback,
+                    cacheAgeMinutes = fallbackResult.getOrNull()?.cacheAgeMinutes(),
+                    activeFallback = true,
+                    fallbackFromProvider = primary,
+                )
                 return fallbackResult.map {
                     it.copy(sourceProvider = fallback.displayName, usedFallback = true)
                 }
             }
+            providerHealthRepository.recordFailure(
+                type = WeatherDataType.FORECAST,
+                provider = fallback,
+                exception = fallbackResult.exceptionOrNull(),
+                clearActiveFallback = true,
+            )
             Log.w(TAG, "Fallback forecast source ${fallback.displayName} also failed", fallbackResult.exceptionOrNull())
         }
 
@@ -113,15 +139,43 @@ class WeatherSourceManager @Inject constructor(
         val result = withRetry {
             getAlertsFrom(primary, latitude, longitude, includeMeteredSources, countryHint)
         }
-        if (result.isSuccess) return result
+        if (result.isSuccess) {
+            providerHealthRepository.recordSuccess(
+                type = WeatherDataType.ALERTS,
+                provider = primary,
+                cacheAgeMinutes = null,
+            )
+            return result
+        }
 
+        providerHealthRepository.recordFailure(
+            type = WeatherDataType.ALERTS,
+            provider = primary,
+            exception = result.exceptionOrNull(),
+            clearActiveFallback = fallback == null || fallback == primary,
+        )
         Log.w(TAG, "Primary alert source ${primary.displayName} failed, trying fallback", result.exceptionOrNull())
 
         if (fallback != null && fallback != primary) {
             val fallbackResult = withRetry {
                 getAlertsFrom(fallback, latitude, longitude, includeMeteredSources, countryHint)
             }
-            if (fallbackResult.isSuccess) return fallbackResult
+            if (fallbackResult.isSuccess) {
+                providerHealthRepository.recordSuccess(
+                    type = WeatherDataType.ALERTS,
+                    provider = fallback,
+                    cacheAgeMinutes = null,
+                    activeFallback = true,
+                    fallbackFromProvider = primary,
+                )
+                return fallbackResult
+            }
+            providerHealthRepository.recordFailure(
+                type = WeatherDataType.ALERTS,
+                provider = fallback,
+                exception = fallbackResult.exceptionOrNull(),
+                clearActiveFallback = true,
+            )
             Log.w(TAG, "Fallback alert source ${fallback.displayName} also failed", fallbackResult.exceptionOrNull())
         }
 
@@ -146,8 +200,21 @@ class WeatherSourceManager @Inject constructor(
         val fallback = config.alertsFallback
 
         val primaryResult = getAlertsDetailedFrom(primary, latitude, longitude, includeMeteredSources, countryHint)
-        if (!primaryResult.allAdaptersFailed) return primaryResult
+        if (!primaryResult.allAdaptersFailed) {
+            providerHealthRepository.recordSuccess(
+                type = WeatherDataType.ALERTS,
+                provider = primary,
+                cacheAgeMinutes = null,
+            )
+            return primaryResult
+        }
 
+        providerHealthRepository.recordFailure(
+            type = WeatherDataType.ALERTS,
+            provider = primary,
+            reason = ProviderFailureReason.UNKNOWN,
+            clearActiveFallback = fallback == null || fallback == primary,
+        )
         Log.w(TAG, "Primary alert source ${primary.displayName} failed, trying fallback")
 
         if (fallback != null && fallback != primary) {
@@ -158,7 +225,22 @@ class WeatherSourceManager @Inject constructor(
                 includeMeteredSources,
                 countryHint,
             )
-            if (!fallbackResult.allAdaptersFailed) return fallbackResult
+            if (!fallbackResult.allAdaptersFailed) {
+                providerHealthRepository.recordSuccess(
+                    type = WeatherDataType.ALERTS,
+                    provider = fallback,
+                    cacheAgeMinutes = null,
+                    activeFallback = true,
+                    fallbackFromProvider = primary,
+                )
+                return fallbackResult
+            }
+            providerHealthRepository.recordFailure(
+                type = WeatherDataType.ALERTS,
+                provider = fallback,
+                reason = ProviderFailureReason.UNKNOWN,
+                clearActiveFallback = true,
+            )
             Log.w(TAG, "Fallback alert source ${fallback.displayName} also failed")
         }
 
@@ -214,7 +296,9 @@ class WeatherSourceManager @Inject constructor(
         val config = prefs.settings.first().sourceConfig
         val primary = config.airQuality
 
-        return withRetry { getAirQualityFrom(primary, latitude, longitude) }
+        val result = withRetry { getAirQualityFrom(primary, latitude, longitude) }
+        recordHealthResult(WeatherDataType.AIR_QUALITY, primary, result)
+        return result
     }
 
     private suspend fun getAirQualityFrom(
@@ -237,7 +321,9 @@ class WeatherSourceManager @Inject constructor(
         val config = prefs.settings.first().sourceConfig
         val primary = config.minutely
 
-        return withRetry { getMinutelyFrom(primary, latitude, longitude) }
+        val result = withRetry { getMinutelyFrom(primary, latitude, longitude) }
+        recordHealthResult(WeatherDataType.MINUTELY, primary, result)
+        return result
     }
 
     private suspend fun getMinutelyFrom(
@@ -270,6 +356,27 @@ class WeatherSourceManager @Inject constructor(
             failedSources = listOf(provider.name),
         )
 
+    private suspend fun <T> recordHealthResult(
+        type: WeatherDataType,
+        provider: WeatherSourceProvider,
+        result: Result<T>,
+    ) {
+        if (result.isSuccess) {
+            providerHealthRepository.recordSuccess(
+                type = type,
+                provider = provider,
+                cacheAgeMinutes = null,
+            )
+        } else {
+            providerHealthRepository.recordFailure(
+                type = type,
+                provider = provider,
+                exception = result.exceptionOrNull(),
+                clearActiveFallback = true,
+            )
+        }
+    }
+
     private val WeatherDataType.label: String
         get() = when (this) {
             WeatherDataType.FORECAST -> "forecasts"
@@ -278,6 +385,11 @@ class WeatherSourceManager @Inject constructor(
             WeatherDataType.MINUTELY -> "minutely data"
         }
 }
+
+private fun WeatherData.cacheAgeMinutes(): Long =
+    Duration.between(lastUpdated, java.time.LocalDateTime.now())
+        .toMinutes()
+        .coerceAtLeast(0L)
 
 // ── Source Adapters ─────────────────────────────────────────────────────
 

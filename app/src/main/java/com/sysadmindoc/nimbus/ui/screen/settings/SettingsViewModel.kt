@@ -37,9 +37,11 @@ class SettingsViewModel @Inject constructor(
     private val prefs: UserPreferences,
     private val iconPackManager: IconPackManager,
     private val settingsTransferManager: SettingsTransferManager,
+    private val providerHealthRepository: ProviderHealthRepository,
 ) : ViewModel() {
 
     val settings = prefs.settings
+    val providerHealth = providerHealthRepository.snapshot
 
     /**
      * Discovered icon packs (bundled + external APKs). Exposed as a StateFlow
@@ -212,6 +214,29 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun exportProviderDiagnostics(uri: Uri) = viewModelScope.launch {
+        if (!beginTransfer()) return@launch
+        clearPendingImport()
+        try {
+            runCatching {
+                val text = withContext(Dispatchers.IO) { providerHealthRepository.diagnosticsText() }
+                withContext(Dispatchers.IO) {
+                    appContext.contentResolver.openOutputStream(uri, "wt")?.bufferedWriter()?.use { writer ->
+                        writer.write(text)
+                    } ?: error("Could not open diagnostics file.")
+                }
+            }.fold(
+                onSuccess = { _transferStatus.value = SettingsTransferStatus.DiagnosticsExportSuccess },
+                onFailure = {
+                    Log.w(TAG, "Failed to export provider diagnostics", it)
+                    _transferStatus.value = SettingsTransferStatus.DiagnosticsExportError
+                },
+            )
+        } finally {
+            _transferInProgress.value = false
+        }
+    }
+
     fun importSettings(uri: Uri) = viewModelScope.launch {
         if (!beginTransfer()) return@launch
         clearPendingImport()
@@ -303,6 +328,16 @@ sealed interface SettingsTransferStatus {
 
     data object ExportError : SettingsTransferStatus {
         override val messageRes: Int = R.string.settings_transfer_export_error
+        override val tone: SettingsTransferStatusTone = SettingsTransferStatusTone.ERROR
+    }
+
+    data object DiagnosticsExportSuccess : SettingsTransferStatus {
+        override val messageRes: Int = R.string.settings_provider_health_export_success
+        override val tone: SettingsTransferStatusTone = SettingsTransferStatusTone.SUCCESS
+    }
+
+    data object DiagnosticsExportError : SettingsTransferStatus {
+        override val messageRes: Int = R.string.settings_provider_health_export_error
         override val tone: SettingsTransferStatusTone = SettingsTransferStatusTone.ERROR
     }
 
