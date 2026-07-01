@@ -929,7 +929,7 @@
     <string name="settings_display_title">Display</string>
     <string name="settings_display_desc">Choose the overall visual style, iconography, and forecast voice.</string>
     <string name="settings_radar_provider">Radar Provider</string>
-    <string name="settings_radar_hint">Windy is the default for new installs. RainViewer Native keeps ZeusWatch\'s in-app playback, but its public feed is past radar only with max zoom 7 and Universal Blue tiles. NWS options open official U.S. radar pages.</string>
+    <string name="settings_radar_hint">Windy is the default for new installs. LibreWXR Native keeps FOSS in-app playback with higher zoom, Viper HD tiles, and nowcast. RainViewer Native remains the conservative fallback with past radar only, max zoom 7, and Universal Blue tiles. NWS options open official U.S. radar pages.</string>
     <string name="settings_icon_style">Icon Style</string>
     <string name="settings_theme_mode">Theme Mode</string>
     <string name="settings_summary_style">Weather Summary Style</string>
@@ -1145,6 +1145,8 @@
     <string name="settings_radar_provider_windy_summary">Global interactive radar from Windy.</string>
     <string name="settings_radar_provider_rainviewer">RainViewer Native</string>
     <string name="settings_radar_provider_rainviewer_summary">Past-only RainViewer playback with max zoom 7, Universal Blue PNG tiles, lightning, and overlays.</string>
+    <string name="settings_radar_provider_librewxr">LibreWXR Native</string>
+    <string name="settings_radar_provider_librewxr_summary">FOSS radar playback with max zoom 12, Viper HD PNG tiles, nowcast, lightning, and overlays.</string>
     <string name="settings_radar_provider_nws">NWS Radar (US)</string>
     <string name="settings_radar_provider_nws_summary">Official NOAA/NWS interactive radar for U.S. regions and stations.</string>
     <string name="settings_radar_provider_nws_lite">NWS Radar Lite (US)</string>
@@ -1158,6 +1160,8 @@
     <string name="settings_summary_ai_generated">AI-Generated (Gemini)</string>
     <string name="settings_summary_custom_template">Custom Template</string>
     <string name="radar_attribution_rainviewer_limited">Radar: RainViewer \u2022 past only \u2022 max zoom 7 \u2022 Universal Blue</string>
+    <string name="radar_attribution_librewxr">Radar: LibreWXR \u2022 past + nowcast \u2022 max zoom 12 \u2022 Viper HD</string>
+    <string name="radar_attribution_librewxr_fallback">Radar: LibreWXR unavailable \u2022 using RainViewer fallback \u2022 max zoom 7</string>
     <string name="settings_custom_template_label">Template</string>
     <string name="settings_custom_template_help">Variables: {condition} {time} {temp} {high} {low} {humidity} {wind} {wind_speed} {uv} {precip} {precip_max} {pressure} {dewpoint}. Max 8,000 characters.</string>
     <string name="weather_source_open_meteo">Open-Meteo</string>

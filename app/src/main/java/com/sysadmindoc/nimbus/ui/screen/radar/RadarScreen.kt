@@ -61,11 +61,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.api.LightningStrike
+import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import com.sysadmindoc.nimbus.data.model.CommunityReport
 import com.sysadmindoc.nimbus.data.model.ReportCondition
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.RadarProvider
+import com.sysadmindoc.nimbus.data.repository.RadarTileSource
 import com.sysadmindoc.nimbus.ui.component.AlertDetailSheet
 import com.sysadmindoc.nimbus.ui.component.GlassActionButton
 import com.sysadmindoc.nimbus.ui.component.NimbusStatusBadge
@@ -127,7 +129,7 @@ fun RadarScreen(
         onCameraIdle = viewModel::onMapInteractionEnd,
         onTogglePlayback = viewModel::togglePlayback,
         onSeekToFrame = viewModel::seekToFrame,
-        onRetryFrames = { viewModel.loadFrames(force = true) },
+        onRetryFrames = { viewModel.loadFrames(provider = settings.radarProvider, force = true) },
         onOpenReportSheet = { showReportSheet = true },
         onDismissReportSheet = {
             showReportSheet = false
@@ -152,7 +154,7 @@ fun RadarScreen(
         selectedLayer = selectedLayer,
         provider = settings.radarProvider,
         isOffline = isOffline,
-        loadFrames = { viewModel.loadFrames() },
+        loadFrames = { viewModel.loadFrames(settings.radarProvider) },
         pausePlayback = viewModel::pausePlayback,
         connectLightning = viewModel::connectLightning,
         disconnectLightning = viewModel::disconnectLightning,
@@ -218,7 +220,7 @@ fun RadarTab(
         onCameraIdle = viewModel::onMapInteractionEnd,
         onTogglePlayback = viewModel::togglePlayback,
         onSeekToFrame = viewModel::seekToFrame,
-        onRetryFrames = { viewModel.loadFrames(force = true) },
+        onRetryFrames = { viewModel.loadFrames(provider = settings.radarProvider, force = true) },
         onOpenReportSheet = { showReportSheet = true },
         onDismissReportSheet = {
             showReportSheet = false
@@ -243,7 +245,7 @@ fun RadarTab(
         selectedLayer = selectedLayer,
         provider = settings.radarProvider,
         isOffline = isOffline,
-        loadFrames = { viewModel.loadFrames() },
+        loadFrames = { viewModel.loadFrames(settings.radarProvider) },
         pausePlayback = viewModel::pausePlayback,
         connectLightning = viewModel::connectLightning,
         disconnectLightning = viewModel::disconnectLightning,
@@ -429,6 +431,7 @@ private fun BoxScope.RadarNativeContent(
         longitude = coordinates.longitude,
         currentTileUrl = if (isRadarMode) state.radarState.currentFrame?.tileUrl else null,
         previousTileUrl = previousRadarTileUrl(isRadarMode, state.radarState),
+        radarMaxZoom = state.radarState.frameSet?.maxTileZoom ?: RainViewerApi.MAX_TILE_ZOOM,
         overlayTileUrl = if (isRadarMode || isLightningMode) null else state.selectedLayer.tileUrlTemplate,
         lightningStrikes = if (showLightning) state.strikes else emptyList(),
         communityReports = state.nearbyReports,
@@ -451,14 +454,28 @@ private fun BoxScope.RadarNativeContent(
     )
     if (isRadarMode) {
         RadarPlaybackAndStatus(state, actions)
-        RadarAttribution(modifier = Modifier.align(Alignment.BottomStart))
+        RadarAttribution(
+            provider = state.settings.radarProvider,
+            source = state.radarState.frameSet?.source,
+            modifier = Modifier.align(Alignment.BottomStart),
+        )
     }
 }
 
 @Composable
-private fun RadarAttribution(modifier: Modifier = Modifier) {
+private fun RadarAttribution(
+    provider: RadarProvider,
+    source: RadarTileSource?,
+    modifier: Modifier = Modifier,
+) {
+    val attributionRes = when {
+        source == RadarTileSource.LIBREWXR -> R.string.radar_attribution_librewxr
+        provider == RadarProvider.LIBREWXR_NATIVE && source == RadarTileSource.RAINVIEWER ->
+            R.string.radar_attribution_librewxr_fallback
+        else -> R.string.radar_attribution_rainviewer_limited
+    }
     Text(
-        text = stringResource(R.string.radar_attribution_rainviewer_limited),
+        text = stringResource(attributionRes),
         color = NimbusTextPrimary.copy(alpha = 0.5f),
         fontSize = 9.sp,
         modifier = modifier.padding(start = 8.dp, bottom = 4.dp),
@@ -765,7 +782,8 @@ private fun RadarWebView(
                                     host == "radar.weather.gov" ||
                                         NWS_ALLOWED_HOST_PATTERNS.any { it.matches(host) }
                                 }
-                                RadarProvider.NATIVE_MAPLIBRE -> false
+                                RadarProvider.NATIVE_MAPLIBRE,
+                                RadarProvider.LIBREWXR_NATIVE -> false
                             }
                         }
                         override fun shouldOverrideUrlLoading(
@@ -827,7 +845,8 @@ private fun buildRadarProviderUrl(provider: RadarProvider, lat: Double, lon: Dou
         RadarProvider.WINDY_WEBVIEW -> buildWindyRadarUrl(lat, lon, zoom)
         RadarProvider.NWS_WEBVIEW -> "https://radar.weather.gov/"
         RadarProvider.NWS_STANDARD_WEBVIEW -> "https://radar.weather.gov/standard"
-        RadarProvider.NATIVE_MAPLIBRE -> buildWindyRadarUrl(lat, lon, zoom)
+        RadarProvider.NATIVE_MAPLIBRE,
+        RadarProvider.LIBREWXR_NATIVE -> buildWindyRadarUrl(lat, lon, zoom)
     }
 }
 

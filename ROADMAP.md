@@ -401,17 +401,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 
 ### P2 — Product Differentiation & Coverage
 
-- [ ] P2 — Evaluate LibreWXR as FOSS radar source · **T-SOURCES** / **T-RELIABILITY**
-  Why: RainViewer's free tier degraded significantly in January 2026 (max zoom 7, single color, no nowcast/satellite, PNG only). LibreWXR is a new 2026 FOSS project providing a RainViewer v2 API-compatible drop-in with real radar composites from 7 national services (MRMS/US, MSC/Canada, OPERA/24 EU countries, JMA/Japan, CWA/Taiwan, MET Malaysia) plus ECMWF IFS global fallback and WMO alerts. Extends the existing P2 RainViewer/Rainbow.ai evaluation with a FOSS-native option.
-  Evidence: LibreWXR GitHub documentation; RainViewer API changelog (Jan 2026 free-tier restrictions); existing P2 RainViewer+Rainbow.ai roadmap item covers commercial alternatives but not FOSS ones.
-  Touches: `RadarRepository.kt` (add source selection), `RadarScreen.kt` (surface quality/source indicator), Settings radar section (source picker if viable). If API-compatible: minimal code — URL swap. If not: new `LibreWxrRadarApi` Retrofit interface.
-  Acceptance: Evaluation documents LibreWXR's uptime, hosting model, coverage quality, and API compatibility. If viable: radar tiles load from LibreWXR with higher zoom/color fidelity than current RainViewer free tier; RainViewer remains as fallback.
-  Complexity: M
-
-
-
-
-
 
 - [ ] P2 — HKO (Hong Kong) forecast and alert adapter · **T-SOURCES**
   Why: HKO offers 48 datasets via clean JSON REST at `data.weather.gov.hk/weatherAPI/` — no key, no registration, no XML parsing. Coverage includes 9-day forecast, rainfall nowcast, UV index, tropical cyclone tracking, and earthquake data. Free for commercial and non-commercial use. Compact regional win for 7.5M residents + travellers.

@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.data.repository
 
+import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -36,7 +37,7 @@ class RadarTileMathTest {
 
     @Test
     fun `buildPreviewTileUrls substitutes placeholders`() {
-        val repo = RadarRepository(radarApiStub())
+        val repo = radarRepository()
         val urls = repo.buildPreviewTileUrls(
             lat = 51.5,
             lon = -0.12,
@@ -49,7 +50,7 @@ class RadarTileMathTest {
 
     @Test
     fun `buildPreviewTileUrls clamps preview zoom to RainViewer public max`() {
-        val repo = RadarRepository(radarApiStub())
+        val repo = radarRepository()
         val urls = repo.buildPreviewTileUrls(
             lat = 51.5,
             lon = -0.12,
@@ -60,6 +61,23 @@ class RadarTileMathTest {
         assert(urls.radarTileUrl.contains("/7/")) { "RainViewer public tiles should not exceed zoom 7" }
         assert(urls.baseMapUrl.contains("/7/")) { "preview basemap should use the clamped zoom" }
     }
+
+    @Test
+    fun `buildPreviewTileUrls can use higher LibreWXR max zoom`() {
+        val repo = radarRepository()
+        val urls = repo.buildPreviewTileUrls(
+            lat = 51.5,
+            lon = -0.12,
+            tileUrlTemplate = "https://tiles.example.com/{z}/{x}/{y}/radar.png",
+            zoom = 12,
+            maxTileZoom = RainViewerApi.LIBREWXR_MAX_TILE_ZOOM,
+        )
+
+        assert(urls.radarTileUrl.contains("/12/")) { "LibreWXR preview should keep the requested zoom" }
+        assert(urls.baseMapUrl.contains("/12/")) { "preview basemap should use the provider max zoom" }
+    }
+
+    private fun radarRepository() = RadarRepository(radarApiStub(), radarApiStub())
 
     private fun radarApiStub() = io.mockk.mockk<com.sysadmindoc.nimbus.data.api.RainViewerApi>()
 }

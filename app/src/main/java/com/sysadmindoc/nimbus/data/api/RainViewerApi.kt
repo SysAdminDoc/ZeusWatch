@@ -17,9 +17,12 @@ interface RainViewerApi {
 
     companion object {
         const val BASE_URL = "https://api.rainviewer.com/"
+        const val LIBREWXR_BASE_URL = "https://api.librewxr.net/"
         const val TILE_HOST = "https://tilecache.rainviewer.com"
         const val UNIVERSAL_BLUE_COLOR_SCHEME = 2
+        const val LIBREWXR_VIPER_HD_COLOR_SCHEME = 10
         const val MAX_TILE_ZOOM = 7
+        const val LIBREWXR_MAX_TILE_ZOOM = 12
         const val PUBLIC_TILE_FORMAT = "png"
         const val SUPPORTS_PUBLIC_NOWCAST_TILES = false
         const val SUPPORTS_PUBLIC_SATELLITE_TILES = false
@@ -36,12 +39,13 @@ interface RainViewerApi {
             colorScheme: Int = UNIVERSAL_BLUE_COLOR_SCHEME,
             smooth: Boolean = true,
             snow: Boolean = true,
+            restrictToPublicRainViewer: Boolean = true,
         ): String {
             val resolvedHost = host?.takeIf { it.isNotBlank() } ?: TILE_HOST
-            val supportedColorScheme = if (colorScheme == UNIVERSAL_BLUE_COLOR_SCHEME) {
-                colorScheme
-            } else {
+            val supportedColorScheme = if (restrictToPublicRainViewer && colorScheme != UNIVERSAL_BLUE_COLOR_SCHEME) {
                 UNIVERSAL_BLUE_COLOR_SCHEME
+            } else {
+                colorScheme
             }
             val smoothFlag = if (smooth) 1 else 0
             val snowFlag = if (snow) 1 else 0

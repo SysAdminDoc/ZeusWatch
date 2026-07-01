@@ -720,7 +720,8 @@ class MainViewModel @Inject constructor(
 
     private suspend fun fetchRadarPreview(lat: Double, lon: Double, requestId: Long) {
         try {
-            radarRepository.getRadarFrames().fold(
+            val radarProvider = _uiState.value.settings.radarProvider
+            radarRepository.getRadarFrames(radarProvider).fold(
                 onSuccess = { frameSet ->
                     val latestFrame = frameSet.past.lastOrNull()
                     if (latestFrame == null) {
@@ -729,7 +730,12 @@ class MainViewModel @Inject constructor(
                         }
                         return@fold
                     }
-                    val preview = radarRepository.buildPreviewTileUrls(lat, lon, latestFrame.tileUrl)
+                    val preview = radarRepository.buildPreviewTileUrls(
+                        lat = lat,
+                        lon = lon,
+                        tileUrlTemplate = latestFrame.tileUrl,
+                        maxTileZoom = frameSet.maxTileZoom,
+                    )
                     val radarUrl = preview.radarTileUrl
                     val baseUrl = preview.baseMapUrl
                     if (isLatestWeatherRequest(requestId)) {

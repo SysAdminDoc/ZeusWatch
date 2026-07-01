@@ -157,7 +157,7 @@ class MainViewModelTest {
         coEvery { weatherRepository.getMinutelyPrecipitation(any(), any()) } coAnswers { Result.success(emptyList()) }
         coEvery { weatherRepository.getYesterdayWeather(any(), any()) } coAnswers { Result.success(null) }
         coEvery { weatherRepository.getCachedWeather(any(), any()) } returns null
-        coEvery { radarRepository.getRadarFrames() } coAnswers {
+        coEvery { radarRepository.getRadarFrames(any()) } coAnswers {
             Result.success(RadarFrameSet(past = emptyList(), forecast = emptyList()))
         }
     }

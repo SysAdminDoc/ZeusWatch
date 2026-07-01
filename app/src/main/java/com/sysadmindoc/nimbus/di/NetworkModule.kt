@@ -192,7 +192,21 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @Named("rainviewer")
     fun provideRainViewerApi(@Named("rainviewer") retrofit: Retrofit): RainViewerApi {
+        return retrofit.create(RainViewerApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    @Named("librewxr")
+    fun provideLibreWxrRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(RainViewerApi.LIBREWXR_BASE_URL, client)
+
+    @Provides
+    @Singleton
+    @Named("librewxr")
+    fun provideLibreWxrApi(@Named("librewxr") retrofit: Retrofit): RainViewerApi {
         return retrofit.create(RainViewerApi::class.java)
     }
 
