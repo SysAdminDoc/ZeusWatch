@@ -16,10 +16,11 @@ object WidgetUtils {
         isDay: Boolean = true,
         fallback: String = "Weather icon",
     ): String {
-        return try {
-            WeatherCode.fromCode(code).description
-        } catch (_: Exception) {
+        val weatherCode = WeatherCode.fromCode(code)
+        return if (weatherCode == WeatherCode.UNKNOWN && code != WeatherCode.UNKNOWN.code) {
             fallback
+        } else {
+            weatherCode.description
         }
     }
 }
