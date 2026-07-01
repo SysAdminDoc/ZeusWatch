@@ -502,13 +502,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 
 ### P1
 
-- [ ] P1 — Geohash-backed community report geoquery
-  Why: Current Firestore report lookup limits by latitude before client-side longitude filtering, so dense same-latitude reports can hide actually nearby reports and waste reads.
-  Evidence: `RESEARCH.md`; `app/src/standard/java/com/sysadmindoc/nimbus/data/repository/CommunityReportRepository.kt`; `firestore.rules`; Firebase Firestore geoquery docs recommend geohash ranges for location queries.
-  Touches: `CommunityReport.kt`, `CommunityReportRepository.kt`, `firestore.rules`, `tools/firestore-rules.test.mjs`, Firestore index docs, radar report marker tests.
-  Acceptance: New writes include a geohash, nearby queries use geohash bounds plus exact-distance filtering, legacy two-hour docs without geohash do not crash the map, and tests prove longitude-starvation is fixed.
-  Complexity: M
-
 ### P2
 
 - [ ] P2 — Expand source-of-truth drift gates for user-visible inventory and dependency claims

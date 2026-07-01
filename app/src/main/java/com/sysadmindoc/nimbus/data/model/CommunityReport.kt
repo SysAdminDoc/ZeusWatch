@@ -15,6 +15,7 @@ data class CommunityReport(
     val note: String = "",
     val timestamp: Long = System.currentTimeMillis(),
     val ownerUid: String = "", // Anonymous Firebase Auth uid of the submitter (no user accounts)
+    val geohash: String = "",
 )
 
 enum class ReportCondition(val label: String, val emoji: String) {

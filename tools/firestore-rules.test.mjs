@@ -39,6 +39,7 @@ function report(uid, overrides = {}) {
   return {
     latitude: 39.7392,
     longitude: -104.9903,
+    geohash: "9xj64",
     condition: "RAIN",
     ownerUid: uid,
     timestamp: Date.now(),
@@ -122,6 +123,29 @@ test("rejects malformed report payloads", async () => {
 
   await assertFails(submit(db, UID, "extra-field", { owner: "client" }));
   await assertFails(submit(db, UID, "bad-latitude", { latitude: "39.7" }));
+});
+
+test("requires a valid geohash on new report creates", async () => {
+  const db = dbFor(UID);
+
+  const missingGeohash = report(UID);
+  delete missingGeohash.geohash;
+  const missingBatch = writeBatch(db);
+  missingBatch.set(doc(db, COLLECTION, "missing-geohash"), missingGeohash);
+  missingBatch.set(doc(db, THROTTLES, UID), { lastReportAt: serverTimestamp() });
+  await assertFails(missingBatch.commit());
+
+  await assertFails(submit(db, UID, "short-geohash", { geohash: "9x" }));
+  await assertFails(submit(db, UID, "uppercase-geohash", { geohash: "9XJ64" }));
+  await assertFails(submit(db, UID, "symbol-geohash", { geohash: "9xj6!" }));
+});
+
+test("allows reading recent legacy reports that predate geohash writes", async () => {
+  const legacy = report(UID);
+  delete legacy.geohash;
+  await seedReport("legacy-without-geohash", legacy);
+
+  await assertSucceeds(getDocs(collection(dbFor(UID), COLLECTION)));
 });
 
 test("rejects stale and future report timestamps", async () => {

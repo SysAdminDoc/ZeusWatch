@@ -9,10 +9,12 @@ import com.google.firebase.firestore.Query
 import com.sysadmindoc.nimbus.data.model.CommunityReport
 import com.sysadmindoc.nimbus.data.model.ReportCondition
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.cos
 
 /**
  * Repository for submitting and querying community weather reports via Firebase Firestore.
@@ -65,10 +67,15 @@ class CommunityReportRepository @Inject constructor(
         return try {
             val uid = ensureSignedIn()
             val docRef = collection.document()
+            val safeLat = report.latitude.coerceIn(-90.0, 90.0)
+            val safeLon = report.longitude.coerceIn(-180.0, 180.0)
             val reportWithId = report.copy(
                 id = docRef.id,
+                latitude = safeLat,
+                longitude = safeLon,
                 ownerUid = uid,
                 timestamp = now,
+                geohash = CommunityReportGeo.geohash(safeLat, safeLon),
             )
 
             // Atomic batch: the report create + the throttle bump must land in the
@@ -91,7 +98,8 @@ class CommunityReportRepository @Inject constructor(
 
     /**
      * Query community reports near a location within the last 2 hours.
-     * Uses a bounding box approximation since Firestore lacks native geo-queries.
+     * Uses geohash prefix ranges plus exact-distance filtering so dense reports
+     * elsewhere on the same latitude cannot starve nearby longitude matches.
      */
     override suspend fun getReportsNearby(
         lat: Double,
@@ -101,35 +109,33 @@ class CommunityReportRepository @Inject constructor(
         return try {
             ensureSignedIn()
             val twoHoursAgo = System.currentTimeMillis() - TWO_HOURS_MS
-
-            // Bounding box approximation: 1 degree latitude ~ 111 km
-            val latDelta = radiusKm / 111.0
-            // Longitude degrees vary by latitude
-            val lonDelta = radiusKm / (111.0 * cos(Math.toRadians(lat)))
-
-            val snapshot = collection
-                .whereGreaterThan("latitude", lat - latDelta)
-                .whereLessThan("latitude", lat + latDelta)
-                .whereGreaterThan("timestamp", twoHoursAgo)
-                .orderBy("latitude", Query.Direction.ASCENDING)
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .limit(MAX_RESULTS)
-                .get()
-                .await()
-
-            val reports = snapshot.documents.mapNotNull { doc ->
-                try {
-                    mapToReport(doc.id, doc.data ?: return@mapNotNull null)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Skipping malformed report ${doc.id}", e)
-                    null
-                }
-            }.filter { report ->
-                // Post-filter longitude since Firestore compound queries are limited
-                report.longitude in (lon - lonDelta)..(lon + lonDelta)
+            val reports = coroutineScope {
+                CommunityReportGeo.queryBounds(lat, lon, radiusKm).map { bound ->
+                    async {
+                        collection
+                            .whereGreaterThanOrEqualTo("geohash", bound.start)
+                            .whereLessThan("geohash", bound.end)
+                            .whereGreaterThan("timestamp", twoHoursAgo)
+                            .orderBy("geohash", Query.Direction.ASCENDING)
+                            .orderBy("timestamp", Query.Direction.DESCENDING)
+                            .limit(MAX_RESULTS_PER_GEOHASH_QUERY)
+                            .get()
+                            .await()
+                            .documents
+                            .mapNotNull { doc -> mapToReportOrNull(doc.id, doc.data) }
+                    }
+                }.awaitAll().flatten()
             }
 
-            Result.success(reports)
+            Result.success(
+                CommunityReportGeo.sortNearby(
+                    reports = reports,
+                    latitude = lat,
+                    longitude = lon,
+                    radiusKm = radiusKm,
+                    maxResults = MAX_RESULTS,
+                )
+            )
         } catch (e: Exception) {
             Log.w(TAG, "Community report lookup unavailable: ${e.safeLogMessage()}")
             Result.failure(e)
@@ -161,17 +167,30 @@ class CommunityReportRepository @Inject constructor(
     private fun reportToMap(report: CommunityReport): Map<String, Any> = mapOf(
         "latitude" to report.latitude.coerceIn(-90.0, 90.0),
         "longitude" to report.longitude.coerceIn(-180.0, 180.0),
+        "geohash" to report.geohash.ifBlank {
+            CommunityReportGeo.geohash(report.latitude, report.longitude)
+        },
         "condition" to report.condition.name,
         "note" to report.note.trim().take(100),
         "timestamp" to report.timestamp,
         "ownerUid" to report.ownerUid,
     )
 
+    private fun mapToReportOrNull(id: String, data: Map<String, Any>?): CommunityReport? {
+        return try {
+            mapToReport(id, data ?: return null)
+        } catch (e: Exception) {
+            Log.w(TAG, "Skipping malformed report $id", e)
+            null
+        }
+    }
+
     private fun mapToReport(id: String, data: Map<String, Any>): CommunityReport {
         return CommunityReport(
             id = id,
             latitude = (data["latitude"] as? Number)?.toDouble() ?: 0.0,
             longitude = (data["longitude"] as? Number)?.toDouble() ?: 0.0,
+            geohash = (data["geohash"] as? String) ?: "",
             condition = try {
                 ReportCondition.valueOf(data["condition"] as? String ?: "SUNNY")
             } catch (_: IllegalArgumentException) {
@@ -190,7 +209,8 @@ class CommunityReportRepository @Inject constructor(
         private const val THROTTLE_FIELD = "lastReportAt"
         private const val RATE_LIMIT_MS = 5 * 60 * 1000L // 5 minutes
         private const val TWO_HOURS_MS = 2 * 60 * 60 * 1000L
-        private const val MAX_RESULTS = 200L
+        private const val MAX_RESULTS = 200
+        private const val MAX_RESULTS_PER_GEOHASH_QUERY = 50L
     }
 }
 
