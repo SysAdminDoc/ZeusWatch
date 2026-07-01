@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
@@ -60,6 +62,7 @@ fun WindTrendCard(
 
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val peakTimeLabel = WeatherFormatter.formatRelativeHourLabel(context, peakHour.time, referenceTime, s)
     val semanticSummary = if (maxGust > maxWind * 1.2) {
         stringResource(
@@ -132,7 +135,7 @@ fun WindTrendCard(
                 if (gust > wind * 1.2 && gust > 1.0) {
                     val barH = (gust / ceiling * graphH * 0.85).toFloat()
                     val barW = stepX * 0.5f
-                    val x = i * stepX - barW / 2
+                    val x = rtlCanvasRectLeft(i * stepX - barW / 2, barW, w, isRtl)
                     drawRoundRect(
                         color = Color(0xFFFF9800).copy(alpha = 0.15f),
                         topLeft = Offset(x, graphH - barH),
@@ -144,7 +147,7 @@ fun WindTrendCard(
 
             // Wind speed line
             val points = data.mapIndexed { i, hour ->
-                val x = i * stepX
+                val x = rtlCanvasX(i * stepX, w, isRtl)
                 val speed = hour.windSpeed ?: 0.0
                 val y = (graphH * (1.0 - speed / ceiling)).toFloat()
                 Offset(x, y)
@@ -199,7 +202,7 @@ fun WindTrendCard(
                     val label = WeatherFormatter.formatRelativeHourLabel(context, data[i].time, referenceTime, s)
                     val m = textMeasurer.measure(label, labelStyle)
                     drawText(m, topLeft = Offset(
-                        (points[i].x - m.size.width / 2f).coerceIn(0f, w - m.size.width),
+                        centeredCanvasLabelLeft(points[i].x, m.size.width.toFloat(), w),
                         graphH + 2.dp.toPx(),
                     ))
                 }

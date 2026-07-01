@@ -21,6 +21,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
@@ -128,6 +130,7 @@ private fun CloudCoverChart(
     val timeFmt = DateTimeFormatter.ofPattern(timePattern)
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -160,7 +163,7 @@ private fun CloudCoverChart(
         hours.forEachIndexed { i, hour ->
             val cloud = (hour.cloudCover ?: 0).coerceIn(0, 100)
             val barH = chartH * (cloud.toFloat() / 100f)
-            val x = i * (barWidth + barSpacing)
+            val x = rtlCanvasRectLeft(i * (barWidth + barSpacing), barWidth, w, isRtl)
 
             val barColor = when {
                 cloud <= 25 -> NimbusBlueAccent.copy(alpha = 0.7f)
@@ -186,7 +189,7 @@ private fun CloudCoverChart(
                 drawText(
                     measured,
                     topLeft = Offset(
-                        x + barWidth / 2 - measured.size.width / 2,
+                        centeredCanvasLabelLeft(x + barWidth / 2f, measured.size.width.toFloat(), w),
                         chartH + 4.dp.toPx(),
                     ),
                 )

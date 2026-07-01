@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
@@ -90,12 +92,13 @@ fun TemperatureGraph(
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 10.sp)
     val tooltipStyle = TextStyle(color = NimbusTextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     // Interactive state
     var inspectX by remember { mutableFloatStateOf(-1f) }
     var isInspecting by remember { mutableStateOf(false) }
 
-    // Summarize the series for TalkBack — exact drag interaction isn't
+    // Summarize the series for TalkBack; exact drag interaction isn't
     // meaningful to a screen reader, but the shape of the curve is.
     val trendSummary = remember(data, s.tempUnit) { buildTemperatureTrendSummary(data, s) }
     val trendSummaryText = stringResource(
@@ -160,7 +163,7 @@ fun TemperatureGraph(
                         }
                         .drawWithCache {
                             val metrics = temperatureGraphMetrics(size.width, size.height, data, density)
-                            val points = temperaturePoints(data, metrics)
+                            val points = temperaturePoints(data, metrics, isRtl)
                             val paths = buildTemperaturePaths(points, metrics.baselineY)
                             val inspectionText = TemperatureInspectionText(
                                 textMeasurer = textMeasurer,
@@ -171,12 +174,12 @@ fun TemperatureGraph(
                             )
 
                             onDrawBehind {
-                                drawPrecipitationBars(data, metrics)
+                                drawPrecipitationBars(data, metrics, isRtl)
                                 drawNormalBand(metrics, normalHigh, normalLow)
-                                drawConfidenceBand(data, metrics, confidenceBands)
+                                drawConfidenceBand(data, metrics, confidenceBands, isRtl)
                                 drawTemperatureCurve(paths, metrics)
-                                drawFeelsLikeOverlay(data, metrics)
-                                drawHighLowMarkers(data, points, textMeasurer, labelStyle, s)
+                                drawFeelsLikeOverlay(data, metrics, isRtl)
+                                drawHighLowMarkers(data, points, textMeasurer, labelStyle, s, metrics.width)
                                 drawTimeLabels(data, points, referenceTime, s, textMeasurer, labelStyle, metrics, context)
                                 drawInspectionOverlay(
                                     data = data,
@@ -185,6 +188,7 @@ fun TemperatureGraph(
                                     isInspecting = isInspecting,
                                     metrics = metrics,
                                     inspectionText = inspectionText,
+                                    isRtl = isRtl,
                                 )
                             }
                         },
@@ -295,9 +299,10 @@ private fun temperatureGraphMetrics(
 private fun temperaturePoints(
     data: List<HourlyConditions>,
     metrics: TemperatureGraphMetrics,
+    isRtl: Boolean,
 ): List<Offset> = data.mapIndexed { index, hour ->
     Offset(
-        x = index * metrics.stepX,
+        x = rtlCanvasX(index * metrics.stepX, metrics.width, isRtl),
         y = temperatureY(hour.temperature, metrics),
     )
 }
@@ -334,6 +339,7 @@ private fun buildTemperaturePaths(
 private fun DrawScope.drawPrecipitationBars(
     data: List<HourlyConditions>,
     metrics: TemperatureGraphMetrics,
+    isRtl: Boolean,
 ) {
     if ((data.maxOfOrNull { it.precipitationProbability } ?: 0) <= 0) return
 
@@ -343,7 +349,10 @@ private fun DrawScope.drawPrecipitationBars(
             val barHeight = (hour.precipitationProbability / 100f) * metrics.graphHeight * 0.4f
             drawRect(
                 color = NimbusRainBlue.copy(alpha = 0.15f),
-                topLeft = Offset(index * metrics.stepX - barWidth / 2, metrics.baselineY - barHeight),
+                topLeft = Offset(
+                    rtlCanvasRectLeft(index * metrics.stepX - barWidth / 2, barWidth, metrics.width, isRtl),
+                    metrics.baselineY - barHeight,
+                ),
                 size = Size(barWidth, barHeight),
             )
         }
@@ -387,13 +396,14 @@ private fun DrawScope.drawConfidenceBand(
     data: List<HourlyConditions>,
     metrics: TemperatureGraphMetrics,
     confidenceBands: ConfidenceBandData?,
+    isRtl: Boolean,
 ) {
     confidenceBands ?: return
     val upperPoints = mutableListOf<Offset>()
     val lowerPoints = mutableListOf<Offset>()
     for ((index, hour) in data.withIndex()) {
         val entry = confidenceBands.entryAt(hour.time) ?: continue
-        val x = index * metrics.stepX
+        val x = rtlCanvasX(index * metrics.stepX, metrics.width, isRtl)
         upperPoints.add(Offset(x, temperatureY(entry.temperatureUpper, metrics)))
         lowerPoints.add(Offset(x, temperatureY(entry.temperatureLower, metrics)))
     }
@@ -474,10 +484,11 @@ private fun DrawScope.drawTemperatureCurve(
 private fun DrawScope.drawFeelsLikeOverlay(
     data: List<HourlyConditions>,
     metrics: TemperatureGraphMetrics,
+    isRtl: Boolean,
 ) {
     if (!shouldDrawFeelsLikeOverlay(data)) return
     drawPath(
-        path = buildFeelsLikePath(data, metrics),
+        path = buildFeelsLikePath(data, metrics, isRtl),
         color = Color(0xFFFF9800).copy(alpha = 0.6f),
         style = Stroke(
             width = 1.5f,
@@ -497,16 +508,17 @@ private fun shouldDrawFeelsLikeOverlay(data: List<HourlyConditions>): Boolean {
 private fun buildFeelsLikePath(
     data: List<HourlyConditions>,
     metrics: TemperatureGraphMetrics,
+    isRtl: Boolean,
 ): Path {
     val path = Path()
     data.forEachIndexed { index, hour ->
-        val x = index * metrics.stepX
+        val x = rtlCanvasX(index * metrics.stepX, metrics.width, isRtl)
         val y = temperatureY(hour.feelsLike ?: hour.temperature, metrics)
         if (index == 0) {
             path.moveTo(x, y)
         } else {
             val previous = data[index - 1]
-            val previousX = (index - 1) * metrics.stepX
+            val previousX = rtlCanvasX((index - 1) * metrics.stepX, metrics.width, isRtl)
             val previousY = temperatureY(previous.feelsLike ?: previous.temperature, metrics)
             val controlX = (previousX + x) / 2f
             path.cubicTo(controlX, previousY, controlX, y, x, y)
@@ -521,13 +533,22 @@ private fun DrawScope.drawHighLowMarkers(
     textMeasurer: TextMeasurer,
     labelStyle: TextStyle,
     settings: NimbusSettings,
+    chartWidth: Float,
 ) {
     val temps = data.map { it.temperature }
     val maxIdx = temps.indices.maxByOrNull { temps[it] } ?: 0
     val minIdx = temps.indices.minByOrNull { temps[it] } ?: 0
     listOf(maxIdx, minIdx).forEach { index ->
         if (index < points.size) {
-            drawTemperatureMarker(points[index], temps[index], index == maxIdx, textMeasurer, labelStyle, settings)
+            drawTemperatureMarker(
+                point = points[index],
+                temperature = temps[index],
+                isHigh = index == maxIdx,
+                textMeasurer = textMeasurer,
+                labelStyle = labelStyle,
+                settings = settings,
+                chartWidth = chartWidth,
+            )
         }
     }
 }
@@ -539,6 +560,7 @@ private fun DrawScope.drawTemperatureMarker(
     textMeasurer: TextMeasurer,
     labelStyle: TextStyle,
     settings: NimbusSettings,
+    chartWidth: Float,
 ) {
     drawCircle(NimbusBlueAccent, radius = 4.dp.toPx(), center = point)
     drawCircle(Color(0xFF0A0E1A), radius = 2.dp.toPx(), center = point)
@@ -546,7 +568,10 @@ private fun DrawScope.drawTemperatureMarker(
     val label = WeatherFormatter.formatTemperature(temperature, settings)
     val measured = textMeasurer.measure(label, labelStyle)
     val labelY = if (isHigh) point.y - 16.dp.toPx() else point.y + 6.dp.toPx()
-    drawText(measured, topLeft = Offset(point.x - measured.size.width / 2f, labelY))
+    drawText(
+        measured,
+        topLeft = Offset(centeredCanvasLabelLeft(point.x, measured.size.width.toFloat(), chartWidth), labelY),
+    )
 }
 
 private fun DrawScope.drawTimeLabels(
@@ -565,7 +590,10 @@ private fun DrawScope.drawTimeLabels(
             val measured = textMeasurer.measure(label, labelStyle)
             drawText(
                 measured,
-                topLeft = Offset(points[index].x - measured.size.width / 2f, metrics.baselineY + 6f),
+                topLeft = Offset(
+                    centeredCanvasLabelLeft(points[index].x, measured.size.width.toFloat(), metrics.width),
+                    metrics.baselineY + 6f,
+                ),
             )
         }
     }
@@ -578,10 +606,12 @@ private fun DrawScope.drawInspectionOverlay(
     isInspecting: Boolean,
     metrics: TemperatureGraphMetrics,
     inspectionText: TemperatureInspectionText,
+    isRtl: Boolean,
 ) {
     if (!isInspecting || inspectX < 0f || metrics.stepX <= 0f) return
 
-    val nearestIndex = ((inspectX / metrics.stepX + 0.5f).toInt()).coerceIn(0, data.lastIndex)
+    val logicalInspectX = logicalCanvasX(inspectX, metrics.width, isRtl)
+    val nearestIndex = ((logicalInspectX / metrics.stepX + 0.5f).toInt()).coerceIn(0, data.lastIndex)
     val nearPoint = points[nearestIndex]
     val nearHour = data[nearestIndex]
     drawInspectionGuide(nearPoint, metrics)

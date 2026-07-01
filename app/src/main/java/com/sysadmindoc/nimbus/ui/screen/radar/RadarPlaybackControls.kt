@@ -24,14 +24,17 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.repository.TimeFormat
@@ -72,6 +75,8 @@ fun RadarPlaybackControls(
     val playLabel = stringResource(R.string.radar_playback_play)
     val pauseLabel = stringResource(R.string.radar_playback_pause)
     val normalizedFrame = if (totalFrames > 0) currentFrame.coerceIn(0, totalFrames - 1) else 0
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val sliderDisplayValue = radarPlaybackDisplayValue(normalizedFrame, totalFrames, isRtl)
     val framePositionLabel = when {
         !playbackEnabled -> staticLabel
         totalFrames <= 0 -> noFramesLabel
@@ -155,23 +160,27 @@ fun RadarPlaybackControls(
 
             // Slider
             Column(modifier = Modifier.weight(1f)) {
-                Slider(
-                    enabled = playbackEnabled,
-                    value = currentFrame.toFloat(),
-                    onValueChange = { onSeekToFrame(it.toInt()) },
-                    // A single (or empty) frame set must not invent a phantom
-                    // second frame — collapse the range to 0..0 (the slider is
-                    // already disabled via playbackEnabled in that case).
-                    valueRange = 0f..(totalFrames - 1).coerceAtLeast(0).toFloat(),
-                    colors = SliderDefaults.colors(
-                        thumbColor = NimbusBlueAccent,
-                        activeTrackColor = NimbusBlueAccent,
-                        inactiveTrackColor = NimbusTextTertiary.copy(alpha = 0.3f),
-                        disabledThumbColor = NimbusTextTertiary.copy(alpha = 0.38f),
-                        disabledActiveTrackColor = NimbusTextTertiary.copy(alpha = 0.24f),
-                        disabledInactiveTrackColor = NimbusTextTertiary.copy(alpha = 0.16f),
-                    ),
-                )
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Slider(
+                        enabled = playbackEnabled,
+                        value = sliderDisplayValue,
+                        onValueChange = {
+                            onSeekToFrame(radarPlaybackFrameFromDisplayValue(it, totalFrames, isRtl))
+                        },
+                        // A single (or empty) frame set must not invent a phantom
+                        // second frame; collapse the range to 0..0 (the slider is
+                        // already disabled via playbackEnabled in that case).
+                        valueRange = 0f..(totalFrames - 1).coerceAtLeast(0).toFloat(),
+                        colors = SliderDefaults.colors(
+                            thumbColor = NimbusBlueAccent,
+                            activeTrackColor = NimbusBlueAccent,
+                            inactiveTrackColor = NimbusTextTertiary.copy(alpha = 0.3f),
+                            disabledThumbColor = NimbusTextTertiary.copy(alpha = 0.38f),
+                            disabledActiveTrackColor = NimbusTextTertiary.copy(alpha = 0.24f),
+                            disabledInactiveTrackColor = NimbusTextTertiary.copy(alpha = 0.16f),
+                        ),
+                    )
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -206,4 +215,24 @@ fun RadarPlaybackControls(
             }
         }
     }
+}
+
+internal fun radarPlaybackDisplayValue(
+    frame: Int,
+    totalFrames: Int,
+    isRtl: Boolean,
+): Float {
+    val maxFrame = (totalFrames - 1).coerceAtLeast(0)
+    val clampedFrame = frame.coerceIn(0, maxFrame)
+    return if (isRtl) (maxFrame - clampedFrame).toFloat() else clampedFrame.toFloat()
+}
+
+internal fun radarPlaybackFrameFromDisplayValue(
+    displayValue: Float,
+    totalFrames: Int,
+    isRtl: Boolean,
+): Int {
+    val maxFrame = (totalFrames - 1).coerceAtLeast(0)
+    val displayFrame = displayValue.toInt().coerceIn(0, maxFrame)
+    return if (isRtl) maxFrame - displayFrame else displayFrame
 }

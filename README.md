@@ -218,7 +218,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Wear OS Companion** | Watch app, Material3 animated weather tile, and complications for temperature, condition/high-low, UV, and icon slots |
 | **Premium State Polish** | Focused, pressed, disabled, loading, empty, and recovery states use consistent dark glass chrome across phone, widgets, and Wear OS |
 | **Accessibility** | TalkBack descriptions on all Canvas components, alert icons, non-color risk cues on color-coded weather surfaces, and merged card semantics with liveRegion alerts |
-| **Localization Foundation** | Core navigation, Today shell states/card headers/card microcopy/alert dialogs/report sheet, Settings controls/enums, Home Card labels, Custom Alerts, Locations, Compare, widgets, and Wear OS state copy use Android string resources with an initial Spanish resource set |
+| **Localization Foundation** | Core navigation, Today shell states/card headers/card microcopy/alert dialogs/report sheet, Settings controls/enums, Home Card labels, Custom Alerts, Locations, Compare, widgets, and Wear OS state copy use Android string resources with Spanish plus Arabic/Hebrew RTL resources |
 | **App Shortcuts** | Long-press launcher: Search, Radar, Settings, Compare |
 | **Deep Links** | `zeuswatch://` URI scheme for locations, radar, settings, compare |
 | **F-Droid Ready** | `freenet` build flavor with no proprietary dependencies |

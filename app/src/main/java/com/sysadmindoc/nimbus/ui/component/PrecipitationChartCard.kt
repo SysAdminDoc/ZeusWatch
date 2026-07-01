@@ -17,12 +17,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
@@ -57,6 +59,7 @@ fun PrecipitationChartCard(
 
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val peakTimeRaw = if (peakHour != null) {
         WeatherFormatter.formatRelativeHourLabel(context, peakHour.time, referenceTime, s)
     } else null
@@ -135,7 +138,7 @@ fun PrecipitationChartCard(
                 val barWidth = (w / data.size) - barSpacing
 
                 data.forEachIndexed { i, hour ->
-                    val x = i * (barWidth + barSpacing)
+                    val x = rtlCanvasRectLeft(i * (barWidth + barSpacing), barWidth, w, isRtl)
                     val prob = hour.precipitationProbability
                     val precip = hour.precipitation ?: 0.0
 
@@ -188,7 +191,7 @@ fun PrecipitationChartCard(
                         drawText(
                             measured,
                             topLeft = Offset(
-                                (x + barWidth / 2 - measured.size.width / 2).coerceIn(0f, w - measured.size.width),
+                                centeredCanvasLabelLeft(x + barWidth / 2f, measured.size.width.toFloat(), w),
                                 graphHeight + 4.dp.toPx(),
                             ),
                         )
