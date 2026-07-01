@@ -8,6 +8,8 @@
     <string name="wear_complication_temperature_value">%1$d\u00B0</string>
     <string name="wear_complication_temperature_content_description">%1$d grados, %2$s</string>
     <string name="wear_complication_long_text">%1$d\u00B0 %2$s</string>
+    <string name="wear_complication_long_text_details">%1$d\u00B0 %2$s \u2022 %3$d%% lluvia \u2022 %4$s</string>
+    <string name="wear_complication_long_content_description">%1$d grados, %2$s, maxima %3$d, minima %4$d, probabilidad de precipitacion %5$d por ciento, actualizado %6$s</string>
     <string name="wear_complication_uv_short">UV %1$d</string>
     <string name="wear_complication_uv_content_description">Índice UV %1$d</string>
     <string name="wear_complication_preview_small_image_cd">Clima parcialmente nublado</string>

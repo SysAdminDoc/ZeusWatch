@@ -11,6 +11,7 @@ import androidx.wear.watchface.complications.datasource.ComplicationRequest
 import androidx.wear.watchface.complications.datasource.SuspendingComplicationDataSourceService
 import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.WearMainActivity
+import com.sysadmindoc.nimbus.wear.data.DataSource
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
 import com.sysadmindoc.nimbus.wear.data.WearUnitFormatter
 import com.sysadmindoc.nimbus.wear.data.WearWeatherData
@@ -32,10 +33,18 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
 
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData? {
         // Prefer phone-synced data to avoid network calls from the watch
-        val data = syncedStore.getFreshData() ?: run {
+        val syncedData = syncedStore.getFreshData()
+        val fallbackData = if (syncedData == null) {
             val loc = locationProvider.getLocation()
             repository.getCurrentWeather(loc.lat, loc.lon, loc.name).getOrNull()
-        } ?: return null
+        } else {
+            null
+        }
+        val data = WeatherComplicationPayloadSelector.select(
+            syncedData = syncedData,
+            syncedAtMs = syncedStore.lastSyncTimestamp(),
+            fallbackData = fallbackData,
+        ) ?: return null
 
         return WeatherComplicationDataFactory.currentWeatherData(
             type = request.complicationType,
@@ -77,6 +86,7 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
         val temp = WearUnitFormatter.displayTemp(data.temperature, data.tempUnit)
         val high = WearUnitFormatter.displayTemp(data.high, data.tempUnit)
         val low = WearUnitFormatter.displayTemp(data.low, data.tempUnit)
+        val updated = data.updatedLabel()
         return WeatherComplicationCopy(
             shortText = getString(R.string.wear_complication_temperature_value, temp),
             shortContentDescription = getString(
@@ -84,11 +94,21 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
                 temp,
                 data.condition,
             ),
-            longText = getString(R.string.wear_complication_long_text, temp, data.condition),
-            longContentDescription = getString(
-                R.string.wear_complication_temperature_content_description,
+            longText = getString(
+                R.string.wear_complication_long_text_details,
                 temp,
                 data.condition,
+                data.precipChance,
+                updated,
+            ),
+            longContentDescription = getString(
+                R.string.wear_complication_long_content_description,
+                temp,
+                data.condition,
+                high,
+                low,
+                data.precipChance,
+                updated,
             ),
             longTitle = getString(R.string.wear_tile_high_low_abbrev, high, low),
             rangedText = getString(R.string.wear_complication_uv_short, data.uvIndex),
@@ -102,5 +122,19 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
                 temp,
             ),
         )
+    }
+
+    private fun WearWeatherData.updatedLabel(): String {
+        val sourceTime = when (dataSource) {
+            DataSource.PHONE_SYNC,
+            DataSource.DIRECT_API -> syncedAtMs
+            DataSource.UNKNOWN -> 0L
+        }
+        val ageMin = WeatherComplicationFreshness.ageMinutes(System.currentTimeMillis(), sourceTime)
+        return if (ageMin < 60) {
+            getString(R.string.wear_tile_updated_min, ageMin)
+        } else {
+            getString(R.string.wear_tile_updated_hr, ageMin / 60)
+        }
     }
 }
