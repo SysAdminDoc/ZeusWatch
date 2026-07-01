@@ -10,6 +10,7 @@ import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertAdapter
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertApi
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaForecastApi
 import com.sysadmindoc.nimbus.data.api.GeocodingApi
+import com.sysadmindoc.nimbus.data.api.HkoApi
 import com.sysadmindoc.nimbus.data.api.JmaAlertAdapter
 import com.sysadmindoc.nimbus.data.api.JmaAlertApi
 import com.sysadmindoc.nimbus.data.api.MetNorwayApi
@@ -301,6 +302,18 @@ object NetworkModule {
         @Named("eccc_forecast") retrofit: Retrofit,
     ): EnvironmentCanadaForecastApi {
         return retrofit.create(EnvironmentCanadaForecastApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    @Named("hko")
+    fun provideHkoRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(HkoApi.BASE_URL, client)
+
+    @Provides
+    @Singleton
+    fun provideHkoApi(@Named("hko") retrofit: Retrofit): HkoApi {
+        return retrofit.create(HkoApi::class.java)
     }
 
     @Provides

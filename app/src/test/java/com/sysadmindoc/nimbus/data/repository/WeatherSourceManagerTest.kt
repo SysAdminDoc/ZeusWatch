@@ -32,6 +32,8 @@ class WeatherSourceManagerTest {
     private lateinit var brightSkyAlertAdapter: BrightSkyAlertAdapter
     private lateinit var metNorwayForecastAdapter: MetNorwayForecastAdapter
     private lateinit var ecccForecastAdapter: EnvironmentCanadaForecastAdapter
+    private lateinit var hkoForecastAdapter: HkoForecastAdapter
+    private lateinit var hkoAlertAdapter: HkoAlertAdapter
     private lateinit var timeZoneResolver: LocationTimeZoneResolver
     private lateinit var providerHealthRepository: ProviderHealthRepository
     private lateinit var manager: WeatherSourceManager
@@ -80,6 +82,8 @@ class WeatherSourceManagerTest {
         brightSkyAlertAdapter = mockk()
         metNorwayForecastAdapter = mockk()
         ecccForecastAdapter = mockk()
+        hkoForecastAdapter = mockk()
+        hkoAlertAdapter = mockk()
         timeZoneResolver = mockk()
         providerHealthRepository = mockk(relaxed = true)
         every { prefs.settings } returns flowOf(defaultSettings)
@@ -130,6 +134,10 @@ class WeatherSourceManagerTest {
         WeatherSourceProvider.ENVIRONMENT_CANADA to WeatherSourceAdapterModule.provideEnvironmentCanadaAdapter(
             ecccForecastAdapter,
             alertAdapter,
+        ),
+        WeatherSourceProvider.HKO to WeatherSourceAdapterModule.provideHkoAdapter(
+            hkoForecastAdapter,
+            hkoAlertAdapter,
         ),
     )
 
@@ -337,6 +345,24 @@ class WeatherSourceManagerTest {
         }
     }
 
+    @Test
+    fun getWeatherDelegatesHkoProviderToHkoAdapter() = runTest {
+        val settingsWithHko = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                forecast = WeatherSourceProvider.HKO,
+            )
+        )
+        every { prefs.settings } returns flowOf(settingsWithHko)
+        coEvery { hkoForecastAdapter.getWeather(any(), any(), any()) } returns Result.success(testWeatherData)
+
+        val result = manager.getWeather(22.3027, 114.1772, "Hong Kong")
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            hkoForecastAdapter.getWeather(22.3027, 114.1772, "Hong Kong")
+        }
+    }
+
     // ── Alert Tests ──
 
     @Test
@@ -497,6 +523,27 @@ class WeatherSourceManagerTest {
         }
     }
 
+    @Test
+    fun getAlertsDelegatesHkoProviderToHkoAdapter() = runTest {
+        val settingsWithHko = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                alerts = WeatherSourceProvider.HKO,
+            )
+        )
+        every { prefs.settings } returns flowOf(settingsWithHko)
+        coEvery { hkoAlertAdapter.getAlerts(any(), any()) } returns Result.success(emptyList())
+
+        val result = manager.getAlerts(22.3027, 114.1772)
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            hkoAlertAdapter.getAlerts(22.3027, 114.1772)
+        }
+        coVerify(exactly = 0) {
+            alertAdapter.getAlerts(any(), any(), any(), any(), any())
+        }
+    }
+
     // ── Air Quality Tests ──
 
     @Test
@@ -588,6 +635,10 @@ class WeatherSourceManagerTest {
             "Environment Canada forecast should be present once implemented",
             forecastProviders.contains(WeatherSourceProvider.ENVIRONMENT_CANADA),
         )
+        assertTrue(
+            "HKO forecast should be present once implemented",
+            forecastProviders.contains(WeatherSourceProvider.HKO),
+        )
     }
 
     @Test
@@ -616,6 +667,7 @@ class WeatherSourceManagerTest {
         val alertProviders = WeatherSourceProvider.forType(WeatherDataType.ALERTS)
         assertTrue(alertProviders.contains(WeatherSourceProvider.NWS))
         assertTrue(alertProviders.contains(WeatherSourceProvider.ENVIRONMENT_CANADA))
+        assertTrue(alertProviders.contains(WeatherSourceProvider.HKO))
         assertTrue(alertProviders.contains(WeatherSourceProvider.METEOALARM))
         assertTrue(alertProviders.contains(WeatherSourceProvider.JMA))
     }

@@ -402,13 +402,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 ### P2 — Product Differentiation & Coverage
 
 
-- [ ] P2 — HKO (Hong Kong) forecast and alert adapter · **T-SOURCES**
-  Why: HKO offers 48 datasets via clean JSON REST at `data.weather.gov.hk/weatherAPI/` — no key, no registration, no XML parsing. Coverage includes 9-day forecast, rainfall nowcast, UV index, tropical cyclone tracking, and earthquake data. Free for commercial and non-commercial use. Compact regional win for 7.5M residents + travellers.
-  Evidence: HKO Open Data API documentation (`data.weather.gov.hk`); Provider Expansion Priority table (rank 4, P1/P2); no existing roadmap item with implementation detail.
-  Touches: New `HkoApi.kt` Retrofit interface + `HkoForecastAdapter.kt` + response models. `WeatherSourceAdapterModule.kt` registry binding. `NetworkModule.kt` (`@Named("hko")` Retrofit). Settings labels and attribution. freenet-compatible (no proprietary deps).
-  Acceptance: Users can select HKO as forecast source for Hong Kong locations; current conditions, 9-day forecast, and alerts surface correctly; fallback to Open-Meteo works; tests cover JSON parsing and metric-unit mapping.
-  Complexity: M
-
 ### P3 — Polish & Future
 
 

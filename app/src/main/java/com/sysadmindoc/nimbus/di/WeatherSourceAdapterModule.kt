@@ -8,6 +8,8 @@ import com.sysadmindoc.nimbus.data.repository.BrightSkyForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.CoordinateSourceRequest
 import com.sysadmindoc.nimbus.data.repository.EnvironmentCanadaForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.ForecastSourceRequest
+import com.sysadmindoc.nimbus.data.repository.HkoAlertAdapter
+import com.sysadmindoc.nimbus.data.repository.HkoForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.MetNorwayForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoAqiAdapter
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoBomForecastAdapter
@@ -235,6 +237,27 @@ object WeatherSourceAdapterModule {
                 includeMeteredSources = request.includeMeteredSources,
                 countryHint = request.countryHint,
             )
+    }
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @WeatherSourceKey(WeatherSourceProvider.HKO)
+    fun provideHkoAdapter(
+        forecastAdapter: HkoForecastAdapter,
+        alertAdapter: HkoAlertAdapter,
+    ): WeatherSourceAdapter = object : WeatherSourceAdapter {
+        override val provider = WeatherSourceProvider.HKO
+        override val supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.ALERTS)
+
+        override suspend fun getForecast(request: ForecastSourceRequest) =
+            forecastAdapter.getWeather(request.latitude, request.longitude, request.locationName)
+
+        override suspend fun getAlerts(request: AlertSourceRequest) =
+            alertAdapter.getAlerts(request.latitude, request.longitude)
+
+        override suspend fun getAlertsDetailed(request: AlertSourceRequest) =
+            alertAdapter.getAlertsDetailed(request.latitude, request.longitude)
     }
 
     private fun forecastOnlyAdapter(
