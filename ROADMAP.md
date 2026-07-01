@@ -250,13 +250,6 @@ Open question: needs measurement.
 
 [Moved to Roadmap_Blocked.md: Glance widget picker previews (needs Glance 1.2.0 stable)]
 
-- [ ] P2 — RainViewer free tier limitations documentation and Rainbow.ai evaluation · **T-SOURCES**
-  Why: RainViewer's commercial API shut down January 2026. The free tiled map service continues but with degraded quality: max zoom 7, Universal Blue color only, past radar only (no nowcast/satellite), PNG only. Rainbow.ai offers 30K free tiles/month with XYZ compatibility, nowcast support, and custom color schemes.
-  Evidence: RainViewer API documentation (rainviewer.com/api.html); Rainbow.ai developer docs (developer.rainbow.ai); RainViewer blog post on 2025 API changes.
-  Touches: Evaluate Rainbow.ai as supplementary radar source. If adopted: new `RainbowRadarApi` Retrofit interface, `RadarRepository` (add source selection), `RadarScreen` (surface quality indicator), Settings (radar source picker). Keep RainViewer as default free option.
-  Acceptance: Document current RainViewer limitations in-app (zoom/color/nowcast). If Rainbow.ai is viable: radar tiles load from Rainbow.ai with nowcast; RainViewer remains as fallback.
-  Complexity: M
-
 ### P3 — Polish & Future
 
 - [ ] P3 — WCAG 2.2 AA automated local gate · accessibility

@@ -20,6 +20,9 @@ interface RainViewerApi {
         const val TILE_HOST = "https://tilecache.rainviewer.com"
         const val UNIVERSAL_BLUE_COLOR_SCHEME = 2
         const val MAX_TILE_ZOOM = 7
+        const val PUBLIC_TILE_FORMAT = "png"
+        const val SUPPORTS_PUBLIC_NOWCAST_TILES = false
+        const val SUPPORTS_PUBLIC_SATELLITE_TILES = false
 
         /**
          * Build a RainViewer radar tile URL template for MapLibre RasterSource.
