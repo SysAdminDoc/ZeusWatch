@@ -79,6 +79,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavSurface
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import java.net.URLEncoder
 
 object Routes {
     const val ONBOARDING_GATE = "onboarding_gate"
@@ -87,16 +88,23 @@ object Routes {
     const val MAIN_LOCATION = "main/{locationId}"
     const val MAIN_TARGET = "main/target/{target}"
     const val SETTINGS = "settings"
-    const val RADAR = "radar/{lat}/{lon}"
+    const val RADAR = "radar/{lat}/{lon}?route={route}"
     const val LOCATIONS = "locations"
     const val LOCATION_PICKER = "location_picker"
     const val COMPARE = "compare"
     const val CUSTOM_ALERTS = "custom_alerts"
 
-    fun radar(lat: Double, lon: Double): String = "radar/$lat/$lon"
+    fun radar(lat: Double, lon: Double, routeText: String? = null): String {
+        val base = "radar/$lat/$lon"
+        val route = routeText?.trim()?.takeIf { it.isNotBlank() } ?: return base
+        return "$base?route=${encodeRouteArg(route)}"
+    }
     fun mainWithLocation(id: Long): String = "main/$id"
     fun mainTarget(target: MainDeepLinkTarget): String = "main/target/${target.routeValue}"
 }
+
+private fun encodeRouteArg(value: String): String =
+    URLEncoder.encode(value, Charsets.UTF_8.name()).replace("+", "%20")
 
 enum class MainDeepLinkTarget(val routeValue: String) {
     WEATHER_ALERTS("weather_alerts"),
@@ -124,12 +132,13 @@ internal fun resolveZeusWatchDeepLinkRoute(
     target: String? = null,
     card: String? = null,
     locationId: String? = null,
+    routeText: String? = null,
 ): String? {
     val parsedLocationId = locationId?.toLongOrNull()?.takeIf { it > 0L }
     return when (host?.lowercase()) {
         "locations" -> Routes.LOCATIONS
         "settings" -> Routes.SETTINGS
-        "radar" -> Routes.radar(0.0, 0.0)
+        "radar" -> Routes.radar(0.0, 0.0, routeText)
         "compare" -> Routes.COMPARE
         "custom_alerts" -> Routes.CUSTOM_ALERTS
         "alerts", "weather_alerts" -> Routes.mainTarget(MainDeepLinkTarget.WEATHER_ALERTS)
@@ -264,14 +273,21 @@ fun NimbusNavHost(
             arguments = listOf(
                 navArgument("lat") { type = NavType.StringType; defaultValue = "0.0" },
                 navArgument("lon") { type = NavType.StringType; defaultValue = "0.0" },
+                navArgument("route") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
             ),
         ) { backStack ->
             val lat = backStack.arguments?.getString("lat")?.toDoubleOrNull() ?: 0.0
             val lon = backStack.arguments?.getString("lon")?.toDoubleOrNull() ?: 0.0
+            val routeText = backStack.arguments?.getString("route")
             RadarScreen(
                 latitude = lat,
                 longitude = lon,
                 onBack = { navController.popBackStack() },
+                sharedRouteText = routeText,
             )
         }
         composable(Routes.LOCATIONS) {

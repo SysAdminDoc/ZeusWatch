@@ -323,13 +323,6 @@ Items found during the v1.23.0 deep audit that need design decisions or larger w
 ### P2
 
 
-- [ ] P2 - Route-aware driving weather planner
-  - Why: Point-location driving conditions miss the competitive route-weather use case surfaced by MyRadar RouteCast, CARROT CarPlay, and Android Auto user expectations.
-  - Evidence: `DrivingConditionEvaluator.kt` currently evaluates local/current conditions only; commercial apps now present hazards along a route; existing Android Auto roadmap work can later reuse a phone-first route model.
-  - Touches: `app/src/main/java/com/sysadmindoc/nimbus/data/weather/DrivingConditionEvaluator.kt`, `app/src/main/java/com/sysadmindoc/nimbus/data/weather/WeatherRepository.kt`, `app/src/main/java/com/sysadmindoc/nimbus/ui/screen/radar/RadarScreen.kt`, `app/src/main/java/com/sysadmindoc/nimbus/ui/screen/main/MainViewModel.kt`.
-  - Acceptance: User can enter or share a route with departure time, see waypoint/time-indexed precipitation, wind, visibility, ice, and alert risk, and use the feature without background tracking.
-  - Complexity: L
-
 ### P3
 
 

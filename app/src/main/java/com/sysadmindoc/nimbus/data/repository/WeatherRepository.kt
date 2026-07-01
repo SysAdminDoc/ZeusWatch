@@ -5,6 +5,10 @@ import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
 import com.sysadmindoc.nimbus.data.api.WeatherDao
 import com.sysadmindoc.nimbus.data.location.ReverseGeocoder
 import com.sysadmindoc.nimbus.data.model.*
+import com.sysadmindoc.nimbus.util.DrivingAlert
+import com.sysadmindoc.nimbus.util.DrivingAlertType
+import com.sysadmindoc.nimbus.util.DrivingConditionEvaluator
+import com.sysadmindoc.nimbus.util.DrivingSeverity
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -19,6 +23,11 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.roundToLong
+import kotlin.math.sin
+import kotlin.math.sqrt
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -135,6 +144,93 @@ class WeatherRepository @Inject constructor(
             sourceOverrides = location.sourceOverrides(),
             allowStaleUpToMs = allowStaleUpToMs,
         )
+
+    /**
+     * Builds a foreground route-weather plan by sampling forecast and alert data
+     * along a straight-line route. No background tracking or routing vendor is used.
+     */
+    suspend fun planDrivingRouteWeather(
+        originQuery: String,
+        destinationQuery: String,
+        departureTime: LocalDateTime,
+        fallbackOrigin: LocationInfo? = null,
+        averageSpeedKmh: Double = DEFAULT_DRIVING_ROUTE_SPEED_KMH,
+    ): Result<DrivingRouteWeatherPlan> = withContext(Dispatchers.IO) {
+        try {
+            val destination = resolveRouteEndpoint(
+                query = destinationQuery,
+                fallback = null,
+                missingReason = DrivingRoutePlanningFailure.DESTINATION_REQUIRED,
+                notFoundReason = DrivingRoutePlanningFailure.DESTINATION_NOT_FOUND,
+            )
+            val origin = resolveRouteEndpoint(
+                query = originQuery,
+                fallback = fallbackOrigin,
+                missingReason = DrivingRoutePlanningFailure.ORIGIN_REQUIRED,
+                notFoundReason = DrivingRoutePlanningFailure.ORIGIN_NOT_FOUND,
+            )
+            val distanceKm = haversineKm(origin.latitude, origin.longitude, destination.latitude, destination.longitude)
+            val durationMinutes = ((distanceKm / averageSpeedKmh.coerceAtLeast(20.0)) * 60.0)
+                .roundToLong()
+                .coerceAtLeast(1L)
+            val waypointFractions = routeWaypointFractions(distanceKm)
+            val waypoints = waypointFractions.mapIndexed { index, fraction ->
+                val latitude = interpolate(origin.latitude, destination.latitude, fraction)
+                val longitude = interpolate(origin.longitude, destination.longitude, fraction)
+                val waypointLabel = when (index) {
+                    0 -> origin.name
+                    waypointFractions.lastIndex -> destination.name
+                    else -> "Waypoint ${index + 1}"
+                }
+                val arrivalTime = departureTime.plusMinutes((durationMinutes * fraction).roundToLong())
+                val weather = getWeatherOrCached(
+                    latitude = latitude,
+                    longitude = longitude,
+                    locationName = waypointLabel,
+                    locationTimeZone = null,
+                    allowStaleUpToMs = DEFAULT_STALE_FALLBACK_MS,
+                ).getOrElse { throw DrivingRoutePlanningException(DrivingRoutePlanningFailure.WEATHER_UNAVAILABLE, it) }
+                val hourly = weather.hourly.nearestTo(arrivalTime)
+                val drivingAlerts = if (hourly != null) {
+                    DrivingConditionEvaluator.evaluate(hourly, weather.current)
+                } else {
+                    DrivingConditionEvaluator.evaluate(weather.current)
+                }
+                val routeConditions = drivingRouteConditions(weather, hourly, drivingAlerts)
+                val weatherAlerts = routeWeatherAlerts(
+                    latitude = latitude,
+                    longitude = longitude,
+                    countryHint = weather.location.country.ifBlank { null },
+                )
+                DrivingRouteWaypoint(
+                    index = index,
+                    label = waypointLabel,
+                    latitude = latitude,
+                    longitude = longitude,
+                    arrivalTime = arrivalTime,
+                    distanceFromStartKm = distanceKm * fraction,
+                    conditions = routeConditions,
+                    drivingAlerts = drivingAlerts,
+                    weatherAlerts = weatherAlerts,
+                    risk = drivingRouteRisk(drivingAlerts, weatherAlerts),
+                )
+            }
+            Result.success(
+                DrivingRouteWeatherPlan(
+                    origin = origin,
+                    destination = destination,
+                    departureTime = departureTime,
+                    estimatedArrivalTime = departureTime.plusMinutes(durationMinutes),
+                    distanceKm = distanceKm,
+                    estimatedDurationMinutes = durationMinutes,
+                    waypoints = waypoints,
+                )
+            )
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Result.failure(e)
+        }
+    }
 
     /**
      * Direct Open-Meteo forecast fetch — used by the [OpenMeteoForecastAdapter].
@@ -637,6 +733,167 @@ class WeatherRepository @Inject constructor(
         LocalDate.parse(str, DateTimeFormatter.ISO_LOCAL_DATE)
     } catch (_: Exception) { null }
 
+    private suspend fun resolveRouteEndpoint(
+        query: String,
+        fallback: LocationInfo?,
+        missingReason: DrivingRoutePlanningFailure,
+        notFoundReason: DrivingRoutePlanningFailure,
+    ): LocationInfo {
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) {
+            return fallback ?: throw DrivingRoutePlanningException(missingReason)
+        }
+        var lastFailure: Throwable? = null
+        routeSearchCandidates(trimmed).forEach { candidate ->
+            val locations = searchLocations(candidate).getOrElse {
+                lastFailure = it
+                emptyList()
+            }
+            routeSearchMatch(locations, trimmed)?.let { return it }
+        }
+        throw DrivingRoutePlanningException(notFoundReason, lastFailure)
+    }
+
+    private fun routeSearchCandidates(query: String): List<String> {
+        val normalized = query.replace('+', ' ').replace(Regex("\\s+"), " ").trim()
+        val withoutParenthetical = normalized.replace(Regex("\\s*\\([^)]*\\)"), "").trim()
+        val parts = withoutParenthetical.split(',')
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+        val candidates = buildList {
+            add(normalized)
+            add(withoutParenthetical)
+            if (parts.size >= 2) {
+                val city = parts.first()
+                val region = parts[1]
+                val expandedRegion = routeRegionExpansion(region)
+                add("$city $expandedRegion")
+                add("$city, $expandedRegion")
+                add(city)
+            }
+            add(withoutParenthetical.replace(Regex("[,;]+"), " ").replace(Regex("\\s+"), " ").trim())
+        }
+        return candidates.filter { it.isNotBlank() }.distinctBy { it.lowercase(Locale.US) }
+    }
+
+    private fun routeSearchMatch(
+        locations: List<LocationInfo>,
+        query: String,
+    ): LocationInfo? {
+        if (locations.isEmpty()) return null
+        val hints = routeRegionHints(query)
+        return hints
+            .firstNotNullOfOrNull { hint ->
+                locations.firstOrNull { location ->
+                    location.region.equals(hint, ignoreCase = true) ||
+                        location.country.equals(hint, ignoreCase = true)
+                }
+            }
+            ?: locations.first()
+    }
+
+    private fun routeRegionHints(query: String): List<String> {
+        val parts = query.split(',')
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+        if (parts.size < 2) return emptyList()
+        val region = parts[1]
+        return listOf(region, routeRegionExpansion(region))
+            .distinctBy { it.lowercase(Locale.US) }
+    }
+
+    private fun routeRegionExpansion(region: String): String =
+        US_STATE_NAMES[region.trim().uppercase(Locale.US)] ?: region.trim()
+
+    private suspend fun routeWeatherAlerts(
+        latitude: Double,
+        longitude: Double,
+        countryHint: String?,
+    ): List<WeatherAlert> {
+        return try {
+            sourceManager.get().getAlertsDetailed(
+                latitude = latitude,
+                longitude = longitude,
+                sourceOverrides = SourceOverrides(),
+                includeMeteredSources = false,
+                countryHint = countryHint,
+            ).alerts
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun drivingRouteConditions(
+        weather: WeatherData,
+        hourly: HourlyConditions?,
+        alerts: List<DrivingAlert>,
+    ): DrivingRouteConditions {
+        val current = weather.current
+        return DrivingRouteConditions(
+            temperatureC = hourly?.temperature ?: current.temperature,
+            weatherCode = hourly?.weatherCode ?: current.weatherCode,
+            precipitationMm = hourly?.precipitation ?: current.precipitation,
+            precipitationProbability = hourly?.precipitationProbability ?: 0,
+            windSpeedKmh = hourly?.windSpeed ?: current.windSpeed,
+            windGustKmh = hourly?.windGusts ?: current.windGusts,
+            visibilityMeters = hourly?.visibility ?: current.visibility,
+            iceRisk = alerts.any {
+                it.type == DrivingAlertType.BLACK_ICE || it.type == DrivingAlertType.SNOW_ICE
+            },
+        )
+    }
+
+    private fun drivingRouteRisk(
+        drivingAlerts: List<DrivingAlert>,
+        weatherAlerts: List<WeatherAlert>,
+    ): DrivingRouteRiskLevel {
+        val hasDangerDriving = drivingAlerts.any { it.severity == DrivingSeverity.DANGER }
+        val hasCautionDriving = drivingAlerts.any { it.severity == DrivingSeverity.CAUTION }
+        val hasAdvisoryDriving = drivingAlerts.any { it.severity == DrivingSeverity.ADVISORY }
+        val highestWeatherAlertOrder = weatherAlerts.minOfOrNull { it.severity.sortOrder }
+        return when {
+            hasDangerDriving || highestWeatherAlertOrder != null && highestWeatherAlertOrder <= 1 ->
+                DrivingRouteRiskLevel.HIGH
+            hasCautionDriving || highestWeatherAlertOrder == 2 -> DrivingRouteRiskLevel.MODERATE
+            hasAdvisoryDriving || highestWeatherAlertOrder != null -> DrivingRouteRiskLevel.LOW
+            else -> DrivingRouteRiskLevel.CLEAR
+        }
+    }
+
+    private fun List<HourlyConditions>.nearestTo(time: LocalDateTime): HourlyConditions? =
+        minByOrNull { abs(Duration.between(it.time, time).toMinutes()) }
+
+    private fun routeWaypointFractions(distanceKm: Double): List<Double> {
+        val segmentCount = when {
+            distanceKm < 80.0 -> 1
+            distanceKm < 240.0 -> 2
+            distanceKm < 520.0 -> 3
+            distanceKm < 900.0 -> 4
+            else -> 5
+        }
+        return (0..segmentCount).map { index -> index.toDouble() / segmentCount.toDouble() }
+    }
+
+    private fun interpolate(start: Double, end: Double, fraction: Double): Double =
+        start + ((end - start) * fraction)
+
+    private fun haversineKm(
+        startLat: Double,
+        startLon: Double,
+        endLat: Double,
+        endLon: Double,
+    ): Double {
+        val earthRadiusKm = 6371.0
+        val dLat = Math.toRadians(endLat - startLat)
+        val dLon = Math.toRadians(endLon - startLon)
+        val lat1 = Math.toRadians(startLat)
+        val lat2 = Math.toRadians(endLat)
+        val a = sin(dLat / 2.0) * sin(dLat / 2.0) +
+            cos(lat1) * cos(lat2) * sin(dLon / 2.0) * sin(dLon / 2.0)
+        val c = 2.0 * atan2(sqrt(a), sqrt(1.0 - a))
+        return earthRadiusKm * c
+    }
+
     private fun LocationInfo.withResponseTimeZone(responseTimeZone: String?): LocationInfo {
         val validResponseTimeZone = responseTimeZone?.takeIf { it.toZoneIdOrNull() != null }
         return if (timeZone == null && validResponseTimeZone != null) {
@@ -646,3 +903,59 @@ class WeatherRepository @Inject constructor(
         }
     }
 }
+
+private const val DEFAULT_DRIVING_ROUTE_SPEED_KMH = 88.0
+
+private val US_STATE_NAMES = mapOf(
+    "AL" to "Alabama",
+    "AK" to "Alaska",
+    "AZ" to "Arizona",
+    "AR" to "Arkansas",
+    "CA" to "California",
+    "CO" to "Colorado",
+    "CT" to "Connecticut",
+    "DE" to "Delaware",
+    "FL" to "Florida",
+    "GA" to "Georgia",
+    "HI" to "Hawaii",
+    "ID" to "Idaho",
+    "IL" to "Illinois",
+    "IN" to "Indiana",
+    "IA" to "Iowa",
+    "KS" to "Kansas",
+    "KY" to "Kentucky",
+    "LA" to "Louisiana",
+    "ME" to "Maine",
+    "MD" to "Maryland",
+    "MA" to "Massachusetts",
+    "MI" to "Michigan",
+    "MN" to "Minnesota",
+    "MS" to "Mississippi",
+    "MO" to "Missouri",
+    "MT" to "Montana",
+    "NE" to "Nebraska",
+    "NV" to "Nevada",
+    "NH" to "New Hampshire",
+    "NJ" to "New Jersey",
+    "NM" to "New Mexico",
+    "NY" to "New York",
+    "NC" to "North Carolina",
+    "ND" to "North Dakota",
+    "OH" to "Ohio",
+    "OK" to "Oklahoma",
+    "OR" to "Oregon",
+    "PA" to "Pennsylvania",
+    "RI" to "Rhode Island",
+    "SC" to "South Carolina",
+    "SD" to "South Dakota",
+    "TN" to "Tennessee",
+    "TX" to "Texas",
+    "UT" to "Utah",
+    "VT" to "Vermont",
+    "VA" to "Virginia",
+    "WA" to "Washington",
+    "WV" to "West Virginia",
+    "WI" to "Wisconsin",
+    "WY" to "Wyoming",
+    "DC" to "District of Columbia",
+)

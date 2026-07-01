@@ -1,9 +1,11 @@
 package com.sysadmindoc.nimbus.util
 
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
+import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import org.junit.Assert.*
 import org.junit.Test
+import java.time.LocalDateTime
 
 class DrivingConditionEvaluatorTest {
 
@@ -187,6 +189,33 @@ class DrivingConditionEvaluatorTest {
     fun `clear conditions return no alerts`() {
         val result = DrivingConditionEvaluator.evaluate(conditions())
         assertTrue("Expected no driving alerts", result.isEmpty())
+    }
+
+    @Test
+    fun `hourly route forecast triggers waypoint hazards`() {
+        val result = DrivingConditionEvaluator.evaluate(
+            HourlyConditions(
+                time = LocalDateTime.of(2026, 1, 1, 7, 0),
+                temperature = 1.0,
+                feelsLike = -2.0,
+                weatherCode = WeatherCode.FREEZING_RAIN_LIGHT,
+                isDay = true,
+                precipitationProbability = 80,
+                precipitation = 1.2,
+                windSpeed = 54.0,
+                windDirection = 270,
+                humidity = 88,
+                uvIndex = 0.0,
+                cloudCover = 100,
+                visibility = 900.0,
+                windGusts = 72.0,
+            )
+        )
+
+        assertTrue(result.any { it.type == DrivingAlertType.BLACK_ICE })
+        assertTrue(result.any { it.type == DrivingAlertType.SNOW_ICE })
+        assertTrue(result.any { it.type == DrivingAlertType.LOW_VISIBILITY })
+        assertTrue(result.any { it.type == DrivingAlertType.HIGH_WIND })
     }
 
     @Test
