@@ -133,7 +133,7 @@
     <string name="onboarding_cards_standard_count">Predeterminado</string>
     <string name="onboarding_cards_everything">Todo</string>
     <string name="onboarding_cards_everything_desc">Activa todas las tarjetas disponibles para un panel denso de usuario avanzado.</string>
-    <string name="onboarding_cards_everything_count">29 tarjetas</string>
+    <string name="onboarding_cards_everything_count">35 tarjetas</string>
     <string name="onboarding_continue">Continuar</string>
     <string name="onboarding_finish">Iniciar ZeusWatch</string>
     <string name="whats_new_title">Novedades de ZeusWatch</string>

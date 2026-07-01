@@ -183,6 +183,102 @@ def parse_widget_receiver_count():
     return len(set(receivers))
 
 
+def parse_version_catalog():
+    content = read_text(REPO_ROOT / "gradle" / "libs.versions.toml")
+    if content is None:
+        return {}
+
+    versions = {}
+    in_versions = False
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped == "[versions]":
+            in_versions = True
+            continue
+        if in_versions and stripped.startswith("["):
+            break
+        if not in_versions:
+            continue
+        match = re.match(r'([A-Za-z0-9_.-]+)\s*=\s*"([^"]+)"', stripped)
+        if match:
+            versions[match.group(1)] = match.group(2)
+    return versions
+
+
+def parse_firebase_bom_version():
+    content = read_text(REPO_ROOT / "app" / "build.gradle.kts")
+    if content is None:
+        return None
+    match = re.search(r'platform\("com\.google\.firebase:firebase-bom:([^"]+)"\)', content)
+    return match.group(1) if match else None
+
+
+def parse_radar_providers():
+    content = read_text(
+        REPO_ROOT / "app" / "src" / "main" / "java" / "com" /
+        "sysadmindoc" / "nimbus" / "data" / "repository" / "UserPreferences.kt"
+    )
+    if content is None:
+        return None
+    match = re.search(
+        r"enum\s+class\s+RadarProvider\([^)]*\)\s*\{(?P<body>.*?)\n\}",
+        content,
+        re.DOTALL,
+    )
+    if not match:
+        return None
+    return [
+        (entry.group(1), entry.group(2))
+        for entry in re.finditer(
+            r"^\s*([A-Z][A-Z0-9_]*)\(\s*label\s*=\s*\"([^\"]+)\"",
+            match.group("body"),
+            re.MULTILINE,
+        )
+    ]
+
+
+def parse_radar_provider_string_branches(property_name):
+    content = read_text(
+        REPO_ROOT / "app" / "src" / "main" / "java" / "com" /
+        "sysadmindoc" / "nimbus" / "util" / "SettingsEnumText.kt"
+    )
+    if content is None:
+        return None
+    match = re.search(
+        rf"internal\s+val\s+RadarProvider\.{re.escape(property_name)}:\s*Int\s*"
+        r"get\(\)\s*=\s*when\s*\(this\)\s*\{(?P<body>.*?)\n\s*\}",
+        content,
+        re.DOTALL,
+    )
+    if not match:
+        return None
+    return {
+        provider: res_name
+        for provider, res_name in re.findall(
+            r"RadarProvider\.([A-Z0-9_]+)\s*->\s*R\.string\.([A-Za-z0-9_]+)",
+            match.group("body"),
+        )
+    }
+
+
+def parse_string_names(path):
+    content = read_text(path)
+    if content is None:
+        return None
+    return set(re.findall(r'<string\s+name="([^"]+)"', content))
+
+
+def parse_string_value(path, name):
+    content = read_text(path)
+    if content is None:
+        return None
+    match = re.search(
+        rf'<string\s+name="{re.escape(name)}">([^<]*)</string>',
+        content,
+    )
+    return match.group(1) if match else None
+
+
 def current_readme_content(content):
     # The historical "Implemented through" section can mention old counts.
     return content.split("**Implemented through", 1)[0]
@@ -252,6 +348,134 @@ def check_readme_inventory():
     return issues
 
 
+def check_onboarding_card_count():
+    issues = []
+    card_count = parse_card_type_count()
+    if card_count is None:
+        return issues
+
+    string_files = [
+        (REPO_ROOT / "app" / "src" / "main" / "res" / "values" / "strings.xml", "values"),
+        (REPO_ROOT / "app" / "src" / "main" / "res" / "values-es" / "strings.xml", "values-es"),
+    ]
+    for path, label in string_files:
+        value = parse_string_value(path, "onboarding_cards_everything_count")
+        if value is None:
+            issues.append(f"{label}/strings.xml: missing onboarding_cards_everything_count")
+            continue
+        match = re.search(r"\b(\d+)\b", value)
+        if not match:
+            issues.append(
+                f"{label}/strings.xml: onboarding_cards_everything_count has no numeric count"
+            )
+            continue
+        found = int(match.group(1))
+        if found != card_count:
+            issues.append(
+                f"{label}/strings.xml: onboarding everything count {found} != "
+                f"CardType count {card_count}"
+            )
+    return issues
+
+
+def check_radar_provider_inventory():
+    issues = []
+    providers = parse_radar_providers()
+    if not providers:
+        return issues
+
+    provider_names = {name for name, _ in providers}
+    readme = read_text(REPO_ROOT / "README.md")
+    if readme:
+        current_content = current_readme_content(readme)
+        if len(providers) != 2 and re.search(r"\bDual Radar Provider\b", current_content):
+            issues.append(
+                "README.md: radar section still says Dual Radar Provider "
+                f"but RadarProvider has {len(providers)} entries"
+            )
+        for _, label in providers:
+            if label not in current_content:
+                issues.append(f"README.md: missing radar provider label '{label}'")
+
+    for property_name in ["labelRes", "summaryRes"]:
+        branches = parse_radar_provider_string_branches(property_name)
+        if branches is None:
+            issues.append(f"SettingsEnumText.kt: missing RadarProvider.{property_name} mapping")
+            continue
+        branch_names = set(branches)
+        for missing in sorted(provider_names - branch_names):
+            issues.append(
+                f"SettingsEnumText.kt: RadarProvider.{property_name} missing {missing}"
+            )
+        for extra in sorted(branch_names - provider_names):
+            issues.append(
+                f"SettingsEnumText.kt: RadarProvider.{property_name} has stale {extra}"
+            )
+
+        for values_dir in ["values", "values-es"]:
+            string_names = parse_string_names(
+                REPO_ROOT / "app" / "src" / "main" / "res" / values_dir / "strings.xml"
+            )
+            if string_names is None:
+                continue
+            for provider, res_name in sorted(branches.items()):
+                if res_name not in string_names:
+                    issues.append(
+                        f"{values_dir}/strings.xml: missing {res_name} for "
+                        f"RadarProvider.{provider}.{property_name}"
+                    )
+    return issues
+
+
+def check_dependency_version_claims():
+    issues = []
+    versions = parse_version_catalog()
+    firebase_bom = parse_firebase_bom_version()
+    if firebase_bom:
+        versions["firebase-bom"] = firebase_bom
+
+    dependency_claims = [
+        ("Kotlin", "kotlin"),
+        ("Jetpack Compose", "compose-bom"),
+        ("Hilt", "hilt"),
+        ("Retrofit", "retrofit"),
+        ("Room", "room"),
+        ("DataStore", "datastore"),
+        ("MapLibre", "maplibre"),
+        ("Glance", "glance"),
+        ("WorkManager", "work"),
+        ("Lottie", "lottie"),
+        ("Coil", "coil"),
+        ("Firebase Firestore", "firebase-bom"),
+    ]
+
+    for path in [REPO_ROOT / "README.md", REPO_ROOT / "CLAUDE.md"]:
+        content = read_text(path)
+        if content is None:
+            continue
+        rel = path.relative_to(REPO_ROOT)
+        stack_lines = [
+            line for line in content.splitlines()
+            if re.match(r"\s*\*\*Stack(?::|\*\*:)", line)
+        ]
+        if not stack_lines:
+            issues.append(f"{rel}: missing **Stack:** dependency line")
+            continue
+        stack_line = " ".join(stack_lines)
+        for label_pattern, version_key in dependency_claims:
+            version = versions.get(version_key)
+            if version is None:
+                continue
+            pattern = rf"{label_pattern}[^,\n|]*\b{re.escape(version)}\b"
+            if not re.search(pattern, stack_line):
+                display = re.sub(r"\\|\(|\)|\?:", "", label_pattern)
+                issues.append(
+                    f"{rel}: stack claim for {display} does not match "
+                    f"{version_key} {version}"
+                )
+    return issues
+
+
 def check_version_sync():
     issues = []
     app_gradle = REPO_ROOT / "app" / "build.gradle.kts"
@@ -295,6 +519,24 @@ def check_version_sync():
                     f"v{app_ver} ({app_code}/{wear_code})"
                 )
 
+    claude = read_text(REPO_ROOT / "CLAUDE.md")
+    if claude and app_ver and app_code is not None and wear_code is not None:
+        match = re.search(
+            r"\*\*Version\*\*:\s*v?([0-9A-Za-z.\-]+)\s*"
+            r"\(phone versionCode\s*(\d+),\s*wear versionCode\s*(\d+)\)",
+            claude,
+        )
+        if not match:
+            issues.append("CLAUDE.md: missing version header")
+        else:
+            version, phone_code, watch_code = match.groups()
+            if version != app_ver or int(phone_code) != app_code or int(watch_code) != wear_code:
+                issues.append(
+                    "CLAUDE.md: version header "
+                    f"v{version} ({phone_code}/{watch_code}) != "
+                    f"v{app_ver} ({app_code}/{wear_code})"
+                )
+
     return issues
 
 
@@ -306,6 +548,9 @@ def main():
     issues.extend(check_release_workflow_truth())
     issues.extend(check_version_sync())
     issues.extend(check_readme_inventory())
+    issues.extend(check_onboarding_card_count())
+    issues.extend(check_radar_provider_inventory())
+    issues.extend(check_dependency_version_claims())
 
     if issues:
         print(f"Documentation consistency check found {len(issues)} issue(s):")

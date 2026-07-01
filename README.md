@@ -125,7 +125,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 
 | Feature | Description |
 |---------|-------------|
-| **Dual Radar Provider** | User-selectable: native MapLibre with RainViewer past-radar tiles (max zoom 7, Universal Blue), or Windy.com WebView embed |
+| **Radar Providers** | User-selectable: Windy Radar WebView, RainViewer Native MapLibre playback with past-radar tiles (max zoom 7, Universal Blue), NWS Radar (US), or NWS Radar Lite (US) |
 | **Animated Radar Playback** | Play/pause, frame slider, recent-past labels, timestamp overlay (native mode) |
 | **Radar Preview Card** | Recent RainViewer tile + CartoDB dark basemap on the Today tab |
 | **Radar Tab** | Full-screen radar in the bottom nav with provider-aware rendering |
@@ -172,7 +172,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 
 | Setting | Options |
 |---------|---------|
-| **Radar Provider** | Windy WebView / Native MapLibre |
+| **Radar Provider** | Windy Radar / RainViewer Native / NWS Radar (US) / NWS Radar Lite (US) |
 | **Icon Style** | Meteocons Animated (Lottie, default) / Material Icons / Custom Icon Packs |
 | **Theme Mode** | Static Dark / Weather Adaptive (accent colors shift: amber for sun, blue for rain, purple for storms) |
 | **Weather Summary** | AI-Generated (Gemini Nano, default) / Standard template |
@@ -285,7 +285,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Stack:** Kotlin 2.1.0, Jetpack Compose (BOM 2025.04.01), Hilt 2.53.1, Retrofit 3.0.0, Room 2.6.1, DataStore 1.3.0-alpha09 with Tink-encrypted API keys, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore
+**Stack:** Kotlin 2.1.0, Jetpack Compose (BOM 2025.04.01), Hilt 2.53.1, Retrofit 3.0.0, Room 2.6.1, DataStore 1.2.1 with Tink-encrypted API keys, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
 
 ---
 
