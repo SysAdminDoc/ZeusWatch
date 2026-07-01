@@ -93,6 +93,7 @@ dependencies {
     implementation("androidx.wear.tiles:tiles-material:1.6.0")
     implementation("androidx.wear.protolayout:protolayout:1.4.0")
     implementation("androidx.wear.protolayout:protolayout-material:1.4.0")
+    implementation("androidx.wear.protolayout:protolayout-material3:1.4.0")
     implementation("androidx.wear.protolayout:protolayout-expression:1.4.0")
 
     // Complications

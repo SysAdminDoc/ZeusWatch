@@ -1,6 +1,5 @@
 package com.sysadmindoc.nimbus.wear.tile
 
-import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.wear.protolayout.ActionBuilders
 import androidx.wear.protolayout.ColorBuilders.argb
 import androidx.wear.protolayout.DimensionBuilders.dp
@@ -13,6 +12,12 @@ import androidx.wear.protolayout.LayoutElementBuilders.Text
 import androidx.wear.protolayout.ModifiersBuilders
 import androidx.wear.protolayout.ResourceBuilders
 import androidx.wear.protolayout.TimelineBuilders
+import androidx.wear.protolayout.TriggerBuilders
+import androidx.wear.protolayout.material3.ColorScheme
+import androidx.wear.protolayout.material3.MaterialScope
+import androidx.wear.protolayout.material3.icon
+import androidx.wear.protolayout.types.LayoutColor
+import androidx.wear.tiles.Material3TileService
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.TileBuilders
 import com.sysadmindoc.nimbus.wear.R
@@ -23,42 +28,28 @@ import com.sysadmindoc.nimbus.wear.data.WearWeatherData
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
 import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import javax.inject.Inject
 
+internal const val WEATHER_TILE_FRESHNESS_MS = 30 * 60 * 1000L
+
 @AndroidEntryPoint
-class WeatherTileService : androidx.wear.tiles.TileService() {
+class WeatherTileService : Material3TileService(
+    allowDynamicTheme = true,
+    defaultColorScheme = ColorScheme(),
+    serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+) {
 
     @Inject lateinit var repository: WearWeatherRepository
     @Inject lateinit var locationProvider: WearLocationProvider
     @Inject lateinit var syncedStore: SyncedWeatherStore
 
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    override fun onTileRequest(requestParams: RequestBuilders.TileRequest) =
-        WeatherTileRequestRunner.requestTile(
-            scope = serviceScope,
-            loadData = ::loadTileData,
-            buildTile = ::buildTile,
-        )
-
-    override fun onTileResourcesRequest(requestParams: RequestBuilders.ResourcesRequest) =
-        CallbackToFutureAdapter.getFuture { completer ->
-            completer.set(
-                ResourceBuilders.Resources.Builder()
-                    .setVersion("2")
-                    .build(),
-            )
-            "weather-tile-resources"
-        }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        serviceScope.cancel()
-    }
+    override suspend fun MaterialScope.tileResponse(
+        requestParams: RequestBuilders.TileRequest,
+    ): TileBuilders.Tile = buildTile(loadTileDataForTile(), this)
 
     internal suspend fun loadTileData(): WearWeatherData? {
         // Prefer phone-synced data to avoid network calls from the watch.
@@ -69,7 +60,20 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
         }
     }
 
-    private fun buildTile(data: WearWeatherData?): TileBuilders.Tile {
+    internal suspend fun loadTileDataForTile(): WearWeatherData? =
+        try {
+            loadTileData()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (e: Exception) {
+            null
+        }
+
+    private fun buildTile(
+        data: WearWeatherData?,
+        materialScope: MaterialScope?,
+        launchPackageName: String = packageName,
+    ): TileBuilders.Tile {
         val layout = Column.Builder()
             .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
             // Tap anywhere on the tile opens the full app.
@@ -82,7 +86,7 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
                                 ActionBuilders.LaunchAction.Builder()
                                     .setAndroidActivity(
                                         ActionBuilders.AndroidActivity.Builder()
-                                            .setPackageName(packageName)
+                                            .setPackageName(launchPackageName)
                                             .setClassName(WearMainActivity::class.java.name)
                                             .build(),
                                     )
@@ -92,22 +96,36 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
                     )
                     .build(),
             )
-            .addContent(
-                Text.Builder()
-                    .setText(
-                        if (data != null) {
-                            "${WearUnitFormatter.displayTemp(data.temperature, data.tempUnit)}\u00B0"
-                        } else {
-                            "--"
-                        },
-                    )
-                    .setFontStyle(
-                        LayoutElementBuilders.FontStyle.Builder()
-                            .setSize(sp(40f))
-                            .setColor(argb(0xFFF0F0F5.toInt()))
-                            .build(),
-                    )
-                    .build(),
+
+        if (materialScope != null) {
+            layout.addContent(
+                materialScope.icon(
+                    WeatherTileLottieResources.weatherIcon(),
+                    "weather_tile_icon",
+                    dp(28f),
+                    dp(28f),
+                    materialScope.colorScheme.primary,
+                ),
+            )
+            layout.addContent(Spacer.Builder().setHeight(dp(3f)).build())
+        }
+
+        layout.addContent(
+            Text.Builder()
+                .setText(
+                    if (data != null) {
+                        "${WearUnitFormatter.displayTemp(data.temperature, data.tempUnit)}\u00B0"
+                    } else {
+                        "--"
+                    },
+                )
+                .setFontStyle(
+                    LayoutElementBuilders.FontStyle.Builder()
+                        .setSize(sp(40f))
+                        .setColor(tileColor(materialScope?.colorScheme?.onSurface, 0xFFF0F0F5.toInt()))
+                        .build(),
+                )
+                .build(),
             )
             .addContent(Spacer.Builder().setHeight(dp(4f)).build())
             .addContent(
@@ -116,7 +134,7 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
                     .setFontStyle(
                         LayoutElementBuilders.FontStyle.Builder()
                             .setSize(sp(14f))
-                            .setColor(argb(0xFFB0B8CC.toInt()))
+                            .setColor(tileColor(materialScope?.colorScheme?.onSurfaceVariant, 0xFFB0B8CC.toInt()))
                             .build(),
                     )
                     .build(),
@@ -138,7 +156,7 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
                     .setFontStyle(
                         LayoutElementBuilders.FontStyle.Builder()
                             .setSize(sp(12f))
-                            .setColor(argb(0xFF7A839E.toInt()))
+                            .setColor(tileColor(materialScope?.colorScheme?.outline, 0xFF7A839E.toInt()))
                             .build(),
                     )
                     .build(),
@@ -161,7 +179,7 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
                             .setFontStyle(
                                 LayoutElementBuilders.FontStyle.Builder()
                                     .setSize(sp(11f))
-                                    .setColor(argb(0xFF7A839E.toInt()))
+                                    .setColor(tileColor(materialScope?.colorScheme?.outline, 0xFF7A839E.toInt()))
                                     .build(),
                             )
                             .build(),
@@ -175,7 +193,7 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
                     .setFontStyle(
                         LayoutElementBuilders.FontStyle.Builder()
                             .setSize(sp(10f))
-                            .setColor(argb(0xFF7A839E.toInt()))
+                            .setColor(tileColor(materialScope?.colorScheme?.outline, 0xFF7A839E.toInt()))
                             .build(),
                     )
                     .setMaxLines(1)
@@ -194,7 +212,7 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
                         .setFontStyle(
                             LayoutElementBuilders.FontStyle.Builder()
                                 .setSize(sp(9f))
-                                .setColor(argb(0xFF5A6180.toInt()))
+                                .setColor(tileColor(materialScope?.colorScheme?.outlineVariant, 0xFF5A6180.toInt()))
                                 .build(),
                         )
                         .build(),
@@ -217,7 +235,21 @@ class WeatherTileService : androidx.wear.tiles.TileService() {
         return TileBuilders.Tile.Builder()
             .setResourcesVersion("2")
             .setTileTimeline(timeline)
-            .setFreshnessIntervalMillis(30 * 60 * 1000L)
+            .setFreshnessIntervalMillis(WEATHER_TILE_FRESHNESS_MS)
             .build()
     }
+
+    private fun tileColor(materialColor: LayoutColor?, fallbackArgb: Int) =
+        materialColor?.prop ?: argb(fallbackArgb)
+}
+
+internal object WeatherTileLottieResources {
+    fun weatherIcon(): ResourceBuilders.ImageResource =
+        ResourceBuilders.ImageResource.Builder()
+            .setAndroidLottieResourceByResId(
+                ResourceBuilders.AndroidLottieResourceByResId.Builder(R.raw.weather_tile_clear)
+                    .setStartTrigger(TriggerBuilders.createOnVisibleTrigger())
+                    .build(),
+            )
+            .build()
 }
