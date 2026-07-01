@@ -8,7 +8,7 @@ import com.sysadmindoc.nimbus.data.model.CommunityReport
  */
 interface CommunityReportSource {
 
-    /** Hashed device ID for anonymous attribution. */
+    /** Anonymous account id when a community-report backend is available. */
     val deviceId: String
 
     /** Submit a community weather report. Returns the document ID on success. */
