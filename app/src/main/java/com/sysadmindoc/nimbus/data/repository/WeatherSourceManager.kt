@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.first
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.jvm.JvmSuppressWildcards
 
 private const val TAG = "WeatherSourceManager"
 
@@ -20,26 +21,10 @@ private const val TAG = "WeatherSourceManager"
  * primary source and optional fallback. If the primary fails, the fallback
  * is attempted transparently.
  */
-// Hilt fan-in is intentional: this manager coordinates fallback across every provider family.
-@Suppress("LongParameterList")
 @Singleton
 class WeatherSourceManager @Inject constructor(
     private val prefs: UserPreferences,
-    private val openMeteoAdapter: OpenMeteoForecastAdapter,
-    private val openMeteoBomAdapter: OpenMeteoBomForecastAdapter,
-    private val openMeteoKmaAdapter: OpenMeteoKmaForecastAdapter,
-    private val openMeteoUkmoAdapter: OpenMeteoUkmoForecastAdapter,
-    private val openMeteoMinutelyAdapter: OpenMeteoMinutelyAdapter,
-    private val nwsAlertAdapter: AlertSourceManagerAdapter,
-    private val openMeteoAqiAdapter: OpenMeteoAqiAdapter,
-    private val owmForecastAdapter: OwmForecastAdapter,
-    private val owmAlertAdapter: OwmAlertAdapter,
-    private val owmAqiAdapter: OwmAqiAdapter,
-    private val pirateWeatherAdapter: PirateWeatherForecastAdapter,
-    private val brightSkyForecastAdapter: BrightSkyForecastAdapter,
-    private val brightSkyAlertAdapter: BrightSkyAlertAdapter,
-    private val metNorwayForecastAdapter: MetNorwayForecastAdapter,
-    private val ecccForecastAdapter: EnvironmentCanadaForecastAdapter,
+    private val adapters: Map<WeatherSourceProvider, @JvmSuppressWildcards WeatherSourceAdapter>,
     private val timeZoneResolver: LocationTimeZoneResolver,
 ) {
 
@@ -86,32 +71,24 @@ class WeatherSourceManager @Inject constructor(
         longitude: Double,
         locationName: String?,
         locationTimeZone: String?,
-    ): Result<WeatherData> = when (provider) {
-        WeatherSourceProvider.OPEN_METEO -> openMeteoAdapter.getWeather(latitude, longitude, locationName)
-        WeatherSourceProvider.OPEN_METEO_BOM -> openMeteoBomAdapter.getWeather(latitude, longitude, locationName)
-        WeatherSourceProvider.OPEN_METEO_KMA -> openMeteoKmaAdapter.getWeather(latitude, longitude, locationName)
-        WeatherSourceProvider.OPEN_METEO_UKMO -> openMeteoUkmoAdapter.getWeather(latitude, longitude, locationName)
-        WeatherSourceProvider.OPEN_WEATHER_MAP -> owmForecastAdapter.getWeather(latitude, longitude, locationName)
-        WeatherSourceProvider.PIRATE_WEATHER -> pirateWeatherAdapter.getWeather(latitude, longitude, locationName)
-        WeatherSourceProvider.BRIGHT_SKY -> brightSkyForecastAdapter.getWeather(
-            latitude,
-            longitude,
-            locationName,
-            resolveForecastZone(latitude, longitude, locationTimeZone),
+    ): Result<WeatherData> {
+        val adapter = adapterFor(provider, WeatherDataType.FORECAST)
+            ?: return unsupportedProvider(provider, WeatherDataType.FORECAST)
+
+        val forecastZone = if (adapter.requiresForecastZone) {
+            resolveForecastZone(latitude, longitude, locationTimeZone)
+        } else {
+            null
+        }
+
+        return adapter.getForecast(
+            ForecastSourceRequest(
+                latitude = latitude,
+                longitude = longitude,
+                locationName = locationName,
+                forecastZone = forecastZone,
+            ),
         )
-        WeatherSourceProvider.MET_NORWAY -> metNorwayForecastAdapter.getWeather(
-            latitude,
-            longitude,
-            locationName,
-            resolveForecastZone(latitude, longitude, locationTimeZone),
-        )
-        WeatherSourceProvider.ENVIRONMENT_CANADA -> ecccForecastAdapter.getWeather(
-            latitude,
-            longitude,
-            locationName,
-            resolveForecastZone(latitude, longitude, locationTimeZone),
-        )
-        else -> Result.failure(UnsupportedOperationException("${provider.displayName} does not support forecasts"))
     }
 
     private suspend fun resolveForecastZone(
@@ -194,38 +171,19 @@ class WeatherSourceManager @Inject constructor(
         longitude: Double,
         includeMeteredSources: Boolean,
         countryHint: String?,
-    ): AlertFetchResult = when (provider) {
-        WeatherSourceProvider.NWS,
-        WeatherSourceProvider.METEOALARM,
-        WeatherSourceProvider.JMA,
-        WeatherSourceProvider.ENVIRONMENT_CANADA -> {
-            val override = provider
-                .takeUnless { it == WeatherSourceProvider.defaultFor(WeatherDataType.ALERTS) }
-                ?.toAlertSourcePreference()
-            nwsAlertAdapter.getAlertsDetailed(
+    ): AlertFetchResult {
+        val adapter = adapterFor(provider, WeatherDataType.ALERTS)
+            ?: return unsupportedAlertFetch(provider)
+
+        return adapter.getAlertsDetailed(
+            AlertSourceRequest(
                 latitude = latitude,
                 longitude = longitude,
-                preferenceOverride = override,
                 includeMeteredSources = includeMeteredSources,
                 countryHint = countryHint,
-            )
-        }
-        WeatherSourceProvider.OPEN_WEATHER_MAP ->
-            owmAlertAdapter.getAlerts(latitude, longitude).toFetchResult(provider.name)
-        WeatherSourceProvider.BRIGHT_SKY ->
-            brightSkyAlertAdapter.getAlerts(latitude, longitude).toFetchResult(provider.name)
-        else -> AlertFetchResult(
-            alerts = emptyList(),
-            allAdaptersFailed = true,
-            failedSources = listOf(provider.name),
+            ),
         )
     }
-
-    private fun Result<List<WeatherAlert>>.toFetchResult(sourceId: String): AlertFetchResult =
-        fold(
-            onSuccess = { AlertFetchResult(it, allAdaptersFailed = false, failedSources = emptyList()) },
-            onFailure = { AlertFetchResult(emptyList(), allAdaptersFailed = true, failedSources = listOf(sourceId)) },
-        )
 
     private suspend fun getAlertsFrom(
         provider: WeatherSourceProvider,
@@ -233,31 +191,18 @@ class WeatherSourceManager @Inject constructor(
         longitude: Double,
         includeMeteredSources: Boolean,
         countryHint: String?,
-    ): Result<List<WeatherAlert>> = when (provider) {
-        WeatherSourceProvider.NWS,
-        WeatherSourceProvider.METEOALARM,
-        WeatherSourceProvider.JMA,
-        WeatherSourceProvider.ENVIRONMENT_CANADA -> {
-            // The built-in default alert source (NWS) really means "let
-            // AlertRepository decide": pass no override so the Settings
-            // alert-source preference (AUTO / ALL_SOURCES / pinned source)
-            // is honored — AUTO still dispatches the same regional adapter
-            // per country (NWS for US, etc.). A non-default pick is an
-            // explicit user choice and keeps its dedicated *_ONLY override.
-            val override = provider
-                .takeUnless { it == WeatherSourceProvider.defaultFor(WeatherDataType.ALERTS) }
-                ?.toAlertSourcePreference()
-            nwsAlertAdapter.getAlerts(
+    ): Result<List<WeatherAlert>> {
+        val adapter = adapterFor(provider, WeatherDataType.ALERTS)
+            ?: return unsupportedProvider(provider, WeatherDataType.ALERTS)
+
+        return adapter.getAlerts(
+            AlertSourceRequest(
                 latitude = latitude,
                 longitude = longitude,
-                preferenceOverride = override,
                 includeMeteredSources = includeMeteredSources,
                 countryHint = countryHint,
-            )
-        }
-        WeatherSourceProvider.OPEN_WEATHER_MAP -> owmAlertAdapter.getAlerts(latitude, longitude)
-        WeatherSourceProvider.BRIGHT_SKY -> brightSkyAlertAdapter.getAlerts(latitude, longitude)
-        else -> Result.failure(UnsupportedOperationException("${provider.displayName} does not support alerts"))
+            ),
+        )
     }
 
     // ── Air Quality ─────────────────────────────────────────────────────
@@ -276,10 +221,11 @@ class WeatherSourceManager @Inject constructor(
         provider: WeatherSourceProvider,
         latitude: Double,
         longitude: Double,
-    ): Result<AirQualityData> = when (provider) {
-        WeatherSourceProvider.OPEN_METEO -> openMeteoAqiAdapter.getAirQuality(latitude, longitude)
-        WeatherSourceProvider.OPEN_WEATHER_MAP -> owmAqiAdapter.getAirQuality(latitude, longitude)
-        else -> Result.failure(UnsupportedOperationException("${provider.displayName} does not support air quality"))
+    ): Result<AirQualityData> {
+        val adapter = adapterFor(provider, WeatherDataType.AIR_QUALITY)
+            ?: return unsupportedProvider(provider, WeatherDataType.AIR_QUALITY)
+
+        return adapter.getAirQuality(CoordinateSourceRequest(latitude, longitude))
     }
 
     // ── Minutely ────────────────────────────────────────────────────────
@@ -298,20 +244,39 @@ class WeatherSourceManager @Inject constructor(
         provider: WeatherSourceProvider,
         latitude: Double,
         longitude: Double,
-    ): Result<List<MinutelyPrecipitation>> = when (provider) {
-        WeatherSourceProvider.OPEN_METEO -> openMeteoMinutelyAdapter.getMinutelyPrecipitation(latitude, longitude)
-        else -> Result.failure(UnsupportedOperationException("${provider.displayName} does not support minutely data"))
+    ): Result<List<MinutelyPrecipitation>> {
+        val adapter = adapterFor(provider, WeatherDataType.MINUTELY)
+            ?: return unsupportedProvider(provider, WeatherDataType.MINUTELY)
+
+        return adapter.getMinutely(CoordinateSourceRequest(latitude, longitude))
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────
 
-    private fun WeatherSourceProvider.toAlertSourcePreference(): AlertSourcePreference = when (this) {
-        WeatherSourceProvider.NWS -> AlertSourcePreference.NWS_ONLY
-        WeatherSourceProvider.METEOALARM -> AlertSourcePreference.METEOALARM_ONLY
-        WeatherSourceProvider.JMA -> AlertSourcePreference.JMA_ONLY
-        WeatherSourceProvider.ENVIRONMENT_CANADA -> AlertSourcePreference.ECCC_ONLY
-        else -> error("${displayName} does not map to an AlertSourcePreference override")
-    }
+    private fun adapterFor(
+        provider: WeatherSourceProvider,
+        type: WeatherDataType,
+    ): WeatherSourceAdapter? = adapters[provider]?.takeIf { type in it.supportedTypes }
+
+    private fun <T> unsupportedProvider(
+        provider: WeatherSourceProvider,
+        type: WeatherDataType,
+    ): Result<T> = Result.failure(UnsupportedOperationException("${provider.displayName} does not support ${type.label}"))
+
+    private fun unsupportedAlertFetch(provider: WeatherSourceProvider): AlertFetchResult =
+        AlertFetchResult(
+            alerts = emptyList(),
+            allAdaptersFailed = true,
+            failedSources = listOf(provider.name),
+        )
+
+    private val WeatherDataType.label: String
+        get() = when (this) {
+            WeatherDataType.FORECAST -> "forecasts"
+            WeatherDataType.ALERTS -> "alerts"
+            WeatherDataType.AIR_QUALITY -> "air quality"
+            WeatherDataType.MINUTELY -> "minutely data"
+        }
 }
 
 // ── Source Adapters ─────────────────────────────────────────────────────
