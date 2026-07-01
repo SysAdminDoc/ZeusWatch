@@ -374,6 +374,7 @@ private fun TabletopWeatherTabs(
                         hourly = data.hourly,
                         locationName = data.location.name,
                         referenceTime = referenceTime,
+                        confidenceBands = state.confidenceBands,
                         isRefreshing = state.isRefreshing,
                         onRefresh = actions.content.onRefresh,
                     )
@@ -381,6 +382,7 @@ private fun TabletopWeatherTabs(
                         daily = data.daily,
                         locationName = data.location.name,
                         referenceDate = referenceDate,
+                        confidenceBands = state.confidenceBands,
                         isRefreshing = state.isRefreshing,
                         onRefresh = actions.content.onRefresh,
                     )
@@ -408,6 +410,7 @@ private fun TabletWeatherTabs(
                         hourly = data.hourly,
                         locationName = data.location.name,
                         referenceTime = referenceTime,
+                        confidenceBands = state.confidenceBands,
                         isRefreshing = state.isRefreshing,
                         onRefresh = actions.content.onRefresh,
                     )
@@ -415,6 +418,7 @@ private fun TabletWeatherTabs(
                         daily = data.daily,
                         locationName = data.location.name,
                         referenceDate = referenceDate,
+                        confidenceBands = state.confidenceBands,
                         isRefreshing = state.isRefreshing,
                         onRefresh = actions.content.onRefresh,
                     )
@@ -451,6 +455,7 @@ private fun PhoneWeatherTabs(
                 hourly = data.hourly,
                 locationName = data.location.name,
                 referenceTime = referenceTime,
+                confidenceBands = state.confidenceBands,
                 isRefreshing = state.isRefreshing,
                 onRefresh = actions.content.onRefresh,
             )
@@ -458,6 +463,7 @@ private fun PhoneWeatherTabs(
                 daily = data.daily,
                 locationName = data.location.name,
                 referenceDate = referenceDate,
+                confidenceBands = state.confidenceBands,
                 isRefreshing = state.isRefreshing,
                 onRefresh = actions.content.onRefresh,
             )
@@ -1177,6 +1183,7 @@ private fun RenderForecastCard(
         CardType.HOURLY_FORECAST -> HourlyForecastStrip(
             hourly = data.hourly,
             referenceTime = referenceTime,
+            confidenceBands = context.state.confidenceBands,
             modifier = modifier,
         )
         CardType.TEMPERATURE_GRAPH -> {
@@ -1219,6 +1226,7 @@ private fun RenderForecastCard(
             daily = data.daily,
             referenceDate = referenceDate,
             forecastAccuracy = context.state.forecastAccuracy,
+            confidenceBands = context.state.confidenceBands,
             modifier = modifier,
         )
         else -> Unit

@@ -604,6 +604,11 @@
     <string name="temperature_graph_uncertainty_low">narrow band, higher confidence</string>
     <string name="temperature_graph_uncertainty_medium">moderate band, watch for updates</string>
     <string name="temperature_graph_uncertainty_high">wide band, lower confidence</string>
+    <string name="forecast_uncertainty_label">Forecast confidence</string>
+    <string name="forecast_uncertainty_hour_summary">Likely range %1$s to %2$s (%3$s spread): %4$s.</string>
+    <string name="forecast_uncertainty_day_summary">Average hourly range %1$s to %2$s (%3$s spread): %4$s.</string>
+    <string name="forecast_uncertainty_explainer">This is the 10th-to-90th percentile range from ensemble model runs. A wider range means the forecast is less certain.</string>
+    <string name="forecast_uncertainty_semantics">%1$s. %2$s %3$s</string>
     <string name="temperature_trend_warmer">trending warmer</string>
     <string name="temperature_trend_cooler">trending cooler</string>
     <string name="temperature_trend_steady">steady</string>

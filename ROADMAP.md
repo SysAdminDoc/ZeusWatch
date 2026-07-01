@@ -378,16 +378,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 
 ## Research-Driven Additions
 
-### P2 — Safety UX And Forecast Trust
-
-- [ ] P2 — Add a plain-language forecast-uncertainty explanation layer
-  Status: PARTIAL — TemperatureGraph now shows a compact forecast-spread legend when ensemble bands are present and includes the same average-spread explanation in TalkBack semantics. Remaining: extend the explanation into forecast detail sheets and add screenshot/accessibility coverage.
-  Why: Confidence bands and accuracy badges are valuable trust signals, but users need to know whether a wide band means "less certain" and what action to take. Without legend text and accessibility summaries, uncertainty data is easy to misread.
-  Evidence: `TemperatureGraph.kt:70` accepts `ConfidenceBandData`; `TemperatureGraph.kt:311-355` draws the band; `strings.xml:484-485` only says "Confidence bands" and "Show ensemble spread on the temperature graph"; WMO forecast-uncertainty guidance emphasizes clear service-provider communication.
-  Touches: `TemperatureGraph.kt`, forecast detail sheets, daily/hourly forecast UI, settings strings, TalkBack semantics, screenshot/accessibility tests.
-  Acceptance: Temperature graph shows a compact legend and low/medium/high spread summary when bands are enabled; forecast details explain p10/p90 or equivalent in plain language; TalkBack announces uncertainty meaning without reading raw chart internals; screenshots show no chart clutter on narrow screens.
-  Complexity: M
-
 ### P3 — Planning Hygiene
 
 

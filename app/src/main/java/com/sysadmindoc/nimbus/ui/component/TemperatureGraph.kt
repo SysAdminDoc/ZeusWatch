@@ -61,6 +61,8 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.ForecastUncertaintyExplainer
+import com.sysadmindoc.nimbus.util.ForecastUncertaintyLevel
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.LocalDateTime
 import kotlin.math.abs
@@ -104,11 +106,15 @@ fun TemperatureGraph(
         stringResource(trendSummary.directionRes),
     )
     val uncertaintySummary = remember(data, confidenceBands, s.tempUnit) {
-        buildForecastUncertaintySummary(data, confidenceBands, s)
+        ForecastUncertaintyExplainer.summarizeHourly(data, confidenceBands)
     }
-    val uncertaintyLevelText = uncertaintySummary?.let { stringResource(it.levelRes) }
+    val uncertaintyLevelText = uncertaintySummary?.let { stringResource(it.level.descriptionRes()) }
     val uncertaintyText = uncertaintySummary?.let {
-        stringResource(R.string.temperature_graph_uncertainty_summary, it.averageSpread, uncertaintyLevelText ?: "")
+        stringResource(
+            R.string.temperature_graph_uncertainty_summary,
+            WeatherFormatter.formatTemperatureDelta(it.averageSpreadC, s),
+            uncertaintyLevelText ?: "",
+        )
     }
     val semanticSummary = if (uncertaintyText != null) {
         stringResource(R.string.temperature_graph_semantics_with_uncertainty, trendSummaryText, uncertaintyText)
@@ -642,11 +648,6 @@ private data class TemperatureTrendSummary(
     val directionRes: Int,
 )
 
-private data class ForecastUncertaintySummary(
-    val averageSpread: String,
-    val levelRes: Int,
-)
-
 private fun buildTemperatureTrendSummary(
     data: List<HourlyConditions>,
     settings: NimbusSettings,
@@ -669,28 +670,8 @@ private fun buildTemperatureTrendSummary(
     )
 }
 
-private fun buildForecastUncertaintySummary(
-    data: List<HourlyConditions>,
-    confidenceBands: ConfidenceBandData?,
-    settings: NimbusSettings,
-): ForecastUncertaintySummary? {
-    confidenceBands ?: return null
-    val spreads = data.mapNotNull { hour ->
-        confidenceBands.entryAt(hour.time)?.let { entry ->
-            (entry.temperatureUpper - entry.temperatureLower)
-                .takeIf { it >= 0.0 && !it.isNaN() && !it.isInfinite() }
-        }
-    }
-    if (spreads.size < 2) return null
-
-    val averageSpreadC = spreads.average()
-    val levelRes = when {
-        averageSpreadC < 2.0 -> R.string.temperature_graph_uncertainty_low
-        averageSpreadC < 5.0 -> R.string.temperature_graph_uncertainty_medium
-        else -> R.string.temperature_graph_uncertainty_high
-    }
-    return ForecastUncertaintySummary(
-        averageSpread = WeatherFormatter.formatTemperatureDelta(averageSpreadC, settings),
-        levelRes = levelRes,
-    )
+private fun ForecastUncertaintyLevel.descriptionRes(): Int = when (this) {
+    ForecastUncertaintyLevel.LOW -> R.string.temperature_graph_uncertainty_low
+    ForecastUncertaintyLevel.MEDIUM -> R.string.temperature_graph_uncertainty_medium
+    ForecastUncertaintyLevel.HIGH -> R.string.temperature_graph_uncertainty_high
 }

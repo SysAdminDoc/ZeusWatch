@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
 import com.sysadmindoc.nimbus.ui.component.HourlyForecastDetailSheet
 import com.sysadmindoc.nimbus.ui.component.WeatherIcon
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
@@ -59,6 +60,7 @@ fun HourlyTab(
     hourly: List<HourlyConditions>,
     locationName: String,
     referenceTime: java.time.LocalDateTime? = hourly.firstOrNull()?.time,
+    confidenceBands: ConfidenceBandData? = null,
     isRefreshing: Boolean = false,
     onRefresh: () -> Unit = {},
 ) {
@@ -71,6 +73,7 @@ fun HourlyTab(
         HourlyForecastDetailSheet(
             hour = hour,
             referenceTime = referenceTime,
+            confidenceBands = confidenceBands,
             onDismiss = { selectedHour = null },
         )
     }

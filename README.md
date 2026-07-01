@@ -76,7 +76,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | **Weather Summary** | Time-aware natural language forecast ("Clear skies this morning") via Gemini Nano AI (default) or template engine, with UV/humidity warnings |
 | **Hourly Forecast** | 72h scrollable strip with temp, animated Lottie icons, wind direction arrows, precip probability, smart rain timeline ("Rain likely within 3h"), feels-like when significantly different |
 | **16-Day Forecast** | Expandable daily rows with temperature range bars, rain hours, sunshine, snowfall, wind gusts, UV max. "Warmest" day highlighted |
-| **Temperature Graph** | Interactive Canvas graph with drag-to-inspect, precipitation bars, forecast average normals band, and feels-like overlay |
+| **Temperature Graph** | Interactive Canvas graph with drag-to-inspect, precipitation bars, forecast average normals band, optional confidence bands, and detail-sheet uncertainty explanations |
 | **Rain Next Hour** | 60-minute precipitation nowcasting bar chart from Open-Meteo minutely_15 data |
 | **Temperature Normals** | Shaded band on temperature graph showing forecast average range with dashed boundary lines |
 

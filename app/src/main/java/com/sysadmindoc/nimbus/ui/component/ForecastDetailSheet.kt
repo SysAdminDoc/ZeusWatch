@@ -45,12 +45,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
@@ -60,6 +62,9 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusSurface
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.ForecastUncertaintyDetail
+import com.sysadmindoc.nimbus.util.ForecastUncertaintyExplainer
+import com.sysadmindoc.nimbus.util.ForecastUncertaintyLevel
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -67,6 +72,7 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 fun HourlyForecastDetailSheet(
     hour: HourlyConditions,
     referenceTime: java.time.LocalDateTime?,
+    confidenceBands: ConfidenceBandData? = null,
     onDismiss: () -> Unit,
 ) {
     val settings = LocalUnitSettings.current
@@ -80,6 +86,9 @@ fun HourlyForecastDetailSheet(
         heroValue = WeatherFormatter.formatTemperature(hour.temperature, settings),
         heroLabel = stringResource(R.string.forecast_detail_temperature),
         metrics = hourlyMetrics(hour, settings),
+        uncertainty = ForecastUncertaintyExplainer.detailForHour(hour, confidenceBands)?.let {
+            DetailSheetUncertainty(detail = it, isDaily = false)
+        },
         onDismiss = onDismiss,
     )
 }
@@ -89,6 +98,7 @@ fun HourlyForecastDetailSheet(
 fun DailyForecastDetailSheet(
     day: DailyConditions,
     referenceDate: java.time.LocalDate?,
+    confidenceBands: ConfidenceBandData? = null,
     onDismiss: () -> Unit,
 ) {
     val settings = LocalUnitSettings.current
@@ -106,6 +116,9 @@ fun DailyForecastDetailSheet(
         ),
         heroLabel = stringResource(R.string.forecast_detail_high_low),
         metrics = dailyMetrics(day, settings),
+        uncertainty = ForecastUncertaintyExplainer.detailForDay(day, confidenceBands)?.let {
+            DetailSheetUncertainty(detail = it, isDaily = true)
+        },
         onDismiss = onDismiss,
     )
 }
@@ -120,6 +133,7 @@ private fun ForecastDetailSheetFrame(
     heroValue: String,
     heroLabel: String,
     metrics: List<DetailMetric>,
+    uncertainty: DetailSheetUncertainty?,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -199,6 +213,82 @@ private fun ForecastDetailSheetFrame(
                     DetailMetricCard(metric)
                 }
             }
+
+            if (uncertainty != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                ForecastUncertaintyDetailCard(
+                    detail = uncertainty.detail,
+                    isDaily = uncertainty.isDaily,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ForecastUncertaintyDetailCard(
+    detail: ForecastUncertaintyDetail,
+    isDaily: Boolean,
+) {
+    val settings = LocalUnitSettings.current
+    val label = stringResource(R.string.forecast_uncertainty_label)
+    val levelText = stringResource(detail.level.descriptionRes())
+    val lower = WeatherFormatter.formatTemperature(detail.lowerC, settings)
+    val upper = WeatherFormatter.formatTemperature(detail.upperC, settings)
+    val spread = WeatherFormatter.formatTemperatureDelta(detail.spreadC, settings)
+    val summary = stringResource(
+        if (isDaily) R.string.forecast_uncertainty_day_summary
+        else R.string.forecast_uncertainty_hour_summary,
+        lower,
+        upper,
+        spread,
+        levelText,
+    )
+    val explainer = stringResource(R.string.forecast_uncertainty_explainer)
+    val semanticText = stringResource(
+        R.string.forecast_uncertainty_semantics,
+        label,
+        summary,
+        explainer,
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color.White.copy(alpha = 0.04f))
+            .border(1.dp, NimbusBlueAccent.copy(alpha = 0.24f), RoundedCornerShape(10.dp))
+            .semantics(mergeDescendants = true) {
+                contentDescription = semanticText
+            }
+            .padding(horizontal = 12.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Thermostat,
+            contentDescription = null,
+            tint = NimbusBlueAccent,
+            modifier = Modifier
+                .padding(top = 1.dp)
+                .size(18.dp),
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = NimbusTextPrimary,
+            )
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
+            Text(
+                text = explainer,
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextTertiary,
+            )
         }
     }
 }
@@ -399,3 +489,14 @@ private data class DetailMetric(
     val value: String,
     val tint: Color,
 )
+
+private data class DetailSheetUncertainty(
+    val detail: ForecastUncertaintyDetail,
+    val isDaily: Boolean,
+)
+
+private fun ForecastUncertaintyLevel.descriptionRes(): Int = when (this) {
+    ForecastUncertaintyLevel.LOW -> R.string.temperature_graph_uncertainty_low
+    ForecastUncertaintyLevel.MEDIUM -> R.string.temperature_graph_uncertainty_medium
+    ForecastUncertaintyLevel.HIGH -> R.string.temperature_graph_uncertainty_high
+}
