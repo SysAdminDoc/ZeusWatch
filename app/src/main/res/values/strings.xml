@@ -136,7 +136,7 @@
     <string name="onboarding_cards_standard_count">Default</string>
     <string name="onboarding_cards_everything">Everything</string>
     <string name="onboarding_cards_everything_desc">Enable every available card for a dense power-user dashboard.</string>
-    <string name="onboarding_cards_everything_count">29 cards</string>
+    <string name="onboarding_cards_everything_count">35 cards</string>
     <string name="onboarding_continue">Continue</string>
     <string name="onboarding_finish">Start ZeusWatch</string>
     <string name="whats_new_title">What\'s new in ZeusWatch</string>

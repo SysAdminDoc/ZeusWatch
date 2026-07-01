@@ -489,10 +489,3 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 ### P1
 
 ### P2
-
-- [ ] P2 — Expand source-of-truth drift gates for user-visible inventory and dependency claims
-  Why: User-facing and agent-facing claims have drifted from code: onboarding still says 29 cards while `CardType` has 35, README radar/provider/dependency text is stale in places, and CLAUDE.md still reports v1.24.2.
-  Evidence: `RESEARCH.md`; `app/src/main/res/values/strings.xml`; `app/src/main/res/values-es/strings.xml`; `README.md`; `CLAUDE.md`; `tools/check_docs_consistency.py`.
-  Touches: `tools/check_docs_consistency.py`, onboarding strings, README, CLAUDE.md, `gradle/libs.versions.toml`, `CardConfig.kt`, `UserPreferences.kt` `RadarProvider`.
-  Acceptance: The docs checker fails when onboarding card counts, radar provider inventory, dependency versions, or root version claims drift from source-of-truth code/manifests; current stale claims are corrected.
-  Complexity: M
