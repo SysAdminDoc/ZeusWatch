@@ -182,6 +182,24 @@ class WidgetRefreshWorkerLogicTest {
     }
 
     @Test
+    fun `buildWidgetSavedCity keeps empty row for locations without cached weather`() {
+        val location = savedLocation(id = 43L, name = "Portland", sortOrder = 0)
+
+        val city = buildWidgetSavedCity(location, weatherData = null) { it }
+
+        assertEquals(43L, city.locationId)
+        assertEquals("Portland", city.locationName)
+        assertEquals(null, city.temperature)
+        assertEquals(null, city.high)
+        assertEquals(null, city.low)
+        assertEquals(null, city.weatherCode)
+        assertTrue(city.isDay)
+        assertEquals(0L, city.updatedAt)
+        assertEquals(0L, city.observedAt)
+        assertEquals(null, city.sourceProvider)
+    }
+
+    @Test
     fun `buildWidgetWeatherData preserves app source observation time and cache age`() {
         val location = savedLocation(id = 24L, name = "Boulder", sortOrder = 0)
         val observationTime = LocalDateTime.of(2026, 4, 15, 12, 0)
@@ -249,6 +267,100 @@ class WidgetRefreshWorkerLogicTest {
         assertEquals("Now", items.first().hour)
         assertEquals(10, items.first().temp)
         assertEquals(21, items.last().temp)
+    }
+
+    @Test
+    fun `buildWidgetHourlyItems uses custom now label and preserves projected fields`() {
+        val originalLocale = Locale.getDefault()
+        Locale.setDefault(Locale.US)
+        try {
+            val referenceTime = LocalDateTime.of(2026, 4, 15, 12, 45)
+            val hourly = listOf(
+                HourlyConditions(
+                    time = referenceTime.minusHours(1).withMinute(0),
+                    temperature = 18.0,
+                    feelsLike = null,
+                    weatherCode = WeatherCode.OVERCAST,
+                    isDay = true,
+                    precipitationProbability = 20,
+                    precipitation = null,
+                    windSpeed = null,
+                    windDirection = null,
+                    humidity = null,
+                    uvIndex = null,
+                    cloudCover = null,
+                    visibility = null,
+                ),
+                HourlyConditions(
+                    time = referenceTime.withMinute(0),
+                    temperature = 20.9,
+                    feelsLike = null,
+                    weatherCode = WeatherCode.RAIN_MODERATE,
+                    isDay = false,
+                    precipitationProbability = 80,
+                    precipitation = null,
+                    windSpeed = null,
+                    windDirection = null,
+                    humidity = null,
+                    uvIndex = null,
+                    cloudCover = null,
+                    visibility = null,
+                ),
+            )
+
+            val items = buildWidgetHourlyItems(
+                hourly = hourly,
+                referenceTime = referenceTime,
+                nowLabel = "Live",
+                convertTemp = { celsius -> celsius * 9.0 / 5.0 + 32.0 },
+            )
+
+            assertEquals("11 AM", items[0].hour)
+            assertEquals("Live", items[1].hour)
+            assertEquals(69, items[1].temp)
+            assertEquals(WeatherCode.RAIN_MODERATE.code, items[1].code)
+            assertFalse(items[1].isDay)
+            assertEquals(80, items[1].precipChance)
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
+    }
+
+    @Test
+    fun `buildWidgetHourlyItems does not mark same clock hour on another date as now`() {
+        val originalLocale = Locale.getDefault()
+        Locale.setDefault(Locale.US)
+        try {
+            val referenceTime = LocalDateTime.of(2026, 4, 15, 23, 30)
+            val hourly = listOf(
+                HourlyConditions(
+                    time = referenceTime.plusDays(1).withMinute(0),
+                    temperature = 10.0,
+                    feelsLike = null,
+                    weatherCode = WeatherCode.CLEAR_SKY,
+                    isDay = false,
+                    precipitationProbability = 0,
+                    precipitation = null,
+                    windSpeed = null,
+                    windDirection = null,
+                    humidity = null,
+                    uvIndex = null,
+                    cloudCover = null,
+                    visibility = null,
+                ),
+            )
+
+            val items = buildWidgetHourlyItems(
+                hourly = hourly,
+                referenceTime = referenceTime,
+                nowLabel = "Live",
+                convertTemp = { it },
+            )
+
+            assertEquals("11 PM", items.single().hour)
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
     }
 
     @Test
