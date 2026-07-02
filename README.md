@@ -141,7 +141,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | Source | Data Types | Region |
 |--------|------------|--------|
 | **Open-Meteo** | Forecast, AQI, Pollen, Minutely, Historical, Single Runs | Global |
-| **Open-Meteo Models** | BOM ACCESS-G, UK Met Office, DMI HARMONIE forecast sources | Australia, UK/North Atlantic, Northern Europe |
+| **Open-Meteo Models** | BOM ACCESS-G, UK Met Office, DMI HARMONIE, Meteo-France forecast/AROME nowcast sources | Australia, UK/North Atlantic, Northern Europe, France/Central Europe |
 | **NWS** | Alerts | United States |
 | **MeteoAlarm** | Alerts | 31 EU countries |
 | **JMA** | Alerts | Japan |

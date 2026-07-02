@@ -109,8 +109,39 @@ interface OpenMeteoApi {
         @Query("forecast_hours") forecastHours: Int = 48,
     ): OpenMeteoResponse
 
+    /**
+     * Open-Meteo Meteo-France ARPEGE/AROME model proxy.
+     * Docs: https://open-meteo.com/en/docs/meteofrance-api
+     *
+     * The dedicated endpoint exposes a maximum four-day forecast and
+     * 15-minute AROME nowcast data for France/Central Europe.
+     */
+    @GET("meteofrance")
+    suspend fun getMeteoFranceForecast(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("current") current: String = CURRENT_PARAMS,
+        @Query("hourly") hourly: String = BOM_HOURLY_PARAMS,
+        @Query("daily") daily: String = BOM_DAILY_PARAMS,
+        @Query("temperature_unit") temperatureUnit: String = "celsius",
+        @Query("wind_speed_unit") windSpeedUnit: String = "kmh",
+        @Query("precipitation_unit") precipitationUnit: String = "mm",
+        @Query("timezone") timezone: String = "auto",
+        @Query("forecast_days") forecastDays: Int = 4,
+        @Query("forecast_hours") forecastHours: Int = 48,
+    ): OpenMeteoResponse
+
     @GET("forecast")
     suspend fun getMinutely15Forecast(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("minutely_15") minutely15: String = "precipitation",
+        @Query("forecast_minutely_15") forecastMinutely15: Int = 24,
+        @Query("timezone") timezone: String = "auto",
+    ): OpenMeteoResponse
+
+    @GET("meteofrance")
+    suspend fun getMeteoFranceMinutely15Forecast(
         @Query("latitude") latitude: Double,
         @Query("longitude") longitude: Double,
         @Query("minutely_15") minutely15: String = "precipitation",

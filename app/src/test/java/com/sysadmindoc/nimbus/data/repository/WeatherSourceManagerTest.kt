@@ -22,7 +22,9 @@ class WeatherSourceManagerTest {
     private lateinit var openMeteoKmaAdapter: OpenMeteoKmaForecastAdapter
     private lateinit var openMeteoUkmoAdapter: OpenMeteoUkmoForecastAdapter
     private lateinit var openMeteoDmiAdapter: OpenMeteoDmiForecastAdapter
+    private lateinit var openMeteoMeteoFranceAdapter: OpenMeteoMeteoFranceForecastAdapter
     private lateinit var openMeteoMinutelyAdapter: OpenMeteoMinutelyAdapter
+    private lateinit var openMeteoMeteoFranceMinutelyAdapter: OpenMeteoMeteoFranceMinutelyAdapter
     private lateinit var alertAdapter: AlertSourceManagerAdapter
     private lateinit var aqiAdapter: OpenMeteoAqiAdapter
     private lateinit var owmForecastAdapter: OwmForecastAdapter
@@ -73,7 +75,9 @@ class WeatherSourceManagerTest {
         openMeteoKmaAdapter = mockk()
         openMeteoUkmoAdapter = mockk()
         openMeteoDmiAdapter = mockk()
+        openMeteoMeteoFranceAdapter = mockk()
         openMeteoMinutelyAdapter = mockk()
+        openMeteoMeteoFranceMinutelyAdapter = mockk()
         alertAdapter = mockk()
         aqiAdapter = mockk()
         owmForecastAdapter = mockk()
@@ -115,6 +119,10 @@ class WeatherSourceManagerTest {
         ),
         WeatherSourceProvider.OPEN_METEO_DMI to WeatherSourceAdapterModule.provideOpenMeteoDmiAdapter(
             openMeteoDmiAdapter,
+        ),
+        WeatherSourceProvider.OPEN_METEO_METEO_FRANCE to WeatherSourceAdapterModule.provideOpenMeteoMeteoFranceAdapter(
+            openMeteoMeteoFranceAdapter,
+            openMeteoMeteoFranceMinutelyAdapter,
         ),
         WeatherSourceProvider.NWS to WeatherSourceAdapterModule.provideNwsAlertAdapter(alertAdapter),
         WeatherSourceProvider.METEOALARM to WeatherSourceAdapterModule.provideMeteoAlarmAlertAdapter(alertAdapter),
@@ -281,6 +289,24 @@ class WeatherSourceManagerTest {
         assertTrue(result.isSuccess)
         coVerify(exactly = 1) {
             openMeteoDmiAdapter.getWeather(55.68, 12.57, "Copenhagen")
+        }
+    }
+
+    @Test
+    fun getWeatherDelegatesMeteoFranceProviderToOpenMeteoMeteoFranceAdapter() = runTest {
+        val settingsWithMeteoFrance = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                forecast = WeatherSourceProvider.OPEN_METEO_METEO_FRANCE,
+            )
+        )
+        every { prefs.settings } returns flowOf(settingsWithMeteoFrance)
+        coEvery { openMeteoMeteoFranceAdapter.getWeather(any(), any(), any()) } returns Result.success(testWeatherData)
+
+        val result = manager.getWeather(48.8566, 2.3522, "Paris")
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            openMeteoMeteoFranceAdapter.getWeather(48.8566, 2.3522, "Paris")
         }
     }
 
@@ -613,6 +639,31 @@ class WeatherSourceManagerTest {
         assertTrue(result.isFailure)
     }
 
+    @Test
+    fun getMinutelyPrecipitationDelegatesMeteoFranceProviderToMeteoFranceAdapter() = runTest {
+        val settingsWithMeteoFrance = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                minutely = WeatherSourceProvider.OPEN_METEO_METEO_FRANCE,
+            )
+        )
+        val minutely = listOf(
+            MinutelyPrecipitation(time = LocalDateTime.now(), precipitation = 0.3)
+        )
+        every { prefs.settings } returns flowOf(settingsWithMeteoFrance)
+        coEvery { openMeteoMeteoFranceMinutelyAdapter.getMinutelyPrecipitation(any(), any()) } returns Result.success(minutely)
+
+        val result = manager.getMinutelyPrecipitation(48.8566, 2.3522)
+
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrNull()?.size)
+        coVerify(exactly = 1) {
+            openMeteoMeteoFranceMinutelyAdapter.getMinutelyPrecipitation(48.8566, 2.3522)
+        }
+        coVerify(exactly = 0) {
+            openMeteoMinutelyAdapter.getMinutelyPrecipitation(any(), any())
+        }
+    }
+
     // ── Source Config Tests ──
 
     @Test
@@ -653,6 +704,10 @@ class WeatherSourceManagerTest {
         assertTrue(
             "Open-Meteo DMI should be present",
             forecastProviders.contains(WeatherSourceProvider.OPEN_METEO_DMI),
+        )
+        assertTrue(
+            "Open-Meteo Meteo-France should be present",
+            forecastProviders.contains(WeatherSourceProvider.OPEN_METEO_METEO_FRANCE),
         )
         assertTrue(
             "MET Norway should be present once implemented",
@@ -698,5 +753,13 @@ class WeatherSourceManagerTest {
         assertTrue(alertProviders.contains(WeatherSourceProvider.BMKG))
         assertTrue(alertProviders.contains(WeatherSourceProvider.METEOALARM))
         assertTrue(alertProviders.contains(WeatherSourceProvider.JMA))
+    }
+
+    @Test
+    fun forTypeReturnsImplementedMinutelyProviders() {
+        val minutelyProviders = WeatherSourceProvider.forType(WeatherDataType.MINUTELY)
+
+        assertTrue(minutelyProviders.contains(WeatherSourceProvider.OPEN_METEO))
+        assertTrue(minutelyProviders.contains(WeatherSourceProvider.OPEN_METEO_METEO_FRANCE))
     }
 }

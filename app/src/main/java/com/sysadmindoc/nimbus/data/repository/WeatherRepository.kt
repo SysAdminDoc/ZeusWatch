@@ -307,6 +307,19 @@ class WeatherRepository @Inject constructor(
         },
     )
 
+    suspend fun getMeteoFranceWeatherDirect(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = getOpenMeteoWeather(
+        latitude = latitude,
+        longitude = longitude,
+        locationName = locationName,
+        fetch = { forecastHours ->
+            weatherApi.getMeteoFranceForecast(latitude, longitude, forecastHours = forecastHours)
+        },
+    )
+
     private suspend fun getOpenMeteoWeather(
         latitude: Double,
         longitude: Double,
@@ -679,9 +692,27 @@ class WeatherRepository @Inject constructor(
     suspend fun getMinutelyPrecipitationDirect(
         latitude: Double,
         longitude: Double,
+    ): Result<List<MinutelyPrecipitation>> =
+        getOpenMeteoMinutelyPrecipitation {
+            weatherApi.getMinutely15Forecast(latitude, longitude)
+        }
+
+    /**
+     * Direct Open-Meteo Meteo-France 15-minute precipitation fetch.
+     */
+    suspend fun getMeteoFranceMinutelyPrecipitationDirect(
+        latitude: Double,
+        longitude: Double,
+    ): Result<List<MinutelyPrecipitation>> =
+        getOpenMeteoMinutelyPrecipitation {
+            weatherApi.getMeteoFranceMinutely15Forecast(latitude, longitude)
+        }
+
+    private suspend fun getOpenMeteoMinutelyPrecipitation(
+        fetch: suspend () -> OpenMeteoResponse,
     ): Result<List<MinutelyPrecipitation>> = withContext(Dispatchers.IO) {
         try {
-            val response = weatherApi.getMinutely15Forecast(latitude, longitude)
+            val response = fetch()
             val minutely = response.minutely15 ?: return@withContext Result.success(emptyList())
             val data = minutely.time.mapIndexedNotNull { i, timeStr ->
                 val time = parseDateTime(timeStr) ?: return@mapIndexedNotNull null
