@@ -133,7 +133,7 @@
     <string name="onboarding_cards_standard_count">Predeterminado</string>
     <string name="onboarding_cards_everything">Todo</string>
     <string name="onboarding_cards_everything_desc">Activa todas las tarjetas disponibles para un panel denso de usuario avanzado.</string>
-    <string name="onboarding_cards_everything_count">35 tarjetas</string>
+    <string name="onboarding_cards_everything_count">36 tarjetas</string>
     <string name="onboarding_continue">Continuar</string>
     <string name="onboarding_finish">Iniciar ZeusWatch</string>
     <string name="whats_new_title">Novedades de ZeusWatch</string>
@@ -271,6 +271,7 @@
     <string name="card_type_hourly_forecast">Pronóstico por hora</string>
     <string name="card_type_temperature_graph">Tendencia de temperatura</string>
     <string name="card_type_forecast_evolution">Evolución del pronóstico</string>
+    <string name="card_type_provider_agreement">Acuerdo entre proveedores</string>
     <string name="card_type_daily_forecast">Pronóstico diario</string>
     <string name="card_type_uv_index">Índice UV</string>
     <string name="card_type_wind_compass">Viento</string>
@@ -532,6 +533,18 @@
     <string name="forecast_evolution_rain_delta">%1$+d%%</string>
     <string name="forecast_evolution_point">%1$s: %2$s, %3$s lluvia</string>
     <string name="forecast_evolution_semantics">Evolución del pronóstico. Última ejecución comparada con la anterior. Cambio promedio de temperatura %1$s. Cambio promedio de riesgo de lluvia %2$s.</string>
+    <string name="provider_agreement_loading_title">Comparando proveedores</string>
+    <string name="provider_agreement_loading_message">Consultando temperatura y precipitacion de 24 horas en fuentes alternativas.</string>
+    <string name="provider_agreement_unavailable_title">Acuerdo entre proveedores no disponible</string>
+    <string name="provider_agreement_unavailable_message">Se necesitan al menos dos fuentes de pronostico para esta ubicacion.</string>
+    <string name="provider_agreement_badge_strong">Acuerdo fuerte</string>
+    <string name="provider_agreement_badge_moderate">Acuerdo moderado</string>
+    <string name="provider_agreement_badge_divergent">Divergente</string>
+    <string name="provider_agreement_window">%1$d proveedores, proximas 24 horas</string>
+    <string name="provider_agreement_temp_spread">Rango temp.</string>
+    <string name="provider_agreement_precip_spread">Rango precip.</string>
+    <string name="provider_agreement_provider_values">%1$s prom., %2$s precip.</string>
+    <string name="provider_agreement_semantics">Acuerdo entre proveedores. %1$s entre %2$d proveedores. Rango de temperatura %3$s. Rango de precipitacion %4$s.</string>
     <string name="forecast_accuracy_too_warm">Hace %1$d d: %2$s demasiado cálido</string>
     <string name="forecast_accuracy_too_cool">Hace %1$d d: %2$s demasiado fresco</string>
     <string name="settings_show_forecast_accuracy">Precisión del pronóstico</string>

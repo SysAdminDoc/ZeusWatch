@@ -91,6 +91,16 @@ class WeatherSourceManager @Inject constructor(
         return result
     }
 
+    suspend fun getWeatherFromProvider(
+        provider: WeatherSourceProvider,
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+        locationTimeZone: String? = null,
+    ): Result<WeatherData> = withRetry {
+        getForecastFrom(provider, latitude, longitude, locationName, locationTimeZone)
+    }.map { it.copy(sourceProvider = provider.displayName) }
+
     private suspend fun getForecastFrom(
         provider: WeatherSourceProvider,
         latitude: Double,

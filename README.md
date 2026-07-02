@@ -7,7 +7,7 @@
 ![Compose](https://img.shields.io/badge/Jetpack%20Compose-2025.04.01-4285F4?logo=jetpackcompose&logoColor=white)
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 
-> A free, open-source Android weather app with a premium dark UI, 35 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, route weather planning, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, FMI, LibreWXR, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, Hong Kong Observatory, BMKG, and WMO SWIC.
+> A free, open-source Android weather app with a premium dark UI, 36 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, route weather planning, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, FMI, LibreWXR, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, Hong Kong Observatory, BMKG, and WMO SWIC.
 
 <img width="1536" height="1024" alt="design" src="https://github.com/user-attachments/assets/dce70ccc-af71-48d8-8000-0b2935f45996" />
 
@@ -101,6 +101,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | **Pressure Trend** | 24-hour barometric pressure line graph with trend direction and delta |
 | **Wind Forecast** | 24-hour wind speed line graph with gust overlay bars and peak callout |
 | **Forecast Evolution** | Optional Open-Meteo Single Runs card compares recent model runs for temp/rain-risk deltas |
+| **Provider Agreement** | Optional card compares next-24h temperature and precipitation across 2-3 forecast providers with agreement/divergence badges |
 | **Clothing Suggestions** | Rule-based outfit recommendations from feels-like temp, rain, snow, UV, wind |
 | **Pet Safety** | Pavement temperature estimates, heat stress, cold exposure, storm anxiety alerts |
 
@@ -184,7 +185,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Icon Style** | Meteocons Animated (Lottie, default) / Material Icons / Custom Icon Packs |
 | **Theme Mode** | Static Dark / Weather Adaptive (accent colors shift: amber for sun, blue for rain, purple for storms) |
 | **Weather Summary** | AI-Generated (Gemini Nano, default) / Standard template |
-| **Card Visibility** | Toggle each of the 35 card types on/off |
+| **Card Visibility** | Toggle each of the 36 card types on/off |
 | **Card Ordering** | Reorderable card list in Settings with move up/down arrows |
 | **Temperature** | Fahrenheit / Celsius |
 | **Wind Speed** | mph / km/h / m/s / knots |
@@ -249,7 +250,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 │  │+ViewModel│ │+ViewModel │ │ + VM     │ │+ VM      │ │+ ViewModel   │  │
 │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └──────┬───────┘  │
 │       │            │            │            │               │           │
-│  35 Card Types via LazyColumn items()                                    │
+│  36 Card Types via LazyColumn items()                                    │
 │  WeatherSummary | NowcastCard | RadarPreview | HourlyStrip | TempGraph  │
 │  DailyForecast | UvIndexBar | WindCompass | AqiCard | PollenCard | ...   │
 │  ClothingSuggestion | PetSafety | DrivingAlert | HealthAlert | ...      │
@@ -456,7 +457,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | Section | Options |
 |---------|---------|
 | **Display** | Radar provider, icon style (Meteocons/Material/Custom), theme mode, summary style (AI/template) |
-| **Cards** | Toggle + reorder each of 35 card types with move up/down arrows |
+| **Cards** | Toggle + reorder each of 36 card types with move up/down arrows |
 | **Units** | Temperature, wind, pressure, precipitation, visibility, time format |
 | **Notifications** | Alert notifications (severity threshold, multi-location, source preference), persistent weather, nowcasting timelines, driving, health |
 | **Data Display** | Hourly range (48/72h), snowfall, CAPE, sunshine, golden hour, Beaufort colors, outdoor score, yesterday comparison |
@@ -467,11 +468,11 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | **Advanced** | Cache TTL (15/30/60/120 min) (collapsed by default) |
 | **About** | Version, data source, license |
 
-### Card Types (35)
+### Card Types (36)
 
 All cards can be independently shown/hidden and reordered:
 
-Weather Summary, Radar Preview, Rain Next Hour, Hourly Forecast, Temperature Graph, Forecast Evolution, Daily Forecast, UV Index, Wind Compass, Air Quality, Pollen, Outdoor Activity Score, Snowfall, Severe Weather Potential, Golden Hour, Sunshine Duration, Driving Conditions, Health Alerts, What to Wear, Pet Safety, Moon Phase, Humidity & Comfort, Precipitation Forecast, Pressure Trend, Wind Forecast, Today's Details, Cloud Cover, Visibility, On This Day, Aurora / Kp Index, Activity Index, Solar Irradiance, Marine, Flood Risk, Climate Outlook
+Weather Summary, Radar Preview, Rain Next Hour, Hourly Forecast, Temperature Graph, Forecast Evolution, Provider Agreement, Daily Forecast, UV Index, Wind Compass, Air Quality, Pollen, Outdoor Activity Score, Snowfall, Severe Weather Potential, Golden Hour, Sunshine Duration, Driving Conditions, Health Alerts, What to Wear, Pet Safety, Moon Phase, Humidity & Comfort, Precipitation Forecast, Pressure Trend, Wind Forecast, Today's Details, Cloud Cover, Visibility, On This Day, Aurora / Kp Index, Activity Index, Solar Irradiance, Marine, Flood Risk, Climate Outlook
 
 ---
 

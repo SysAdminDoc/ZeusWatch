@@ -43,9 +43,6 @@ Split into remaining lanes:
 
 ## NEXT — 2-3 release cycles out (target v1.25 - v1.27)
 
-### NX-5. Multi-provider agreement card · **T-RELIABILITY**
-Fetch 24h temp + precip from 2-3 providers; render agreement/divergence badge. Gate behind opt-in (API quota multiplication). Effort: medium.
-
 ### NX-6. Per-location offline-first cache · **T-PERF**
 Make cache provider-aware. Add normalized `WeatherDataCacheEntity` with `sourceProvider`, `savedLocationId`, schema version. Serve cached data immediately; refresh in background. Done when location-switch renders <100ms with cached data across all providers. Effort: medium.
 
@@ -367,7 +364,7 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 
 
 - [ ] P3 — Stacked multi-source forecast overlay on Compare screen · UX / **T-SOURCES**
-  Why: Windy and Flowx demonstrate that overlaying temperature or precipitation lines from multiple sources on a single chart reveals forecast agreement and divergence at a glance. ZeusWatch's Compare screen shows side-by-side values but no graphical overlay. NX-5 (multi-provider agreement card) tracks a badge/indicator; this is the complementary visual.
+  Why: Windy and Flowx demonstrate that overlaying temperature or precipitation lines from multiple sources on a single chart reveals forecast agreement and divergence at a glance. ZeusWatch's Compare screen shows side-by-side values but no graphical overlay. The Provider Agreement card now tracks a badge/indicator; this is the complementary visual.
   Evidence: Windy Compare Mode; Flowx stacked model graphs; Ventusky dual-axis overlays; existing `CompareScreen.kt` with side-by-side layout; existing `TemperatureGraph.kt` Canvas rendering.
   Touches: `CompareScreen.kt` (add chart overlay mode), new `MultiSourceChart.kt` composable (extend `TemperatureGraph` Canvas logic to plot 2-3 source lines with distinct colors), `CompareViewModel.kt` (fetch hourly data from selected sources in parallel).
   Acceptance: Compare screen has a toggle for "chart overlay" that plots temperature (and optionally precipitation) from 2-3 selected sources on one graph with a legend; sources use distinct colors; TalkBack announces source names and agreement/divergence summary.

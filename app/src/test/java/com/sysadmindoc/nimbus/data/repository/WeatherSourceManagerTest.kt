@@ -192,6 +192,29 @@ class WeatherSourceManagerTest {
     }
 
     @Test
+    fun getWeatherFromProviderFetchesRequestedProviderWithoutRecordingHealth() = runTest {
+        coEvery { timeZoneResolver.resolveZone(40.0, -74.0, "UTC") } returns ZoneId.of("UTC")
+        coEvery {
+            metNorwayForecastAdapter.getWeather(40.0, -74.0, "Test City", ZoneId.of("UTC"))
+        } returns Result.success(testWeatherData)
+
+        val result = manager.getWeatherFromProvider(
+            provider = WeatherSourceProvider.MET_NORWAY,
+            latitude = 40.0,
+            longitude = -74.0,
+            locationName = "Test City",
+            locationTimeZone = "UTC",
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(WeatherSourceProvider.MET_NORWAY.displayName, result.getOrThrow().sourceProvider)
+        coVerify(exactly = 1) {
+            metNorwayForecastAdapter.getWeather(40.0, -74.0, "Test City", ZoneId.of("UTC"))
+        }
+        confirmVerified(providerHealthRepository)
+    }
+
+    @Test
     fun getWeatherFallsBackWhenPrimaryFailsWithSameProvider() = runTest {
         val settingsWithFallback = defaultSettings.copy(
             sourceConfig = SourceConfig(
