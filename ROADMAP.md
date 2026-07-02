@@ -34,9 +34,6 @@
 
 ## NOW — Current cycle (target v1.24.x)
 
-### N-9. Widget pure-function test coverage · **T-RELIABILITY**
-**Status**: PARTIAL. `WidgetThemeTest`, `WidgetStringsTest`, widget data/provider tests, and worker logic tests cover freshness badges, icon mapping, widget string/accessibility formatting, cache models, saved-city rows, empty saved-city fallbacks, hourly row projection, locale-safe widget location keys, row caps, and refresh planning. Full Glance widget unit tests require Glance 1.2.0+ (repo is on 1.1.1). Keep adding pure-function tests until Glance upgrade lands.
-
 ### N-10. Dependency runway and platform compatibility pass · **T-RELIABILITY** / **T-PERF**
 Split into remaining lanes:
 - **Lane B**: feature-enabling AndroidX upgrades with dedicated test slices — Glance 1.1.1->1.2.0 (only when stable).
