@@ -36,7 +36,6 @@
 
 ### N-10. Dependency runway and platform compatibility pass · **T-RELIABILITY** / **T-PERF**
 Split into remaining lanes:
-- **Lane B**: feature-enabling AndroidX upgrades with dedicated test slices — Glance 1.1.1->1.2.0 (only when stable).
 - **Lane C**: architecture-affecting upgrades (Retrofit 3, OkHttp 5, MapLibre 13, Kotlin 2.3+, Gradle 9, AGP 9) only after migration risk/rollback are documented.
 
 ---
