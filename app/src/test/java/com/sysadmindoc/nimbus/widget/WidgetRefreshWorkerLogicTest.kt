@@ -14,6 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.Locale
 
 class WidgetRefreshWorkerLogicTest {
 
@@ -129,6 +130,18 @@ class WidgetRefreshWorkerLogicTest {
             listOf(WidgetRefreshAssignment(appWidgetId = 101, displayName = "Denver")),
             plan.requests.single().assignments,
         )
+    }
+
+    @Test
+    fun `widgetLocationKey is locale safe and rounds to four decimals`() {
+        val originalLocale = Locale.getDefault()
+        Locale.setDefault(Locale.GERMANY)
+        try {
+            assertEquals("39.7392:-104.9903", widgetLocationKey(39.73924, -104.99034))
+            assertEquals("-33.8688:151.2093", widgetLocationKey(-33.86882, 151.20930))
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
     }
 
     @Test
@@ -290,6 +303,32 @@ class WidgetRefreshWorkerLogicTest {
         assertEquals("Tmrw", items[1].day)
         assertTrue(items[2].day.isNotBlank())
         assertEquals(16, items[2].high)
+    }
+
+    @Test
+    fun `buildWidgetDailyItems caps rows at seven days`() {
+        val today = LocalDate.of(2026, 4, 15)
+        val daily = (0 until 9).map { offset ->
+            DailyConditions(
+                date = today.plusDays(offset.toLong()),
+                weatherCode = WeatherCode.CLEAR_SKY,
+                temperatureHigh = 20.0 + offset,
+                temperatureLow = 10.0 + offset,
+                precipitationProbability = offset,
+                precipitationSum = null,
+                sunrise = null,
+                sunset = null,
+                uvIndexMax = null,
+                windSpeedMax = null,
+                windDirectionDominant = null,
+            )
+        }
+
+        val items = buildWidgetDailyItems(daily = daily, today = today) { it }
+
+        assertEquals(7, items.size)
+        assertEquals("Today", items.first().day)
+        assertEquals(26, items.last().high)
     }
 
     private fun savedLocation(
