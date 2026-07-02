@@ -159,6 +159,8 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 
 The `WeatherSourceManager` supports primary + fallback source per data type with automatic failover. Sources are configurable globally in Settings, saved locations can override forecast and alert providers from the Locations screen, and Settings > Data Sources shows local provider health with a redacted diagnostics export for support.
 
+Forecasts are cached as normalized `WeatherData` per location and provider, so saved-location switches can render cached conditions immediately while the selected source refreshes in the background. Open-Meteo's older response cache is retained only as a migration fallback for Open-Meteo reads.
+
 ### Widgets (Jetpack Glance)
 
 | Widget | Size | Content |
@@ -214,6 +216,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 | **Drag-to-Reorder Locations** | Long-press drag handles to reorder saved locations with batch persistence |
 | **Location Temperature Preview** | Saved location list shows cached temperatures with weather condition icons |
 | **Per-Location Sources** | Saved locations can override forecast and alert providers while falling back to the app defaults when unset |
+| **Provider-Aware Offline Cache** | Saved locations keep source-specific cached forecasts for immediate offline-first rendering before background refresh |
 | **Share as Text** | Formatted weather summary via system share sheet |
 | **Share as Image** | Rendered dark-themed weather card as PNG |
 | **Persistent Notification** | Always-on notification showing current conditions (toggleable) |

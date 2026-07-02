@@ -460,11 +460,15 @@ class MainViewModel @Inject constructor(
             activeLatitude = lat
             activeLongitude = lon
 
+            tryLoadCached(requestId, lat, lon, sourceOverrides, activeLocationId)
+            if (!isLatestWeatherRequest(requestId)) return
+
             val result = repository.getWeather(
                 latitude = lat,
                 longitude = lon,
                 locationName = locationName,
                 sourceOverrides = sourceOverrides,
+                savedLocationId = activeLocationId,
             )
             if (!isLatestWeatherRequest(requestId)) return
             result.fold(
@@ -521,7 +525,9 @@ class MainViewModel @Inject constructor(
                 onFailure = { e ->
                     if (!isLatestWeatherRequest(requestId)) return@fold
                     Log.e(TAG, "fetchWeather: failed: ${e.message}")
-                    if (!tryLoadCached(requestId, lat, lon) && isLatestWeatherRequest(requestId)) {
+                    if (!tryLoadCached(requestId, lat, lon, sourceOverrides, activeLocationId) &&
+                        isLatestWeatherRequest(requestId)
+                    ) {
                         _uiState.update {
                             it.copy(isLoading = false, isRefreshing = false, error = userFriendlyError(e))
                         }
@@ -577,6 +583,8 @@ class MainViewModel @Inject constructor(
         requestId: Long? = null,
         lat: Double? = null,
         lon: Double? = null,
+        sourceOverrides: SourceOverrides = SourceOverrides(),
+        savedLocationId: Long? = null,
     ): Boolean {
         return try {
             if (requestId != null && !isLatestWeatherRequest(requestId)) return false
@@ -590,7 +598,12 @@ class MainViewModel @Inject constructor(
                 cacheLat = lastLoc.latitude
                 cacheLon = lastLoc.longitude
             }
-            val cached = repository.getCachedWeather(cacheLat, cacheLon)
+            val cached = repository.getCachedWeather(
+                latitude = cacheLat,
+                longitude = cacheLon,
+                sourceOverrides = sourceOverrides,
+                savedLocationId = savedLocationId,
+            )
             if (cached != null) {
                 if (requestId == null || isLatestWeatherRequest(requestId)) {
                     activeLatitude = cacheLat

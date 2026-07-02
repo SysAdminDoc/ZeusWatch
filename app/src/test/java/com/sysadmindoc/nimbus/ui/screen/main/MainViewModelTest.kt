@@ -133,7 +133,7 @@ class MainViewModelTest {
         coEvery { forecastEvolutionRepository.getForecastEvolution(any(), any(), any()) } returns Result.failure(
             IllegalStateException("disabled in default tests"),
         )
-        coEvery { weatherRepository.getWeather(any(), any(), any(), any(), any()) } coAnswers {
+        coEvery { weatherRepository.getWeather(any(), any(), any(), any(), any(), any()) } coAnswers {
             val latitude = firstArg<Double>()
             val longitude = secondArg<Double>()
             val locationName = thirdArg<String?>() ?: testWeatherData.location.name
@@ -151,7 +151,7 @@ class MainViewModelTest {
         }
         coEvery { weatherRepository.getMinutelyPrecipitation(any(), any()) } coAnswers { Result.success(emptyList()) }
         coEvery { weatherRepository.getYesterdayWeather(any(), any()) } coAnswers { Result.success(null) }
-        coEvery { weatherRepository.getCachedWeather(any(), any()) } returns null
+        coEvery { weatherRepository.getCachedWeather(any(), any(), any(), any()) } returns null
         coEvery { radarRepository.getRadarFrames(any()) } coAnswers {
             Result.success(RadarFrameSet(past = emptyList(), forecast = emptyList()))
         }
@@ -292,7 +292,7 @@ class MainViewModelTest {
     fun `loadWeather uses retained cached location without prompting for permission`() = runTest {
         every { locationProvider.hasLocationPermission } returns false
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
-        coEvery { weatherRepository.getCachedWeather(39.7, -104.9) } returns testWeatherData
+        coEvery { weatherRepository.getCachedWeather(39.7, -104.9, SourceOverrides(), null) } returns testWeatherData
 
         viewModel = createAndAdvance()
 
@@ -351,11 +351,11 @@ class MainViewModelTest {
     @Test
     fun `loadWeather falls back to cache on API error`() = runTest {
         stubLocationSuccess()
-        coEvery { weatherRepository.getWeather(any(), any(), any(), any(), any()) } coAnswers {
+        coEvery { weatherRepository.getWeather(any(), any(), any(), any(), any(), any()) } coAnswers {
             Result.failure(Exception("Network error"))
         }
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
-        coEvery { weatherRepository.getCachedWeather(39.7, -104.9) } returns testWeatherData
+        coEvery { weatherRepository.getCachedWeather(39.7, -104.9, SourceOverrides(), null) } returns testWeatherData
 
         viewModel = createAndAdvance()
         val state = viewModel.uiState.value
@@ -366,7 +366,7 @@ class MainViewModelTest {
     @Test
     fun `loadWeather shows error when API fails and no cache`() = runTest {
         stubLocationSuccess()
-        coEvery { weatherRepository.getWeather(any(), any(), any(), any(), any()) } coAnswers {
+        coEvery { weatherRepository.getWeather(any(), any(), any(), any(), any(), any()) } coAnswers {
             Result.failure(Exception("Network error"))
         }
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
@@ -381,10 +381,10 @@ class MainViewModelTest {
     fun `failed fetch for a location does not render another location's cache`() = runTest {
         every { locationProvider.hasLocationPermission } returns false
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
-        coEvery { weatherRepository.getCachedWeather(39.7, -104.9) } returns testWeatherData
-        coEvery { weatherRepository.getCachedWeather(seattle.latitude, seattle.longitude) } returns null
+        coEvery { weatherRepository.getCachedWeather(39.7, -104.9, SourceOverrides(), null) } returns testWeatherData
+        coEvery { weatherRepository.getCachedWeather(seattle.latitude, seattle.longitude, SourceOverrides(), seattle.id) } returns null
         coEvery {
-            weatherRepository.getWeather(seattle.latitude, seattle.longitude, any(), null, any())
+            weatherRepository.getWeather(seattle.latitude, seattle.longitude, any(), null, any(), seattle.id)
         } returns Result.failure(Exception("Network error"))
 
         viewModel = createAndAdvance()
@@ -405,12 +405,12 @@ class MainViewModelTest {
     fun `failed fetch falls back to the requested location's own cache`() = runTest {
         every { locationProvider.hasLocationPermission } returns false
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
-        coEvery { weatherRepository.getCachedWeather(39.7, -104.9) } returns testWeatherData
+        coEvery { weatherRepository.getCachedWeather(39.7, -104.9, SourceOverrides(), null) } returns testWeatherData
         coEvery {
-            weatherRepository.getCachedWeather(seattle.latitude, seattle.longitude)
+            weatherRepository.getCachedWeather(seattle.latitude, seattle.longitude, SourceOverrides(), seattle.id)
         } returns weatherFor(seattle)
         coEvery {
-            weatherRepository.getWeather(seattle.latitude, seattle.longitude, any(), null, any())
+            weatherRepository.getWeather(seattle.latitude, seattle.longitude, any(), null, any(), seattle.id)
         } returns Result.failure(Exception("Network error"))
 
         viewModel = createAndAdvance()
@@ -421,6 +421,48 @@ class MainViewModelTest {
         assertEquals("Seattle", state.weatherData?.location?.name)
         assertTrue(state.isCached)
         assertNull(state.error)
+    }
+
+    @Test
+    fun `saved location switch renders provider cache before live refresh completes`() = runTest {
+        every { locationProvider.hasLocationPermission } returns false
+        val provider = WeatherSourceProvider.MET_NORWAY
+        val saved = seattle.copy(forecastSource = provider.name)
+        val overrides = SourceOverrides(forecast = provider)
+        val cachedWeather = weatherFor(saved).copy(sourceProvider = provider.displayName)
+        val liveWeather = weatherFor(saved).copy(
+            current = weatherFor(saved).current.copy(temperature = 18.0),
+            sourceProvider = provider.displayName,
+        )
+        val liveStarted = CompletableDeferred<Unit>()
+        val releaseLive = CompletableDeferred<Unit>()
+        coEvery {
+            weatherRepository.getCachedWeather(saved.latitude, saved.longitude, overrides, saved.id)
+        } returns cachedWeather
+        coEvery {
+            weatherRepository.getWeather(saved.latitude, saved.longitude, saved.name, null, overrides, saved.id)
+        } coAnswers {
+            liveStarted.complete(Unit)
+            releaseLive.await()
+            Result.success(liveWeather)
+        }
+
+        viewModel = createAndAdvance()
+        viewModel.loadWeatherForCoords(saved.latitude, saved.longitude, saved.id, saved.name, overrides)
+        liveStarted.await()
+
+        val cachedState = viewModel.uiState.value
+        assertEquals("Seattle", cachedState.weatherData?.location?.name)
+        assertTrue(cachedState.isCached)
+        assertFalse(cachedState.isLoading)
+
+        releaseLive.complete(Unit)
+        advanceUntilIdle()
+
+        val liveState = viewModel.uiState.value
+        assertEquals("Seattle", liveState.weatherData?.location?.name)
+        assertFalse(liveState.isCached)
+        assertEquals(18.0, liveState.weatherData?.current?.temperature ?: 0.0, 0.01)
     }
 
     @Test
@@ -500,7 +542,7 @@ class MainViewModelTest {
         assertEquals(0, state.currentPage)
         assertEquals(listOf(seattle), state.savedLocations)
         assertEquals("Seattle", state.weatherData?.location?.name)
-        coVerify { weatherRepository.getWeather(seattle.latitude, seattle.longitude, seattle.name, null, any()) }
+        coVerify { weatherRepository.getWeather(seattle.latitude, seattle.longitude, seattle.name, null, any(), seattle.id) }
     }
 
     @Test
@@ -527,7 +569,7 @@ class MainViewModelTest {
             )
         )
         coEvery {
-            weatherRepository.getWeather(seattle.latitude, seattle.longitude, seattle.name, null, any())
+            weatherRepository.getWeather(seattle.latitude, seattle.longitude, seattle.name, null, any(), seattle.id)
         } returns Result.failure(Exception("Network error"))
 
         viewModel = createAndAdvance()
@@ -559,7 +601,7 @@ class MainViewModelTest {
         val releaseSecondRequest = CompletableDeferred<Unit>()
         var requestCount = 0
 
-        coEvery { weatherRepository.getWeather(any(), any(), any(), any(), any()) } coAnswers {
+        coEvery { weatherRepository.getWeather(any(), any(), any(), any(), any(), any()) } coAnswers {
             when (++requestCount) {
                 1 -> {
                     firstRequestStarted.complete(Unit)

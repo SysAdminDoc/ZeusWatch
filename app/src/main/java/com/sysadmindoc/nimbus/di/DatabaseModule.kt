@@ -27,6 +27,7 @@ object DatabaseModule {
             .addMigrations(NimbusDatabase.MIGRATION_1_2)
             .addMigrations(NimbusDatabase.MIGRATION_2_3)
             .addMigrations(NimbusDatabase.MIGRATION_3_4)
+            .addMigrations(NimbusDatabase.MIGRATION_4_5)
             .build()
     }
 

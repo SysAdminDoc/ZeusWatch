@@ -43,9 +43,6 @@ Split into remaining lanes:
 
 ## NEXT — 2-3 release cycles out (target v1.25 - v1.27)
 
-### NX-6. Per-location offline-first cache · **T-PERF**
-Make cache provider-aware. Add normalized `WeatherDataCacheEntity` with `sourceProvider`, `savedLocationId`, schema version. Serve cached data immediately; refresh in background. Done when location-switch renders <100ms with cached data across all providers. Effort: medium.
-
 ### NX-7. Baseline Profiles + Macrobenchmark startup gate · **T-PERF**
 Add `:benchmark` module. Local release verification asserts p95 cold start <1200ms. Effort: medium.
 
@@ -332,7 +329,7 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 ### P3 — Polish
 
 
-> Cross-references (already tracked, reinforced by this audit): **Baseline Profile / Macrobenchmark startup gate = NX-7** (still unstarted — no `:baselineprofile` module, plugin not applied; recommend pulling forward, it is the single biggest cold-start win for a card-heavy Compose app). Provider-metadata registry = **NX-20** (`WeatherSourceAdapterModule` is the first shipped registry slice; metadata remains). Provider-aware cache = **NX-6** (prereq for the stale-cache P1). Already-fixed since the v1.21.x audit and intentionally **not** re-listed: Firestore world-delete vector, alert-worker total-failure retry, and the `WeatherParticles` lifecycle `derivedStateOf` bug (now uses `currentStateAsState()`).
+> Cross-references (already tracked, reinforced by this audit): **Baseline Profile / Macrobenchmark startup gate = NX-7** (still unstarted — no `:baselineprofile` module, plugin not applied; recommend pulling forward, it is the single biggest cold-start win for a card-heavy Compose app). Provider-metadata registry = **NX-20** (`WeatherSourceAdapterModule` is the first shipped registry slice; metadata remains). Already-fixed since the v1.21.x audit and intentionally **not** re-listed: Firestore world-delete vector, provider-aware cache, alert-worker total-failure retry, and the `WeatherParticles` lifecycle `derivedStateOf` bug (now uses `currentStateAsState()`).
 
 ## Research-Driven Additions
 

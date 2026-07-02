@@ -62,7 +62,7 @@ class LocationsViewModelTest {
         weatherRepository = mockk(relaxed = true)
         userPreferences = mockk(relaxed = true)
         savedLocationsFlow = MutableStateFlow(savedLocations)
-        coEvery { weatherRepository.getCachedWeather(any(), any()) } returns null
+        coEvery { weatherRepository.getCachedWeather(any<SavedLocationEntity>()) } returns null
         every { locationRepository.savedLocations } returns savedLocationsFlow
         every { userPreferences.recentLocationSearches } returns flowOf(emptyList())
         coEvery { userPreferences.addRecentLocationSearch(any()) } returns Unit
