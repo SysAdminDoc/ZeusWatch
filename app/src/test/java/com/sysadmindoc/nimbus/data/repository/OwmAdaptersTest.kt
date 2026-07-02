@@ -76,7 +76,7 @@ class OwmForecastAdapterTest {
         val api = mockk<OpenWeatherMapApi>()
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key-abc"))
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns makeOneCallResponse(
             nowEpoch = nowEpoch,
             windSpeedMs = 5.0, // 5 m/s = 18 km/h
         )
@@ -93,7 +93,7 @@ class OwmForecastAdapterTest {
         val api = mockk<OpenWeatherMapApi>()
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key-abc"))
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns makeOneCallResponse(
             nowEpoch = nowEpoch,
             windSpeedMs = 3.0,
             windGustMs = 8.0, // 8 m/s = 28.8 km/h
@@ -109,7 +109,7 @@ class OwmForecastAdapterTest {
         val api = mockk<OpenWeatherMapApi>()
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns makeOneCallResponse(
             nowEpoch = nowEpoch,
             visibilityM = 8000, // OWM sends meters; stored as-is
         )
@@ -123,7 +123,7 @@ class OwmForecastAdapterTest {
         val api = mockk<OpenWeatherMapApi>()
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns makeOneCallResponse(
             nowEpoch = nowEpoch,
             weatherId = 800, // Clear sky
         )
@@ -137,7 +137,7 @@ class OwmForecastAdapterTest {
         val api = mockk<OpenWeatherMapApi>()
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns makeOneCallResponse(
             nowEpoch = nowEpoch,
             weatherId = 200, // Thunderstorm with light rain
         )
@@ -153,7 +153,7 @@ class OwmForecastAdapterTest {
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
 
         // Day icon
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns makeOneCallResponse(
             nowEpoch = nowEpoch,
             icon = "01d",
         )
@@ -161,7 +161,7 @@ class OwmForecastAdapterTest {
         assertTrue(dayData.current.isDay)
 
         // Night icon
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns makeOneCallResponse(
             nowEpoch = nowEpoch,
             icon = "01n",
         )
@@ -175,7 +175,7 @@ class OwmForecastAdapterTest {
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
         val futureEpoch = nowEpoch + 3600L // 1h ahead
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns makeOneCallResponse(
             nowEpoch = nowEpoch,
             hourly = listOf(
                 OwmHourly(
@@ -199,7 +199,7 @@ class OwmForecastAdapterTest {
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
         val futureEpoch = nowEpoch + 3600L
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns makeOneCallResponse(
             nowEpoch = nowEpoch,
             hourly = listOf(
                 OwmHourly(dt = futureEpoch, temp = 18.0, pop = 1.5,
@@ -227,7 +227,7 @@ class OwmForecastAdapterTest {
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
         val futureEpoch = nowEpoch + 3600L
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns makeOneCallResponse(
             nowEpoch = nowEpoch,
             currentSnow1h = 2.0, // mm → 0.2 cm
             hourly = listOf(
@@ -259,7 +259,7 @@ class OwmForecastAdapterTest {
         val api = mockk<OpenWeatherMapApi>()
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns makeOneCallResponse(
             nowEpoch = nowEpoch,
             daily = listOf(
                 OwmDaily(
@@ -279,7 +279,7 @@ class OwmForecastAdapterTest {
         val api = mockk<OpenWeatherMapApi>()
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns makeOneCallResponse(
             nowEpoch = nowEpoch,
             daily = listOf(
                 OwmDaily(
@@ -299,7 +299,7 @@ class OwmForecastAdapterTest {
         val api = mockk<OpenWeatherMapApi>()
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns makeOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns makeOneCallResponse(
             nowEpoch = nowEpoch,
             daily = listOf(
                 OwmDaily(
@@ -324,7 +324,7 @@ class OwmAlertAdapterTest {
         val api = mockk<OpenWeatherMapApi>()
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns OwmOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns OwmOneCallResponse(
             lat = 0.0, lon = 0.0,
             alerts = listOf(
                 OwmAlert(event = "Tornado Warning", start = nowEpoch, end = nowEpoch + 3600,
@@ -344,7 +344,7 @@ class OwmAlertAdapterTest {
         val api = mockk<OpenWeatherMapApi>()
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns OwmOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns OwmOneCallResponse(
             lat = 0.0, lon = 0.0,
             alerts = listOf(
                 OwmAlert(event = "Flood Warning", start = nowEpoch, end = nowEpoch + 3600,
@@ -362,7 +362,7 @@ class OwmAlertAdapterTest {
         val api = mockk<OpenWeatherMapApi>()
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns OwmOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns OwmOneCallResponse(
             lat = 0.0, lon = 0.0,
             alerts = listOf(
                 OwmAlert(event = "Winter Watch", start = nowEpoch, end = nowEpoch + 3600,
@@ -380,7 +380,7 @@ class OwmAlertAdapterTest {
         val api = mockk<OpenWeatherMapApi>()
         val prefs = mockk<UserPreferences>()
         every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "key"))
-        coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns OwmOneCallResponse(
+        coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns OwmOneCallResponse(
             lat = 0.0, lon = 0.0,
             alerts = emptyList(),
         )

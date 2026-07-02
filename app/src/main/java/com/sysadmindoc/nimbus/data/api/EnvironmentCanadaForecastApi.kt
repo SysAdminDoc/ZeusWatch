@@ -67,7 +67,9 @@ data class EcccGeometry(
 @Serializable
 data class EcccProperties(
     @SerialName("city_en") val cityEn: String? = null,
+    @SerialName("city_fr") val cityFr: String? = null,
     @SerialName("name_en") val nameEn: String? = null,
+    @SerialName("name_fr") val nameFr: String? = null,
     @SerialName("timestamp_utc") val timestampUtc: String? = null,
     val currentConditions: EcccCurrentConditions? = null,
     val forecastGroup: EcccForecastGroup? = null,

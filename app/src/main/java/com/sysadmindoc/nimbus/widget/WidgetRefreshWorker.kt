@@ -633,6 +633,7 @@ internal fun buildWidgetSavedCity(
             ?.toWidgetEpochMillis()
             ?: 0L,
         sourceProvider = weatherData?.sourceProvider,
+        conditionText = weatherData?.current?.sourceConditionText,
     )
 }
 
@@ -672,6 +673,7 @@ internal fun buildWidgetWeatherData(
         updatedAt = weatherData.lastUpdated.toWidgetEpochMillis(),
         observedAt = weatherData.current.observationTime?.toWidgetEpochMillis() ?: 0L,
         sourceProvider = weatherData.sourceProvider,
+        conditionText = weatherData.current.sourceConditionText,
     )
 }
 
@@ -705,6 +707,7 @@ internal fun buildWidgetHourlyItems(
             code = hour.weatherCode.code,
             isDay = hour.isDay,
             precipChance = hour.precipitationProbability,
+            conditionText = hour.sourceConditionText,
         )
     }
 }
@@ -728,6 +731,7 @@ internal fun buildWidgetDailyItems(
             low = convertTemp(day.temperatureLow).toInt(),
             code = day.weatherCode.code,
             precipChance = day.precipitationProbability,
+            conditionText = day.sourceConditionText,
         )
     }
 }

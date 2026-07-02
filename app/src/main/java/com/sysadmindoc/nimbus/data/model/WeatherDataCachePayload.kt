@@ -49,6 +49,7 @@ data class CachedCurrentConditions(
     val dailyLow: Double,
     val sunrise: String? = null,
     val sunset: String? = null,
+    val sourceConditionText: String? = null,
 )
 
 @Serializable
@@ -72,6 +73,7 @@ data class CachedHourlyConditions(
     val surfacePressure: Double? = null,
     val shortwaveRadiation: Double? = null,
     val directNormalIrradiance: Double? = null,
+    val sourceConditionText: String? = null,
 )
 
 @Serializable
@@ -91,6 +93,7 @@ data class CachedDailyConditions(
     val sunshineDuration: Double? = null,
     val windGustsMax: Double? = null,
     val precipitationHours: Double? = null,
+    val sourceConditionText: String? = null,
 )
 
 fun WeatherData.toCachePayload(): WeatherDataCachePayload =
@@ -159,6 +162,7 @@ private fun CurrentConditions.toCachePayload(): CachedCurrentConditions =
         dailyLow = dailyLow,
         sunrise = sunrise,
         sunset = sunset,
+        sourceConditionText = sourceConditionText,
     )
 
 private fun CachedCurrentConditions.toCurrentConditions(): CurrentConditions =
@@ -185,6 +189,7 @@ private fun CachedCurrentConditions.toCurrentConditions(): CurrentConditions =
         dailyLow = dailyLow,
         sunrise = sunrise,
         sunset = sunset,
+        sourceConditionText = sourceConditionText,
     )
 
 private fun HourlyConditions.toCachePayload(): CachedHourlyConditions =
@@ -208,6 +213,7 @@ private fun HourlyConditions.toCachePayload(): CachedHourlyConditions =
         surfacePressure = surfacePressure,
         shortwaveRadiation = shortwaveRadiation,
         directNormalIrradiance = directNormalIrradiance,
+        sourceConditionText = sourceConditionText,
     )
 
 private fun CachedHourlyConditions.toHourlyConditions(): HourlyConditions? {
@@ -232,6 +238,7 @@ private fun CachedHourlyConditions.toHourlyConditions(): HourlyConditions? {
         surfacePressure = surfacePressure,
         shortwaveRadiation = shortwaveRadiation,
         directNormalIrradiance = directNormalIrradiance,
+        sourceConditionText = sourceConditionText,
     )
 }
 
@@ -252,6 +259,7 @@ private fun DailyConditions.toCachePayload(): CachedDailyConditions =
         sunshineDuration = sunshineDuration,
         windGustsMax = windGustsMax,
         precipitationHours = precipitationHours,
+        sourceConditionText = sourceConditionText,
     )
 
 private fun CachedDailyConditions.toDailyConditions(): DailyConditions? {
@@ -272,6 +280,7 @@ private fun CachedDailyConditions.toDailyConditions(): DailyConditions? {
         sunshineDuration = sunshineDuration,
         windGustsMax = windGustsMax,
         precipitationHours = precipitationHours,
+        sourceConditionText = sourceConditionText,
     )
 }
 

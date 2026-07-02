@@ -3,6 +3,7 @@ package com.sysadmindoc.nimbus.data.api
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import com.sysadmindoc.nimbus.data.util.SourceLocaleText
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +30,10 @@ class EnvironmentCanadaAlertAdapter @Inject constructor(
             if (province == null) {
                 return Result.success(emptyList())
             }
-            val response = ecApi.getProvinceAlerts(province)
+            val response = ecApi.getProvinceAlerts(
+                province = province,
+                language = SourceLocaleText.preferredEnvironmentCanadaAlertSuffix(),
+            )
             val alerts = response.entries.mapNotNull { entry ->
                 val title = entry.title ?: return@mapNotNull null
                 // Skip non-alert entries (e.g. "No watches or warnings in effect")

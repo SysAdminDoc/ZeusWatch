@@ -65,6 +65,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.ForecastUncertaintyDetail
 import com.sysadmindoc.nimbus.util.ForecastUncertaintyExplainer
 import com.sysadmindoc.nimbus.util.ForecastUncertaintyLevel
+import com.sysadmindoc.nimbus.util.conditionDescription
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -80,7 +81,7 @@ fun HourlyForecastDetailSheet(
     val title = WeatherFormatter.formatRelativeHourLabel(context, hour.time, referenceTime, settings)
     ForecastDetailSheetFrame(
         title = stringResource(R.string.forecast_detail_hourly_title, title),
-        subtitle = stringResource(hour.weatherCode.descriptionRes()),
+        subtitle = hour.conditionDescription(context),
         weatherCode = hour.weatherCode,
         isDay = hour.isDay,
         heroValue = WeatherFormatter.formatTemperature(hour.temperature, settings),
@@ -106,7 +107,7 @@ fun DailyForecastDetailSheet(
     val dayLabel = WeatherFormatter.formatRelativeDayLabel(context, day.date, referenceDate)
     ForecastDetailSheetFrame(
         title = stringResource(R.string.forecast_detail_daily_title, dayLabel),
-        subtitle = stringResource(day.weatherCode.descriptionRes()),
+        subtitle = day.conditionDescription(context),
         weatherCode = day.weatherCode,
         isDay = true,
         heroValue = stringResource(

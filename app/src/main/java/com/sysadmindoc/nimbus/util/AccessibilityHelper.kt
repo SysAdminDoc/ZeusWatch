@@ -26,7 +26,7 @@ object AccessibilityHelper {
     fun currentConditions(current: CurrentConditions, locationName: String, s: NimbusSettings = NimbusSettings()): String {
         val temp = WeatherFormatter.formatTemperature(current.temperature, s)
         val feelsLike = WeatherFormatter.formatTemperature(current.feelsLike, s)
-        val condition = current.weatherCode.description
+        val condition = current.sourceConditionText.takeUnlessBlank() ?: current.weatherCode.description
         val high = WeatherFormatter.formatTemperature(current.dailyHigh, s)
         val low = WeatherFormatter.formatTemperature(current.dailyLow, s)
         return buildString {
@@ -139,7 +139,7 @@ object AccessibilityHelper {
             R.string.current_conditions_semantics,
             locationName,
             WeatherFormatter.formatTemperature(current.temperature, s),
-            current.weatherCode.localizedDescription(context),
+            current.conditionDescription(context),
             WeatherFormatter.formatTemperature(current.feelsLike, s),
             WeatherFormatter.formatTemperature(current.dailyHigh, s),
             WeatherFormatter.formatTemperature(current.dailyLow, s),
@@ -334,7 +334,7 @@ object AccessibilityHelper {
                 val label = WeatherFormatter.formatRelativeDayLabel(day.date, referenceDate)
                 val high = WeatherFormatter.formatTemperature(day.temperatureHigh, s)
                 val low = WeatherFormatter.formatTemperature(day.temperatureLow, s)
-                append("$label: ${day.weatherCode.description}, ")
+                append("$label: ${day.sourceConditionText.takeUnlessBlank() ?: day.weatherCode.description}, ")
                 append("high $high, low $low. ")
             }
             if (daily.size > 3) append("And ${daily.size - 3} more days.")
@@ -361,7 +361,10 @@ object AccessibilityHelper {
     fun weatherSummary(data: WeatherData, s: NimbusSettings = NimbusSettings()): String {
         return buildString {
             appendLine("Weather for ${data.location.name}")
-            appendLine("${WeatherFormatter.formatTemperature(data.current.temperature, s)} - ${data.current.weatherCode.description}")
+            appendLine(
+                "${WeatherFormatter.formatTemperature(data.current.temperature, s)} - " +
+                    (data.current.sourceConditionText.takeUnlessBlank() ?: data.current.weatherCode.description),
+            )
             appendLine("Feels like ${WeatherFormatter.formatTemperature(data.current.feelsLike, s)}")
             appendLine("High ${WeatherFormatter.formatTemperature(data.current.dailyHigh, s)} / Low ${WeatherFormatter.formatTemperature(data.current.dailyLow, s)}")
             appendLine("Wind: ${WeatherFormatter.formatWindSpeed(data.current.windSpeed, data.current.windDirection, s)}")
@@ -424,4 +427,7 @@ object AccessibilityHelper {
 
     private const val NOWCAST_ENTRY_LIMIT = 8
     private const val RAIN_THRESHOLD_MM = 0.1
+
+    private fun String?.takeUnlessBlank(): String? =
+        this?.trim()?.takeIf { it.isNotBlank() }
 }

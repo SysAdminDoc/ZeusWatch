@@ -19,9 +19,10 @@ interface EnvironmentCanadaAlertApi {
      * Get active alerts for a province.
      * @param province Two-letter province code, e.g. "on", "bc", "ab".
      */
-    @GET("rss/battleboard/{province}00_e.xml")
+    @GET("rss/battleboard/{province}00_{language}.xml")
     suspend fun getProvinceAlerts(
         @Path("province") province: String,
+        @Path("language") language: String = "e",
     ): EnvironmentCanadaResponse
 
     companion object {

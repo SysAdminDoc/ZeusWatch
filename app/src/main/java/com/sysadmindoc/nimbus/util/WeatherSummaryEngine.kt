@@ -71,7 +71,7 @@ object WeatherSummaryEngine {
 
         // Opening: time-of-day greeting + condition
         val timeOfDay = timeOfDayLabel(current, context)
-        val conditionPhrase = conditionPhrase(current.weatherCode, current.isDay, context)
+        val conditionPhrase = conditionPhrase(current, context)
         parts.add(
             summaryString(
                 context,
@@ -166,10 +166,11 @@ object WeatherSummaryEngine {
         }
     }
 
-    private fun conditionPhrase(code: WeatherCode, isDay: Boolean, context: Context? = null): String {
-        if (context != null) return code.localizedDescription(context)
-        val phrases = if (isDay) daytimeConditionPhrases else nighttimeConditionPhrases
-        return phrases[code] ?: "Variable conditions"
+    private fun conditionPhrase(current: CurrentConditions, context: Context? = null): String {
+        current.sourceConditionText?.trim()?.takeIf { it.isNotBlank() }?.let { return it }
+        if (context != null) return current.weatherCode.localizedDescription(context)
+        val phrases = if (current.isDay) daytimeConditionPhrases else nighttimeConditionPhrases
+        return phrases[current.weatherCode] ?: "Variable conditions"
     }
 
     private fun precipitationOutlook(hourly: List<HourlyConditions>, context: Context?): String? {
@@ -235,7 +236,7 @@ object WeatherSummaryEngine {
         // Attempt AI generation with formatted display values
         return try {
             val currentTemp = WeatherFormatter.formatTemperatureUnit(current.temperature, s)
-            val condition = conditionPhrase(current.weatherCode, current.isDay, context)
+            val condition = conditionPhrase(current, context)
             val high = WeatherFormatter.formatTemperatureUnit(
                 today?.temperatureHigh ?: current.dailyHigh, s,
             )
@@ -270,7 +271,7 @@ object WeatherSummaryEngine {
         s: NimbusSettings,
         context: Context?,
     ): String {
-        val condition = conditionPhrase(current.weatherCode, current.isDay, context)
+        val condition = conditionPhrase(current, context)
         val timeLabel = timeOfDayLabel(current, context)
         val temp = WeatherFormatter.formatTemperatureUnit(current.temperature, s)
         val high = WeatherFormatter.formatTemperatureUnit(

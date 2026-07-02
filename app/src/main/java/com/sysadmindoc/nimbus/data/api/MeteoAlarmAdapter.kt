@@ -3,6 +3,7 @@ package com.sysadmindoc.nimbus.data.api
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import com.sysadmindoc.nimbus.data.util.SourceLocaleText
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -48,7 +49,7 @@ class MeteoAlarmAdapter @Inject constructor(
             val alerts = response.warnings.flatMap { warning ->
                 val alertPayload = warning.alert
                 val warningInfo = alertPayload?.info?.takeIf { it.isNotEmpty() } ?: warning.info
-                warningInfo.mapNotNull { info ->
+                SourceLocaleText.filterByLocale(warningInfo, languageTag = { it.language }).mapNotNull { info ->
                     val event = info.event ?: return@mapNotNull null
                     val areaDesc = info.area
                         .mapNotNull { it.areaDesc }

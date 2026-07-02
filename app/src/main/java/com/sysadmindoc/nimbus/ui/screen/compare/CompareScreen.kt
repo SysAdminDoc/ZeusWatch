@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -70,6 +71,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusSurfaceVariant
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.conditionDescription
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -433,6 +435,7 @@ private fun CompareConditionColumn(
     weather: WeatherData,
     settings: NimbusSettings,
 ) {
+    val context = LocalContext.current
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         WeatherIcon(
             weatherCode = weather.current.weatherCode,
@@ -446,7 +449,7 @@ private fun CompareConditionColumn(
             color = NimbusTextPrimary,
         )
         Text(
-            stringResource(weather.current.weatherCode.descriptionRes()),
+            weather.current.conditionDescription(context),
             style = MaterialTheme.typography.labelSmall,
             color = NimbusTextSecondary,
             maxLines = 2,

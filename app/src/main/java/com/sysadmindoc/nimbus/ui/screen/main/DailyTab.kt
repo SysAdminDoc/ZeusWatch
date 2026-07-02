@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +48,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.conditionDescription
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -135,6 +137,7 @@ private fun DailyDetailRow(
     onClick: () -> Unit,
 ) {
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
+    val context = LocalContext.current
     val shape = RoundedCornerShape(12.dp)
     Column(
         modifier = Modifier
@@ -183,7 +186,7 @@ private fun DailyDetailRow(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    stringResource(day.weatherCode.descriptionRes()),
+                    day.conditionDescription(context),
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                 )

@@ -48,6 +48,7 @@ data class MeteoAlarmAlert(
 
 @Serializable
 data class MeteoAlarmInfo(
+    val language: String? = null,
     val event: String? = null,
     val severity: String? = null,        // Minor, Moderate, Severe, Extreme
     val urgency: String? = null,         // Immediate, Expected, Future, Past

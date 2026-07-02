@@ -132,7 +132,7 @@ private fun SavedCityRow(
         city.weatherCode?.let { code ->
             Image(
                 provider = ImageProvider(weatherIconRes(code, city.isDay)),
-                contentDescription = strings.weatherDescription(code, city.isDay),
+                contentDescription = strings.weatherDescription(code, city.isDay, city.conditionText),
                 modifier = GlanceModifier.size(22.dp),
             )
         } ?: Spacer(modifier = GlanceModifier.size(22.dp))

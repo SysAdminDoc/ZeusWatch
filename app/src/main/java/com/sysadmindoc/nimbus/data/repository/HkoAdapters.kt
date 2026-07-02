@@ -17,6 +17,7 @@ import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.data.util.SourceLocaleText
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -54,9 +55,10 @@ class HkoForecastAdapter @Inject constructor(
             "HKO forecast coverage is limited to Hong Kong"
         }
 
-        val forecast = api.getForecast9Day()
-        val current = api.getCurrentReport()
-        val localForecast = api.getLocalForecast()
+        val language = SourceLocaleText.preferredHkoLanguage()
+        val forecast = api.getForecast9Day(lang = language)
+        val current = api.getCurrentReport(lang = language)
+        val localForecast = api.getLocalForecast(lang = language)
 
         mapToWeatherData(
             forecast = forecast,
@@ -131,6 +133,7 @@ class HkoForecastAdapter @Inject constructor(
                 dailyLow = todayDaily?.temperatureLow ?: temperature,
                 sunrise = null,
                 sunset = null,
+                sourceConditionText = localForecast.forecastDesc.takeUnlessBlank(),
             ),
             hourly = emptyList(),
             daily = daily,
@@ -158,6 +161,7 @@ class HkoForecastAdapter @Inject constructor(
             uvIndexMax = null,
             windSpeedMax = null,
             windDirectionDominant = null,
+            sourceConditionText = day.forecastWeather.takeUnlessBlank(),
         )
     }
 }
@@ -174,8 +178,9 @@ class HkoAlertAdapter @Inject constructor(
             "HKO alert coverage is limited to Hong Kong"
         }
 
-        val summaries = api.getWarningSummary()
-        val details = api.getWarningInfo().details
+        val language = SourceLocaleText.preferredHkoLanguage()
+        val summaries = api.getWarningSummary(lang = language)
+        val details = api.getWarningInfo(lang = language).details
         if (details.isNotEmpty()) {
             details.mapIndexed { index, detail -> mapDetail(index, detail, summaries) }
         } else {
@@ -358,3 +363,6 @@ private fun hkoWarningName(statementCode: String?, warningCode: String?): String
     "WTS" -> "Thunderstorm Warning"
     else -> "HKO Weather Warning"
 }
+
+private fun String?.takeUnlessBlank(): String? =
+    this?.trim()?.takeIf { it.isNotBlank() }

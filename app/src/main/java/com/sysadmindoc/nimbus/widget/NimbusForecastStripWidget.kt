@@ -87,7 +87,7 @@ private fun ForecastStripContent(
                 Spacer(modifier = GlanceModifier.height(3.dp))
                 Image(
                     provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
-                    contentDescription = strings.weatherDescription(data.weatherCode, data.isDay),
+                    contentDescription = strings.weatherDescription(data.weatherCode, data.isDay, data.conditionText),
                     modifier = GlanceModifier.size(18.dp),
                 )
                 Text(
@@ -133,7 +133,7 @@ private fun ForecastStripContent(
                         )
                         Image(
                             provider = ImageProvider(weatherIconRes(hour.code, hour.isDay)),
-                            contentDescription = strings.weatherDescription(hour.code, hour.isDay),
+                            contentDescription = strings.weatherDescription(hour.code, hour.isDay, hour.conditionText),
                             modifier = GlanceModifier.size(14.dp),
                         )
                         Text(

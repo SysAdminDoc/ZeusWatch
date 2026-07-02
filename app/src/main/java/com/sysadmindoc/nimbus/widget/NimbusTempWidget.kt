@@ -74,7 +74,7 @@ private fun TempWidgetContent(
         } else {
             Image(
                 provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
-                contentDescription = strings.weatherDescription(data.weatherCode, data.isDay),
+                contentDescription = strings.weatherDescription(data.weatherCode, data.isDay, data.conditionText),
                 modifier = GlanceModifier.size(28.dp),
             )
             Spacer(modifier = GlanceModifier.height(2.dp))

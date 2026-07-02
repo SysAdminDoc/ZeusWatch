@@ -5,6 +5,7 @@ import com.sysadmindoc.nimbus.data.api.EcccAbbreviatedForecast
 import com.sysadmindoc.nimbus.data.api.EcccCurrentConditions
 import com.sysadmindoc.nimbus.data.api.EcccFeature
 import com.sysadmindoc.nimbus.data.api.EcccForecastEntry
+import com.sysadmindoc.nimbus.data.api.EcccProperties
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaForecastApi
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import com.sysadmindoc.nimbus.data.model.DailyConditions
@@ -12,6 +13,7 @@ import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.data.util.SourceLocaleText
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -63,7 +65,8 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         locationName: String? = null,
         locationZone: ZoneId? = null,
     ): Result<WeatherData> = runCatching {
-        val feature = findNearestFeature(latitude, longitude)
+        val language = SourceLocaleText.preferredLanguage(SUPPORTED_LANGUAGES)
+        val feature = findNearestFeature(latitude, longitude, language)
             ?: error("No ECCC city within 1.5° of ($latitude, $longitude)")
         mapToWeatherData(feature, latitude, longitude, locationName, locationZone ?: ZoneId.systemDefault())
     }.onFailure {
@@ -71,10 +74,10 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         Log.w(TAG, "ECCC forecast failed", it)
     }
 
-    private suspend fun findNearestFeature(lat: Double, lon: Double): EcccFeature? {
-        val tight = api.getCityWeather(buildBbox(lat, lon, 0.5))
+    private suspend fun findNearestFeature(lat: Double, lon: Double, language: String): EcccFeature? {
+        val tight = api.getCityWeather(buildBbox(lat, lon, 0.5), lang = language)
         closest(tight.features, lat, lon)?.let { return it }
-        val wide = api.getCityWeather(buildBbox(lat, lon, 1.5))
+        val wide = api.getCityWeather(buildBbox(lat, lon, 1.5), lang = language)
         return closest(wide.features, lat, lon)
     }
 
@@ -131,7 +134,7 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
 
         return WeatherData(
             location = LocationInfo(
-                name = locationName ?: props.cityEn ?: props.nameEn ?: "Unknown",
+                name = locationName ?: props.localizedCityName() ?: "Unknown",
                 region = "Canada",
                 country = "CA",
                 latitude = requestedLat,
@@ -161,6 +164,7 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
                 dailyLow = todayDaily?.temperatureLow ?: cc?.temperatureValue ?: 0.0,
                 sunrise = null,
                 sunset = null,
+                sourceConditionText = cc?.condition.takeUnlessBlank(),
             ),
             hourly = emptyList<HourlyConditions>(),
             daily = dailyList,
@@ -219,6 +223,8 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
                 snowfallSum = null,
                 sunshineDuration = null,
                 windGustsMax = null,
+                sourceConditionText = pair.day?.abbreviatedForecast?.textSummary.takeUnlessBlank()
+                    ?: pair.day?.textSummary.takeUnlessBlank(),
             )
         }
     }
@@ -292,6 +298,8 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
     }
 
     companion object {
+        private val SUPPORTED_LANGUAGES = setOf("en", "fr")
+
         /**
          * Map ECCC currentConditions to a WMO weather code.
          * iconCode takes precedence when present; falls back to a
@@ -386,3 +394,15 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         }
     }
 }
+
+private fun EcccProperties.localizedCityName(): String? {
+    val language = SourceLocaleText.preferredLanguage(setOf("en", "fr"))
+    return if (language == "fr") {
+        cityFr.takeUnlessBlank() ?: nameFr.takeUnlessBlank() ?: cityEn.takeUnlessBlank() ?: nameEn.takeUnlessBlank()
+    } else {
+        cityEn.takeUnlessBlank() ?: nameEn.takeUnlessBlank() ?: cityFr.takeUnlessBlank() ?: nameFr.takeUnlessBlank()
+    }
+}
+
+private fun String?.takeUnlessBlank(): String? =
+    this?.trim()?.takeIf { it.isNotBlank() }

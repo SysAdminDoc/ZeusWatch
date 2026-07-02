@@ -51,6 +51,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.conditionDescription
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.format.DateTimeFormatter
 
@@ -253,7 +254,7 @@ private fun HourlyRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                stringResource(hour.weatherCode.descriptionRes()),
+                hour.conditionDescription(context),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
             )

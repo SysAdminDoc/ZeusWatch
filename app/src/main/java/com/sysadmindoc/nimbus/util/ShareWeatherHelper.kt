@@ -51,7 +51,7 @@ object ShareWeatherHelper {
             context.getString(
                 R.string.share_text_now,
                 WeatherFormatter.formatTemperatureUnit(current.temperature, s),
-                current.weatherCode.localizedDescription(context),
+                current.conditionDescription(context),
             ),
         )
         appendLine(
@@ -113,7 +113,7 @@ object ShareWeatherHelper {
             appendLine(context.getString(R.string.share_text_forecast_header))
             data.daily.take(3).forEach { day ->
                 val label = WeatherFormatter.formatRelativeDayLabel(context, day.date, referenceDate)
-                val desc = day.weatherCode.localizedDescription(context)
+                val desc = day.conditionDescription(context)
                 val hi = WeatherFormatter.formatTemperature(day.temperatureHigh, s)
                 val lo = WeatherFormatter.formatTemperature(day.temperatureLow, s)
                 val precip = day.precipitationProbability
@@ -189,7 +189,7 @@ object ShareWeatherHelper {
         }
 
         canvas.drawText(WeatherFormatter.formatTemperature(current.temperature, s), 80f, 300f, textPaint(TEXT_PRIMARY, 120f, bold = true))
-        canvas.drawText(current.weatherCode.localizedDescription(context), 80f, 350f, textPaint(TEXT_SECONDARY, 36f))
+        canvas.drawText(current.conditionDescription(context), 80f, 350f, textPaint(TEXT_SECONDARY, 36f))
         canvas.drawText(
             context.getString(
                 R.string.share_image_feels_like,
@@ -241,7 +241,7 @@ object ShareWeatherHelper {
                 forecastY,
                 textPaint(TEXT_SECONDARY, 24f),
             )
-            canvas.drawText(day.weatherCode.localizedDescription(context), x, forecastY + 30f, textPaint(TEXT_TERTIARY, 20f))
+            canvas.drawText(day.conditionDescription(context), x, forecastY + 30f, textPaint(TEXT_TERTIARY, 20f))
             canvas.drawText(
                 context.getString(
                     R.string.share_image_temperature_pair,

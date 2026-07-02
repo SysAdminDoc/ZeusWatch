@@ -51,6 +51,7 @@ data class CurrentConditions(
     val dailyLow: Double,
     val sunrise: String?,
     val sunset: String?,
+    val sourceConditionText: String? = null,
 )
 
 @Stable
@@ -74,6 +75,7 @@ data class HourlyConditions(
     val surfacePressure: Double? = null,
     val shortwaveRadiation: Double? = null,
     val directNormalIrradiance: Double? = null,
+    val sourceConditionText: String? = null,
 )
 
 @Stable
@@ -93,6 +95,7 @@ data class DailyConditions(
     val sunshineDuration: Double? = null,
     val windGustsMax: Double? = null,
     val precipitationHours: Double? = null,
+    val sourceConditionText: String? = null,
 )
 
 @Stable

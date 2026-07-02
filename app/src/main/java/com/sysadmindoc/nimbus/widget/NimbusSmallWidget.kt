@@ -114,7 +114,7 @@ private fun SmallWidgetContent(
                 ) {
                     Image(
                         provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
-                        contentDescription = strings.weatherDescription(data.weatherCode, data.isDay),
+                        contentDescription = strings.weatherDescription(data.weatherCode, data.isDay, data.conditionText),
                         modifier = GlanceModifier.size(30.dp),
                     )
                 }
