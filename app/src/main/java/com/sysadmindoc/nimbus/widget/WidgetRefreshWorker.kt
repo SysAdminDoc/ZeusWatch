@@ -404,7 +404,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
         val cities = savedCityLocationsForWidget(savedLocations).map { location ->
             val key = locationKey(location.latitude, location.longitude)
             val weather = state.weatherByLocationKey[key]
-                ?: weatherRepository.getCachedWeather(location.latitude, location.longitude)
+                ?: weatherRepository.getCachedWeather(location)
             buildWidgetSavedCity(location, weather, convertTemp)
         }
         if (cities.isEmpty()) {

@@ -16,6 +16,9 @@ import com.sysadmindoc.nimbus.data.model.OpenMeteoResponse
 import com.sysadmindoc.nimbus.data.model.WeatherCacheEntity
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.data.model.WeatherDataCacheEntity
+import com.sysadmindoc.nimbus.data.model.WeatherDataCachePayload
+import com.sysadmindoc.nimbus.data.model.toCachePayload
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -118,6 +121,71 @@ class WeatherRepositoryTest {
         cachedAt = cachedAt,
     )
 
+    private fun makeWeatherData(
+        sourceProvider: String? = WeatherSourceProvider.OPEN_METEO.displayName,
+        usedFallback: Boolean = false,
+        temperature: Double = 22.0,
+        lastUpdated: LocalDateTime = LocalDateTime.of(2026, 1, 1, 12, 0),
+    ) = WeatherData(
+        location = LocationInfo(
+            name = testLocationName,
+            region = "Colorado",
+            country = "US",
+            latitude = testLat,
+            longitude = testLon,
+            timeZone = "America/Denver",
+        ),
+        current = CurrentConditions(
+            temperature = temperature,
+            feelsLike = temperature - 1.0,
+            humidity = 45,
+            weatherCode = WeatherCode.CLEAR_SKY,
+            observationTime = lastUpdated,
+            isDay = true,
+            windSpeed = 10.0,
+            windDirection = 180,
+            windGusts = null,
+            pressure = 1013.0,
+            uvIndex = 5.0,
+            visibility = 10000.0,
+            dewPoint = 6.0,
+            cloudCover = 20,
+            precipitation = 0.0,
+            dailyHigh = 28.0,
+            dailyLow = 15.0,
+            sunrise = "05:30",
+            sunset = "20:30",
+        ),
+        hourly = emptyList(),
+        daily = emptyList(),
+        lastUpdated = lastUpdated,
+        sourceProvider = sourceProvider,
+        usedFallback = usedFallback,
+    )
+
+    private fun makeWeatherDataCacheEntity(
+        data: WeatherData,
+        provider: WeatherSourceProvider,
+        savedLocationId: Long? = null,
+        cachedAt: Long = System.currentTimeMillis(),
+    ) = WeatherDataCacheEntity(
+        cacheKey = WeatherDataCacheEntity.makeKey(
+            latitude = testLat,
+            longitude = testLon,
+            sourceProvider = provider.name,
+            savedLocationId = savedLocationId,
+        ),
+        locationKey = WeatherCacheEntity.makeKey(testLat, testLon),
+        sourceProvider = provider.name,
+        savedLocationId = savedLocationId,
+        schemaVersion = WeatherDataCacheEntity.CURRENT_SCHEMA_VERSION,
+        payloadJson = json.encodeToString(
+            WeatherDataCachePayload.serializer(),
+            data.toCachePayload(),
+        ),
+        cachedAt = cachedAt,
+    )
+
     private fun routeWeatherData() = WeatherData(
         location = LocationInfo(
             name = "Route point",
@@ -179,6 +247,8 @@ class WeatherRepositoryTest {
         sourceManager = mockk()
 
         every { userPreferences.settings } returns flowOf(NimbusSettings())
+        coEvery { weatherDao.getCachedWeatherData(any(), any(), any(), any()) } returns null
+        coEvery { weatherDao.getCached(any()) } returns null
 
         repository = WeatherRepository(
             weatherApi = weatherApi,
@@ -477,6 +547,96 @@ class WeatherRepositoryTest {
         assertEquals("US", data.location.country)
         assertEquals(testLat, data.location.latitude, 0.01)
         assertEquals(testLon, data.location.longitude, 0.01)
+    }
+
+    @Test
+    fun getCachedWeatherReturnsProviderAwareNormalizedCache() = runTest {
+        val cachedAt = System.currentTimeMillis() - (5 * 60 * 1000L)
+        val provider = WeatherSourceProvider.MET_NORWAY
+        val entity = makeWeatherDataCacheEntity(
+            data = makeWeatherData(
+                sourceProvider = provider.displayName,
+                temperature = 14.5,
+            ),
+            provider = provider,
+            savedLocationId = 42L,
+            cachedAt = cachedAt,
+        )
+        coEvery {
+            weatherDao.getCachedWeatherData(
+                WeatherCacheEntity.makeKey(testLat, testLon),
+                42L,
+                listOf(provider.name),
+                WeatherDataCacheEntity.CURRENT_SCHEMA_VERSION,
+            )
+        } returns entity
+
+        val data = repository.getCachedWeather(
+            latitude = testLat,
+            longitude = testLon,
+            sourceOverrides = SourceOverrides(forecast = provider),
+            savedLocationId = 42L,
+        )
+
+        assertNotNull(data)
+        assertEquals(provider.displayName, data!!.sourceProvider)
+        assertEquals(14.5, data.current.temperature, 0.01)
+        val expected = java.time.Instant.ofEpochMilli(cachedAt)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalDateTime()
+        assertEquals(expected, data.lastUpdated)
+    }
+
+    @Test
+    fun getCachedWeatherDoesNotUseLegacyOpenMeteoCacheForDifferentProvider() = runTest {
+        val provider = WeatherSourceProvider.MET_NORWAY
+        coEvery { weatherDao.getCached(any()) } returns makeCacheEntity()
+
+        val data = repository.getCachedWeather(
+            latitude = testLat,
+            longitude = testLon,
+            sourceOverrides = SourceOverrides(forecast = provider),
+        )
+
+        assertNull(data)
+        coVerify(exactly = 0) { weatherDao.getCached(any()) }
+    }
+
+    @Test
+    fun getWeatherWritesNormalizedCacheForActualFallbackProvider() = runTest {
+        val fallbackProvider = WeatherSourceProvider.MET_NORWAY
+        every { userPreferences.settings } returns flowOf(
+            NimbusSettings(
+                sourceConfig = SourceConfig(
+                    forecast = WeatherSourceProvider.OPEN_METEO,
+                    forecastFallback = fallbackProvider,
+                )
+            )
+        )
+        val weather = makeWeatherData(
+            sourceProvider = fallbackProvider.displayName,
+            usedFallback = true,
+        )
+        val entitySlot = slot<WeatherDataCacheEntity>()
+        coEvery {
+            sourceManager.getWeather(testLat, testLon, null, null, SourceOverrides())
+        } returns Result.success(weather)
+        coEvery { weatherDao.upsertWeatherData(capture(entitySlot)) } returns Unit
+
+        val result = repository.getWeather(
+            latitude = testLat,
+            longitude = testLon,
+            savedLocationId = 42L,
+        )
+
+        assertTrue(result.isSuccess)
+        val entity = entitySlot.captured
+        assertEquals(fallbackProvider.name, entity.sourceProvider)
+        assertEquals(42L, entity.savedLocationId)
+        assertEquals(WeatherCacheEntity.makeKey(testLat, testLon), entity.locationKey)
+        val payload = json.decodeFromString(WeatherDataCachePayload.serializer(), entity.payloadJson)
+        assertTrue(payload.usedFallback)
+        assertEquals(fallbackProvider.displayName, payload.sourceProvider)
     }
 
     // --- planDrivingRouteWeather ---

@@ -55,8 +55,20 @@ class WeatherRepository @Inject constructor(
          */
         const val DEFAULT_STALE_FALLBACK_MS = 6 * 60 * 60 * 1000L
 
-        private fun coalescingKey(lat: Double, lon: Double): String =
-            String.format(Locale.US, "%.4f,%.4f", lat, lon)
+        private fun coalescingKey(
+            lat: Double,
+            lon: Double,
+            config: SourceConfig,
+            savedLocationId: Long?,
+        ): String = String.format(
+            Locale.US,
+            "%.4f,%.4f|%s|%s|%s",
+            lat,
+            lon,
+            config.forecast.name,
+            config.forecastFallback?.name ?: "none",
+            savedLocationId?.toString() ?: "coord",
+        )
     }
 
     /**
@@ -70,8 +82,13 @@ class WeatherRepository @Inject constructor(
         locationName: String? = null,
         locationTimeZone: String? = null,
         sourceOverrides: SourceOverrides = SourceOverrides(),
+        savedLocationId: Long? = null,
     ): Result<WeatherData> {
-        val key = coalescingKey(latitude, longitude)
+        val settings = userPreferences.settings.first()
+        val sourceConfig = settings.sourceConfig.withOverrides(sourceOverrides)
+        val cacheMaxAgeMs = settings.cacheTtlMs.takeIf { it > 0L } ?: DEFAULT_CACHE_MAX_AGE_MS
+        val normalizedSavedLocationId = savedLocationId?.takeIf { it > 0L }
+        val key = coalescingKey(latitude, longitude, sourceConfig, normalizedSavedLocationId)
         val existing = inFlightRequests[key]
         if (existing != null) return existing.await()
 
@@ -87,6 +104,16 @@ class WeatherRepository @Inject constructor(
                 locationTimeZone = locationTimeZone,
                 sourceOverrides = sourceOverrides,
             )
+            result.getOrNull()?.let { data ->
+                cacheWeatherData(
+                    data = data,
+                    latitude = latitude,
+                    longitude = longitude,
+                    requestedConfig = sourceConfig,
+                    savedLocationId = normalizedSavedLocationId,
+                    cacheMaxAgeMs = cacheMaxAgeMs,
+                )
+            }
             deferred.complete(result)
             result
         } catch (e: Exception) {
@@ -104,6 +131,7 @@ class WeatherRepository @Inject constructor(
             locationName = location.name,
             locationTimeZone = location.timeZone,
             sourceOverrides = location.sourceOverrides(),
+            savedLocationId = location.id,
         )
 
     /**
@@ -124,11 +152,19 @@ class WeatherRepository @Inject constructor(
         locationName: String? = null,
         locationTimeZone: String? = null,
         sourceOverrides: SourceOverrides = SourceOverrides(),
+        savedLocationId: Long? = null,
         allowStaleUpToMs: Long = DEFAULT_STALE_FALLBACK_MS,
     ): Result<WeatherData> {
-        val live = getWeather(latitude, longitude, locationName, locationTimeZone, sourceOverrides)
+        val live = getWeather(
+            latitude = latitude,
+            longitude = longitude,
+            locationName = locationName,
+            locationTimeZone = locationTimeZone,
+            sourceOverrides = sourceOverrides,
+            savedLocationId = savedLocationId,
+        )
         if (live.isSuccess) return live
-        val stale = readCachedWeather(latitude, longitude, allowStaleUpToMs)
+        val stale = readCachedWeather(latitude, longitude, sourceOverrides, savedLocationId, allowStaleUpToMs)
         return if (stale != null) Result.success(stale) else live
     }
 
@@ -142,6 +178,7 @@ class WeatherRepository @Inject constructor(
             locationName = location.name,
             locationTimeZone = location.timeZone,
             sourceOverrides = location.sourceOverrides(),
+            savedLocationId = location.id,
             allowStaleUpToMs = allowStaleUpToMs,
         )
 
@@ -334,7 +371,7 @@ class WeatherRepository @Inject constructor(
             val location = resolveLocationName(latitude, longitude, locationName)
             val weatherData = mapToWeatherData(response, location)
 
-            // Cache the response
+            // Legacy Open-Meteo cache retained for migration/backward compatibility.
             try {
                 val responseJson = json.encodeToString(OpenMeteoResponse.serializer(), response)
                 weatherDao.upsert(
@@ -358,13 +395,26 @@ class WeatherRepository @Inject constructor(
         }
     }
 
-    suspend fun getCachedWeather(latitude: Double, longitude: Double): WeatherData? =
+    suspend fun getCachedWeather(
+        latitude: Double,
+        longitude: Double,
+        sourceOverrides: SourceOverrides = SourceOverrides(),
+        savedLocationId: Long? = null,
+    ): WeatherData? =
         withContext(Dispatchers.IO) {
             val cacheMaxAgeMs = userPreferences.settings.first().cacheTtlMs
                 .takeIf { it > 0L }
                 ?: DEFAULT_CACHE_MAX_AGE_MS
-            readCachedWeather(latitude, longitude, cacheMaxAgeMs)
+            readCachedWeather(latitude, longitude, sourceOverrides, savedLocationId, cacheMaxAgeMs)
         }
+
+    suspend fun getCachedWeather(location: SavedLocationEntity): WeatherData? =
+        getCachedWeather(
+            latitude = location.latitude,
+            longitude = location.longitude,
+            sourceOverrides = location.sourceOverrides(),
+            savedLocationId = location.id,
+        )
 
     /**
      * Decode the cached forecast for a location if it exists and is no older
@@ -376,10 +426,29 @@ class WeatherRepository @Inject constructor(
     private suspend fun readCachedWeather(
         latitude: Double,
         longitude: Double,
+        sourceOverrides: SourceOverrides,
+        savedLocationId: Long?,
         maxAgeMs: Long,
     ): WeatherData? = withContext(Dispatchers.IO) {
         try {
             val key = WeatherCacheEntity.makeKey(latitude, longitude)
+            val providerNames = cacheProviderNames(sourceOverrides)
+            val normalizedSavedLocationId = savedLocationId?.takeIf { it > 0L }
+            val normalized = weatherDao.getCachedWeatherData(
+                locationKey = key,
+                savedLocationId = normalizedSavedLocationId,
+                sourceProviders = providerNames,
+                schemaVersion = WeatherDataCacheEntity.CURRENT_SCHEMA_VERSION,
+            )
+            if (normalized != null && !normalized.isExpired(maxAgeMs)) {
+                val payload = json.decodeFromString(WeatherDataCachePayload.serializer(), normalized.payloadJson)
+                return@withContext payload.toWeatherData(
+                    lastUpdatedOverride = Instant.ofEpochMilli(normalized.cachedAt)
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime(),
+                )
+            }
+            if (WeatherSourceProvider.OPEN_METEO.name !in providerNames) return@withContext null
             val cached = weatherDao.getCached(key) ?: return@withContext null
             if (cached.isExpired(maxAgeMs)) return@withContext null
             val response = json.decodeFromString(OpenMeteoResponse.serializer(), cached.responseJson)
@@ -397,11 +466,59 @@ class WeatherRepository @Inject constructor(
                 observedAt = Instant.ofEpochMilli(cached.cachedAt)
                     .atZone(ZoneId.systemDefault())
                     .toLocalDateTime(),
-            )
+            ).copy(sourceProvider = WeatherSourceProvider.OPEN_METEO.displayName)
         } catch (_: Exception) {
             null
         }
     }
+
+    private suspend fun cacheWeatherData(
+        data: WeatherData,
+        latitude: Double,
+        longitude: Double,
+        requestedConfig: SourceConfig,
+        savedLocationId: Long?,
+        cacheMaxAgeMs: Long,
+    ) {
+        try {
+            val provider = data.actualSourceProvider(requestedConfig)
+            val cacheData = data.copy(sourceProvider = data.sourceProvider ?: provider.displayName)
+            weatherDao.upsertWeatherData(
+                WeatherDataCacheEntity(
+                    cacheKey = WeatherDataCacheEntity.makeKey(
+                        latitude = latitude,
+                        longitude = longitude,
+                        sourceProvider = provider.name,
+                        savedLocationId = savedLocationId,
+                    ),
+                    locationKey = WeatherCacheEntity.makeKey(latitude, longitude),
+                    sourceProvider = provider.name,
+                    savedLocationId = savedLocationId,
+                    schemaVersion = WeatherDataCacheEntity.CURRENT_SCHEMA_VERSION,
+                    payloadJson = json.encodeToString(
+                        WeatherDataCachePayload.serializer(),
+                        cacheData.toCachePayload(),
+                    ),
+                ),
+            )
+            weatherDao.deleteWeatherDataOlderThan(System.currentTimeMillis() - cacheMaxAgeMs)
+        } catch (_: Exception) {
+            // Cache failure is non-fatal.
+        }
+    }
+
+    private suspend fun cacheProviderNames(sourceOverrides: SourceOverrides): List<String> {
+        val config = userPreferences.settings.first().sourceConfig.withOverrides(sourceOverrides)
+        return listOfNotNull(config.forecast, config.forecastFallback)
+            .map { it.name }
+            .distinct()
+            .ifEmpty { listOf(WeatherSourceProvider.OPEN_METEO.name) }
+    }
+
+    private fun WeatherData.actualSourceProvider(config: SourceConfig): WeatherSourceProvider =
+        WeatherSourceProvider.entries.firstOrNull { it.displayName == sourceProvider }
+            ?.takeIf { it.isSelectableFor(WeatherDataType.FORECAST) }
+            ?: config.forecast
 
     suspend fun searchLocations(query: String): Result<List<LocationInfo>> =
         withContext(Dispatchers.IO) {

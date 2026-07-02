@@ -80,7 +80,7 @@ class LocationsViewModel @Inject constructor(
         // doesn't stall the temp/condition refresh.
         val cachedList = coroutineScope {
             locations.map { loc ->
-                async { loc to weatherRepository.getCachedWeather(loc.latitude, loc.longitude) }
+                async { loc to weatherRepository.getCachedWeather(loc) }
             }.awaitAll()
         }
         // A newer saved-locations emission started a fresher scan — drop this

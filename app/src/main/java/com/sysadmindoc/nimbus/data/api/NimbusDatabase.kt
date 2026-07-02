@@ -6,10 +6,11 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherCacheEntity
+import com.sysadmindoc.nimbus.data.model.WeatherDataCacheEntity
 
 @Database(
-    entities = [WeatherCacheEntity::class, SavedLocationEntity::class],
-    version = 4,
+    entities = [WeatherCacheEntity::class, WeatherDataCacheEntity::class, SavedLocationEntity::class],
+    version = 5,
     exportSchema = true,
 )
 abstract class NimbusDatabase : RoomDatabase() {
@@ -55,6 +56,37 @@ abstract class NimbusDatabase : RoomDatabase() {
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE saved_locations ADD COLUMN timeZone TEXT")
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weather_data_cache (
+                        cacheKey TEXT NOT NULL,
+                        locationKey TEXT NOT NULL,
+                        sourceProvider TEXT NOT NULL,
+                        savedLocationId INTEGER,
+                        schemaVersion INTEGER NOT NULL,
+                        payloadJson TEXT NOT NULL,
+                        cachedAt INTEGER NOT NULL,
+                        PRIMARY KEY(cacheKey)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_weather_data_cache_locationKey " +
+                        "ON weather_data_cache(locationKey)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_weather_data_cache_sourceProvider " +
+                        "ON weather_data_cache(sourceProvider)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_weather_data_cache_savedLocationId " +
+                        "ON weather_data_cache(savedLocationId)"
+                )
             }
         }
     }
