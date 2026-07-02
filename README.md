@@ -292,7 +292,7 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Stack:** Kotlin 2.1.0, Jetpack Compose (BOM 2025.04.01), Hilt 2.53.1, Retrofit 3.0.0, Room 2.6.1, DataStore 1.2.1 with Tink-encrypted API keys, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
+**Stack:** Kotlin 2.1.0, Jetpack Compose (BOM 2025.04.01), Hilt 2.53.1, Retrofit 3.0.0, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
 
 ---
 
