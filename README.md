@@ -7,7 +7,7 @@
 ![Compose](https://img.shields.io/badge/Jetpack%20Compose-2025.04.01-4285F4?logo=jetpackcompose&logoColor=white)
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 
-> A free, open-source Android weather app with a premium dark UI, 35 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, route weather planning, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, LibreWXR, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, Hong Kong Observatory, BMKG, and WMO SWIC.
+> A free, open-source Android weather app with a premium dark UI, 35 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, route weather planning, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, FMI, LibreWXR, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, Hong Kong Observatory, BMKG, and WMO SWIC.
 
 <img width="1536" height="1024" alt="design" src="https://github.com/user-attachments/assets/dce70ccc-af71-48d8-8000-0b2935f45996" />
 
@@ -142,6 +142,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 |--------|------------|--------|
 | **Open-Meteo** | Forecast, AQI, Pollen, Minutely, Historical, Single Runs | Global |
 | **Open-Meteo Models** | BOM ACCESS-G, UK Met Office, DMI HARMONIE, Meteo-France forecast/AROME nowcast sources | Australia, UK/North Atlantic, Northern Europe, France/Central Europe |
+| **Finnish Meteorological Institute** | HARMONIE WFS forecast | Finland / Nordic-Baltic region |
 | **NWS** | Alerts | United States |
 | **MeteoAlarm** | Alerts | 31 EU countries |
 | **JMA** | Alerts | Japan |
@@ -319,6 +320,7 @@ All core APIs are free with no keys required:
 | [Hong Kong Observatory](https://www.hko.gov.hk/en/weatherAPI/doc/files/HKO_Open_Data_API_Documentation.pdf) | Hong Kong current conditions, 9-day forecast, and weather warnings | Free open data |
 | [BMKG](https://data.bmkg.go.id/peringatan-dini-cuaca/) | Indonesian CAP nowcast weather alerts | No key required |
 | [WMO SWIC](https://severeweather.wmo.int/) | Global severe weather alert fallback | Fair use |
+| [FMI Open Data](https://en.ilmatieteenlaitos.fi/open-data) | Nordic/Baltic HARMONIE WFS forecast | No key required |
 | [MET Norway](https://api.met.no/weatherapi/locationforecast/2.0/documentation) | Forecast fallback | Fair use |
 | [Bright Sky](https://brightsky.dev/) | Germany forecast fallback | Fair use |
 | [Blitzortung](https://www.blitzortung.org/) | Real-time lightning strike data (WebSocket) | Fair use |
@@ -601,6 +603,7 @@ The `freenet` flavor contains no proprietary code and is suitable for F-Droid di
 This project is licensed under the [GNU Lesser General Public License v3.0](LICENSE).
 
 Weather data provided by [Open-Meteo.com](https://open-meteo.com/) under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Nordic/Baltic forecast data by [Finnish Meteorological Institute](https://en.ilmatieteenlaitos.fi/open-data).
 Radar tiles by [LibreWXR](https://librewxr.net/) or [RainViewer](https://www.rainviewer.com/).
 Interactive radar by [Windy.com](https://www.windy.com/).
 Lightning data by [Blitzortung.org](https://www.blitzortung.org/).

@@ -11,6 +11,7 @@ import com.sysadmindoc.nimbus.data.api.BrightSkyApi
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertAdapter
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertApi
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaForecastApi
+import com.sysadmindoc.nimbus.data.api.FmiForecastApi
 import com.sysadmindoc.nimbus.data.api.GeocodingApi
 import com.sysadmindoc.nimbus.data.api.GeoSphereAustriaDatasetApi
 import com.sysadmindoc.nimbus.data.api.GeoSphereAustriaWarnApi
@@ -306,6 +307,18 @@ object NetworkModule {
         @Named("eccc_forecast") retrofit: Retrofit,
     ): EnvironmentCanadaForecastApi {
         return retrofit.create(EnvironmentCanadaForecastApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    @Named("fmi")
+    fun provideFmiForecastRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(FmiForecastApi.BASE_URL, client)
+
+    @Provides
+    @Singleton
+    fun provideFmiForecastApi(@Named("fmi") retrofit: Retrofit): FmiForecastApi {
+        return retrofit.create(FmiForecastApi::class.java)
     }
 
     @Provides

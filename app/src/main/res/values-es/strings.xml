@@ -1176,6 +1176,7 @@
     <string name="weather_source_open_meteo_ukmo">Open-Meteo + UK Met Office</string>
     <string name="weather_source_open_meteo_dmi">Open-Meteo + DMI HARMONIE</string>
     <string name="weather_source_open_meteo_meteo_france">Open-Meteo + Meteo-France</string>
+    <string name="weather_source_fmi">Finnish Meteorological Institute</string>
     <string name="weather_source_nws">National Weather Service</string>
     <string name="weather_source_open_weather_map">OpenWeatherMap</string>
     <string name="weather_source_pirate_weather">Pirate Weather</string>

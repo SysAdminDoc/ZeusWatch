@@ -42,6 +42,8 @@ PARIS_LATITUDE = "48.8566"
 PARIS_LONGITUDE = "2.3522"
 VIENNA_LATITUDE = "48.2082"
 VIENNA_LONGITUDE = "16.3738"
+HELSINKI_LATITUDE = "60.1699"
+HELSINKI_LONGITUDE = "24.9384"
 
 JsonMap = dict[str, Any]
 Transport = Callable[[Request, float], tuple[int, dict[str, str], bytes]]
@@ -220,6 +222,20 @@ def provider_checks() -> list[ContractCheck]:
             "lang": "en",
         }
     )
+    fmi_forecast_query = urlencode(
+        {
+            "service": "WFS",
+            "version": "2.0.0",
+            "request": "getFeature",
+            "storedquery_id": "fmi::forecast::harmonie::surface::point::timevaluepair",
+            "latlon": f"{HELSINKI_LATITUDE},{HELSINKI_LONGITUDE}",
+            "parameters": (
+                "Temperature,Humidity,Pressure,WindSpeedMS,WindDirection,WindGust,"
+                "TotalCloudCover,Precipitation1h,Visibility,DewPoint,WeatherSymbol3"
+            ),
+            "timestep": "60",
+        }
+    )
     bright_sky_forecast_query = urlencode(
         {
             "lat": BERLIN_LATITUDE,
@@ -365,6 +381,18 @@ def provider_checks() -> list[ContractCheck]:
             schema_assertion="provider remains non-selectable while upstream KMA/KIM updates are suspended",
             unavailable_policy="OPEN_METEO_KMA is intentionally absent from WeatherSourceProvider.forType() until a live KMA contract passes.",
             policy_only=True,
+        ),
+        ContractCheck(
+            key="fmi-harmonie-forecast",
+            name="FMI Harmonie WFS forecast",
+            url=f"https://opendata.fmi.fi/wfs?{fmi_forecast_query}",
+            docs_url="https://en.ilmatieteenlaitos.fi/open-data-manual-wfs-examples-and-guidelines",
+            validator=validate_fmi_wfs_forecast,
+            providers=("FMI",),
+            data_types=("FORECAST",),
+            coverage=f"Helsinki, FI ({HELSINKI_LATITUDE},{HELSINKI_LONGITUDE})",
+            schema_assertion="WFS FeatureCollection includes point time-value series for Temperature, WindSpeedMS, and WeatherSymbol3",
+            response_format="text",
         ),
         ContractCheck(
             key="nws-active-alerts",
@@ -801,6 +829,24 @@ def validate_geosphere_warnings(data: Any) -> ValidationResult:
         if "warnstufeid" not in first or "warntypid" not in first:
             return ValidationResult(False, "warning entries must include warnstufeid and warntypid")
     return ValidationResult(True, f"{len(warnings)} GeoSphere point warnings")
+
+
+def validate_fmi_wfs_forecast(data: Any) -> ValidationResult:
+    if not isinstance(data, str):
+        return ValidationResult(False, "expected WFS XML text")
+    errors: list[str] = []
+    if "FeatureCollection" not in data:
+        errors.append("FeatureCollection missing")
+    if "PointTimeSeriesObservation" not in data:
+        errors.append("PointTimeSeriesObservation missing")
+    if "MeasurementTVP" not in data:
+        errors.append("MeasurementTVP missing")
+    for parameter in ("Temperature", "WindSpeedMS", "WeatherSymbol3"):
+        if f"param={parameter}" not in data:
+            errors.append(f"{parameter} observedProperty missing")
+    if errors:
+        return ValidationResult(False, "; ".join(errors))
+    return ValidationResult(True, f"{data.count('MeasurementTVP')} FMI time-value pairs")
 
 
 def validate_meteoalarm_warnings(data: Any) -> ValidationResult:

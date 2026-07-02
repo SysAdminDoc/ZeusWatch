@@ -47,6 +47,10 @@ enum class WeatherSourceProvider(
         displayName = "Open-Meteo + Meteo-France",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.MINUTELY),
     ),
+    FMI(
+        displayName = "Finnish Meteorological Institute",
+        supportedTypes = setOf(WeatherDataType.FORECAST),
+    ),
     NWS(
         displayName = "National Weather Service",
         supportedTypes = setOf(WeatherDataType.ALERTS),
