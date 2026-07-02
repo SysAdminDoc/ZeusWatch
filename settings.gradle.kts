@@ -28,3 +28,4 @@ dependencyResolutionManagement {
 rootProject.name = "ZeusWatch"
 include(":app")
 include(":wear")
+include(":benchmark")

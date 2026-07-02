@@ -514,6 +514,13 @@ py -3 tools/generate_release_provenance.py
 # Accessibility release gate - WCAG contrast, touch targets, Compose checks
 ./gradlew accessibilityGate
 
+# Startup performance gate - release startup Macrobenchmark p95 <1200 ms
+# Use a stable physical target for release acceptance; emulator results are advisory
+./gradlew startupGate
+
+# Baseline profile collection - use a stable physical benchmark target
+./gradlew :app:generateStandardReleaseBaselineProfile
+
 # Firestore community-report rules tests
 npm install
 npm run test:firestore-rules
@@ -523,6 +530,7 @@ npm run test:firestore-rules
 |-------|-----------|----------|
 | Unit | JUnit 4 + MockK + Turbine + coroutines-test | WeatherFormatter (20), WeatherCode (12), Accessibility contrast, AirQuality (14), Alerts (9), MainViewModel (10), LocationsViewModel (7) |
 | UI | Compose UI Test + JUnit4 + Hilt Testing | MainScreen, SettingsScreen, LocationsScreen, accessibility audit gate |
+| Performance | AndroidX Macrobenchmark + Baseline Profile Gradle plugin | Cold-start release p95 gate and standard release baseline-profile collection |
 | Firestore rules | Firebase Emulator + rules-unit-testing | Community report create/read validation, malformed/stale rejection, append-only delete/update denial |
 
 **180+ tests** across 14 test suites.

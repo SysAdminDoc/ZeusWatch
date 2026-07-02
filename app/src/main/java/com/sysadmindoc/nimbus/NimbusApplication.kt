@@ -27,6 +27,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -69,13 +70,14 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
 
     override fun onCreate() {
         super.onCreate()
-        communityReportSecurityInitializer.install(this)
         appScope = CoroutineScope(SupervisorJob() + defaultDispatcher + startupExceptionHandler)
         AlertNotificationHelper.createChannels(this)
         WeatherNotificationHelper.createChannel(this)
-        DatabaseMaintenanceWorker.schedule(this)
 
         appScope.launch {
+            delay(2_000)
+            communityReportSecurityInitializer.install(this@NimbusApplication)
+            DatabaseMaintenanceWorker.schedule(this@NimbusApplication)
             prefs.migrateEncryptedApiKeys()
             val settings = prefs.settings.first()
             if (settings.alertNotificationsEnabled) {

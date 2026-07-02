@@ -30,6 +30,9 @@ desugar = "2.1.5"
 maplibre = "11.5.2"
 acra = "5.13.1"
 detekt = "1.23.8"
+benchmark = "1.4.1"
+profileinstaller = "1.4.1"
+uiautomator = "2.4.0"
 
 material3-windowsize = "1.3.2"
 window = "1.5.1"
@@ -109,6 +112,8 @@ glance-material3 = { group = "androidx.glance", name = "glance-material3", versi
 
 # Background Work
 work-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
+benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
+profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 
 # Coroutines
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
@@ -139,11 +144,14 @@ compose-ui-test-junit4-accessibility = { group = "androidx.compose.ui", name = "
 compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 junit-ext = { group = "androidx.test.ext", name = "junit", version.ref = "junit-ext" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 hilt-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hilt-testing" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-test = { id = "com.android.test", version.ref = "agp" }
+androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "benchmark" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
