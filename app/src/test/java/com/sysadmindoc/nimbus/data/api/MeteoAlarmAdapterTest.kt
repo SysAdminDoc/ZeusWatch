@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 class MeteoAlarmAdapterTest {
 
@@ -114,6 +115,43 @@ class MeteoAlarmAdapterTest {
         assertEquals("Likely", alert.certainty)
         assertEquals("opendata@dwd.de", alert.senderName)
         assertEquals("Kreis Amberg-Sulzbach", alert.areaDescription)
+    }
+
+    @Test
+    fun `localized info block is preferred when device locale matches`() = runTest {
+        val previousLocale = Locale.getDefault()
+        Locale.setDefault(Locale.GERMANY)
+        try {
+            coEvery { api.getWarnings("germany") } returns MeteoAlarmResponse(
+                warnings = listOf(
+                    MeteoAlarmWarning(
+                        identifier = "de-localized",
+                        info = listOf(
+                            MeteoAlarmInfo(
+                                language = "en",
+                                event = "Rain",
+                                headline = "Official rain warning",
+                                description = "Heavy rain possible.",
+                            ),
+                            MeteoAlarmInfo(
+                                language = "de",
+                                event = "Regen",
+                                headline = "Amtliche Regenwarnung",
+                                description = "Starkregen moeglich.",
+                            ),
+                        ),
+                    ),
+                ),
+            )
+
+            val alert = adapter.getAlertsForCountry("DE").getOrThrow().single()
+
+            assertEquals("Regen", alert.event)
+            assertEquals("Amtliche Regenwarnung", alert.headline)
+            assertEquals("Starkregen moeglich.", alert.description)
+        } finally {
+            Locale.setDefault(previousLocale)
+        }
     }
 
     @Test

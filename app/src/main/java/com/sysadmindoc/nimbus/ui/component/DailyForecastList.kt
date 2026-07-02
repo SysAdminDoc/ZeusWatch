@@ -58,6 +58,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
+import com.sysadmindoc.nimbus.util.conditionDescription
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -489,7 +490,7 @@ private fun DailyOverviewRow(
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
             )
             Text(
-                text = stringResource(day.weatherCode.descriptionRes()),
+                text = day.conditionDescription(context),
                 style = MaterialTheme.typography.labelSmall,
                 color = NimbusTextTertiary,
                 maxLines = 1,

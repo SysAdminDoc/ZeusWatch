@@ -6,6 +6,7 @@ import com.sysadmindoc.nimbus.data.model.AlertPolygon
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import com.sysadmindoc.nimbus.data.util.SourceLocaleText
 import kotlinx.coroutines.CancellationException
 import org.w3c.dom.Element
 import org.w3c.dom.NodeList
@@ -79,9 +80,9 @@ class BmkgAlertAdapter @Inject constructor(
         longitude: Double,
     ): WeatherAlert? {
         val root = parseXml(xml).documentElement
-        val info = root.childElements("info")
-            .firstOrNull { it.childText("language")?.equals("en", ignoreCase = true) == true }
-            ?: root.childElements("info").firstOrNull()
+        val infoBlocks = root.childElements("info")
+        val info = SourceLocaleText.filterByLocale(infoBlocks, languageTag = { it.childText("language") })
+            .firstOrNull()
             ?: return null
         val event = info.childText("event") ?: return null
         val geometry = info.toAlertGeometry()

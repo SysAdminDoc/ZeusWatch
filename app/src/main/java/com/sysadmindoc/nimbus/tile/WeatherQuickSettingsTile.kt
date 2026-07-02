@@ -15,6 +15,7 @@ import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.util.WeatherFormatter
+import com.sysadmindoc.nimbus.util.conditionDescription
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -93,7 +94,7 @@ class WeatherQuickSettingsTile : TileService() {
 
     private fun applyWeatherToTile(tile: Tile, data: WeatherData, s: NimbusSettings) {
         val temp = WeatherFormatter.formatTemperature(data.current.temperature, s)
-        val condition = data.current.weatherCode.localizedDescription(this)
+        val condition = data.current.conditionDescription(this)
 
         tile.state = Tile.STATE_ACTIVE
         tile.label = "$temp $condition"

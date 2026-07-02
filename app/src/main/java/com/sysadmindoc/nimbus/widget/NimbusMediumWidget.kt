@@ -108,7 +108,7 @@ private fun MediumWidgetContent(
         ) {
             Image(
                 provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
-                contentDescription = strings.weatherDescription(data.weatherCode, data.isDay),
+                contentDescription = strings.weatherDescription(data.weatherCode, data.isDay, data.conditionText),
                 modifier = GlanceModifier.size(30.dp),
             )
             Spacer(modifier = GlanceModifier.width(10.dp))
@@ -182,7 +182,7 @@ private fun DayColumn(
         Spacer(modifier = GlanceModifier.height(3.dp))
         Image(
             provider = ImageProvider(weatherIconRes(day.code, true)),
-            contentDescription = strings.weatherDescription(day.code, true),
+            contentDescription = strings.weatherDescription(day.code, true, day.conditionText),
             modifier = GlanceModifier.size(18.dp),
         )
         Spacer(modifier = GlanceModifier.height(4.dp))

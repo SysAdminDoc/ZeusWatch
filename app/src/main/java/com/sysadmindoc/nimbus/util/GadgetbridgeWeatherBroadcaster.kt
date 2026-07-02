@@ -169,7 +169,7 @@ private fun WeatherData.toGadgetbridgeWeatherSpec(
         location = location.name,
         currentTemp = current.temperature.toKelvinInt(),
         currentConditionCode = current.weatherCode.toOpenWeatherCode(),
-        currentCondition = conditionLabel(current.weatherCode),
+        currentCondition = current.sourceConditionText.takeUnlessBlank() ?: conditionLabel(current.weatherCode),
         currentHumidity = current.humidity,
         todayMaxTemp = current.dailyHigh.toKelvinInt(),
         todayMinTemp = current.dailyLow.toKelvinInt(),
@@ -228,6 +228,9 @@ private fun HourlyConditions.toGadgetbridgeHourlySpec(zone: ZoneId): Gadgetbridg
 
 private fun WeatherCode.toOpenWeatherCode(): Int =
     openWeatherConditionCodes[this] ?: UNKNOWN_OPEN_WEATHER_CODE
+
+private fun String?.takeUnlessBlank(): String? =
+    this?.trim()?.takeIf { it.isNotBlank() }
 
 private fun dateTimeStringToEpochSeconds(
     raw: String?,

@@ -108,7 +108,7 @@ private fun LargeWidgetContent(
         ) {
             Image(
                 provider = ImageProvider(weatherIconRes(data.weatherCode, data.isDay)),
-                contentDescription = strings.weatherDescription(data.weatherCode, data.isDay),
+                contentDescription = strings.weatherDescription(data.weatherCode, data.isDay, data.conditionText),
                 modifier = GlanceModifier.size(32.dp),
             )
             Spacer(modifier = GlanceModifier.width(10.dp))
@@ -189,7 +189,7 @@ private fun HourColumn(
         )
         Image(
             provider = ImageProvider(weatherIconRes(hour.code, hour.isDay)),
-            contentDescription = strings.weatherDescription(hour.code, hour.isDay),
+            contentDescription = strings.weatherDescription(hour.code, hour.isDay, hour.conditionText),
             modifier = GlanceModifier.size(16.dp),
         )
         Text("${hour.temp}\u00B0", style = WidgetTheme.tempSmall)
@@ -223,7 +223,7 @@ private fun DayRow(
         // Icon (daily forecasts use daytime icons)
         Image(
             provider = ImageProvider(weatherIconRes(day.code, true)),
-            contentDescription = strings.weatherDescription(day.code, true),
+            contentDescription = strings.weatherDescription(day.code, true, day.conditionText),
             modifier = GlanceModifier.size(16.dp),
         )
 

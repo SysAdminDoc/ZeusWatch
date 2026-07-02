@@ -67,7 +67,7 @@ class ForecastAdapterTimezoneTest {
             val currentInstant = Instant.now().truncatedTo(ChronoUnit.HOURS)
 
             every { prefs.settings } returns flowOf(NimbusSettings(owmApiKey = "test-key"))
-            coEvery { api.getOneCall(any(), any(), any(), any(), any()) } returns OwmOneCallResponse(
+            coEvery { api.getOneCall(any(), any(), any(), any(), any(), any()) } returns OwmOneCallResponse(
                 lat = -14.2756,
                 lon = -170.702,
                 timezone = locationZone.id,

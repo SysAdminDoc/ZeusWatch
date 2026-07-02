@@ -161,6 +161,8 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 
 Forecasts are cached as normalized `WeatherData` per location and provider, so saved-location switches can render cached conditions immediately while the selected source refreshes in the background. Open-Meteo's older response cache is retained only as a migration fallback for Open-Meteo reads.
 
+When providers publish localized condition or alert text, matching user-locale source wording is preferred before falling back to app WMO labels.
+
 ### Widgets (Jetpack Glance)
 
 | Widget | Size | Content |
@@ -227,7 +229,7 @@ Forecasts are cached as normalized `WeatherData` per location and provider, so s
 | **Wear OS Companion** | Watch app, Material3 animated weather tile, and complications for temperature, condition/high-low, UV, and icon slots |
 | **Premium State Polish** | Focused, pressed, disabled, loading, empty, and recovery states use consistent dark glass chrome across phone, widgets, and Wear OS |
 | **Accessibility** | TalkBack descriptions on all Canvas components, alert icons, non-color risk cues on color-coded weather surfaces, and merged card semantics with liveRegion alerts |
-| **Localization Foundation** | Core navigation, Today shell states/card headers/card microcopy/alert dialogs/report sheet, Settings controls/enums, Home Card labels, Custom Alerts, Locations, Compare, widgets, and Wear OS state copy use Android string resources with Spanish plus Arabic/Hebrew RTL resources |
+| **Localization Foundation** | Core navigation, Today shell states/card headers/card microcopy/alert dialogs/report sheet, Settings controls/enums, Home Card labels, Custom Alerts, Locations, Compare, widgets, and Wear OS state copy use Android string resources with Spanish plus Arabic/Hebrew RTL resources; provider-native condition and alert text is preferred when upstream language matches the user's locale |
 | **App Shortcuts** | Long-press launcher: Search, Radar, Settings, Compare |
 | **Deep Links** | `zeuswatch://` URI scheme for locations, radar, settings, compare |
 | **F-Droid Ready** | `freenet` build flavor with no proprietary dependencies |

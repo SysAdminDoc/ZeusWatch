@@ -30,6 +30,7 @@ class WidgetDataProviderTest {
             updatedAt = 1000L,
             observedAt = 900L,
             sourceProvider = "Open-Meteo",
+            conditionText = "Mainly cloudy with showers",
         )
 
         assertEquals("Denver", data.locationName)
@@ -44,6 +45,7 @@ class WidgetDataProviderTest {
         assertEquals(1000L, data.updatedAt)
         assertEquals(900L, data.observedAt)
         assertEquals("Open-Meteo", data.sourceProvider)
+        assertEquals("Mainly cloudy with showers", data.conditionText)
     }
 
     @Test
@@ -65,6 +67,7 @@ class WidgetDataProviderTest {
         assertEquals(0L, data.updatedAt)
         assertEquals(0L, data.observedAt)
         assertNull(data.sourceProvider)
+        assertNull(data.conditionText)
     }
 
     // --- WidgetHourly items ---
@@ -77,6 +80,7 @@ class WidgetDataProviderTest {
             code = 1,
             isDay = true,
             precipChance = 20,
+            conditionText = "Partly cloudy",
         )
 
         assertEquals("3 PM", hourly.hour)
@@ -84,6 +88,7 @@ class WidgetDataProviderTest {
         assertEquals(1, hourly.code)
         assertTrue(hourly.isDay)
         assertEquals(20, hourly.precipChance)
+        assertEquals("Partly cloudy", hourly.conditionText)
     }
 
     @Test
@@ -113,6 +118,7 @@ class WidgetDataProviderTest {
             low = 60,
             code = 3,
             precipChance = 40,
+            conditionText = "Overcast",
         )
 
         assertEquals("Today", daily.day)
@@ -120,6 +126,7 @@ class WidgetDataProviderTest {
         assertEquals(60, daily.low)
         assertEquals(3, daily.code)
         assertEquals(40, daily.precipChance)
+        assertEquals("Overcast", daily.conditionText)
     }
 
     @Test

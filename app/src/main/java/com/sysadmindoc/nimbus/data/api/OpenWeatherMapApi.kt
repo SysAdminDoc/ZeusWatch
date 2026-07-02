@@ -19,6 +19,7 @@ interface OpenWeatherMapApi {
         @Query("appid") apiKey: String,
         @Query("units") units: String = "metric",
         @Query("exclude") exclude: String = "minutely",
+        @Query("lang") language: String? = null,
     ): OwmOneCallResponse
 
     @GET("air_pollution")

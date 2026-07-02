@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,6 +41,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
+import com.sysadmindoc.nimbus.util.conditionDescription
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -231,6 +233,7 @@ private fun CurrentHeaderTextBlock(
     copy: CurrentHeaderCopy,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     Column(modifier = modifier) {
         Text(
             text = stringResource(R.string.current_conditions_label),
@@ -244,7 +247,7 @@ private fun CurrentHeaderTextBlock(
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = stringResource(current.weatherCode.descriptionRes()),
+            text = current.conditionDescription(context),
             style = MaterialTheme.typography.titleLarge,
             color = NimbusTextPrimary.copy(alpha = 0.94f),
             maxLines = 2,

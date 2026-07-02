@@ -32,6 +32,7 @@ object WidgetDataProvider {
     private val KEY_HIGH = doublePreferencesKey("w_high")
     private val KEY_LOW = doublePreferencesKey("w_low")
     private val KEY_WEATHER_CODE = intPreferencesKey("w_code")
+    private val KEY_CONDITION_TEXT = stringPreferencesKey("w_condition_text")
     private val KEY_IS_DAY = intPreferencesKey("w_is_day")
     private val KEY_HUMIDITY = intPreferencesKey("w_humidity")
     private val KEY_WIND_SPEED = doublePreferencesKey("w_wind")
@@ -50,6 +51,11 @@ object WidgetDataProvider {
             prefs[KEY_HIGH] = data.high
             prefs[KEY_LOW] = data.low
             prefs[KEY_WEATHER_CODE] = data.weatherCode
+            if (data.conditionText.isNullOrBlank()) {
+                prefs.remove(KEY_CONDITION_TEXT)
+            } else {
+                prefs[KEY_CONDITION_TEXT] = data.conditionText
+            }
             prefs[KEY_IS_DAY] = if (data.isDay) 1 else 0
             prefs[KEY_HUMIDITY] = data.humidity
             prefs[KEY_WIND_SPEED] = data.windSpeed
@@ -78,6 +84,7 @@ object WidgetDataProvider {
             high = prefs[KEY_HIGH] ?: 0.0,
             low = prefs[KEY_LOW] ?: 0.0,
             weatherCode = prefs[KEY_WEATHER_CODE] ?: 0,
+            conditionText = prefs[KEY_CONDITION_TEXT],
             isDay = (prefs[KEY_IS_DAY] ?: 1) == 1,
             humidity = prefs[KEY_HUMIDITY] ?: 0,
             windSpeed = prefs[KEY_WIND_SPEED] ?: 0.0,
@@ -101,6 +108,7 @@ object WidgetDataProvider {
             prefs.remove(KEY_HIGH)
             prefs.remove(KEY_LOW)
             prefs.remove(KEY_WEATHER_CODE)
+            prefs.remove(KEY_CONDITION_TEXT)
             prefs.remove(KEY_IS_DAY)
             prefs.remove(KEY_HUMIDITY)
             prefs.remove(KEY_WIND_SPEED)
@@ -150,6 +158,12 @@ object WidgetDataProvider {
             prefs[doublePreferencesKey(wKey(appWidgetId, "high"))] = data.high
             prefs[doublePreferencesKey(wKey(appWidgetId, "low"))] = data.low
             prefs[intPreferencesKey(wKey(appWidgetId, "code"))] = data.weatherCode
+            val conditionTextKey = stringPreferencesKey(wKey(appWidgetId, "condition_text"))
+            if (data.conditionText.isNullOrBlank()) {
+                prefs.remove(conditionTextKey)
+            } else {
+                prefs[conditionTextKey] = data.conditionText
+            }
             prefs[intPreferencesKey(wKey(appWidgetId, "is_day"))] = if (data.isDay) 1 else 0
             prefs[intPreferencesKey(wKey(appWidgetId, "humidity"))] = data.humidity
             prefs[doublePreferencesKey(wKey(appWidgetId, "wind"))] = data.windSpeed
@@ -183,6 +197,7 @@ object WidgetDataProvider {
             high = prefs[doublePreferencesKey(wKey(appWidgetId, "high"))] ?: 0.0,
             low = prefs[doublePreferencesKey(wKey(appWidgetId, "low"))] ?: 0.0,
             weatherCode = prefs[intPreferencesKey(wKey(appWidgetId, "code"))] ?: 0,
+            conditionText = prefs[stringPreferencesKey(wKey(appWidgetId, "condition_text"))],
             isDay = (prefs[intPreferencesKey(wKey(appWidgetId, "is_day"))] ?: 1) == 1,
             humidity = prefs[intPreferencesKey(wKey(appWidgetId, "humidity"))] ?: 0,
             windSpeed = prefs[doublePreferencesKey(wKey(appWidgetId, "wind"))] ?: 0.0,
@@ -206,6 +221,7 @@ object WidgetDataProvider {
             prefs.remove(doublePreferencesKey(wKey(appWidgetId, "high")))
             prefs.remove(doublePreferencesKey(wKey(appWidgetId, "low")))
             prefs.remove(intPreferencesKey(wKey(appWidgetId, "code")))
+            prefs.remove(stringPreferencesKey(wKey(appWidgetId, "condition_text")))
             prefs.remove(intPreferencesKey(wKey(appWidgetId, "is_day")))
             prefs.remove(intPreferencesKey(wKey(appWidgetId, "humidity")))
             prefs.remove(doublePreferencesKey(wKey(appWidgetId, "wind")))
@@ -240,6 +256,7 @@ data class WidgetWeatherData(
     val updatedAt: Long = 0L,
     val observedAt: Long = 0L,
     val sourceProvider: String? = null,
+    val conditionText: String? = null,
 )
 
 @Serializable
@@ -249,6 +266,7 @@ data class WidgetHourly(
     val code: Int,
     val isDay: Boolean,
     val precipChance: Int,
+    val conditionText: String? = null,
 )
 
 @Serializable
@@ -258,6 +276,7 @@ data class WidgetDaily(
     val low: Int,
     val code: Int,
     val precipChance: Int,
+    val conditionText: String? = null,
 )
 
 @Serializable
@@ -272,6 +291,7 @@ data class WidgetSavedCity(
     val updatedAt: Long = 0L,
     val observedAt: Long = 0L,
     val sourceProvider: String? = null,
+    val conditionText: String? = null,
 )
 
 @Serializable

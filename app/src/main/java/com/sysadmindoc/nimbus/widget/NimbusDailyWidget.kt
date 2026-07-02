@@ -121,7 +121,7 @@ private fun DailyRow(
 
         Image(
             provider = ImageProvider(weatherIconRes(day.code, true)),
-            contentDescription = strings.weatherDescription(day.code, true),
+            contentDescription = strings.weatherDescription(day.code, true, day.conditionText),
             modifier = GlanceModifier.size(16.dp),
         )
 

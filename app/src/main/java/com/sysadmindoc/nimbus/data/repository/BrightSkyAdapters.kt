@@ -3,6 +3,8 @@ package com.sysadmindoc.nimbus.data.repository
 import android.util.Log
 import com.sysadmindoc.nimbus.data.api.BrightSkyApi
 import com.sysadmindoc.nimbus.data.model.*
+import com.sysadmindoc.nimbus.data.util.LocalizedTextOption
+import com.sysadmindoc.nimbus.data.util.SourceLocaleText
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -272,12 +274,38 @@ class BrightSkyAlertAdapter @Inject constructor(
     ): Result<List<WeatherAlert>> = runCatching {
         val response = api.getAlerts(latitude, longitude)
         response.alerts.map { alert ->
+            val event = SourceLocaleText.selectText(
+                listOf(
+                    LocalizedTextOption("de", alert.eventDe),
+                    LocalizedTextOption("en", alert.eventEn),
+                ),
+                fallback = alert.eventEn ?: alert.eventDe ?: "Weather Warning",
+            ) ?: "Weather Warning"
+            val headline = SourceLocaleText.selectText(
+                listOf(
+                    LocalizedTextOption("de", alert.headlineDe),
+                    LocalizedTextOption("en", alert.headlineEn),
+                ),
+                fallback = alert.headlineEn ?: alert.headlineDe ?: event,
+            ) ?: event
             WeatherAlert(
                 id = alert.alertId.ifBlank { "dwd-${alert.id}" },
-                event = alert.eventEn ?: alert.eventDe ?: "Weather Warning",
-                headline = alert.headlineEn ?: alert.headlineDe ?: alert.eventEn ?: "DWD Warning",
-                description = alert.descriptionEn ?: alert.descriptionDe ?: "",
-                instruction = alert.instructionEn ?: alert.instructionDe,
+                event = event,
+                headline = headline,
+                description = SourceLocaleText.selectText(
+                    listOf(
+                        LocalizedTextOption("de", alert.descriptionDe),
+                        LocalizedTextOption("en", alert.descriptionEn),
+                    ),
+                    fallback = alert.descriptionEn ?: alert.descriptionDe ?: "",
+                ) ?: "",
+                instruction = SourceLocaleText.selectText(
+                    listOf(
+                        LocalizedTextOption("de", alert.instructionDe),
+                        LocalizedTextOption("en", alert.instructionEn),
+                    ),
+                    fallback = alert.instructionEn ?: alert.instructionDe,
+                ),
                 severity = AlertSeverity.from(alert.severity),
                 urgency = AlertUrgency.from(alert.urgency),
                 certainty = alert.certainty ?: "",

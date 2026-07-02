@@ -56,8 +56,10 @@ internal data class WidgetStrings(
             String.format(Locale.getDefault(), updatedStaleContentDescriptionFormat, label)
         }
 
-    fun weatherDescription(code: Int, isDay: Boolean): String =
-        weatherDescriptions[code] ?: weatherIconContentDescription
+    fun weatherDescription(code: Int, isDay: Boolean, sourceText: String? = null): String =
+        sourceText?.trim()?.takeIf { it.isNotBlank() }
+            ?: weatherDescriptions[code]
+            ?: weatherIconContentDescription
 
     fun savedCityContentDescription(cityName: String, tempLabel: String): String =
         String.format(Locale.getDefault(), savedCityContentDescriptionFormat, cityName, tempLabel)

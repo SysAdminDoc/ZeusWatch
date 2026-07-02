@@ -13,6 +13,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.Locale
 
 class BmkgAlertAdapterTest {
 
@@ -60,6 +61,24 @@ class BmkgAlertAdapterTest {
     }
 
     @Test
+    fun `prefers CAP detail text matching device locale`() = runTest {
+        val previousLocale = Locale.getDefault()
+        Locale.setDefault(Locale.Builder().setLanguage("id").setRegion("ID").build())
+        try {
+            coEvery { api.getNowcastFeed() } returns rssFeed().xmlBody()
+            coEvery { api.getAlertDetail(DETAIL_URL) } returns multilingualCapAlert().xmlBody()
+
+            val alert = adapter.getAlerts(-6.2, 106.8).getOrThrow().single()
+
+            assertEquals("Badai petir", alert.event)
+            assertEquals("Peringatan dini badai petir", alert.headline)
+            assertEquals("Berpotensi hujan sedang hingga lebat disertai kilat dan angin kencang.", alert.description)
+        } finally {
+            Locale.setDefault(previousLocale)
+        }
+    }
+
+    @Test
     fun `returns empty outside Indonesia without network`() = runTest {
         val alerts = adapter.getAlerts(39.7, -104.9).getOrThrow()
 
@@ -95,6 +114,42 @@ class BmkgAlertAdapterTest {
             <description>Potential moderate to heavy rain with lightning and strong winds.</description>
             <effective>2026-07-01T08:30:00+07:00</effective>
             <expires>2026-07-01T11:30:00+07:00</expires>
+            <area>
+              <areaDesc>Jakarta Selatan</areaDesc>
+              <polygon>-6.30,106.70 -6.30,106.90 -6.10,106.90 -6.10,106.70 -6.30,106.70</polygon>
+            </area>
+          </info>
+        </alert>
+    """.trimIndent()
+
+    private fun multilingualCapAlert(): String = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+          <identifier>CSL20260701002</identifier>
+          <sent>2026-07-01T08:30:00+07:00</sent>
+          <info>
+            <language>en</language>
+            <event>Thunderstorm</event>
+            <urgency>Immediate</urgency>
+            <severity>Moderate</severity>
+            <certainty>Observed</certainty>
+            <senderName>Indonesia Agency for Meteorology, Climatology, and Geophysics</senderName>
+            <headline>Thunderstorm early warning</headline>
+            <description>Potential moderate to heavy rain with lightning and strong winds.</description>
+            <area>
+              <areaDesc>Jakarta Selatan</areaDesc>
+              <polygon>-6.30,106.70 -6.30,106.90 -6.10,106.90 -6.10,106.70 -6.30,106.70</polygon>
+            </area>
+          </info>
+          <info>
+            <language>id-ID</language>
+            <event>Badai petir</event>
+            <urgency>Immediate</urgency>
+            <severity>Moderate</severity>
+            <certainty>Observed</certainty>
+            <senderName>Badan Meteorologi, Klimatologi, dan Geofisika</senderName>
+            <headline>Peringatan dini badai petir</headline>
+            <description>Berpotensi hujan sedang hingga lebat disertai kilat dan angin kencang.</description>
             <area>
               <areaDesc>Jakarta Selatan</areaDesc>
               <polygon>-6.30,106.70 -6.30,106.90 -6.10,106.90 -6.10,106.70 -6.30,106.70</polygon>

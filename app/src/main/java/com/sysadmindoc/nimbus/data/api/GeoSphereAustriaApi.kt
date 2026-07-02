@@ -4,6 +4,7 @@ import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import com.sysadmindoc.nimbus.data.util.SourceLocaleText
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -156,7 +157,11 @@ class GeoSphereAustriaAlertAdapter @Inject constructor(
         }
 
         return try {
-            val response = api.getWarningsForCoords(latitude = latitude, longitude = longitude)
+            val response = api.getWarningsForCoords(
+                latitude = latitude,
+                longitude = longitude,
+                language = SourceLocaleText.preferredLanguage(setOf("de", "en")),
+            )
             val area = response.properties.location?.properties?.name ?: "Austria"
             Result.success(
                 response.properties.warnings.mapNotNull { warning ->

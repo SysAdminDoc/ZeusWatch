@@ -9,6 +9,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
@@ -69,7 +70,7 @@ class OwmForecastAdapter @Inject constructor(
         val apiKey = prefs.settings.first().owmApiKey
         require(apiKey.isNotBlank()) { "OpenWeatherMap API key not configured" }
 
-        val response = api.getOneCall(latitude, longitude, apiKey)
+        val response = api.getOneCall(latitude, longitude, apiKey, language = owmLanguage())
         responseCache.put(latitude, longitude, response)
         mapToWeatherData(response, latitude, longitude, locationName)
     }.onFailure {
@@ -120,6 +121,7 @@ class OwmForecastAdapter @Inject constructor(
                 dailyLow = firstDaily?.temp?.min ?: current.temp,
                 sunrise = current.sunrise?.let { epochToTimeStr(it, zone) },
                 sunset = current.sunset?.let { epochToTimeStr(it, zone) },
+                sourceConditionText = current.weather.firstOrNull()?.description.takeUnlessBlank(),
             ),
             hourly = mapHourly(r.hourly, zone, locationLocalNow),
             daily = mapDaily(r.daily, zone),
@@ -155,6 +157,7 @@ class OwmForecastAdapter @Inject constructor(
                 snowfall = h.snow?.oneHour?.let { (it / 10.0).coerceAtLeast(0.0) }, // mm liquid-equivalent → cm (formatter contract)
                 windGusts = h.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
                 surfacePressure = h.pressure?.toDouble(),
+                sourceConditionText = h.weather.firstOrNull()?.description.takeUnlessBlank(),
             )
         }
     }
@@ -183,6 +186,8 @@ class OwmForecastAdapter @Inject constructor(
                 windDirectionDominant = d.windDeg,
                 snowfallSum = d.snow?.let { (it / 10.0).coerceAtLeast(0.0) }, // mm liquid-equivalent → cm (formatter contract)
                 windGustsMax = d.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
+                sourceConditionText = d.summary.takeUnlessBlank()
+                    ?: d.weather.firstOrNull()?.description.takeUnlessBlank(),
             )
         }
     }
@@ -214,7 +219,13 @@ class OwmAlertAdapter @Inject constructor(
         val response = responseCache.get(latitude, longitude) ?: run {
             val apiKey = prefs.settings.first().owmApiKey
             require(apiKey.isNotBlank()) { "OpenWeatherMap API key not configured" }
-            api.getOneCall(latitude, longitude, apiKey, exclude = "current,minutely,hourly,daily")
+            api.getOneCall(
+                latitude,
+                longitude,
+                apiKey,
+                exclude = "current,minutely,hourly,daily",
+                language = owmLanguage(),
+            )
         }
         response.alerts.mapIndexed { i, alert ->
             val zone = try { ZoneId.of(response.timezone) } catch (_: Exception) { ZoneId.systemDefault() }
@@ -252,6 +263,12 @@ class OwmAlertAdapter @Inject constructor(
         }
     }
 }
+
+private fun owmLanguage(): String? =
+    Locale.getDefault().language.takeIf { it.isNotBlank() }
+
+private fun String?.takeUnlessBlank(): String? =
+    this?.trim()?.takeIf { it.isNotBlank() }
 
 /**
  * Air quality adapter for OpenWeatherMap.

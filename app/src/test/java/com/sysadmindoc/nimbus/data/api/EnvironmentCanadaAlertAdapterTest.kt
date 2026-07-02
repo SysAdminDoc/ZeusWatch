@@ -137,7 +137,7 @@ class EnvironmentCanadaAlertAdapterTest {
 
     @Test
     fun `filters out No watches or warnings entries`() = runTest {
-        coEvery { api.getProvinceAlerts("on") } returns EnvironmentCanadaResponse(
+        coEvery { api.getProvinceAlerts("on", any()) } returns EnvironmentCanadaResponse(
             entries = listOf(
                 EnvironmentCanadaEntry(
                     title = "No watches or warnings in effect",
@@ -163,7 +163,7 @@ class EnvironmentCanadaAlertAdapterTest {
 
     @Test
     fun `filters out No warnings in effect entries (alternate wording)`() = runTest {
-        coEvery { api.getProvinceAlerts("on") } returns EnvironmentCanadaResponse(
+        coEvery { api.getProvinceAlerts("on", any()) } returns EnvironmentCanadaResponse(
             entries = listOf(
                 EnvironmentCanadaEntry(title = "No warnings in effect for Ontario"),
             )
@@ -175,7 +175,7 @@ class EnvironmentCanadaAlertAdapterTest {
 
     @Test
     fun `entries with null title are filtered`() = runTest {
-        coEvery { api.getProvinceAlerts("on") } returns EnvironmentCanadaResponse(
+        coEvery { api.getProvinceAlerts("on", any()) } returns EnvironmentCanadaResponse(
             entries = listOf(
                 EnvironmentCanadaEntry(id = "x", title = null, severity = "Minor"),
                 EnvironmentCanadaEntry(id = "y", title = "Winter Storm Warning", severity = "Severe"),
@@ -189,7 +189,7 @@ class EnvironmentCanadaAlertAdapterTest {
 
     @Test
     fun `maps severity string to AlertSeverity enum`() = runTest {
-        coEvery { api.getProvinceAlerts("bc") } returns EnvironmentCanadaResponse(
+        coEvery { api.getProvinceAlerts("bc", any()) } returns EnvironmentCanadaResponse(
             entries = listOf(
                 EnvironmentCanadaEntry(title = "Extreme Fire Danger", severity = "Extreme"),
                 EnvironmentCanadaEntry(title = "Frost Advisory", severity = "Minor"),
@@ -204,7 +204,7 @@ class EnvironmentCanadaAlertAdapterTest {
 
     @Test
     fun `senderName is Environment Canada`() = runTest {
-        coEvery { api.getProvinceAlerts("mb") } returns EnvironmentCanadaResponse(
+        coEvery { api.getProvinceAlerts("mb", any()) } returns EnvironmentCanadaResponse(
             entries = listOf(
                 EnvironmentCanadaEntry(title = "Blizzard Warning", severity = "Severe"),
             )
@@ -216,7 +216,7 @@ class EnvironmentCanadaAlertAdapterTest {
 
     @Test
     fun `alert ID falls back to synthetic key when entry id is null`() = runTest {
-        coEvery { api.getProvinceAlerts("ab") } returns EnvironmentCanadaResponse(
+        coEvery { api.getProvinceAlerts("ab", any()) } returns EnvironmentCanadaResponse(
             entries = listOf(
                 EnvironmentCanadaEntry(
                     id = null,
@@ -234,7 +234,7 @@ class EnvironmentCanadaAlertAdapterTest {
 
     @Test
     fun `areaDesc from entry is used in alert areaDescription`() = runTest {
-        coEvery { api.getProvinceAlerts("on") } returns EnvironmentCanadaResponse(
+        coEvery { api.getProvinceAlerts("on", any()) } returns EnvironmentCanadaResponse(
             entries = listOf(
                 EnvironmentCanadaEntry(
                     title = "Severe Thunderstorm Watch",

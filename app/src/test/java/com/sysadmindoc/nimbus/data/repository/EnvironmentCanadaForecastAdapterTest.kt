@@ -126,6 +126,7 @@ class EnvironmentCanadaForecastAdapterTest {
         assertEquals("Toronto", data.location.name)
         assertEquals("CA", data.location.country)
         assertEquals(12.5, data.current.temperature, 0.0001)
+        assertEquals("Partly cloudy", data.current.sourceConditionText)
         assertEquals(68, data.current.humidity)
         // kPa → hPa conversion
         assertEquals(1013.0, data.current.pressure, 0.01)
@@ -136,6 +137,7 @@ class EnvironmentCanadaForecastAdapterTest {
         // Daily was paired into Today (high 15 / low 5) + Friday (high 9 / low 2)
         assertEquals(2, data.daily.size)
         assertEquals(15.0, data.daily[0].temperatureHigh, 0.0001)
+        assertEquals("Partly cloudy", data.daily[0].sourceConditionText)
         assertEquals(5.0, data.daily[0].temperatureLow, 0.0001)
         assertEquals(80, data.daily[1].precipitationProbability)
     }

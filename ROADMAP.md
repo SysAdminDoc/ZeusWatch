@@ -42,9 +42,6 @@ Split into remaining lanes:
 
 ## NEXT — 2-3 release cycles out (target v1.25 - v1.27)
 
-### NX-10. Localized condition strings from native services · **T-I18N**
-Prefer upstream localized alert/condition text when user locale matches. Effort: low-medium.
-
 ### NX-11. Vico chart migration for trend cards · **T-PERF** / UX
 Replace custom Canvas trend charts with Vico 3.x. Keep `TemperatureGraph` custom. Removes ~600 lines. Effort: medium.
 
