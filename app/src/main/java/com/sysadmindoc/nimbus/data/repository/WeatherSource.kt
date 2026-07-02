@@ -81,6 +81,10 @@ enum class WeatherSourceProvider(
         displayName = "BMKG",
         supportedTypes = setOf(WeatherDataType.ALERTS),
     ),
+    GEOSPHERE_AUSTRIA(
+        displayName = "GeoSphere Austria",
+        supportedTypes = setOf(WeatherDataType.ALERTS, WeatherDataType.MINUTELY),
+    ),
     METEOALARM(
         displayName = "MeteoAlarm (EUMETNET)",
         supportedTypes = setOf(WeatherDataType.ALERTS),

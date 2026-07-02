@@ -149,6 +149,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | **Environment Canada** | Forecast, Alerts | Canada |
 | **Hong Kong Observatory** | Forecast, Alerts | Hong Kong |
 | **BMKG** | Alerts | Indonesia |
+| **GeoSphere Austria** | INCA 15-minute nowcast, Alerts | Austria / Alpine region |
 | **WMO SWIC** | Alerts | Global fallback by country |
 | **OpenWeatherMap** | Forecast (fallback) | Global (API key) |
 | **Pirate Weather** | Forecast (fallback) | Global (API key) |

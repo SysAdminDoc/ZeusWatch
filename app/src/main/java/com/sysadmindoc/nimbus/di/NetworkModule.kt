@@ -12,6 +12,8 @@ import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertAdapter
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaAlertApi
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaForecastApi
 import com.sysadmindoc.nimbus.data.api.GeocodingApi
+import com.sysadmindoc.nimbus.data.api.GeoSphereAustriaDatasetApi
+import com.sysadmindoc.nimbus.data.api.GeoSphereAustriaWarnApi
 import com.sysadmindoc.nimbus.data.api.HkoApi
 import com.sysadmindoc.nimbus.data.api.JmaAlertAdapter
 import com.sysadmindoc.nimbus.data.api.JmaAlertApi
@@ -334,6 +336,34 @@ object NetworkModule {
     @Singleton
     fun provideBmkgAlertApi(@Named("bmkg") retrofit: Retrofit): BmkgAlertApi {
         return retrofit.create(BmkgAlertApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    @Named("geosphere_dataset")
+    fun provideGeoSphereAustriaDatasetRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(GeoSphereAustriaDatasetApi.BASE_URL, client)
+
+    @Provides
+    @Singleton
+    fun provideGeoSphereAustriaDatasetApi(
+        @Named("geosphere_dataset") retrofit: Retrofit,
+    ): GeoSphereAustriaDatasetApi {
+        return retrofit.create(GeoSphereAustriaDatasetApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    @Named("geosphere_warn")
+    fun provideGeoSphereAustriaWarnRetrofit(client: OkHttpClient): Retrofit =
+        buildRetrofit(GeoSphereAustriaWarnApi.BASE_URL, client)
+
+    @Provides
+    @Singleton
+    fun provideGeoSphereAustriaWarnApi(
+        @Named("geosphere_warn") retrofit: Retrofit,
+    ): GeoSphereAustriaWarnApi {
+        return retrofit.create(GeoSphereAustriaWarnApi::class.java)
     }
 
     @Provides

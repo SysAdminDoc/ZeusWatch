@@ -43,9 +43,6 @@ Split into remaining lanes:
 
 ## NEXT — 2-3 release cycles out (target v1.25 - v1.27)
 
-### NX-2. GeoSphere Austria adapter (INCA nowcast + alerts) · **T-SOURCES**
-CC0 license, no key, 15-min/1-km nowcast for Austria + Alps. Effort: medium.
-
 ### NX-3. FMI (Finland) adapter first; KNMI optional after key-policy decision · **T-SOURCES**
 FMI is no-key, documented WFS 2.0. KNMI requires Authorization key -- defer until NX-20 provides generic optional-key UI. Effort: medium.
 
