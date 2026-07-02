@@ -130,7 +130,7 @@
     <string name="onboarding_cards_standard_count">ברירת מחדל</string>
     <string name="onboarding_cards_everything">הכל</string>
     <string name="onboarding_cards_everything_desc">הפעל את כל הכרטיסים הזמינים ללוח צפוף למשתמשים מתקדמים.</string>
-    <string name="onboarding_cards_everything_count">35 כרטיסים</string>
+    <string name="onboarding_cards_everything_count">36 כרטיסים</string>
     <string name="onboarding_continue">המשך</string>
     <string name="onboarding_finish">התחל את ZeusWatch</string>
     <string name="whats_new_title">What\'s new in ZeusWatch</string>
@@ -262,6 +262,7 @@
     <string name="card_type_hourly_forecast">תחזית שעתית</string>
     <string name="card_type_temperature_graph">מגמת טמפרטורה</string>
     <string name="card_type_forecast_evolution">Forecast Evolution</string>
+    <string name="card_type_provider_agreement">Provider Agreement</string>
     <string name="card_type_daily_forecast">תחזית יומית</string>
     <string name="card_type_uv_index">מדד UV</string>
     <string name="card_type_wind_compass">רוח</string>
@@ -525,6 +526,18 @@
     <string name="forecast_evolution_rain_delta">%1$+d%%</string>
     <string name="forecast_evolution_point">%1$s: %2$s, %3$s rain</string>
     <string name="forecast_evolution_semantics">Forecast evolution. Latest run compared with previous run. Average temperature shift %1$s. Average rain risk shift %2$s.</string>
+    <string name="provider_agreement_loading_title">Comparing providers</string>
+    <string name="provider_agreement_loading_message">Fetching 24-hour temperature and precipitation from alternate sources.</string>
+    <string name="provider_agreement_unavailable_title">Provider agreement unavailable</string>
+    <string name="provider_agreement_unavailable_message">At least two forecast sources are needed for this location.</string>
+    <string name="provider_agreement_badge_strong">Strong agreement</string>
+    <string name="provider_agreement_badge_moderate">Moderate agreement</string>
+    <string name="provider_agreement_badge_divergent">Divergent</string>
+    <string name="provider_agreement_window">%1$d providers, next 24 hours</string>
+    <string name="provider_agreement_temp_spread">Temp spread</string>
+    <string name="provider_agreement_precip_spread">Precip spread</string>
+    <string name="provider_agreement_provider_values">%1$s avg, %2$s precip</string>
+    <string name="provider_agreement_semantics">Provider agreement. %1$s across %2$d providers. Temperature spread %3$s. Precipitation spread %4$s.</string>
     <string name="forecast_accuracy_too_warm">%1$dd ago: %2$s too warm</string>
     <string name="forecast_accuracy_too_cool">%1$dd ago: %2$s too cool</string>
     <string name="settings_show_forecast_accuracy">Forecast accuracy</string>

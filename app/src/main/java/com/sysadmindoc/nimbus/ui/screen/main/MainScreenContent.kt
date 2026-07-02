@@ -128,6 +128,7 @@ import com.sysadmindoc.nimbus.ui.component.PollenCard
 import com.sysadmindoc.nimbus.ui.component.SevereWeatherCard
 import com.sysadmindoc.nimbus.ui.component.SnowfallCard
 import com.sysadmindoc.nimbus.ui.component.SunshineDurationCard
+import com.sysadmindoc.nimbus.ui.component.ProviderAgreementCard
 import com.sysadmindoc.nimbus.ui.component.RadarPreviewCard
 import com.sysadmindoc.nimbus.ui.component.SunArc
 import com.sysadmindoc.nimbus.ui.component.WeatherSummaryCard
@@ -1096,6 +1097,7 @@ private val FORECAST_CARD_TYPES = setOf(
     CardType.HOURLY_FORECAST,
     CardType.TEMPERATURE_GRAPH,
     CardType.FORECAST_EVOLUTION,
+    CardType.PROVIDER_AGREEMENT,
     CardType.DAILY_FORECAST,
 )
 
@@ -1216,6 +1218,28 @@ private fun RenderForecastCard(
                 context.state.forecastEvolutionUnavailable -> InlineNoticeCard(
                     title = stringResource(R.string.forecast_evolution_unavailable_title),
                     message = stringResource(R.string.forecast_evolution_unavailable_message),
+                    icon = Icons.Filled.CloudOff,
+                    tint = NimbusTextSecondary,
+                    modifier = modifier,
+                )
+            }
+        }
+        CardType.PROVIDER_AGREEMENT -> {
+            when {
+                context.state.providerAgreement != null -> ProviderAgreementCard(
+                    data = context.state.providerAgreement,
+                    modifier = modifier,
+                )
+                context.state.isProviderAgreementLoading -> InlineNoticeCard(
+                    title = stringResource(R.string.provider_agreement_loading_title),
+                    message = stringResource(R.string.provider_agreement_loading_message),
+                    icon = Icons.Filled.Refresh,
+                    tint = NimbusBlueAccent,
+                    modifier = modifier,
+                )
+                context.state.providerAgreementUnavailable -> InlineNoticeCard(
+                    title = stringResource(R.string.provider_agreement_unavailable_title),
+                    message = stringResource(R.string.provider_agreement_unavailable_message),
                     icon = Icons.Filled.CloudOff,
                     tint = NimbusTextSecondary,
                     modifier = modifier,

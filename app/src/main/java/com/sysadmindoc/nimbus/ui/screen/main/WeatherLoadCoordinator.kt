@@ -14,11 +14,15 @@ import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionRepository
 import com.sysadmindoc.nimbus.data.repository.MarineRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.OnThisDayRepository
+import com.sysadmindoc.nimbus.data.repository.ProviderAgreementAnalyzer
+import com.sysadmindoc.nimbus.data.repository.ProviderWeatherSnapshot
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.SourceOverrides
 import com.sysadmindoc.nimbus.data.repository.SummaryStyle
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
+import com.sysadmindoc.nimbus.data.repository.WeatherDataType
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
+import com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider
 import com.sysadmindoc.nimbus.data.repository.toZoneIdOrNull
 import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import com.sysadmindoc.nimbus.sync.WearSyncManager
@@ -44,6 +48,8 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -382,6 +388,20 @@ class WeatherLoadCoordinator @Inject constructor(
             if (currentState().settings.isCardEnabled(CardType.FORECAST_EVOLUTION)) {
                 launch { fetchForecastEvolution(lat, lon, requestId, updateState, isLatestRequest) }
             }
+            if (currentState().settings.isCardEnabled(CardType.PROVIDER_AGREEMENT)) {
+                launch {
+                    fetchProviderAgreement(
+                        lat = lat,
+                        lon = lon,
+                        sourceOverrides = sourceOverrides,
+                        data = data,
+                        settings = currentState().settings,
+                        requestId = requestId,
+                        updateState = updateState,
+                        isLatestRequest = isLatestRequest,
+                    )
+                }
+            }
             if (currentState().settings.isCardEnabled(CardType.AURORA_KP)) {
                 launch { fetchAuroraKp(requestId, updateState, isLatestRequest) }
             }
@@ -399,6 +419,117 @@ class WeatherLoadCoordinator @Inject constructor(
             }
             if (currentState().settings.isCardEnabled(CardType.CLIMATE_OUTLOOK)) {
                 launch { fetchClimateOutlook(lat, lon, requestId, updateState, isLatestRequest) }
+            }
+        }
+    }
+
+    suspend fun fetchProviderAgreement(
+        lat: Double,
+        lon: Double,
+        sourceOverrides: SourceOverrides,
+        data: WeatherData,
+        settings: NimbusSettings,
+        requestId: Long,
+        updateState: ((MainUiState) -> MainUiState) -> Unit,
+        isLatestRequest: (Long) -> Boolean,
+    ) {
+        if (!isLatestRequest(requestId)) return
+        updateState {
+            it.copy(
+                providerAgreement = null,
+                isProviderAgreementLoading = true,
+                providerAgreementUnavailable = false,
+            )
+        }
+
+        val primaryProvider = actualForecastProvider(
+            data = data,
+            settings = settings,
+            sourceOverrides = sourceOverrides,
+        )
+        val candidates = providerAgreementCandidates(primaryProvider)
+        if (candidates.size < 2) {
+            markProviderAgreementUnavailable(requestId, updateState, isLatestRequest)
+            return
+        }
+
+        val snapshots = mutableListOf(ProviderWeatherSnapshot(primaryProvider, data))
+        val additionalSnapshots = coroutineScope {
+            candidates
+                .filterNot { it == primaryProvider }
+                .map { provider ->
+                    async {
+                        provider to weatherSourceManager.getWeatherFromProvider(
+                            provider = provider,
+                            latitude = lat,
+                            longitude = lon,
+                            locationName = data.location.name,
+                            locationTimeZone = data.location.timeZone,
+                        )
+                    }
+                }
+                .awaitAll()
+        }.mapNotNull { (provider, result) ->
+            result.fold(
+                onSuccess = { ProviderWeatherSnapshot(provider, it) },
+                onFailure = {
+                    Log.d(TAG, "Provider agreement ${provider.displayName} unavailable: ${it.message}")
+                    null
+                },
+            )
+        }
+        snapshots += additionalSnapshots
+
+        val agreement = withContext(defaultDispatcher) {
+            ProviderAgreementAnalyzer.analyze(
+                forecasts = snapshots,
+                referenceTime = data.current.observationTime,
+            )
+        }
+
+        if (!isLatestRequest(requestId)) return
+        updateState {
+            it.copy(
+                providerAgreement = agreement,
+                isProviderAgreementLoading = false,
+                providerAgreementUnavailable = agreement == null,
+            )
+        }
+    }
+
+    private fun actualForecastProvider(
+        data: WeatherData,
+        settings: NimbusSettings,
+        sourceOverrides: SourceOverrides,
+    ): WeatherSourceProvider {
+        return WeatherSourceProvider.entries
+            .firstOrNull { it.displayName == data.sourceProvider }
+            ?.takeIf { it.isSelectableFor(WeatherDataType.FORECAST) }
+            ?: settings.sourceConfig.withOverrides(sourceOverrides).forecast
+    }
+
+    private fun providerAgreementCandidates(primaryProvider: WeatherSourceProvider): List<WeatherSourceProvider> =
+        listOf(
+            primaryProvider,
+            WeatherSourceProvider.OPEN_METEO,
+            WeatherSourceProvider.MET_NORWAY,
+        )
+            .filter { it.isSelectableFor(WeatherDataType.FORECAST) }
+            .distinct()
+            .take(3)
+
+    private fun markProviderAgreementUnavailable(
+        requestId: Long,
+        updateState: ((MainUiState) -> MainUiState) -> Unit,
+        isLatestRequest: (Long) -> Boolean,
+    ) {
+        if (isLatestRequest(requestId)) {
+            updateState {
+                it.copy(
+                    providerAgreement = null,
+                    isProviderAgreementLoading = false,
+                    providerAgreementUnavailable = true,
+                )
             }
         }
     }

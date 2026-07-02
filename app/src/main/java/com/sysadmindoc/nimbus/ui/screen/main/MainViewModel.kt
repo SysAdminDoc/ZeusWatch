@@ -29,6 +29,7 @@ import com.sysadmindoc.nimbus.data.repository.ForecastAccuracyData
 import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionData
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.ProviderAgreementData
 import com.sysadmindoc.nimbus.data.repository.SourceOverrides
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
@@ -141,6 +142,7 @@ class MainViewModel @Inject constructor(
                 previousSettings = settings
                 if (prior != null) {
                     handleForecastEvolutionSettingChange(prior, settings)
+                    handleProviderAgreementSettingChange(prior, settings)
                 }
                 // Derived data (summary, golden hour, driving/health alerts)
                 // bakes units and thresholds in at compute time - recompute it
@@ -205,6 +207,41 @@ class MainViewModel @Inject constructor(
                         forecastEvolution = null,
                         isForecastEvolutionLoading = false,
                         forecastEvolutionUnavailable = false,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun handleProviderAgreementSettingChange(old: NimbusSettings, new: NimbusSettings) {
+        val wasEnabled = old.isCardEnabled(CardType.PROVIDER_AGREEMENT)
+        val isEnabled = new.isCardEnabled(CardType.PROVIDER_AGREEMENT)
+        when {
+            !wasEnabled && isEnabled -> {
+                val data = _uiState.value.weatherData ?: return
+                val lat = activeLatitude ?: data.location.latitude
+                val lon = activeLongitude ?: data.location.longitude
+                val requestId = weatherRequestCounter.get()
+                val sourceOverrides = activeSourceOverrides
+                viewModelScope.launch {
+                    weatherLoadCoordinator.fetchProviderAgreement(
+                        lat = lat,
+                        lon = lon,
+                        sourceOverrides = sourceOverrides,
+                        data = data,
+                        settings = new,
+                        requestId = requestId,
+                        updateState = ::updateUiState,
+                        isLatestRequest = ::isLatestWeatherRequest,
+                    )
+                }
+            }
+            wasEnabled && !isEnabled -> {
+                _uiState.update {
+                    it.copy(
+                        providerAgreement = null,
+                        isProviderAgreementLoading = false,
+                        providerAgreementUnavailable = false,
                     )
                 }
             }
@@ -774,6 +811,9 @@ data class MainUiState(
     val forecastEvolution: ForecastEvolutionData? = null,
     val isForecastEvolutionLoading: Boolean = false,
     val forecastEvolutionUnavailable: Boolean = false,
+    val providerAgreement: ProviderAgreementData? = null,
+    val isProviderAgreementLoading: Boolean = false,
+    val providerAgreementUnavailable: Boolean = false,
     val forecastAccuracy: ForecastAccuracyData? = null,
     val confidenceBands: ConfidenceBandData? = null,
     val climateOutlook: ClimateOutlookData? = null,
@@ -811,6 +851,9 @@ private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
     forecastEvolution = null,
     isForecastEvolutionLoading = false,
     forecastEvolutionUnavailable = false,
+    providerAgreement = null,
+    isProviderAgreementLoading = false,
+    providerAgreementUnavailable = false,
     forecastAccuracy = null,
     confidenceBands = null,
     climateOutlook = null,
