@@ -43,9 +43,6 @@ Split into remaining lanes:
 
 ## NEXT — 2-3 release cycles out (target v1.25 - v1.27)
 
-### NX-3. FMI (Finland) adapter first; KNMI optional after key-policy decision · **T-SOURCES**
-FMI is no-key, documented WFS 2.0. KNMI requires Authorization key -- defer until NX-20 provides generic optional-key UI. Effort: medium.
-
 ### NX-5. Multi-provider agreement card · **T-RELIABILITY**
 Fetch 24h temp + precip from 2-3 providers; render agreement/divergence badge. Gate behind opt-in (API quota multiplication). Effort: medium.
 

@@ -25,6 +25,7 @@ class WeatherSourceManagerTest {
     private lateinit var openMeteoUkmoAdapter: OpenMeteoUkmoForecastAdapter
     private lateinit var openMeteoDmiAdapter: OpenMeteoDmiForecastAdapter
     private lateinit var openMeteoMeteoFranceAdapter: OpenMeteoMeteoFranceForecastAdapter
+    private lateinit var fmiForecastAdapter: FmiForecastAdapter
     private lateinit var openMeteoMinutelyAdapter: OpenMeteoMinutelyAdapter
     private lateinit var openMeteoMeteoFranceMinutelyAdapter: OpenMeteoMeteoFranceMinutelyAdapter
     private lateinit var alertAdapter: AlertSourceManagerAdapter
@@ -80,6 +81,7 @@ class WeatherSourceManagerTest {
         openMeteoUkmoAdapter = mockk()
         openMeteoDmiAdapter = mockk()
         openMeteoMeteoFranceAdapter = mockk()
+        fmiForecastAdapter = mockk()
         openMeteoMinutelyAdapter = mockk()
         openMeteoMeteoFranceMinutelyAdapter = mockk()
         alertAdapter = mockk()
@@ -129,6 +131,9 @@ class WeatherSourceManagerTest {
         WeatherSourceProvider.OPEN_METEO_METEO_FRANCE to WeatherSourceAdapterModule.provideOpenMeteoMeteoFranceAdapter(
             openMeteoMeteoFranceAdapter,
             openMeteoMeteoFranceMinutelyAdapter,
+        ),
+        WeatherSourceProvider.FMI to WeatherSourceAdapterModule.provideFmiAdapter(
+            fmiForecastAdapter,
         ),
         WeatherSourceProvider.NWS to WeatherSourceAdapterModule.provideNwsAlertAdapter(alertAdapter),
         WeatherSourceProvider.METEOALARM to WeatherSourceAdapterModule.provideMeteoAlarmAlertAdapter(alertAdapter),
@@ -317,6 +322,31 @@ class WeatherSourceManagerTest {
         assertTrue(result.isSuccess)
         coVerify(exactly = 1) {
             openMeteoMeteoFranceAdapter.getWeather(48.8566, 2.3522, "Paris")
+        }
+    }
+
+    @Test
+    fun getWeatherDelegatesFmiProviderToFmiAdapterWithResolvedZone() = runTest {
+        val settingsWithFmi = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                forecast = WeatherSourceProvider.FMI,
+            )
+        )
+        val helsinki = ZoneId.of("Europe/Helsinki")
+        every { prefs.settings } returns flowOf(settingsWithFmi)
+        coEvery { timeZoneResolver.resolveZone(60.1699, 24.9384, "Europe/Helsinki") } returns helsinki
+        coEvery { fmiForecastAdapter.getWeather(any(), any(), any(), any()) } returns Result.success(testWeatherData)
+
+        val result = manager.getWeather(
+            latitude = 60.1699,
+            longitude = 24.9384,
+            locationName = "Helsinki",
+            locationTimeZone = "Europe/Helsinki",
+        )
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            fmiForecastAdapter.getWeather(60.1699, 24.9384, "Helsinki", helsinki)
         }
     }
 
@@ -764,6 +794,10 @@ class WeatherSourceManagerTest {
         assertTrue(
             "Open-Meteo Meteo-France should be present",
             forecastProviders.contains(WeatherSourceProvider.OPEN_METEO_METEO_FRANCE),
+        )
+        assertTrue(
+            "FMI should be present once implemented",
+            forecastProviders.contains(WeatherSourceProvider.FMI),
         )
         assertTrue(
             "MET Norway should be present once implemented",

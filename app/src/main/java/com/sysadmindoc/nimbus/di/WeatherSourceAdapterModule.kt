@@ -10,6 +10,7 @@ import com.sysadmindoc.nimbus.data.repository.BrightSkyAlertAdapter
 import com.sysadmindoc.nimbus.data.repository.BrightSkyForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.CoordinateSourceRequest
 import com.sysadmindoc.nimbus.data.repository.EnvironmentCanadaForecastAdapter
+import com.sysadmindoc.nimbus.data.repository.FmiForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.ForecastSourceRequest
 import com.sysadmindoc.nimbus.data.repository.HkoAlertAdapter
 import com.sysadmindoc.nimbus.data.repository.HkoForecastAdapter
@@ -126,6 +127,23 @@ object WeatherSourceAdapterModule {
         override suspend fun getMinutely(request: CoordinateSourceRequest) =
             minutelyAdapter.getMinutelyPrecipitation(request.latitude, request.longitude)
     }
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @WeatherSourceKey(WeatherSourceProvider.FMI)
+    fun provideFmiAdapter(adapter: FmiForecastAdapter): WeatherSourceAdapter =
+        forecastOnlyAdapter(
+            provider = WeatherSourceProvider.FMI,
+            requiresForecastZone = true,
+        ) { request ->
+            adapter.getWeather(
+                request.latitude,
+                request.longitude,
+                request.locationName,
+                requireNotNull(request.forecastZone),
+            )
+        }
 
     @Provides
     @Singleton
