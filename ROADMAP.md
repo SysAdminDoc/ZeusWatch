@@ -39,7 +39,7 @@
 
 ### N-10. Dependency runway and platform compatibility pass · **T-RELIABILITY** / **T-PERF**
 Split into remaining lanes:
-- **Lane B**: feature-enabling AndroidX upgrades with dedicated test slices — Room 2.6.1->2.8.4, Glance 1.1.1->1.2.0 (only when stable).
+- **Lane B**: feature-enabling AndroidX upgrades with dedicated test slices — Glance 1.1.1->1.2.0 (only when stable).
 - **Lane C**: architecture-affecting upgrades (Retrofit 3, OkHttp 5, MapLibre 13, Kotlin 2.3+, Gradle 9, AGP 9) only after migration risk/rollback are documented.
 
 ---
@@ -204,7 +204,7 @@ Open question: needs measurement.
 | Compose BOM | 2025.04.01 | 2026.05.00 | M3 Expressive. N-10 scope. |
 | Kotlin | 2.1.0 | 2.3.x stable | KSP/Hilt compat risk. |
 | Hilt | 2.53.1 | 2.59.2 | Bump cautiously. |
-| Room | 2.6.1 | 2.8.4 | KMP-ready. |
+| Room | 2.7.2 | — | Current verified 2.7.x line; 2.8.x blocked by KSP schema export crash. |
 | WorkManager | 2.11.2 | — | Current. |
 | MapLibre | 11.5.2 | 13.2.0 | After NX-21. |
 | OkHttp | 4.12.0 | 5.3.2 | `redactQueryParameters` in 5.x. |
