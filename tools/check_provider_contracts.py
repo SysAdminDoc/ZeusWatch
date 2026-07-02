@@ -38,6 +38,8 @@ OTTAWA_LATITUDE = "45.4215"
 OTTAWA_LONGITUDE = "-75.6972"
 HONG_KONG_LATITUDE = "22.3027"
 HONG_KONG_LONGITUDE = "114.1772"
+PARIS_LATITUDE = "48.8566"
+PARIS_LONGITUDE = "2.3522"
 
 JsonMap = dict[str, Any]
 Transport = Callable[[Request, float], tuple[int, dict[str, str], bytes]]
@@ -181,6 +183,27 @@ def provider_checks() -> list[ContractCheck]:
             "timezone": "UTC",
         }
     )
+    open_meteo_meteo_france_query = urlencode(
+        {
+            "latitude": PARIS_LATITUDE,
+            "longitude": PARIS_LONGITUDE,
+            "current": "temperature_2m,weather_code",
+            "hourly": "temperature_2m,weather_code",
+            "daily": "weather_code,temperature_2m_max,temperature_2m_min",
+            "forecast_days": "1",
+            "forecast_hours": "1",
+            "timezone": "UTC",
+        }
+    )
+    open_meteo_meteo_france_minutely_query = urlencode(
+        {
+            "latitude": PARIS_LATITUDE,
+            "longitude": PARIS_LONGITUDE,
+            "minutely_15": "precipitation",
+            "forecast_minutely_15": "24",
+            "timezone": "UTC",
+        }
+    )
     bright_sky_forecast_query = urlencode(
         {
             "lat": BERLIN_LATITUDE,
@@ -291,6 +314,28 @@ def provider_checks() -> list[ContractCheck]:
             data_types=("FORECAST",),
             coverage=f"Copenhagen, DK ({COPENHAGEN_LATITUDE},{COPENHAGEN_LONGITUDE})",
             schema_assertion="Forecast API with models=dmi_seamless returns hourly and daily blocks",
+        ),
+        ContractCheck(
+            key="open-meteo-meteo-france",
+            name="Open-Meteo Meteo-France forecast",
+            url=f"https://api.open-meteo.com/v1/meteofrance?{open_meteo_meteo_france_query}",
+            docs_url="https://open-meteo.com/en/docs/meteofrance-api",
+            validator=validate_open_meteo_forecast,
+            providers=("OPEN_METEO_METEO_FRANCE",),
+            data_types=("FORECAST",),
+            coverage=f"Paris, FR ({PARIS_LATITUDE},{PARIS_LONGITUDE})",
+            schema_assertion="Meteo-France endpoint returns current, hourly, and daily forecast blocks",
+        ),
+        ContractCheck(
+            key="open-meteo-meteo-france-minutely",
+            name="Open-Meteo Meteo-France AROME nowcast",
+            url=f"https://api.open-meteo.com/v1/meteofrance?{open_meteo_meteo_france_minutely_query}",
+            docs_url="https://open-meteo.com/en/docs/meteofrance-api",
+            validator=validate_open_meteo_minutely,
+            providers=("OPEN_METEO_METEO_FRANCE",),
+            data_types=("MINUTELY",),
+            coverage=f"Paris, FR ({PARIS_LATITUDE},{PARIS_LONGITUDE})",
+            schema_assertion="Meteo-France endpoint returns minutely_15 precipitation buckets",
         ),
         ContractCheck(
             key="open-meteo-kma-quarantine",

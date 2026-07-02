@@ -17,6 +17,8 @@ import com.sysadmindoc.nimbus.data.repository.OpenMeteoBomForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoDmiForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoKmaForecastAdapter
+import com.sysadmindoc.nimbus.data.repository.OpenMeteoMeteoFranceForecastAdapter
+import com.sysadmindoc.nimbus.data.repository.OpenMeteoMeteoFranceMinutelyAdapter
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoMinutelyAdapter
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoUkmoForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.OwmAlertAdapter
@@ -104,6 +106,24 @@ object WeatherSourceAdapterModule {
         forecastOnlyAdapter(WeatherSourceProvider.OPEN_METEO_DMI) { request ->
             adapter.getWeather(request.latitude, request.longitude, request.locationName)
         }
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @WeatherSourceKey(WeatherSourceProvider.OPEN_METEO_METEO_FRANCE)
+    fun provideOpenMeteoMeteoFranceAdapter(
+        forecastAdapter: OpenMeteoMeteoFranceForecastAdapter,
+        minutelyAdapter: OpenMeteoMeteoFranceMinutelyAdapter,
+    ): WeatherSourceAdapter = object : WeatherSourceAdapter {
+        override val provider = WeatherSourceProvider.OPEN_METEO_METEO_FRANCE
+        override val supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.MINUTELY)
+
+        override suspend fun getForecast(request: ForecastSourceRequest) =
+            forecastAdapter.getWeather(request.latitude, request.longitude, request.locationName)
+
+        override suspend fun getMinutely(request: CoordinateSourceRequest) =
+            minutelyAdapter.getMinutelyPrecipitation(request.latitude, request.longitude)
+    }
 
     @Provides
     @Singleton

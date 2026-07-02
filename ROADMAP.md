@@ -43,9 +43,6 @@ Split into remaining lanes:
 
 ## NEXT — 2-3 release cycles out (target v1.25 - v1.27)
 
-### NX-1. Meteo-France adapter (forecast + AROME nowcast + vigilance alerts) · **T-SOURCES**
-Split: no-key forecast/nowcast first via Open-Meteo, keyed official Vigilance second. Effort: medium.
-
 ### NX-2. GeoSphere Austria adapter (INCA nowcast + alerts) · **T-SOURCES**
 CC0 license, no key, 15-min/1-km nowcast for Austria + Alps. Effort: medium.
 
@@ -186,7 +183,7 @@ Open question: needs measurement.
 |---|---|---|---|---|
 | 1 | FMI (Finland) | None | P1 | Best no-key regional adapter. Nordic story extension. |
 | 2 | DMI (Denmark/Greenland/Faroe) | Free/open, verify key flow | P1 | Forecast EDR. Queue after FMI. |
-| 3 | Meteo-France via Open-Meteo + Vigilance | None for forecast; JWT for Vigilance | P1 | Split: no-key first. |
+| 3 | Meteo-France via Open-Meteo + Vigilance | None for forecast; JWT for Vigilance | P1 | No-key forecast/nowcast shipped; official Vigilance blocked pending keyed path. |
 | 4 | HKO (Hong Kong) | None | P1/P2 | Compact regional win. |
 | 6 | KNMI (Netherlands) | API key | P2 | Optional user-key only after NX-20. |
 | 7 | CWA (Taiwan) | Free key | P2/P3 | Higher localization effort. |

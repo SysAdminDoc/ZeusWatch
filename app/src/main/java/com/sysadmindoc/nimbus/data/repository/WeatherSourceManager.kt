@@ -455,6 +455,17 @@ class OpenMeteoDmiForecastAdapter @Inject constructor(
     ): Result<WeatherData> = weatherRepository.get().getDmiWeatherDirect(latitude, longitude, locationName)
 }
 
+@Singleton
+class OpenMeteoMeteoFranceForecastAdapter @Inject constructor(
+    private val weatherRepository: dagger.Lazy<WeatherRepository>,
+) {
+    suspend fun getWeather(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = weatherRepository.get().getMeteoFranceWeatherDirect(latitude, longitude, locationName)
+}
+
 /**
  * Adapter wrapping the existing Open-Meteo minutely precipitation logic.
  */
@@ -466,6 +477,17 @@ class OpenMeteoMinutelyAdapter @Inject constructor(
         latitude: Double,
         longitude: Double,
     ): Result<List<MinutelyPrecipitation>> = weatherRepository.get().getMinutelyPrecipitationDirect(latitude, longitude)
+}
+
+@Singleton
+class OpenMeteoMeteoFranceMinutelyAdapter @Inject constructor(
+    private val weatherRepository: dagger.Lazy<WeatherRepository>,
+) {
+    suspend fun getMinutelyPrecipitation(
+        latitude: Double,
+        longitude: Double,
+    ): Result<List<MinutelyPrecipitation>> =
+        weatherRepository.get().getMeteoFranceMinutelyPrecipitationDirect(latitude, longitude)
 }
 
 /**
