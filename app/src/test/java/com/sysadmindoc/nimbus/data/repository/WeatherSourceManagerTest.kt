@@ -1,6 +1,8 @@
 package com.sysadmindoc.nimbus.data.repository
 
 import com.sysadmindoc.nimbus.data.api.BmkgAlertAdapter
+import com.sysadmindoc.nimbus.data.api.GeoSphereAustriaAlertAdapter
+import com.sysadmindoc.nimbus.data.api.GeoSphereAustriaNowcastAdapter
 import com.sysadmindoc.nimbus.data.model.*
 import com.sysadmindoc.nimbus.di.WeatherSourceAdapterModule
 import io.mockk.*
@@ -38,6 +40,8 @@ class WeatherSourceManagerTest {
     private lateinit var hkoForecastAdapter: HkoForecastAdapter
     private lateinit var hkoAlertAdapter: HkoAlertAdapter
     private lateinit var bmkgAlertAdapter: BmkgAlertAdapter
+    private lateinit var geoSphereAustriaAlertAdapter: GeoSphereAustriaAlertAdapter
+    private lateinit var geoSphereAustriaNowcastAdapter: GeoSphereAustriaNowcastAdapter
     private lateinit var timeZoneResolver: LocationTimeZoneResolver
     private lateinit var providerHealthRepository: ProviderHealthRepository
     private lateinit var manager: WeatherSourceManager
@@ -91,6 +95,8 @@ class WeatherSourceManagerTest {
         hkoForecastAdapter = mockk()
         hkoAlertAdapter = mockk()
         bmkgAlertAdapter = mockk()
+        geoSphereAustriaAlertAdapter = mockk()
+        geoSphereAustriaNowcastAdapter = mockk()
         timeZoneResolver = mockk()
         providerHealthRepository = mockk(relaxed = true)
         every { prefs.settings } returns flowOf(defaultSettings)
@@ -152,6 +158,10 @@ class WeatherSourceManagerTest {
         ),
         WeatherSourceProvider.BMKG to WeatherSourceAdapterModule.provideBmkgAdapter(
             bmkgAlertAdapter,
+        ),
+        WeatherSourceProvider.GEOSPHERE_AUSTRIA to WeatherSourceAdapterModule.provideGeoSphereAustriaAdapter(
+            geoSphereAustriaAlertAdapter,
+            geoSphereAustriaNowcastAdapter,
         ),
     )
 
@@ -597,6 +607,27 @@ class WeatherSourceManagerTest {
         }
     }
 
+    @Test
+    fun getAlertsDelegatesGeoSphereAustriaProviderToGeoSphereAustriaAdapter() = runTest {
+        val settingsWithGeoSphere = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                alerts = WeatherSourceProvider.GEOSPHERE_AUSTRIA,
+            )
+        )
+        every { prefs.settings } returns flowOf(settingsWithGeoSphere)
+        coEvery { geoSphereAustriaAlertAdapter.getAlerts(any(), any()) } returns Result.success(emptyList())
+
+        val result = manager.getAlerts(48.2082, 16.3738)
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            geoSphereAustriaAlertAdapter.getAlerts(48.2082, 16.3738)
+        }
+        coVerify(exactly = 0) {
+            alertAdapter.getAlerts(any(), any(), any(), any(), any())
+        }
+    }
+
     // ── Air Quality Tests ──
 
     @Test
@@ -658,6 +689,31 @@ class WeatherSourceManagerTest {
         assertEquals(1, result.getOrNull()?.size)
         coVerify(exactly = 1) {
             openMeteoMeteoFranceMinutelyAdapter.getMinutelyPrecipitation(48.8566, 2.3522)
+        }
+        coVerify(exactly = 0) {
+            openMeteoMinutelyAdapter.getMinutelyPrecipitation(any(), any())
+        }
+    }
+
+    @Test
+    fun getMinutelyPrecipitationDelegatesGeoSphereAustriaProviderToGeoSphereAustriaAdapter() = runTest {
+        val settingsWithGeoSphere = defaultSettings.copy(
+            sourceConfig = defaultSettings.sourceConfig.copy(
+                minutely = WeatherSourceProvider.GEOSPHERE_AUSTRIA,
+            )
+        )
+        val minutely = listOf(
+            MinutelyPrecipitation(time = LocalDateTime.now(), precipitation = 0.2)
+        )
+        every { prefs.settings } returns flowOf(settingsWithGeoSphere)
+        coEvery { geoSphereAustriaNowcastAdapter.getMinutelyPrecipitation(any(), any()) } returns Result.success(minutely)
+
+        val result = manager.getMinutelyPrecipitation(48.2082, 16.3738)
+
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrNull()?.size)
+        coVerify(exactly = 1) {
+            geoSphereAustriaNowcastAdapter.getMinutelyPrecipitation(48.2082, 16.3738)
         }
         coVerify(exactly = 0) {
             openMeteoMinutelyAdapter.getMinutelyPrecipitation(any(), any())
@@ -751,6 +807,7 @@ class WeatherSourceManagerTest {
         assertTrue(alertProviders.contains(WeatherSourceProvider.ENVIRONMENT_CANADA))
         assertTrue(alertProviders.contains(WeatherSourceProvider.HKO))
         assertTrue(alertProviders.contains(WeatherSourceProvider.BMKG))
+        assertTrue(alertProviders.contains(WeatherSourceProvider.GEOSPHERE_AUSTRIA))
         assertTrue(alertProviders.contains(WeatherSourceProvider.METEOALARM))
         assertTrue(alertProviders.contains(WeatherSourceProvider.JMA))
     }
@@ -761,5 +818,6 @@ class WeatherSourceManagerTest {
 
         assertTrue(minutelyProviders.contains(WeatherSourceProvider.OPEN_METEO))
         assertTrue(minutelyProviders.contains(WeatherSourceProvider.OPEN_METEO_METEO_FRANCE))
+        assertTrue(minutelyProviders.contains(WeatherSourceProvider.GEOSPHERE_AUSTRIA))
     }
 }

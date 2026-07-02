@@ -1,6 +1,8 @@
 package com.sysadmindoc.nimbus.di
 
 import com.sysadmindoc.nimbus.data.api.BmkgAlertAdapter
+import com.sysadmindoc.nimbus.data.api.GeoSphereAustriaAlertAdapter
+import com.sysadmindoc.nimbus.data.api.GeoSphereAustriaNowcastAdapter
 import com.sysadmindoc.nimbus.data.repository.AlertSourceManagerAdapter
 import com.sysadmindoc.nimbus.data.repository.AlertSourceRequest
 import com.sysadmindoc.nimbus.data.repository.AlertSourcePreference
@@ -290,6 +292,24 @@ object WeatherSourceAdapterModule {
         alertOnlyAdapter(WeatherSourceProvider.BMKG) { request ->
             alertAdapter.getAlerts(request.latitude, request.longitude)
         }
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @WeatherSourceKey(WeatherSourceProvider.GEOSPHERE_AUSTRIA)
+    fun provideGeoSphereAustriaAdapter(
+        alertAdapter: GeoSphereAustriaAlertAdapter,
+        nowcastAdapter: GeoSphereAustriaNowcastAdapter,
+    ): WeatherSourceAdapter = object : WeatherSourceAdapter {
+        override val provider = WeatherSourceProvider.GEOSPHERE_AUSTRIA
+        override val supportedTypes = setOf(WeatherDataType.ALERTS, WeatherDataType.MINUTELY)
+
+        override suspend fun getAlerts(request: AlertSourceRequest) =
+            alertAdapter.getAlerts(request.latitude, request.longitude)
+
+        override suspend fun getMinutely(request: CoordinateSourceRequest) =
+            nowcastAdapter.getMinutelyPrecipitation(request.latitude, request.longitude)
+    }
 
     private fun forecastOnlyAdapter(
         provider: WeatherSourceProvider,

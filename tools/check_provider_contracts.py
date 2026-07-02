@@ -40,6 +40,8 @@ HONG_KONG_LATITUDE = "22.3027"
 HONG_KONG_LONGITUDE = "114.1772"
 PARIS_LATITUDE = "48.8566"
 PARIS_LONGITUDE = "2.3522"
+VIENNA_LATITUDE = "48.2082"
+VIENNA_LONGITUDE = "16.3738"
 
 JsonMap = dict[str, Any]
 Transport = Callable[[Request, float], tuple[int, dict[str, str], bytes]]
@@ -202,6 +204,20 @@ def provider_checks() -> list[ContractCheck]:
             "minutely_15": "precipitation",
             "forecast_minutely_15": "24",
             "timezone": "UTC",
+        }
+    )
+    geosphere_nowcast_query = urlencode(
+        {
+            "lat_lon": f"{VIENNA_LATITUDE},{VIENNA_LONGITUDE}",
+            "parameters": "rr",
+            "forecast_offset": "0",
+        }
+    )
+    geosphere_warnings_query = urlencode(
+        {
+            "lon": VIENNA_LONGITUDE,
+            "lat": VIENNA_LATITUDE,
+            "lang": "en",
         }
     )
     bright_sky_forecast_query = urlencode(
@@ -438,6 +454,28 @@ def provider_checks() -> list[ContractCheck]:
             data_types=("ALERTS",),
             coverage=f"Hong Kong ({HONG_KONG_LATITUDE},{HONG_KONG_LONGITUDE})",
             schema_assertion="empty no-alert object or details list with warningStatementCode/content entries",
+        ),
+        ContractCheck(
+            key="geosphere-austria-nowcast",
+            name="GeoSphere Austria INCA nowcast",
+            url=f"https://dataset.api.hub.geosphere.at/v1/timeseries/forecast/nowcast-v1-15min-1km?{geosphere_nowcast_query}",
+            docs_url="https://data.hub.geosphere.at/en/dataset/nowcast-v1-15min-1km",
+            validator=validate_geosphere_nowcast,
+            providers=("GEOSPHERE_AUSTRIA",),
+            data_types=("MINUTELY",),
+            coverage=f"Vienna, AT ({VIENNA_LATITUDE},{VIENNA_LONGITUDE})",
+            schema_assertion="FeatureCollection has timestamps and rr precipitation buckets",
+        ),
+        ContractCheck(
+            key="geosphere-austria-warnings",
+            name="GeoSphere Austria point warnings",
+            url=f"https://warnungen.zamg.at/wsapp/api/getWarningsForCoords?{geosphere_warnings_query}",
+            docs_url="https://openapi.hub.geosphere.at/warnapi/v1/",
+            validator=validate_geosphere_warnings,
+            providers=("GEOSPHERE_AUSTRIA",),
+            data_types=("ALERTS",),
+            coverage=f"Vienna, AT ({VIENNA_LATITUDE},{VIENNA_LONGITUDE})",
+            schema_assertion="GeoJSON Feature response has a properties.warnings list",
         ),
         ContractCheck(
             key="meteoalarm-germany",
@@ -720,6 +758,49 @@ def validate_hko_warning_info(data: Any) -> ValidationResult:
         if not isinstance(first.get("contents"), list):
             return ValidationResult(False, "contents list missing")
     return ValidationResult(True, f"{len(details)} HKO warning detail entries")
+
+
+def validate_geosphere_nowcast(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    timestamps = data.get("timestamps")
+    features = data.get("features")
+    errors: list[str] = []
+    if not isinstance(timestamps, list) or not timestamps:
+        errors.append("timestamps missing or empty")
+    if not isinstance(features, list) or not features:
+        errors.append("features missing or empty")
+    else:
+        first = features[0]
+        properties = first.get("properties") if isinstance(first, dict) else None
+        parameters = properties.get("parameters") if isinstance(properties, dict) else None
+        rr = parameters.get("rr") if isinstance(parameters, dict) else None
+        data_values = rr.get("data") if isinstance(rr, dict) else None
+        if not isinstance(data_values, list) or not data_values:
+            errors.append("features[0].properties.parameters.rr.data missing or empty")
+    if errors:
+        return ValidationResult(False, "; ".join(errors))
+    return ValidationResult(True, f"{len(timestamps)} INCA nowcast timestamps")
+
+
+def validate_geosphere_warnings(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    if data.get("type") != "Feature":
+        return ValidationResult(False, "type must be Feature")
+    properties = data.get("properties")
+    if not isinstance(properties, dict):
+        return ValidationResult(False, "properties object missing")
+    warnings = properties.get("warnings")
+    if not isinstance(warnings, list):
+        return ValidationResult(False, "properties.warnings must be a list")
+    if warnings:
+        first = warnings[0]
+        if not isinstance(first, dict):
+            return ValidationResult(False, "warning entries must be objects")
+        if "warnstufeid" not in first or "warntypid" not in first:
+            return ValidationResult(False, "warning entries must include warnstufeid and warntypid")
+    return ValidationResult(True, f"{len(warnings)} GeoSphere point warnings")
 
 
 def validate_meteoalarm_warnings(data: Any) -> ValidationResult:
