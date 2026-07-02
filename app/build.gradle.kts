@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.androidx.baselineprofile)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
 }
@@ -73,6 +74,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+            isDebuggable = false
         }
         debug {
             isDebuggable = true
@@ -207,6 +214,7 @@ dependencies {
 
     // Background Work
     implementation(libs.work.runtime)
+    implementation(libs.profileinstaller)
 
     // Coroutines
     implementation(libs.coroutines.android)
@@ -258,4 +266,5 @@ dependencies {
     androidTestImplementation(libs.coroutines.test)
     kspAndroidTest(libs.hilt.compiler)
     debugImplementation(libs.compose.ui.test.manifest)
+    baselineProfile(project(":benchmark"))
 }

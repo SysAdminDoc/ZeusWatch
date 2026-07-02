@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.kotlin.serialization) apply false
+    alias(libs.plugins.android.test) apply false
+    alias(libs.plugins.androidx.baselineprofile) apply false
     alias(libs.plugins.hilt) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.detekt)
@@ -26,6 +28,7 @@ detekt {
             "$rootDir/app/src/standard/java",
             "$rootDir/app/src/freenet/java",
             "$rootDir/app/src/test/java",
+            "$rootDir/benchmark/src/main/java",
             "$rootDir/wear/src/main/java",
             "$rootDir/wear/src/test/java",
         ),
@@ -48,4 +51,10 @@ tasks.register("accessibilityGate") {
     group = "verification"
     description = "Runs WCAG contrast unit tests and Compose accessibility checks on Android."
     dependsOn(":app:testStandardDebugUnitTest", ":app:connectedStandardDebugAndroidTest")
+}
+
+tasks.register("startupGate") {
+    group = "verification"
+    description = "Runs the standard benchmark startup gate and fails when cold-start p95 exceeds the configured budget."
+    dependsOn(":benchmark:checkStandardStartupP95")
 }
