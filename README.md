@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Android%208.0+-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white)
-![Compose](https://img.shields.io/badge/Jetpack%20Compose-2025.04.01-4285F4?logo=jetpackcompose&logoColor=white)
+![Compose](https://img.shields.io/badge/Jetpack%20Compose-2026.06.01-4285F4?logo=jetpackcompose&logoColor=white)
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 
 > A free, open-source Android weather app with a premium dark UI, 36 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, route weather planning, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, FMI, LibreWXR, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, Hong Kong Observatory, BMKG, and WMO SWIC.
@@ -300,7 +300,7 @@ When providers publish localized condition or alert text, matching user-locale s
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Stack:** Kotlin 2.3.21, Jetpack Compose (BOM 2025.04.01), Hilt 2.58, Retrofit 3.0.0, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
+**Stack:** Kotlin 2.3.21, Jetpack Compose (BOM 2026.06.01), Hilt 2.58, Retrofit 3.0.0, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
 
 ---
 

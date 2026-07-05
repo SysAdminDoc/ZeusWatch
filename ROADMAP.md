@@ -173,7 +173,7 @@ Open question: needs measurement.
 
 | Lib | Current | Target | Notes |
 |---|---|---|---|
-| Compose BOM | 2025.04.01 | 2026.05.00 | M3 Expressive. N-10 scope. |
+| Compose BOM | 2026.06.01 | — | Current; shared-transition baseline. |
 | Kotlin | 2.3.21 | — | Current verified K2/KSP2 line. |
 | Hilt | 2.58 | 2.59.2 | 2.59.x requires AGP 9; stay on 2.58 while AGP remains 8.x. |
 | Room | 2.7.2 | — | Current verified 2.7.x line; 2.8.x blocked by KSP schema export crash. |
@@ -199,13 +199,6 @@ Open question: needs measurement.
 
 ### P3 — Polish & Future
 
-- [ ] P3 — Compose shared element transitions for card-to-detail · UX
-  Why: Shared element transitions are now stable in Compose 1.10 (BOM 2025.12.00). Tapping a forecast card could animate into a detailed view instead of a hard screen swap.
-  Evidence: Jetpack Compose December 2025 release blog (android-developers.googleblog.com).
-  Touches: `NimbusNavHost`, `MainScreen` card tap handlers, detail screen composables. Requires Compose BOM upgrade to 2025.12.00+ (part of N-10).
-  Acceptance: At least one card type (e.g., hourly → hourly detail) uses shared element animation; transition feels natural at 60fps.
-  Complexity: M
-
 - [ ] P3 — WeatherFlow Tempest PWS integration · **T-SOURCES**
   Why: Personal weather stations provide hyper-local data. WeatherFlow Tempest offers a free WebSocket API (`wss://ws.weatherflow.com/swd/data`) for 1-minute real-time observations from personal stations. No FOSS weather app integrates PWS data.
   Evidence: WeatherFlow Tempest WebSocket API documentation; Weather Underground PWS network (250k+ stations).
@@ -217,7 +210,14 @@ Open question: needs measurement.
 
 ### P2 — Platform Opportunities
 
-[Moved to Roadmap_Blocked.md: Android 17 MetricStyle (needs compileSdk 37), Compose Grid (needs BOM 2026.04.01)]
+[Moved to Roadmap_Blocked.md: Android 17 MetricStyle (needs compileSdk 37)]
+
+- [ ] P2 — Compose Grid layout for forecast grids · T-PERF / UX
+  Why: Compose BOM 2026.06.01 is now active, so the prior BOM blocker for Grid-based forecast layouts is gone.
+  Evidence: The repo now compiles on Compose BOM 2026.06.01.
+  Touches: `DailyForecastList.kt`, `WeatherDetailsGrid.kt`.
+  Acceptance: Forecast-grid surfaces use Compose Grid where it reduces layout complexity; rendered layout remains equivalent or better; tests and lint pass.
+  Complexity: M
 
 [Moved to Roadmap_Blocked.md: Glance widget picker previews (needs Glance 1.2.0 stable)]
 
@@ -241,10 +241,6 @@ Open question: needs measurement.
 ## Research-Driven Additions (2026-06-09, Round 3)
 
 ### P2 — Platform Upgrades & Opportunities
-
-[Moved to Roadmap_Blocked.md: Compose BOM 2026.04.01 upgrade (needs dedicated N-10 Lane B pass)]
-
-
 
 ### P3 — Incremental Improvements
 

@@ -2,6 +2,14 @@ package com.sysadmindoc.nimbus.ui.component
 
 import android.content.Context
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,6 +81,9 @@ private enum class HourlyTrendTab(@StringRes val labelRes: Int) {
     HUMIDITY(R.string.forecast_tab_humid),
 }
 
+private data class HourlySharedBoundsKey(val time: java.time.LocalDateTime)
+
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun HourlyForecastStrip(
     hourly: List<HourlyConditions>,
@@ -97,73 +108,108 @@ fun HourlyForecastStrip(
     }
     var selectedHour by remember { mutableStateOf<HourlyConditions?>(null) }
 
-    selectedHour?.let { hour ->
-        HourlyForecastDetailSheet(
-            hour = hour,
-            referenceTime = referenceTime,
-            confidenceBands = confidenceBands,
-            onDismiss = { selectedHour = null },
-        )
-    }
-
-    WeatherCard(
-        titleRes = R.string.card_type_hourly_forecast,
-        modifier = modifier,
-    ) {
-        // Tab selector row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .selectableGroup(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+    SharedTransitionLayout(modifier = modifier) {
+        val sharedTransitionScope = this
+        WeatherCard(
+            titleRes = R.string.card_type_hourly_forecast,
         ) {
-            tabs.forEachIndexed { index, tab ->
-                TrendTabChip(
-                    label = stringResource(tab.labelRes),
-                    isSelected = index == selectedTab,
-                    onClick = { selectedTab = index },
-                )
+            // Tab selector row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .selectableGroup(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                tabs.forEachIndexed { index, tab ->
+                    TrendTabChip(
+                        label = stringResource(tab.labelRes),
+                        isSelected = index == selectedTab,
+                        onClick = { selectedTab = index },
+                    )
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text(
-            text = headerSummary,
-            style = MaterialTheme.typography.bodySmall,
-            color = NimbusTextSecondary,
-        )
-
-        if (precipSummary != null && selectedTab == HourlyTrendTab.PRECIPITATION.ordinal) {
-            Text(
-                text = precipSummary,
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusRainBlue,
-                modifier = Modifier.padding(top = 8.dp, bottom = 10.dp),
-            )
-        } else {
             Spacer(modifier = Modifier.height(10.dp))
-        }
 
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            itemsIndexed(
-                items = forecastHours,
-                key = { _, item -> item.time },
-                contentType = { _, _ -> activeTab.name },
-            ) { index, hour ->
-                val openDetail = { selectedHour = hour }
-                val highlighted = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime)
-                when (activeTab) {
-                    HourlyTrendTab.TEMPERATURE -> HourlyItemTemp(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
-                    HourlyTrendTab.FEELS_LIKE -> HourlyItemFeelsLike(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
-                    HourlyTrendTab.WIND -> HourlyItemWind(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
-                    HourlyTrendTab.PRECIPITATION -> HourlyItemPrecip(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
-                    HourlyTrendTab.CLOUD_COVER -> HourlyItemCloudCover(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
-                    HourlyTrendTab.HUMIDITY -> HourlyItemHumidity(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
+            Text(
+                text = headerSummary,
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
+
+            if (precipSummary != null && selectedTab == HourlyTrendTab.PRECIPITATION.ordinal) {
+                Text(
+                    text = precipSummary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusRainBlue,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 10.dp),
+                )
+            } else {
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                itemsIndexed(
+                    items = forecastHours,
+                    key = { _, item -> item.time },
+                    contentType = { _, _ -> activeTab.name },
+                ) { index, hour ->
+                    val openDetail = { selectedHour = hour }
+                    val highlighted = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime)
+                    AnimatedVisibility(
+                        visible = selectedHour?.time != hour.time,
+                        enter = fadeIn() + scaleIn(initialScale = 0.94f),
+                        exit = fadeOut() + scaleOut(targetScale = 0.94f),
+                    ) {
+                        with(sharedTransitionScope) {
+                            Box(
+                                modifier = Modifier.sharedBounds(
+                                    sharedContentState = rememberSharedContentState(key = HourlySharedBoundsKey(hour.time)),
+                                    animatedVisibilityScope = this@AnimatedVisibility,
+                                ),
+                            ) {
+                                when (activeTab) {
+                                    HourlyTrendTab.TEMPERATURE -> HourlyItemTemp(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
+                                    HourlyTrendTab.FEELS_LIKE -> HourlyItemFeelsLike(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
+                                    HourlyTrendTab.WIND -> HourlyItemWind(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
+                                    HourlyTrendTab.PRECIPITATION -> HourlyItemPrecip(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
+                                    HourlyTrendTab.CLOUD_COVER -> HourlyItemCloudCover(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
+                                    HourlyTrendTab.HUMIDITY -> HourlyItemHumidity(hour = hour, highlighted = highlighted, referenceTime = referenceTime, onClick = openDetail)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            AnimatedContent(
+                targetState = selectedHour,
+                label = "hourly_forecast_detail",
+            ) { detailHour ->
+                if (detailHour != null) {
+                    with(sharedTransitionScope) {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 14.dp)
+                                .sharedBounds(
+                                    sharedContentState = rememberSharedContentState(key = HourlySharedBoundsKey(detailHour.time)),
+                                    animatedVisibilityScope = this@AnimatedContent,
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
+                                ),
+                        ) {
+                            HourlyForecastDetailPanel(
+                                hour = detailHour,
+                                referenceTime = referenceTime,
+                                confidenceBands = confidenceBands,
+                                onDismiss = { selectedHour = null },
+                            )
+                        }
+                    }
                 }
             }
         }

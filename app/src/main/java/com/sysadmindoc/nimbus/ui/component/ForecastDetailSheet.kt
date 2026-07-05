@@ -25,12 +25,14 @@ import androidx.compose.material.icons.filled.Compress
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.AcUnit
 import androidx.compose.material.icons.outlined.Umbrella
 import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material.icons.outlined.WbTwilight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -91,6 +93,34 @@ fun HourlyForecastDetailSheet(
             DetailSheetUncertainty(detail = it, isDaily = false)
         },
         onDismiss = onDismiss,
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun HourlyForecastDetailPanel(
+    hour: HourlyConditions,
+    referenceTime: java.time.LocalDateTime?,
+    confidenceBands: ConfidenceBandData? = null,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val settings = LocalUnitSettings.current
+    val context = LocalContext.current
+    val title = WeatherFormatter.formatRelativeHourLabel(context, hour.time, referenceTime, settings)
+    ForecastDetailPanelFrame(
+        title = stringResource(R.string.forecast_detail_hourly_title, title),
+        subtitle = hour.conditionDescription(context),
+        weatherCode = hour.weatherCode,
+        isDay = hour.isDay,
+        heroValue = WeatherFormatter.formatTemperature(hour.temperature, settings),
+        heroLabel = stringResource(R.string.forecast_detail_temperature),
+        metrics = hourlyMetrics(hour, settings),
+        uncertainty = ForecastUncertaintyExplainer.detailForHour(hour, confidenceBands)?.let {
+            DetailSheetUncertainty(detail = it, isDaily = false)
+        },
+        onDismiss = onDismiss,
+        modifier = modifier,
     )
 }
 
@@ -159,69 +189,144 @@ private fun ForecastDetailSheetFrame(
             )
         },
     ) {
-        Column(
+        ForecastDetailContent(
+            title = title,
+            subtitle = subtitle,
+            weatherCode = weatherCode,
+            isDay = isDay,
+            heroValue = heroValue,
+            heroLabel = heroLabel,
+            metrics = metrics,
+            uncertainty = uncertainty,
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 4.dp)
                 .navigationBarsPadding()
                 .padding(bottom = 24.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AnimatedWeatherIcon(
-                    weatherCode = weatherCode,
-                    isDay = isDay,
-                    iconStyle = LocalUnitSettings.current.iconStyle,
-                    modifier = Modifier.size(44.dp),
-                )
-                Spacer(modifier = Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = NimbusTextPrimary,
-                    )
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = NimbusTextSecondary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = heroValue,
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = NimbusBlueAccent,
-                    )
-                    Text(
-                        text = heroLabel,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = NimbusTextTertiary,
-                    )
-                }
-            }
+        )
+    }
+}
 
-            Spacer(modifier = Modifier.height(18.dp))
-
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ForecastDetailPanelFrame(
+    title: String,
+    subtitle: String,
+    weatherCode: com.sysadmindoc.nimbus.data.model.WeatherCode,
+    isDay: Boolean,
+    heroValue: String,
+    heroLabel: String,
+    metrics: List<DetailMetric>,
+    uncertainty: DetailSheetUncertainty?,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(14.dp)
+    val backDescription = stringResource(R.string.common_back)
+    ForecastDetailContent(
+        title = title,
+        subtitle = subtitle,
+        weatherCode = weatherCode,
+        isDay = isDay,
+        heroValue = heroValue,
+        heroLabel = heroLabel,
+        metrics = metrics,
+        uncertainty = uncertainty,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(NimbusSurface.copy(alpha = 0.94f))
+            .border(1.dp, NimbusBlueAccent.copy(alpha = 0.26f), shape)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        trailingContent = {
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(48.dp),
             ) {
-                metrics.forEach { metric ->
-                    DetailMetricCard(metric)
-                }
-            }
-
-            if (uncertainty != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                ForecastUncertaintyDetailCard(
-                    detail = uncertainty.detail,
-                    isDaily = uncertainty.isDaily,
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = backDescription,
+                    tint = NimbusTextSecondary,
                 )
             }
+        },
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ForecastDetailContent(
+    title: String,
+    subtitle: String,
+    weatherCode: com.sysadmindoc.nimbus.data.model.WeatherCode,
+    isDay: Boolean,
+    heroValue: String,
+    heroLabel: String,
+    metrics: List<DetailMetric>,
+    uncertainty: DetailSheetUncertainty?,
+    modifier: Modifier = Modifier,
+    trailingContent: (@Composable () -> Unit)? = null,
+) {
+    Column(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AnimatedWeatherIcon(
+                weatherCode = weatherCode,
+                isDay = isDay,
+                iconStyle = LocalUnitSettings.current.iconStyle,
+                modifier = Modifier.size(44.dp),
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = NimbusTextPrimary,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NimbusTextSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = heroValue,
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    color = NimbusBlueAccent,
+                )
+                Text(
+                    text = heroLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NimbusTextTertiary,
+                )
+            }
+            trailingContent?.let {
+                Spacer(modifier = Modifier.width(4.dp))
+                it()
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            metrics.forEach { metric ->
+                DetailMetricCard(metric)
+            }
+        }
+
+        if (uncertainty != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            ForecastUncertaintyDetailCard(
+                detail = uncertainty.detail,
+                isDaily = uncertainty.isDaily,
+            )
         }
     }
 }
