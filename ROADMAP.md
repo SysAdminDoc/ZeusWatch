@@ -260,13 +260,6 @@ Items found during the v1.23.0 deep audit that need design decisions or larger w
 
 ### P3 — Future & Polish
 
-- [ ] P3 — IMD (India) forecast and alert adapter · **T-SOURCES**
-  Why: India (1.4B population) is absent from ZeusWatch's Provider Expansion Priority table. IMD offers a REST/JSON API (`api.imd.gov.in`) with 14 endpoints covering city/district/state 7-day forecasts, marine bulletins, and river basin precipitation. Requires free API key registration.
-  Evidence: api.imd.gov.in documentation; IMD open data initiative (2024).
-  Touches: New `ImdApi` Retrofit interface + `ImdForecastAdapter` + `@Named("imd")` Retrofit in `NetworkModule`. Add IMD to the `WeatherSourceAdapterModule` registry and Provider Expansion table. API key field in Settings (conditional display like OWM/PW).
-  Acceptance: Users with an IMD key see Indian-region forecasts from IMD; alerts surface via IMD's warning system; freenet flavor unaffected.
-  Complexity: M
-
 ## Code Audit Findings (2026-06-14)
 
 Three parallel code audits (health/architecture, performance/Compose, testing/reliability/security) read the tree at v1.23.0 (versionCode 101). Each finding below was **re-verified against the current code** after the v1.21.x audit pass — items already fixed in v1.23.0 are noted as such and the residual is scoped to what remains. The codebase is unusually disciplined (clean MVVM, shared `WeatherCard` abstraction, truly-lazy `LazyColumn` with stable keys + `contentType`, `@Stable MainUiState` with `ImmutableList` fields, cert pinning populated, 47 unit-test files, zero TODO/FIXME). These are the residual gaps.
