@@ -91,6 +91,7 @@ fun CompareScreen(
         onRetry = viewModel::retry,
         onSelectLocation1 = viewModel::selectLocation1,
         onSelectLocation2 = viewModel::selectLocation2,
+        onChartOverlayVisible = viewModel::setChartOverlayVisible,
     )
 
     PredictiveBackScaffold(onBack = onBack) {
@@ -104,6 +105,7 @@ private data class CompareScreenActions(
     val onRetry: () -> Unit,
     val onSelectLocation1: (SavedLocationEntity) -> Unit,
     val onSelectLocation2: (SavedLocationEntity) -> Unit,
+    val onChartOverlayVisible: (Boolean) -> Unit,
 )
 
 @Composable
@@ -268,7 +270,7 @@ private fun CompareResultSection(
             ComparePartialWeather(state, settings, actions)
         state.hasError -> CompareLoadFailed(state, actions.onRetry)
         state.weather1 == null || state.weather2 == null -> CompareLoadingPair()
-        else -> CompareLoadedWeather(state, settings)
+        else -> CompareLoadedWeather(state, settings, actions)
     }
 }
 
@@ -380,6 +382,7 @@ private fun compareLoadErrorMessage(state: CompareUiState): String {
 private fun CompareLoadedWeather(
     state: CompareUiState,
     settings: NimbusSettings,
+    actions: CompareScreenActions,
 ) {
     val weather1 = state.weather1 ?: return
     val weather2 = state.weather2 ?: return
@@ -389,6 +392,18 @@ private fun CompareLoadedWeather(
         location2 = state.location2,
         weather1 = weather1,
         weather2 = weather2,
+        settings = settings,
+        modifier = Modifier.padding(horizontal = 16.dp),
+    )
+    Spacer(Modifier.height(12.dp))
+    MultiSourceChartCard(
+        locationName = state.location1?.let { if (it.isCurrentLocation) stringResource(R.string.common_my_location) else it.name }
+            ?: weather1.location.name,
+        forecasts = state.overlayForecasts,
+        isLoading = state.isOverlayLoading,
+        unavailable = state.overlayUnavailable,
+        enabled = state.showChartOverlay,
+        onEnabledChange = actions.onChartOverlayVisible,
         settings = settings,
         modifier = Modifier.padding(horizontal = 16.dp),
     )

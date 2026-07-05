@@ -948,6 +948,14 @@
     <string name="compare_cooler">is cooler right now</string>
     <string name="compare_humidity_summary">Humidity %1$d%% vs %2$d%%</string>
     <string name="compare_rain_summary">Rain %1$d%% vs %2$d%%</string>
+    <string name="compare_chart_overlay_title">Chart overlay</string>
+    <string name="compare_chart_overlay_desc">Compare provider temperature lines and rain risk for the primary location.</string>
+    <string name="compare_chart_overlay_loading">Loading source forecasts...</string>
+    <string name="compare_chart_overlay_unavailable">Source overlay needs at least two hourly forecasts for this location.</string>
+    <string name="compare_chart_overlay_semantics">Source overlay for %1$s: %2$s. Maximum temperature spread %3$s. Maximum precipitation spread %4$d percentage points.</string>
+    <string name="compare_chart_overlay_now_temp">%1$s now</string>
+    <string name="compare_chart_overlay_temp_spread">Max temp spread %1$s</string>
+    <string name="compare_chart_overlay_rain_spread">Rain spread %1$d pts</string>
 
     <!-- Today screen -->
     <string name="main_grant_location">Grant location</string>
