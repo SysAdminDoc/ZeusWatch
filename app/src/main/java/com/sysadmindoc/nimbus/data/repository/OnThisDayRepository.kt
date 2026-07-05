@@ -6,6 +6,7 @@ import com.sysadmindoc.nimbus.data.model.OnThisDayData
 import com.sysadmindoc.nimbus.data.model.PriorYearEntry
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -28,6 +29,8 @@ import javax.inject.Singleton
 class OnThisDayRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val archiveApi: OpenMeteoArchiveApi,
+    private val userPreferences: UserPreferences,
+    private val openMeteoFlatBufferAdapter: OpenMeteoFlatBufferAdapter,
 ) {
 
     private val prefs by lazy {
@@ -70,17 +73,12 @@ class OnThisDayRepository @Inject constructor(
         val endDate = safeDate(endYear, today.monthValue, today.dayOfMonth)
         val fmt = DateTimeFormatter.ISO_LOCAL_DATE
 
-        val response = runCatching {
-            archiveApi.getArchive(
-                latitude = lat,
-                longitude = lon,
-                startDate = fmt.format(startDate),
-                endDate = fmt.format(endDate),
-            )
-        }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
-            .getOrNull() ?: return emptyList()
-
-        val daily = response.daily ?: return emptyList()
+        val daily = fetchArchiveDaily(
+            lat = lat,
+            lon = lon,
+            startDate = fmt.format(startDate),
+            endDate = fmt.format(endDate),
+        ) ?: return emptyList()
         val targetMonthDay = "%02d-%02d".format(
             Locale.US, today.monthValue, today.dayOfMonth,
         )
@@ -91,13 +89,61 @@ class OnThisDayRepository @Inject constructor(
             // Leap-day requests will only find a row every ~4 years — acceptable.
             if (!dateStr.endsWith(targetMonthDay)) continue
             val year = dateStr.substring(0, 4).toIntOrNull() ?: continue
-            val high = daily.temperature_2m_max?.getOrNull(i) ?: continue
-            val low = daily.temperature_2m_min?.getOrNull(i) ?: continue
-            val precip = daily.precipitation_sum?.getOrNull(i)
+            val high = daily.temperatureMax?.getOrNull(i) ?: continue
+            val low = daily.temperatureMin?.getOrNull(i) ?: continue
+            val precip = daily.precipitationSum?.getOrNull(i)
             out += PriorYearEntry(year = year, highC = high, lowC = low, precipMm = precip)
         }
         // Newest first for display
         return out.sortedByDescending { it.year }
+    }
+
+    private suspend fun fetchArchiveDaily(
+        lat: Double,
+        lon: Double,
+        startDate: String,
+        endDate: String,
+    ): ArchiveDailyValues? {
+        val settings = userPreferences.settings.first()
+        if (settings.openMeteoFlatBuffersEnabled) {
+            try {
+                archiveApi.getArchiveFlatBuffer(
+                    latitude = lat,
+                    longitude = lon,
+                    startDate = startDate,
+                    endDate = endDate,
+                ).use { body ->
+                    openMeteoFlatBufferAdapter.decodeForecast(body.bytes()).daily?.let { daily ->
+                        return ArchiveDailyValues(
+                            time = daily.time,
+                            temperatureMax = daily.temperatureMax,
+                            temperatureMin = daily.temperatureMin,
+                            precipitationSum = daily.precipitationSum,
+                        )
+                    }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Historical JSON remains the stable path while FlatBuffers is opt-in.
+            }
+        }
+        return runCatching {
+            archiveApi.getArchive(
+                latitude = lat,
+                longitude = lon,
+                startDate = startDate,
+                endDate = endDate,
+            ).daily?.let { daily ->
+                ArchiveDailyValues(
+                    time = daily.time,
+                    temperatureMax = daily.temperature_2m_max,
+                    temperatureMin = daily.temperature_2m_min,
+                    precipitationSum = daily.precipitation_sum,
+                )
+            }
+        }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+            .getOrNull()
     }
 
     private fun buildData(entries: List<PriorYearEntry>): OnThisDayData {
@@ -173,6 +219,13 @@ class OnThisDayRepository @Inject constructor(
         val highC: Double,
         val lowC: Double,
         val precipMm: Double?,
+    )
+
+    private data class ArchiveDailyValues(
+        val time: List<String>,
+        val temperatureMax: List<Double?>?,
+        val temperatureMin: List<Double?>?,
+        val precipitationSum: List<Double?>?,
     )
 
     /** Clamp day of month for years where it doesn't exist (e.g. Feb 29 in non-leap years). */

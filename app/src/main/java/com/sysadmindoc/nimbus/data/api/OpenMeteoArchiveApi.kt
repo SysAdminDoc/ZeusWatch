@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.data.api
 
 import kotlinx.serialization.Serializable
+import okhttp3.ResponseBody
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -22,6 +23,17 @@ interface OpenMeteoArchiveApi {
         @Query("daily") daily: String = "temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code",
         @Query("timezone") timezone: String = "auto",
     ): ArchiveResponse
+
+    @GET("archive")
+    suspend fun getArchiveFlatBuffer(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("start_date") startDate: String, // "yyyy-MM-dd"
+        @Query("end_date") endDate: String,
+        @Query("daily") daily: String = "temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code",
+        @Query("timezone") timezone: String = "auto",
+        @Query("format") format: String = "flatbuffers",
+    ): ResponseBody
 
     companion object {
         const val BASE_URL = "https://archive-api.open-meteo.com/v1/"

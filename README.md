@@ -162,6 +162,8 @@ The `WeatherSourceManager` supports primary + fallback source per data type with
 
 Forecasts are cached as normalized `WeatherData` per location and provider, so saved-location switches can render cached conditions immediately while the selected source refreshes in the background. Open-Meteo's older response cache is retained only as a migration fallback for Open-Meteo reads.
 
+Settings > Data Sources includes an opt-in Open-Meteo FlatBuffers mode. When enabled, the main Open-Meteo forecast and historical On This Day archive calls request `format=flatbuffers`, decode through `com.open-meteo:sdk`, and automatically fall back to the existing JSON path if the binary response cannot be fetched or decoded.
+
 When providers publish localized condition or alert text, matching user-locale source wording is preferred before falling back to app WMO labels.
 
 ### Widgets (Jetpack Glance)
@@ -301,7 +303,7 @@ When providers publish localized condition or alert text, matching user-locale s
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Stack:** Kotlin 2.3.21, Jetpack Compose (BOM 2026.06.01), Hilt 2.58, Retrofit 3.0.0, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
+**Stack:** Kotlin 2.3.21, Jetpack Compose (BOM 2026.06.01), Hilt 2.58, Retrofit 3.0.0, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, Open-Meteo SDK 1.10.0 FlatBuffers decoder, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
 
 ---
 
@@ -311,9 +313,9 @@ All core APIs are free with no keys required:
 
 | API | Purpose | Rate Limit |
 |-----|---------|------------|
-| [Open-Meteo Forecast](https://open-meteo.com/) | Current, hourly (48-72h), daily (16d), minutely_15 nowcasting | 10,000/day |
+| [Open-Meteo Forecast](https://open-meteo.com/) | Current, hourly (48-72h), daily (16d), optional FlatBuffers payloads, minutely_15 nowcasting | 10,000/day |
 | [Open-Meteo model forecasts](https://open-meteo.com/en/docs/dmi-api) | No-key regional model forecast sources: BOM ACCESS-G, UK Met Office, DMI HARMONIE | No key required |
-| [Open-Meteo Historical](https://open-meteo.com/en/docs/historical-weather-api) | Yesterday's weather for comparison | 10,000/day |
+| [Open-Meteo Historical](https://open-meteo.com/en/docs/historical-weather-api) | Yesterday's weather for comparison and On This Day archive data, with optional FlatBuffers payloads | 10,000/day |
 | [Open-Meteo Single Runs](https://open-meteo.com/en/docs/single-runs-api) | Optional forecast-evolution model-run comparison | No key required |
 | [Open-Meteo Geocoding](https://open-meteo.com/en/docs/geocoding-api) | Location search + reverse geocode | 10,000/day |
 | [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api) | AQI, pollutants, pollen (6 species), 5-day daily forecast | 10,000/day |
@@ -471,7 +473,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | **Health** | Migraine alerts with pressure threshold (3.0/5.0/7.0/10.0 hPa/3h) |
 | **Accessibility** | Haptic feedback for alerts |
 | **Visual Effects** | Weather particle animations |
-| **Data Sources** | App-wide primary + fallback defaults per data type, API keys (collapsed by default) |
+| **Data Sources** | App-wide primary + fallback defaults per data type, Open-Meteo FlatBuffers opt-in, API keys (collapsed by default) |
 | **Advanced** | Cache TTL (15/30/60/120 min) (collapsed by default) |
 | **About** | Version, data source, license |
 

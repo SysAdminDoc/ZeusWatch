@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.data.api
 
 import com.sysadmindoc.nimbus.data.model.OpenMeteoResponse
+import okhttp3.ResponseBody
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -25,6 +26,22 @@ interface OpenMeteoApi {
         @Query("forecast_days") forecastDays: Int = 16,
         @Query("forecast_hours") forecastHours: Int = 48,
     ): OpenMeteoResponse
+
+    @GET("forecast")
+    suspend fun getForecastFlatBuffer(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("current") current: String = CURRENT_PARAMS,
+        @Query("hourly") hourly: String = HOURLY_PARAMS,
+        @Query("daily") daily: String = DAILY_PARAMS,
+        @Query("temperature_unit") temperatureUnit: String = "celsius",
+        @Query("wind_speed_unit") windSpeedUnit: String = "kmh",
+        @Query("precipitation_unit") precipitationUnit: String = "mm",
+        @Query("timezone") timezone: String = "auto",
+        @Query("forecast_days") forecastDays: Int = 16,
+        @Query("forecast_hours") forecastHours: Int = 48,
+        @Query("format") format: String = "flatbuffers",
+    ): ResponseBody
 
     /**
      * Open-Meteo BOM ACCESS-G model proxy.

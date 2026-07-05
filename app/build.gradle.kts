@@ -187,6 +187,7 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.retrofit.kotlinx.serialization)
+    implementation(libs.openmeteo.sdk)
 
     // Storage
     implementation(libs.room.runtime)

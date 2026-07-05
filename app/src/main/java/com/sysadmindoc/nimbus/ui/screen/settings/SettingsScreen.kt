@@ -248,6 +248,7 @@ fun SettingsScreen(
             onSourceAlertsFallback = viewModel::setSourceAlertsFallback,
             onSourceAirQuality = viewModel::setSourceAirQuality,
             onSourceMinutely = viewModel::setSourceMinutely,
+            onOpenMeteoFlatBuffersEnabled = viewModel::setOpenMeteoFlatBuffersEnabled,
             onGadgetbridgeBroadcastEnabled = viewModel::setGadgetbridgeBroadcastEnabled,
             onOwmApiKey = viewModel::setOwmApiKey,
             onPirateWeatherApiKey = viewModel::setPirateWeatherApiKey,

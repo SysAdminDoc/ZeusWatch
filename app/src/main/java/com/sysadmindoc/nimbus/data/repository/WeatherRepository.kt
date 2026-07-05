@@ -38,6 +38,7 @@ class WeatherRepository @Inject constructor(
     private val reverseGeocoder: ReverseGeocoder,
     private val weatherDao: WeatherDao,
     private val userPreferences: UserPreferences,
+    private val openMeteoFlatBufferAdapter: OpenMeteoFlatBufferAdapter,
     private val sourceManager: dagger.Lazy<WeatherSourceManager>,
 ) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true }
@@ -281,8 +282,8 @@ class WeatherRepository @Inject constructor(
         latitude = latitude,
         longitude = longitude,
         locationName = locationName,
-        fetch = { forecastHours ->
-            weatherApi.getForecast(latitude, longitude, forecastHours = forecastHours)
+        fetch = { forecastHours, settings ->
+            fetchDefaultOpenMeteoForecast(latitude, longitude, forecastHours, settings)
         },
     )
 
@@ -300,7 +301,7 @@ class WeatherRepository @Inject constructor(
         latitude = latitude,
         longitude = longitude,
         locationName = locationName,
-        fetch = { forecastHours ->
+        fetch = { forecastHours, _ ->
             weatherApi.getBomForecast(latitude, longitude, forecastHours = forecastHours)
         },
     )
@@ -313,7 +314,7 @@ class WeatherRepository @Inject constructor(
         latitude = latitude,
         longitude = longitude,
         locationName = locationName,
-        fetch = { forecastHours ->
+        fetch = { forecastHours, _ ->
             weatherApi.getKmaForecast(latitude, longitude, forecastHours = forecastHours)
         },
     )
@@ -326,7 +327,7 @@ class WeatherRepository @Inject constructor(
         latitude = latitude,
         longitude = longitude,
         locationName = locationName,
-        fetch = { forecastHours ->
+        fetch = { forecastHours, _ ->
             weatherApi.getUkmoForecast(latitude, longitude, forecastHours = forecastHours)
         },
     )
@@ -339,7 +340,7 @@ class WeatherRepository @Inject constructor(
         latitude = latitude,
         longitude = longitude,
         locationName = locationName,
-        fetch = { forecastHours ->
+        fetch = { forecastHours, _ ->
             weatherApi.getDmiForecast(latitude, longitude, forecastHours = forecastHours)
         },
     )
@@ -352,7 +353,7 @@ class WeatherRepository @Inject constructor(
         latitude = latitude,
         longitude = longitude,
         locationName = locationName,
-        fetch = { forecastHours ->
+        fetch = { forecastHours, _ ->
             weatherApi.getMeteoFranceForecast(latitude, longitude, forecastHours = forecastHours)
         },
     )
@@ -361,13 +362,13 @@ class WeatherRepository @Inject constructor(
         latitude: Double,
         longitude: Double,
         locationName: String?,
-        fetch: suspend (forecastHours: Int) -> OpenMeteoResponse,
+        fetch: suspend (forecastHours: Int, settings: NimbusSettings) -> OpenMeteoResponse,
     ): Result<WeatherData> = withContext(Dispatchers.IO) {
         try {
             val settings = userPreferences.settings.first()
             val forecastHours = settings.hourlyForecastHours
             val cacheMaxAgeMs = settings.cacheTtlMs.takeIf { it > 0L } ?: DEFAULT_CACHE_MAX_AGE_MS
-            val response = fetch(forecastHours)
+            val response = fetch(forecastHours, settings)
             val location = resolveLocationName(latitude, longitude, locationName)
             val weatherData = mapToWeatherData(response, location)
 
@@ -393,6 +394,30 @@ class WeatherRepository @Inject constructor(
             if (e is kotlinx.coroutines.CancellationException) throw e
             Result.failure(e)
         }
+    }
+
+    private suspend fun fetchDefaultOpenMeteoForecast(
+        latitude: Double,
+        longitude: Double,
+        forecastHours: Int,
+        settings: NimbusSettings,
+    ): OpenMeteoResponse {
+        if (settings.openMeteoFlatBuffersEnabled) {
+            try {
+                weatherApi.getForecastFlatBuffer(
+                    latitude = latitude,
+                    longitude = longitude,
+                    forecastHours = forecastHours,
+                ).use { body ->
+                    return openMeteoFlatBufferAdapter.decodeForecast(body.bytes())
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Keep the existing JSON path authoritative while FlatBuffers remains opt-in.
+            }
+        }
+        return weatherApi.getForecast(latitude, longitude, forecastHours = forecastHours)
     }
 
     suspend fun getCachedWeather(

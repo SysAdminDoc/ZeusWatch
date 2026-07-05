@@ -210,13 +210,6 @@ Open question: needs measurement.
 
 ### P3 — Polish & Future
 
-- [ ] P3 — Open-Meteo FlatBuffer SDK for large payload performance · **T-PERF**
-  Why: Open-Meteo's FlatBuffer format avoids JSON parsing overhead for large payloads (historical data, hourly arrays). The SDK (`com.open-meteo:sdk`) is at v1.26.0 on Maven Central. The high-level Kotlin wrapper library is stalled, but the generated FlatBuffer classes work directly with `&format=flatbuffers`.
-  Evidence: Open-Meteo SDK releases (github.com/open-meteo/sdk); `open-meteo-api-kotlin` stalled at v0.1.0 due to KMP FlatBuffers limitation.
-  Touches: `app/.../data/api/OpenMeteoApi.kt` (add `format=flatbuffers` variant), new `OpenMeteoFlatBufferAdapter` (decode FlatBuffer responses), `app/build.gradle.kts` (add `com.open-meteo:sdk` dependency). Opt-in behind a setting initially.
-  Acceptance: Historical weather (On This Day) and large hourly arrays decode faster than JSON; API response size reduced; existing JSON path unaffected.
-  Complexity: L
-
 - [ ] P3 — Smartspacer target plugin for At a Glance · **T-ECOSYSTEM**
   Why: Smartspacer (9.7k GitHub stars) replaces Pixel's At a Glance widget without root. It has an SDK for third-party plugins. ZeusWatch could provide a weather target (current conditions + next-hour precipitation) and complication (temperature). Smartspacer is actively maintained for Android 16+.
   Evidence: Smartspacer GitHub (github.com/KieronQuinn/Smartspacer); Smartspacer SDK documentation.

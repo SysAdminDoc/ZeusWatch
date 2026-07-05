@@ -249,6 +249,7 @@ internal data class SettingsActions(
     val onSourceAlertsFallback: (WeatherSourceProvider?) -> Unit = {},
     val onSourceAirQuality: (WeatherSourceProvider) -> Unit = {},
     val onSourceMinutely: (WeatherSourceProvider) -> Unit = {},
+    val onOpenMeteoFlatBuffersEnabled: (Boolean) -> Unit = {},
     val onGadgetbridgeBroadcastEnabled: (Boolean) -> Unit = {},
     val onOwmApiKey: (String) -> Unit = {},
     val onPirateWeatherApiKey: (String) -> Unit = {},
@@ -886,6 +887,13 @@ private fun SettingsDataSourcesSection(
         Spacer(modifier = Modifier.height(8.dp))
         SourceDropdown(stringResource(R.string.settings_minutely_source), sourceConfig.minutely, WeatherSourceProvider.forType(WeatherDataType.MINUTELY), actions.onSourceMinutely)
         Spacer(modifier = Modifier.height(12.dp))
+        SettingToggle(
+            stringResource(R.string.settings_open_meteo_flatbuffers),
+            stringResource(R.string.settings_open_meteo_flatbuffers_desc),
+            settings.openMeteoFlatBuffersEnabled,
+            actions.onOpenMeteoFlatBuffersEnabled,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         SettingToggle(
             stringResource(R.string.settings_gadgetbridge_broadcast),
             stringResource(R.string.settings_gadgetbridge_broadcast_desc),

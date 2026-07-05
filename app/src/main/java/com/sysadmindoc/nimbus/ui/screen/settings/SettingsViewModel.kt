@@ -182,6 +182,9 @@ class SettingsViewModel @Inject constructor(
     fun setSourceAlertsFallback(provider: WeatherSourceProvider?) = viewModelScope.launch { prefs.setSourceAlertsFallback(provider) }
     fun setSourceAirQuality(provider: WeatherSourceProvider) = viewModelScope.launch { prefs.setSourceAirQuality(provider) }
     fun setSourceMinutely(provider: WeatherSourceProvider) = viewModelScope.launch { prefs.setSourceMinutely(provider) }
+    fun setOpenMeteoFlatBuffersEnabled(enabled: Boolean) = viewModelScope.launch {
+        prefs.setOpenMeteoFlatBuffersEnabled(enabled)
+    }
     fun setGadgetbridgeBroadcastEnabled(enabled: Boolean) = viewModelScope.launch {
         prefs.setGadgetbridgeBroadcastEnabled(enabled)
         if (enabled) WidgetRefreshWorker.sync(appContext, true)
