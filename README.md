@@ -230,6 +230,7 @@ When providers publish localized condition or alert text, matching user-locale s
 | **Adaptive Layout** | Phone and tablet layouts via LazyColumn. Tablets get two-pane weather + radar (840dp+) |
 | **Live Weather Wallpaper** | Rain, snow, thunderstorm, sun rays, cloud wisps, fog particle effects over existing wallpaper |
 | **Wear OS Companion** | Watch app, Material3 animated weather tile, and complications for temperature, condition/high-low, UV, and icon slots |
+| **Smartspacer Plugin** | Optional Smartspacer target and temperature complication read the ZeusWatch cache for Pixel At a Glance-style current conditions |
 | **Premium State Polish** | Focused, pressed, disabled, loading, empty, and recovery states use consistent dark glass chrome across phone, widgets, and Wear OS |
 | **Accessibility** | TalkBack descriptions on all Canvas components, alert icons, non-color risk cues on color-coded weather surfaces, and merged card semantics with liveRegion alerts |
 | **Localization Foundation** | Core navigation, Today shell states/card headers/card microcopy/alert dialogs/report sheet, Settings controls/enums, Home Card labels, Custom Alerts, Locations, Compare, widgets, and Wear OS state copy use Android string resources with Spanish plus Arabic/Hebrew RTL resources; provider-native condition and alert text is preferred when upstream language matches the user's locale |
@@ -303,7 +304,7 @@ When providers publish localized condition or alert text, matching user-locale s
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Stack:** Kotlin 2.3.21, Jetpack Compose (BOM 2026.06.01), Hilt 2.58, Retrofit 3.0.0, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, Open-Meteo SDK 1.10.0 FlatBuffers decoder, ML Kit GenAI Prompt 1.0.0-beta2, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
+**Stack:** Kotlin 2.3.21, Jetpack Compose (BOM 2026.06.01), Hilt 2.58, Retrofit 3.0.0, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, Open-Meteo SDK 1.10.0 FlatBuffers decoder, Smartspacer SDK 1.1, ML Kit GenAI Prompt 1.0.0-beta2, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
 
 ---
 
@@ -442,19 +443,20 @@ app/src/main/java/com/sysadmindoc/nimbus/
 │   └── BlitzortungService       # Real-time lightning WebSocket
 ├── wallpaper/
 │   └── WeatherWallpaperService  # Live weather wallpaper with particle effects
-└── widget/                      # 8 Glance home screen widgets
-    ├── NimbusSmallWidget        # 3x1: temp + icon
-    ├── NimbusMediumWidget       # 3x2: current + 3-day
-    ├── NimbusLargeWidget        # 4x3: hourly + 5-day
-    ├── NimbusForecastStripWidget# 4x1: hourly temp strip
-    ├── NimbusSavedCitiesWidget  # 4x3/4x4: saved-city overview
-    ├── NimbusTempWidget         # compact temp-only surface
-    ├── NimbusCompactWidget      # 2x1 compact current conditions
-    ├── NimbusDailyWidget        # 4x2 daily outlook
-    ├── WidgetRefreshWorker      # Periodic refresh + proactive caching
-    ├── WidgetRefreshAction      # Tap-to-refresh Glance callback
-    ├── WidgetConfigActivity     # Per-widget location picker
-    └── WidgetLocationPrefs      # Widget-to-location DataStore mapping
+├── widget/                      # 8 Glance home screen widgets
+│   ├── NimbusSmallWidget        # 3x1: temp + icon
+│   ├── NimbusMediumWidget       # 3x2: current + 3-day
+│   ├── NimbusLargeWidget        # 4x3: hourly + 5-day
+│   ├── NimbusForecastStripWidget# 4x1: hourly temp strip
+│   ├── NimbusSavedCitiesWidget  # 4x3/4x4: saved-city overview
+│   ├── NimbusTempWidget         # compact temp-only surface
+│   ├── NimbusCompactWidget      # 2x1 compact current conditions
+│   ├── NimbusDailyWidget        # 4x2 daily outlook
+│   ├── WidgetRefreshWorker      # Periodic refresh + proactive caching
+│   ├── WidgetRefreshAction      # Tap-to-refresh Glance callback
+│   ├── WidgetConfigActivity     # Per-widget location picker
+│   └── WidgetLocationPrefs      # Widget-to-location DataStore mapping
+└── smartspacer/                 # Smartspacer target/complication cache bridge
 ```
 
 ---

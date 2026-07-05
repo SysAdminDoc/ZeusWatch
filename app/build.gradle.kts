@@ -215,6 +215,7 @@ dependencies {
     // Widgets
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
+    implementation(libs.smartspacer.plugin)
 
     // Background Work
     implementation(libs.work.runtime)

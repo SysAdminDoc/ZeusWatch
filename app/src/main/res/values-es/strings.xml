@@ -1477,4 +1477,11 @@
     <string name="summary_rain_likely_later_today">con lluvia probable más tarde hoy</string>
     <string name="summary_chance_showers">con posibilidad de chubascos</string>
     <string name="summary_slight_chance_rain">con ligera posibilidad de lluvia</string>
+
+    <!-- Smartspacer -->
+    <string name="smartspacer_weather_target_label">Clima de ZeusWatch</string>
+    <string name="smartspacer_weather_target_description">Condiciones actuales y riesgo de lluvia en la próxima hora desde la caché de ZeusWatch.</string>
+    <string name="smartspacer_weather_complication_label">Temperatura de ZeusWatch</string>
+    <string name="smartspacer_weather_complication_description">Temperatura actual de ZeusWatch para Smartspacer.</string>
+    <string name="smartspacer_weather_requires_android_q">El clima de Smartspacer requiere Android 10 o posterior.</string>
 </resources>
