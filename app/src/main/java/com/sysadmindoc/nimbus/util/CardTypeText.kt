@@ -14,6 +14,7 @@ internal val CardType.labelRes: Int
         CardType.TEMPERATURE_GRAPH -> R.string.card_type_temperature_graph
         CardType.FORECAST_EVOLUTION -> R.string.card_type_forecast_evolution
         CardType.PROVIDER_AGREEMENT -> R.string.card_type_provider_agreement
+        CardType.PWS_OBSERVATION -> R.string.card_type_pws_observation
         CardType.DAILY_FORECAST -> R.string.card_type_daily_forecast
         CardType.UV_INDEX -> R.string.card_type_uv_index
         CardType.WIND_COMPASS -> R.string.card_type_wind_compass

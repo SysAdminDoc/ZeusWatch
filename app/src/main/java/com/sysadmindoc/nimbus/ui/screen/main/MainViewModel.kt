@@ -30,6 +30,7 @@ import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionData
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.ProviderAgreementData
+import com.sysadmindoc.nimbus.data.repository.PwsObservation
 import com.sysadmindoc.nimbus.data.repository.SourceOverrides
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
@@ -143,6 +144,7 @@ class MainViewModel @Inject constructor(
                 if (prior != null) {
                     handleForecastEvolutionSettingChange(prior, settings)
                     handleProviderAgreementSettingChange(prior, settings)
+                    handlePwsObservationSettingChange(prior, settings)
                 }
                 // Derived data (summary, golden hour, driving/health alerts)
                 // bakes units and thresholds in at compute time - recompute it
@@ -242,6 +244,37 @@ class MainViewModel @Inject constructor(
                         providerAgreement = null,
                         isProviderAgreementLoading = false,
                         providerAgreementUnavailable = false,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun handlePwsObservationSettingChange(old: NimbusSettings, new: NimbusSettings) {
+        val wasEnabled = old.isCardEnabled(CardType.PWS_OBSERVATION)
+        val isEnabled = new.isCardEnabled(CardType.PWS_OBSERVATION)
+        val credentialsChanged = old.tempestAccessToken != new.tempestAccessToken ||
+            old.tempestDeviceId != new.tempestDeviceId
+        when {
+            isEnabled && (!wasEnabled || credentialsChanged) -> {
+                _uiState.value.weatherData ?: return
+                val requestId = weatherRequestCounter.get()
+                viewModelScope.launch {
+                    weatherLoadCoordinator.fetchPwsObservation(
+                        settings = new,
+                        requestId = requestId,
+                        updateState = ::updateUiState,
+                        isLatestRequest = ::isLatestWeatherRequest,
+                    )
+                }
+            }
+            wasEnabled && !isEnabled -> {
+                _uiState.update {
+                    it.copy(
+                        pwsObservation = null,
+                        isPwsObservationLoading = false,
+                        pwsObservationUnavailable = false,
+                        pwsObservationNeedsConfig = false,
                     )
                 }
             }
@@ -827,6 +860,10 @@ data class MainUiState(
     val providerAgreement: ProviderAgreementData? = null,
     val isProviderAgreementLoading: Boolean = false,
     val providerAgreementUnavailable: Boolean = false,
+    val pwsObservation: PwsObservation? = null,
+    val isPwsObservationLoading: Boolean = false,
+    val pwsObservationUnavailable: Boolean = false,
+    val pwsObservationNeedsConfig: Boolean = false,
     val forecastAccuracy: ForecastAccuracyData? = null,
     val confidenceBands: ConfidenceBandData? = null,
     val climateOutlook: ClimateOutlookData? = null,
@@ -867,6 +904,10 @@ private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
     providerAgreement = null,
     isProviderAgreementLoading = false,
     providerAgreementUnavailable = false,
+    pwsObservation = null,
+    isPwsObservationLoading = false,
+    pwsObservationUnavailable = false,
+    pwsObservationNeedsConfig = false,
     forecastAccuracy = null,
     confidenceBands = null,
     climateOutlook = null,

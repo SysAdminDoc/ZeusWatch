@@ -16,9 +16,11 @@ import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.OnThisDayRepository
 import com.sysadmindoc.nimbus.data.repository.ProviderAgreementAnalyzer
 import com.sysadmindoc.nimbus.data.repository.ProviderWeatherSnapshot
+import com.sysadmindoc.nimbus.data.repository.PwsRepository
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
 import com.sysadmindoc.nimbus.data.repository.SourceOverrides
 import com.sysadmindoc.nimbus.data.repository.SummaryStyle
+import com.sysadmindoc.nimbus.data.repository.TempestPwsConfigurationException
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherDataType
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
@@ -81,6 +83,7 @@ data class WeatherLoadOptionalRepositories @Inject constructor(
     val marineRepository: MarineRepository,
     val floodRepository: FloodRepository,
     val climateRepository: ClimateRepository,
+    val pwsRepository: PwsRepository,
 )
 
 data class WeatherLoadCompletion(
@@ -120,6 +123,7 @@ class WeatherLoadCoordinator @Inject constructor(
     private val marineRepository = optionalRepositories.marineRepository
     private val floodRepository = optionalRepositories.floodRepository
     private val climateRepository = optionalRepositories.climateRepository
+    private val pwsRepository = optionalRepositories.pwsRepository
 
     suspend fun finishSuccessfulWeatherLoad(
         completion: WeatherLoadCompletion,
@@ -402,6 +406,16 @@ class WeatherLoadCoordinator @Inject constructor(
                     )
                 }
             }
+            if (currentState().settings.isCardEnabled(CardType.PWS_OBSERVATION)) {
+                launch {
+                    fetchPwsObservation(
+                        settings = currentState().settings,
+                        requestId = requestId,
+                        updateState = updateState,
+                        isLatestRequest = isLatestRequest,
+                    )
+                }
+            }
             if (currentState().settings.isCardEnabled(CardType.AURORA_KP)) {
                 launch { fetchAuroraKp(requestId, updateState, isLatestRequest) }
             }
@@ -532,6 +546,51 @@ class WeatherLoadCoordinator @Inject constructor(
                 )
             }
         }
+    }
+
+    suspend fun fetchPwsObservation(
+        settings: NimbusSettings,
+        requestId: Long,
+        updateState: ((MainUiState) -> MainUiState) -> Unit,
+        isLatestRequest: (Long) -> Boolean,
+    ) {
+        if (!isLatestRequest(requestId)) return
+        updateState {
+            it.copy(
+                pwsObservation = null,
+                isPwsObservationLoading = true,
+                pwsObservationUnavailable = false,
+                pwsObservationNeedsConfig = false,
+            )
+        }
+        pwsRepository.fetchLatestObservation(settings).fold(
+            onSuccess = { observation ->
+                if (isLatestRequest(requestId)) {
+                    updateState {
+                        it.copy(
+                            pwsObservation = observation,
+                            isPwsObservationLoading = false,
+                            pwsObservationUnavailable = false,
+                            pwsObservationNeedsConfig = false,
+                        )
+                    }
+                }
+            },
+            onFailure = { failure ->
+                if (failure is CancellationException) throw failure
+                Log.d(TAG, "Tempest PWS observation unavailable: ${failure::class.java.simpleName}")
+                if (isLatestRequest(requestId)) {
+                    updateState {
+                        it.copy(
+                            pwsObservation = null,
+                            isPwsObservationLoading = false,
+                            pwsObservationUnavailable = failure !is TempestPwsConfigurationException,
+                            pwsObservationNeedsConfig = failure is TempestPwsConfigurationException,
+                        )
+                    }
+                }
+            },
+        )
     }
 
     private suspend fun fetchAlerts(

@@ -29,6 +29,7 @@ private val ASSOCIATED_DATA = "nimbus_api_keys_v2".toByteArray()
 data class ApiKeys(
     val owmApiKey: String = "",
     val pirateWeatherApiKey: String = "",
+    val tempestAccessToken: String = "",
 )
 
 class EncryptedApiKeyStore(context: Context) {
@@ -45,6 +46,8 @@ class EncryptedApiKeyStore(context: Context) {
     suspend fun setOwmApiKey(key: String) = update { it.copy(owmApiKey = key) }
 
     suspend fun setPirateWeatherApiKey(key: String) = update { it.copy(pirateWeatherApiKey = key) }
+
+    suspend fun setTempestAccessToken(token: String) = update { it.copy(tempestAccessToken = token) }
 
     private suspend fun update(transform: (ApiKeys) -> ApiKeys) = mutex.withLock {
         val updated = transform(_keys.value)
@@ -72,7 +75,13 @@ class EncryptedApiKeyStore(context: Context) {
     }
 
     suspend fun migrateFromLegacyEncryptedDataStore() = mutex.withLock {
-        if (_keys.value.owmApiKey.isNotBlank() || _keys.value.pirateWeatherApiKey.isNotBlank()) return@withLock
+        if (
+            _keys.value.owmApiKey.isNotBlank() ||
+            _keys.value.pirateWeatherApiKey.isNotBlank() ||
+            _keys.value.tempestAccessToken.isNotBlank()
+        ) {
+            return@withLock
+        }
         val oldFile = File(appContext.filesDir, OLD_ENCRYPTED_FILE)
         if (!oldFile.exists()) return@withLock
         try {
@@ -83,7 +92,11 @@ class EncryptedApiKeyStore(context: Context) {
             }
             val decrypted = aead.decrypt(encrypted, OLD_ASSOCIATED_DATA)
             val migrated = extractApiKeysFromPreferencesProto(decrypted)
-            if (migrated.owmApiKey.isNotBlank() || migrated.pirateWeatherApiKey.isNotBlank()) {
+            if (
+                migrated.owmApiKey.isNotBlank() ||
+                migrated.pirateWeatherApiKey.isNotBlank() ||
+                migrated.tempestAccessToken.isNotBlank()
+            ) {
                 writeToFile(migrated)
                 _keys.value = migrated
             }
@@ -158,6 +171,7 @@ internal fun extractApiKeysFromPreferencesProto(bytes: ByteArray): ApiKeys {
     return ApiKeys(
         owmApiKey = entries["owm_api_key"] ?: "",
         pirateWeatherApiKey = entries["pirate_weather_api_key"] ?: "",
+        tempestAccessToken = entries["tempest_access_token"] ?: "",
     )
 }
 

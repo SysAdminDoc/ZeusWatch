@@ -7,7 +7,7 @@
 ![Compose](https://img.shields.io/badge/Jetpack%20Compose-2026.06.01-4285F4?logo=jetpackcompose&logoColor=white)
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 
-> A free, open-source Android weather app with a premium dark UI, 36 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, route weather planning, custom alert rules, and smart alerts. No API keys required. Powered by Open-Meteo, FMI, LibreWXR, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, Hong Kong Observatory, BMKG, and WMO SWIC.
+> A free, open-source Android weather app with a premium dark UI, 37 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, route weather planning, custom alert rules, and smart alerts. No API keys required for core forecasts. Powered by Open-Meteo, FMI, LibreWXR, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, Hong Kong Observatory, BMKG, WMO SWIC, and optional WeatherFlow Tempest PWS observations.
 
 <img width="1536" height="1024" alt="design" src="https://github.com/user-attachments/assets/dce70ccc-af71-48d8-8000-0b2935f45996" />
 
@@ -102,6 +102,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | **Wind Forecast** | 24-hour wind speed line graph with gust overlay bars and peak callout |
 | **Forecast Evolution** | Optional Open-Meteo Single Runs card compares recent model runs for temp/rain-risk deltas |
 | **Provider Agreement** | Optional card compares next-24h temperature and precipitation across 2-3 forecast providers with agreement/divergence badges |
+| **Tempest PWS** | Optional WeatherFlow Tempest card listens for one-minute observations from the user's own station |
 | **Clothing Suggestions** | Rule-based outfit recommendations from feels-like temp, rain, snow, UV, wind |
 | **Pet Safety** | Pavement temperature estimates, heat stress, cold exposure, storm anxiety alerts |
 
@@ -189,7 +190,7 @@ When providers publish localized condition or alert text, matching user-locale s
 | **Icon Style** | Meteocons Animated (Lottie, default) / Material Icons / Custom Icon Packs |
 | **Theme Mode** | Static Dark / Weather Adaptive (accent colors shift: amber for sun, blue for rain, purple for storms) |
 | **Weather Summary** | AI-Generated (Gemini Nano, default) / Standard template |
-| **Card Visibility** | Toggle each of the 36 card types on/off |
+| **Card Visibility** | Toggle each of the 37 card types on/off |
 | **Card Ordering** | Reorderable card list in Settings with move up/down arrows |
 | **Temperature** | Fahrenheit / Celsius |
 | **Wind Speed** | mph / km/h / m/s / knots |
@@ -255,7 +256,7 @@ When providers publish localized condition or alert text, matching user-locale s
 │  │+ViewModel│ │+ViewModel │ │ + VM     │ │+ VM      │ │+ ViewModel   │  │
 │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └──────┬───────┘  │
 │       │            │            │            │               │           │
-│  36 Card Types via LazyColumn items()                                    │
+│  37 Card Types via LazyColumn items()                                    │
 │  WeatherSummary | NowcastCard | RadarPreview | HourlyStrip | TempGraph  │
 │  DailyForecast | UvIndexBar | WindCompass | AqiCard | PollenCard | ...   │
 │  ClothingSuggestion | PetSafety | DrivingAlert | HealthAlert | ...      │
@@ -338,8 +339,9 @@ Optional fallback sources (require API keys configured in Settings):
 |-----|---------|
 | [OpenWeatherMap](https://openweathermap.org/api) | Forecast fallback |
 | [Pirate Weather](https://pirateweather.net/) | Forecast fallback |
+| [WeatherFlow Tempest](https://apidocs.tempestwx.com/reference/quick-start) | Personal station observations |
 
-OpenWeatherMap and Pirate Weather keys are stored in an encrypted DataStore backed by Tink and Android Keystore. Existing plaintext keys migrate automatically on first launch.
+OpenWeatherMap and Pirate Weather keys plus WeatherFlow Tempest access tokens are stored in an encrypted DataStore backed by Tink and Android Keystore. Existing plaintext keys migrate automatically on first launch.
 
 Community reports use an anonymous append-only Firestore model: users can read reports and submit new condition reports, but reports cannot be updated or deleted after submission. Each report is bound to an anonymous Firebase Auth UID with a server-side per-account 5-minute write-rate limit. Nearby report lookups use geohash ranges plus exact-distance filtering so dense reports on the same latitude cannot hide truly nearby reports. `firestore.rules` validates coordinates, geohash shape, condition enum values, timestamp freshness, note length, and owner UID binding. The `standard` flavor installs Firebase App Check before Firestore/Auth access: debug builds use the Firebase debug provider and release builds use Play Integrity. Firebase enforcement is still a console-side switch; enable Firestore App Check enforcement only after registering the app, reviewing request metrics, and configuring Play Integrity settings for non-Play distribution if needed. The `freenet` flavor is unaffected and uses a no-op community report repository with no Firebase dependency.
 
@@ -462,7 +464,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | Section | Options |
 |---------|---------|
 | **Display** | Radar provider, icon style (Meteocons/Material/Custom), theme mode, summary style (AI/template) |
-| **Cards** | Toggle + reorder each of 36 card types with move up/down arrows |
+| **Cards** | Toggle + reorder each of 37 card types with move up/down arrows |
 | **Units** | Temperature, wind, pressure, precipitation, visibility, time format |
 | **Notifications** | Alert notifications (severity threshold, multi-location, source preference), persistent weather, nowcasting timelines, driving, health |
 | **Data Display** | Hourly range (48/72h), snowfall, CAPE, sunshine, golden hour, Beaufort colors, outdoor score, yesterday comparison |
@@ -473,11 +475,11 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | **Advanced** | Cache TTL (15/30/60/120 min) (collapsed by default) |
 | **About** | Version, data source, license |
 
-### Card Types (36)
+### Card Types (37)
 
 All cards can be independently shown/hidden and reordered:
 
-Weather Summary, Radar Preview, Rain Next Hour, Hourly Forecast, Temperature Graph, Forecast Evolution, Provider Agreement, Daily Forecast, UV Index, Wind Compass, Air Quality, Pollen, Outdoor Activity Score, Snowfall, Severe Weather Potential, Golden Hour, Sunshine Duration, Driving Conditions, Health Alerts, What to Wear, Pet Safety, Moon Phase, Humidity & Comfort, Precipitation Forecast, Pressure Trend, Wind Forecast, Today's Details, Cloud Cover, Visibility, On This Day, Aurora / Kp Index, Activity Index, Solar Irradiance, Marine, Flood Risk, Climate Outlook
+Weather Summary, Radar Preview, Rain Next Hour, Hourly Forecast, Temperature Graph, Forecast Evolution, Provider Agreement, Tempest PWS, Daily Forecast, UV Index, Wind Compass, Air Quality, Pollen, Outdoor Activity Score, Snowfall, Severe Weather Potential, Golden Hour, Sunshine Duration, Driving Conditions, Health Alerts, What to Wear, Pet Safety, Moon Phase, Humidity & Comfort, Precipitation Forecast, Pressure Trend, Wind Forecast, Today's Details, Cloud Cover, Visibility, On This Day, Aurora / Kp Index, Activity Index, Solar Irradiance, Marine, Flood Risk, Climate Outlook
 
 ---
 
@@ -604,7 +606,7 @@ ZeusWatch collects **zero user data**. No analytics, no tracking, no telemetry, 
 - **No accounts required.** The app works fully offline after the first forecast fetch.
 - **No network requests except weather data.** All API calls go directly to the configured weather services (Open-Meteo, RainViewer, etc.) — no intermediary servers.
 - **Community reports** (`standard` flavor only) use anonymous Firebase Auth with no personal identifiers. The `freenet` flavor has zero Firebase or Google dependency.
-- **API keys** (optional, user-provided) are encrypted on-device via Android Keystore + Tink AEAD and never leave the device.
+- **API keys/tokens** (optional, user-provided) are encrypted on-device via Android Keystore + Tink AEAD and never leave the device.
 - **Cloud backup excluded.** Preferences, widget data, encrypted keys, and databases are excluded from Android cloud backup and device-to-device transfer via `data_extraction_rules.xml`.
 - **Crash reports** (ACRA) are opt-in, sent via email, and PII-redacted before dispatch.
 

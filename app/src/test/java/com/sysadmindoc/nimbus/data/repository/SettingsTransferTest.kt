@@ -29,6 +29,8 @@ class SettingsTransferTest {
                 gadgetbridgeBroadcastEnabled = true,
                 owmApiKey = "owm-secret",
                 pirateWeatherApiKey = "pirate-secret",
+                tempestAccessToken = "tempest-secret",
+                tempestDeviceId = "62009",
             ).toBackup(),
         )
 
@@ -36,8 +38,11 @@ class SettingsTransferTest {
 
         assertFalse(encoded.contains("owm-secret"))
         assertFalse(encoded.contains("pirate-secret"))
+        assertFalse(encoded.contains("tempest-secret"))
         assertFalse(encoded.contains("owmApiKey"))
         assertFalse(encoded.contains("pirateWeatherApiKey"))
+        assertFalse(encoded.contains("tempestAccessToken"))
+        assertTrue(encoded.contains("\"tempestDeviceId\":\"62009\""))
         assertTrue(encoded.contains(TempUnit.CELSIUS.name))
         assertTrue(encoded.contains("\"gadgetbridgeBroadcastEnabled\":true"))
     }

@@ -40,6 +40,7 @@ class MainViewModelTest {
     private lateinit var wearSyncManager: WearSyncManager
     private lateinit var onThisDayRepository: OnThisDayRepository
     private lateinit var forecastEvolutionRepository: ForecastEvolutionRepository
+    private lateinit var pwsRepository: PwsRepository
 
     private lateinit var viewModel: MainViewModel
 
@@ -110,6 +111,7 @@ class MainViewModelTest {
         wearSyncManager = mockk(relaxed = true)
         onThisDayRepository = mockk(relaxed = true)
         forecastEvolutionRepository = mockk(relaxed = true)
+        pwsRepository = mockk(relaxed = true)
         every { connectivityObserver.isOnline } returns flowOf(true)
         every { summaryEngine.isAvailable() } returns false
         every { summaryEngine.close() } just Runs
@@ -199,6 +201,7 @@ class MainViewModelTest {
                         marineRepository = mockk(relaxed = true),
                         floodRepository = mockk(relaxed = true),
                         climateRepository = mockk(relaxed = true),
+                        pwsRepository = pwsRepository,
                     ),
                 ),
             ),
