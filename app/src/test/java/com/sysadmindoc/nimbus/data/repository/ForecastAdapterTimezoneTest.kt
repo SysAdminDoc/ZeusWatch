@@ -353,6 +353,7 @@ class ForecastAdapterTimezoneTest {
         userPreferences = mockk<UserPreferences>().also { prefs ->
             every { prefs.settings } returns flowOf(NimbusSettings())
         },
+        openMeteoFlatBufferAdapter = OpenMeteoFlatBufferAdapter(),
         sourceManager = dagger.Lazy { mockk<WeatherSourceManager>(relaxed = true) },
     )
 

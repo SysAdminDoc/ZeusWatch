@@ -1065,6 +1065,8 @@
     <string name="settings_alert_fallback">Alert Fallback</string>
     <string name="settings_air_quality_source">Air Quality Source</string>
     <string name="settings_minutely_source">Minutely Precipitation Source</string>
+    <string name="settings_open_meteo_flatbuffers">Open-Meteo FlatBuffers</string>
+    <string name="settings_open_meteo_flatbuffers_desc">Use Open-Meteo\'s binary SDK format for the main forecast and fall back to JSON if decoding fails.</string>
     <string name="settings_gadgetbridge_broadcast">Gadgetbridge weather broadcast</string>
     <string name="settings_gadgetbridge_broadcast_desc">Send current weather to compatible Gadgetbridge watches after each refresh.</string>
     <string name="settings_api_keys">API Keys</string>

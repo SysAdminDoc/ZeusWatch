@@ -112,6 +112,7 @@ class UserPreferences @Inject constructor(
         val SOURCE_ALERTS_FALLBACK = stringPreferencesKey("source_alerts_fallback")
         val SOURCE_AIR_QUALITY = stringPreferencesKey("source_air_quality")
         val SOURCE_MINUTELY = stringPreferencesKey("source_minutely")
+        val OPEN_METEO_FLATBUFFERS_ENABLED = booleanPreferencesKey("open_meteo_flatbuffers_enabled")
         val GADGETBRIDGE_BROADCAST_ENABLED = booleanPreferencesKey("gadgetbridge_broadcast_enabled")
 
         // API keys for third-party providers
@@ -228,6 +229,7 @@ class UserPreferences @Inject constructor(
                 minutely = prefs[Keys.SOURCE_MINUTELY]?.let { safeValueOf<WeatherSourceProvider>(it) }
                     ?: WeatherSourceProvider.defaultFor(WeatherDataType.MINUTELY),
             ).normalized(),
+            openMeteoFlatBuffersEnabled = prefs[Keys.OPEN_METEO_FLATBUFFERS_ENABLED] ?: false,
             gadgetbridgeBroadcastEnabled = prefs[Keys.GADGETBRIDGE_BROADCAST_ENABLED] ?: false,
             owmApiKey = apiKeys.owmApiKey.ifBlank { prefs[Keys.OWM_API_KEY] ?: "" },
             pirateWeatherApiKey = apiKeys.pirateWeatherApiKey.ifBlank { prefs[Keys.PIRATE_WEATHER_API_KEY] ?: "" },
@@ -453,6 +455,9 @@ class UserPreferences @Inject constructor(
             ?: WeatherSourceProvider.defaultFor(WeatherDataType.MINUTELY)
         it[Keys.SOURCE_MINUTELY] = safeProvider.name
     }
+    suspend fun setOpenMeteoFlatBuffersEnabled(enabled: Boolean) = store.edit {
+        it[Keys.OPEN_METEO_FLATBUFFERS_ENABLED] = enabled
+    }
     suspend fun setGadgetbridgeBroadcastEnabled(enabled: Boolean) = store.edit {
         it[Keys.GADGETBRIDGE_BROADCAST_ENABLED] = enabled
     }
@@ -583,6 +588,7 @@ data class NimbusSettings(
     val cacheTtlMinutes: Int = 30,
     // Data sources
     val sourceConfig: SourceConfig = SourceConfig(),
+    val openMeteoFlatBuffersEnabled: Boolean = false,
     val gadgetbridgeBroadcastEnabled: Boolean = false,
     val owmApiKey: String = "",
     val pirateWeatherApiKey: String = "",

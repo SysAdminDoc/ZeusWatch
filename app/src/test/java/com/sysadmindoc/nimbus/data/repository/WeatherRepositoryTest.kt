@@ -256,6 +256,7 @@ class WeatherRepositoryTest {
             reverseGeocoder = reverseGeocoder,
             weatherDao = weatherDao,
             userPreferences = userPreferences,
+            openMeteoFlatBufferAdapter = OpenMeteoFlatBufferAdapter(),
             sourceManager = dagger.Lazy { sourceManager },
         )
     }
@@ -295,6 +296,9 @@ class WeatherRepositoryTest {
     fun getWeatherDirectReturnsApiDataAndCachesIt() = runTest {
         val response = makeResponse(temp = 25.0, weatherCode = 2)
         coEvery { weatherApi.getForecast(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns response
+        coEvery {
+            weatherApi.getForecastFlatBuffer(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } throws RuntimeException("FlatBuffers should be disabled")
         coEvery { reverseGeocoder.resolve(testLat, testLon) } returns com.sysadmindoc.nimbus.data.location.ReverseGeoResult(
             name = testLocationName, region = "Colorado", country = "US",
         )
@@ -308,6 +312,31 @@ class WeatherRepositoryTest {
 
         // Verify cache was written
         coVerify(exactly = 1) { weatherDao.upsert(any()) }
+        coVerify(exactly = 0) {
+            weatherApi.getForecastFlatBuffer(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun getWeatherDirectFallsBackToJsonWhenFlatBufferPathFails() = runTest {
+        every { userPreferences.settings } returns flowOf(NimbusSettings(openMeteoFlatBuffersEnabled = true))
+        val response = makeResponse(temp = 26.0, weatherCode = 3)
+        coEvery {
+            weatherApi.getForecastFlatBuffer(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } throws RuntimeException("bad flatbuffer")
+        coEvery { weatherApi.getForecast(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns response
+        coEvery { reverseGeocoder.resolve(testLat, testLon) } returns null
+
+        val result = repository.getWeatherDirect(testLat, testLon, testLocationName)
+
+        assertTrue(result.isSuccess)
+        assertEquals(26.0, result.getOrThrow().current.temperature, 0.01)
+        coVerify(exactly = 1) {
+            weatherApi.getForecastFlatBuffer(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        }
+        coVerify(exactly = 1) {
+            weatherApi.getForecast(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        }
     }
 
     @Test
@@ -378,6 +407,7 @@ class WeatherRepositoryTest {
             reverseGeocoder = reverseGeocoder,
             weatherDao = weatherDao,
             userPreferences = userPreferences,
+            openMeteoFlatBufferAdapter = OpenMeteoFlatBufferAdapter(),
             sourceManager = dagger.Lazy { sourceManager },
         )
 
@@ -515,6 +545,7 @@ class WeatherRepositoryTest {
             reverseGeocoder = reverseGeocoder,
             weatherDao = weatherDao,
             userPreferences = userPreferences,
+            openMeteoFlatBufferAdapter = OpenMeteoFlatBufferAdapter(),
             sourceManager = dagger.Lazy { sourceManager },
         )
         val cached = makeCacheEntity(cachedAt = System.currentTimeMillis() - (16 * 60 * 1000L))
