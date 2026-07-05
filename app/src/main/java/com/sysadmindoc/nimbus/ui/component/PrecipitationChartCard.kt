@@ -1,35 +1,23 @@
 package com.sysadmindoc.nimbus.ui.component
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
-import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
@@ -57,9 +45,6 @@ fun PrecipitationChartCard(
     val peakIdx = data.indices.maxByOrNull { data[it].precipitationProbability } ?: 0
     val peakHour = data.getOrNull(peakIdx)
 
-    val textMeasurer = rememberTextMeasurer()
-    val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val peakTimeRaw = if (peakHour != null) {
         WeatherFormatter.formatRelativeHourLabel(context, peakHour.time, referenceTime, s)
     } else null
@@ -124,80 +109,17 @@ fun PrecipitationChartCard(
 
         // Bar chart
         if (maxProb > 0) {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp)
-                    .padding(top = 4.dp),
-            ) {
-                val w = size.width
-                val h = size.height
-                val paddingBottom = 20.dp.toPx()
-                val graphHeight = h - paddingBottom
-                val barSpacing = 2.dp.toPx()
-                val barWidth = (w / data.size) - barSpacing
-
-                data.forEachIndexed { i, hour ->
-                    val x = rtlCanvasRectLeft(i * (barWidth + barSpacing), barWidth, w, isRtl)
-                    val prob = hour.precipitationProbability
-                    val precip = hour.precipitation ?: 0.0
-
-                    // Probability bar
-                    if (prob > 0) {
-                        val barH = (prob / 100f) * graphHeight * 0.85f
-                        val barColor = when {
-                            prob >= 70 -> NimbusRainBlue
-                            prob >= 40 -> NimbusRainBlue.copy(alpha = 0.7f)
-                            prob >= 20 -> NimbusRainBlue.copy(alpha = 0.45f)
-                            else -> NimbusRainBlue.copy(alpha = 0.25f)
-                        }
-                        drawRoundRect(
-                            color = barColor,
-                            topLeft = Offset(x, graphHeight - barH),
-                            size = Size(barWidth, barH),
-                            cornerRadius = CornerRadius(2.dp.toPx()),
-                        )
-                        val stripes = ColorSafeRiskCues.precipitation(prob).ordinal.coerceAtLeast(1)
-                        val stripeGap = 4.dp.toPx()
-                        val stripeInset = 2.dp.toPx()
-                        repeat(stripes) { stripe ->
-                            val y = graphHeight - barH + stripeGap + (stripe * stripeGap)
-                            if (y < graphHeight - stripeGap) {
-                                drawLine(
-                                    color = Color.White.copy(alpha = 0.34f),
-                                    start = Offset(x + stripeInset, y),
-                                    end = Offset(x + barWidth - stripeInset, y),
-                                    strokeWidth = 1.dp.toPx(),
-                                )
-                            }
-                        }
-
-                        // Precipitation amount overlay (darker tip)
-                        if (precip > 0.1) {
-                            val precipH = (precip / 5.0).coerceAtMost(1.0).toFloat() * barH * 0.4f
-                            drawRoundRect(
-                                color = NimbusBlueAccent.copy(alpha = 0.5f),
-                                topLeft = Offset(x, graphHeight - precipH),
-                                size = Size(barWidth, precipH),
-                                cornerRadius = CornerRadius(2.dp.toPx()),
-                            )
-                        }
-                    }
-
-                    // Time labels every 6 hours
-                    if (i % 6 == 0) {
-                        val label = WeatherFormatter.formatRelativeHourLabel(context, hour.time, referenceTime, s)
-                        val measured = textMeasurer.measure(label, labelStyle)
-                        drawText(
-                            measured,
-                            topLeft = Offset(
-                                centeredCanvasLabelLeft(x + barWidth / 2f, measured.size.width.toFloat(), w),
-                                graphHeight + 4.dp.toPx(),
-                            ),
-                        )
-                    }
-                }
+            val probabilities = remember(data) { data.map { it.precipitationProbability.toDouble() } }
+            val labels = remember(data, referenceTime, s) {
+                data.indices
+                    .filter { it % 6 == 0 }
+                    .map { WeatherFormatter.formatRelativeHourLabel(context, data[it].time, referenceTime, s) }
             }
+            VicoColumnTrendChart(
+                values = probabilities,
+                labels = labels,
+                columnColor = NimbusRainBlue.copy(alpha = 0.72f),
+            )
         }
     }
 }
