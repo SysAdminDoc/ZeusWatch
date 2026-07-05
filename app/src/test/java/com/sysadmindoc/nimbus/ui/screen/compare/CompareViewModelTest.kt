@@ -1,12 +1,15 @@
 package com.sysadmindoc.nimbus.ui.screen.compare
 
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
+import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
+import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
+import com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -34,6 +37,7 @@ class CompareViewModelTest {
 
     private lateinit var weatherRepository: WeatherRepository
     private lateinit var locationRepository: LocationRepository
+    private lateinit var weatherSourceManager: WeatherSourceManager
     private lateinit var savedLocationsFlow: MutableStateFlow<List<SavedLocationEntity>>
     private lateinit var viewModel: CompareViewModel
 
@@ -78,12 +82,16 @@ class CompareViewModelTest {
         Dispatchers.setMain(testDispatcher)
         weatherRepository = mockk()
         locationRepository = mockk()
+        weatherSourceManager = mockk()
         savedLocationsFlow = MutableStateFlow(listOf(currentLocation, seattle, chicago, miami))
 
         coEvery { weatherRepository.getWeather(currentLocation) } returns Result.success(weatherFor(currentLocation.name))
         coEvery { weatherRepository.getWeather(seattle) } returns Result.success(weatherFor(seattle.name))
         coEvery { weatherRepository.getWeather(chicago) } returns Result.success(weatherFor(chicago.name))
         coEvery { weatherRepository.getWeather(miami) } returns Result.success(weatherFor(miami.name))
+        coEvery {
+            weatherSourceManager.getWeatherFromProvider(any(), any(), any(), any(), any())
+        } returns Result.failure(Exception("alternate source unavailable"))
 
         every { locationRepository.savedLocations } returns savedLocationsFlow
     }
@@ -100,7 +108,7 @@ class CompareViewModelTest {
         coEvery { weatherRepository.getWeather(chicago) } coAnswers { chicagoResult.await() }
         coEvery { weatherRepository.getWeather(miami) } coAnswers { miamiResult.await() }
 
-        viewModel = CompareViewModel(weatherRepository, locationRepository)
+        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager)
         advanceUntilIdle()
 
         viewModel.selectLocation1(chicago)
@@ -120,7 +128,7 @@ class CompareViewModelTest {
     fun `failed comparison request records failed location without raw error copy`() = runTest {
         coEvery { weatherRepository.getWeather(seattle) } returns Result.failure(Exception("raw network failure"))
 
-        viewModel = CompareViewModel(weatherRepository, locationRepository)
+        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -129,7 +137,67 @@ class CompareViewModelTest {
         assertFalse(state.isLoading)
     }
 
-    private fun weatherFor(name: String): WeatherData {
+    @Test
+    fun `source overlay fetches alternate provider for primary location`() = runTest {
+        coEvery { weatherRepository.getWeather(currentLocation) } returns Result.success(
+            weatherFor(
+                name = currentLocation.name,
+                sourceProvider = WeatherSourceProvider.OPEN_METEO.displayName,
+                hourlyBaseTemp = 20.0,
+            )
+        )
+        coEvery {
+            weatherSourceManager.getWeatherFromProvider(
+                provider = WeatherSourceProvider.MET_NORWAY,
+                latitude = currentLocation.latitude,
+                longitude = currentLocation.longitude,
+                locationName = currentLocation.name,
+                locationTimeZone = null,
+            )
+        } returns Result.success(
+            weatherFor(
+                name = currentLocation.name,
+                sourceProvider = WeatherSourceProvider.MET_NORWAY.displayName,
+                hourlyBaseTemp = 22.0,
+            )
+        )
+
+        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isOverlayLoading)
+        assertFalse(state.overlayUnavailable)
+        assertEquals(
+            listOf(WeatherSourceProvider.OPEN_METEO.displayName, WeatherSourceProvider.MET_NORWAY.displayName),
+            state.overlayForecasts.map { it.label },
+        )
+    }
+
+    @Test
+    fun `source overlay marks unavailable when only primary source has hourly data`() = runTest {
+        coEvery { weatherRepository.getWeather(currentLocation) } returns Result.success(
+            weatherFor(
+                name = currentLocation.name,
+                sourceProvider = WeatherSourceProvider.OPEN_METEO.displayName,
+                hourlyBaseTemp = 20.0,
+            )
+        )
+
+        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isOverlayLoading)
+        assertTrue(state.overlayUnavailable)
+        assertEquals(1, state.overlayForecasts.size)
+    }
+
+    private fun weatherFor(
+        name: String,
+        sourceProvider: String? = null,
+        hourlyBaseTemp: Double? = null,
+    ): WeatherData {
         return WeatherData(
             location = LocationInfo(name = name, latitude = 0.0, longitude = 0.0),
             current = CurrentConditions(
@@ -152,8 +220,29 @@ class CompareViewModelTest {
                 sunrise = null,
                 sunset = null,
             ),
-            hourly = emptyList(),
+            hourly = hourlyBaseTemp?.let(::hourlyFor) ?: emptyList(),
             daily = emptyList(),
+            sourceProvider = sourceProvider,
         )
+    }
+
+    private fun hourlyFor(baseTemp: Double): List<HourlyConditions> {
+        return (0 until 6).map { hour ->
+            HourlyConditions(
+                time = java.time.LocalDateTime.of(2026, 7, 5, 8, 0).plusHours(hour.toLong()),
+                temperature = baseTemp + hour,
+                feelsLike = null,
+                weatherCode = WeatherCode.CLEAR_SKY,
+                isDay = true,
+                precipitationProbability = hour * 10,
+                precipitation = null,
+                windSpeed = null,
+                windDirection = null,
+                humidity = null,
+                uvIndex = null,
+                cloudCover = null,
+                visibility = null,
+            )
+        }
     }
 }

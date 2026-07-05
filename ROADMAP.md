@@ -318,14 +318,6 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 
 ### P3 — Polish & Future
 
-
-- [ ] P3 — Stacked multi-source forecast overlay on Compare screen · UX / **T-SOURCES**
-  Why: Windy and Flowx demonstrate that overlaying temperature or precipitation lines from multiple sources on a single chart reveals forecast agreement and divergence at a glance. ZeusWatch's Compare screen shows side-by-side values but no graphical overlay. The Provider Agreement card now tracks a badge/indicator; this is the complementary visual.
-  Evidence: Windy Compare Mode; Flowx stacked model graphs; Ventusky dual-axis overlays; existing `CompareScreen.kt` with side-by-side layout; existing `TemperatureGraph.kt` Canvas rendering.
-  Touches: `CompareScreen.kt` (add chart overlay mode), new `MultiSourceChart.kt` composable (extend `TemperatureGraph` Canvas logic to plot 2-3 source lines with distinct colors), `CompareViewModel.kt` (fetch hourly data from selected sources in parallel).
-  Acceptance: Compare screen has a toggle for "chart overlay" that plots temperature (and optionally precipitation) from 2-3 selected sources on one graph with a legend; sources use distinct colors; TalkBack announces source names and agreement/divergence summary.
-  Complexity: L
-
 ## Research-Driven Additions
 
 ### P1

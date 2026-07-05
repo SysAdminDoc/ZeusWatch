@@ -215,7 +215,7 @@ When providers publish localized condition or alert text, matching user-locale s
 
 | Feature | Description |
 |---------|-------------|
-| **Compare Weather** | Side-by-side comparison with weather icons, visibility, cloud cover, and value highlighting |
+| **Compare Weather** | Side-by-side comparison with weather icons, visibility, cloud cover, value highlighting, and a provider chart overlay for hourly temperature/rain divergence |
 | **Location Search** | Open-Meteo geocoding with debounced search and error feedback |
 | **Multi-Location** | Room database with add/remove/auto-GPS saved locations |
 | **Drag-to-Reorder Locations** | Long-press drag handles to reorder saved locations with batch persistence |

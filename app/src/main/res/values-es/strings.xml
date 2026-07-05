@@ -913,6 +913,14 @@
     <string name="compare_cooler">está más fresco ahora</string>
     <string name="compare_humidity_summary">Humedad %1$d%% vs %2$d%%</string>
     <string name="compare_rain_summary">Lluvia %1$d%% vs %2$d%%</string>
+    <string name="compare_chart_overlay_title">Superposición de gráfico</string>
+    <string name="compare_chart_overlay_desc">Compara líneas de temperatura de proveedores y riesgo de lluvia para la ubicación principal.</string>
+    <string name="compare_chart_overlay_loading">Cargando pronósticos de fuentes...</string>
+    <string name="compare_chart_overlay_unavailable">La superposición necesita al menos dos pronósticos horarios para esta ubicación.</string>
+    <string name="compare_chart_overlay_semantics">Superposición de fuentes para %1$s: %2$s. Diferencia máxima de temperatura %3$s. Diferencia máxima de precipitación %4$d puntos porcentuales.</string>
+    <string name="compare_chart_overlay_now_temp">%1$s ahora</string>
+    <string name="compare_chart_overlay_temp_spread">Dif. temp. máx. %1$s</string>
+    <string name="compare_chart_overlay_rain_spread">Dif. lluvia %1$d pts</string>
 
     <!-- Today screen -->
     <string name="main_grant_location">Permitir ubicación</string>
