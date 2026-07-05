@@ -185,6 +185,7 @@ data class SettingsBackupPreferences(
     val sourceAirQuality: String = WeatherSourceProvider.defaultFor(WeatherDataType.AIR_QUALITY).name,
     val sourceMinutely: String = WeatherSourceProvider.defaultFor(WeatherDataType.MINUTELY).name,
     val gadgetbridgeBroadcastEnabled: Boolean = false,
+    val tempestDeviceId: String = "",
     val onboardingComplete: Boolean = true,
 )
 
@@ -386,6 +387,7 @@ fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPrefere
     sourceAirQuality = sourceConfig.airQuality.name,
     sourceMinutely = sourceConfig.minutely.name,
     gadgetbridgeBroadcastEnabled = gadgetbridgeBroadcastEnabled,
+    tempestDeviceId = tempestDeviceId,
     onboardingComplete = onboardingComplete,
 )
 
@@ -441,6 +443,7 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
             ?: WeatherSourceProvider.defaultFor(WeatherDataType.MINUTELY),
     ).normalized(),
     gadgetbridgeBroadcastEnabled = gadgetbridgeBroadcastEnabled,
+    tempestDeviceId = tempestDeviceId.filter(Char::isDigit).take(24),
     onboardingComplete = onboardingComplete,
 )
 
@@ -556,6 +559,7 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setSourceAirQuality(settings.sourceConfig.airQuality)
     setSourceMinutely(settings.sourceConfig.minutely)
     setGadgetbridgeBroadcastEnabled(settings.gadgetbridgeBroadcastEnabled)
+    setTempestDeviceId(settings.tempestDeviceId)
     setOnboardingComplete(settings.onboardingComplete)
 }
 

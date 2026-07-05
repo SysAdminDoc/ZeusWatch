@@ -129,6 +129,7 @@ import com.sysadmindoc.nimbus.ui.component.SevereWeatherCard
 import com.sysadmindoc.nimbus.ui.component.SnowfallCard
 import com.sysadmindoc.nimbus.ui.component.SunshineDurationCard
 import com.sysadmindoc.nimbus.ui.component.ProviderAgreementCard
+import com.sysadmindoc.nimbus.ui.component.PwsObservationCard
 import com.sysadmindoc.nimbus.ui.component.RadarPreviewCard
 import com.sysadmindoc.nimbus.ui.component.SunArc
 import com.sysadmindoc.nimbus.ui.component.WeatherSummaryCard
@@ -1098,6 +1099,7 @@ private val FORECAST_CARD_TYPES = setOf(
     CardType.TEMPERATURE_GRAPH,
     CardType.FORECAST_EVOLUTION,
     CardType.PROVIDER_AGREEMENT,
+    CardType.PWS_OBSERVATION,
     CardType.DAILY_FORECAST,
 )
 
@@ -1240,6 +1242,35 @@ private fun RenderForecastCard(
                 context.state.providerAgreementUnavailable -> InlineNoticeCard(
                     title = stringResource(R.string.provider_agreement_unavailable_title),
                     message = stringResource(R.string.provider_agreement_unavailable_message),
+                    icon = Icons.Filled.CloudOff,
+                    tint = NimbusTextSecondary,
+                    modifier = modifier,
+                )
+            }
+        }
+        CardType.PWS_OBSERVATION -> {
+            when {
+                context.state.pwsObservation != null -> PwsObservationCard(
+                    observation = context.state.pwsObservation,
+                    modifier = modifier,
+                )
+                context.state.isPwsObservationLoading -> InlineNoticeCard(
+                    title = stringResource(R.string.pws_loading_title),
+                    message = stringResource(R.string.pws_loading_message),
+                    icon = Icons.Filled.Refresh,
+                    tint = NimbusBlueAccent,
+                    modifier = modifier,
+                )
+                context.state.pwsObservationNeedsConfig -> InlineNoticeCard(
+                    title = stringResource(R.string.pws_config_title),
+                    message = stringResource(R.string.pws_config_message),
+                    icon = Icons.Filled.Settings,
+                    tint = NimbusBlueAccent,
+                    modifier = modifier,
+                )
+                context.state.pwsObservationUnavailable -> InlineNoticeCard(
+                    title = stringResource(R.string.pws_unavailable_title),
+                    message = stringResource(R.string.pws_unavailable_message),
                     icon = Icons.Filled.CloudOff,
                     tint = NimbusTextSecondary,
                     modifier = modifier,

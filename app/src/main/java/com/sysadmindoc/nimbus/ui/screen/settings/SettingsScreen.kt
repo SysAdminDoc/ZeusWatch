@@ -251,6 +251,8 @@ fun SettingsScreen(
             onGadgetbridgeBroadcastEnabled = viewModel::setGadgetbridgeBroadcastEnabled,
             onOwmApiKey = viewModel::setOwmApiKey,
             onPirateWeatherApiKey = viewModel::setPirateWeatherApiKey,
+            onTempestAccessToken = viewModel::setTempestAccessToken,
+            onTempestDeviceId = viewModel::setTempestDeviceId,
             onExportSettings = { exportSettingsLauncher.launch("zeuswatch-settings.json") },
             onImportSettings = { importSettingsLauncher.launch(arrayOf("application/json", "text/*")) },
             onExportProviderDiagnostics = { exportDiagnosticsLauncher.launch("zeuswatch-source-health.txt") },

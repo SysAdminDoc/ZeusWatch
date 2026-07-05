@@ -199,12 +199,6 @@ Open question: needs measurement.
 
 ### P3 — Polish & Future
 
-- [ ] P3 — WeatherFlow Tempest PWS integration · **T-SOURCES**
-  Why: Personal weather stations provide hyper-local data. WeatherFlow Tempest offers a free WebSocket API (`wss://ws.weatherflow.com/swd/data`) for 1-minute real-time observations from personal stations. No FOSS weather app integrates PWS data.
-  Evidence: WeatherFlow Tempest WebSocket API documentation; Weather Underground PWS network (250k+ stations).
-  Touches: New `TempestWebSocketService`, new `PwsRepository`, optional card type showing nearest-station data. User provides station token in Settings. freenet-compatible (no proprietary deps).
-  Acceptance: Users with a Tempest token see real-time 1-minute observations from their station; data complements (doesn't replace) forecast providers.
-  Complexity: L
 
 ## Research-Driven Additions (2026-06-09, Round 2)
 

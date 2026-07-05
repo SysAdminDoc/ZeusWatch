@@ -29,6 +29,7 @@ private val customAlertRulesKey = stringPreferencesKey("custom_alert_rules")
 private val persistentWeatherNotifKey = booleanPreferencesKey("persistent_weather_notif")
 private val owmApiKeyPreferenceKey = stringPreferencesKey("owm_api_key")
 private val pirateWeatherApiKeyPreferenceKey = stringPreferencesKey("pirate_weather_api_key")
+private val tempestAccessTokenPreferenceKey = stringPreferencesKey("tempest_access_token")
 
 internal suspend fun Context.readPersistentWeatherNotificationEnabled(): Boolean {
     return dataStore.data
@@ -116,6 +117,8 @@ class UserPreferences @Inject constructor(
         // API keys for third-party providers
         val OWM_API_KEY = owmApiKeyPreferenceKey
         val PIRATE_WEATHER_API_KEY = pirateWeatherApiKeyPreferenceKey
+        val TEMPEST_ACCESS_TOKEN = tempestAccessTokenPreferenceKey
+        val TEMPEST_DEVICE_ID = stringPreferencesKey("tempest_device_id")
 
         val SEEN_ALERT_IDS_ORDERED = stringPreferencesKey("seen_alert_ids_ordered")
         @Deprecated("Migrated to ordered string in SEEN_ALERT_IDS_ORDERED")
@@ -137,7 +140,9 @@ class UserPreferences @Inject constructor(
             prefs[Keys.TEMP_UNIT] != null ||
             prefs[Keys.SOURCE_FORECAST] != null ||
             prefs[Keys.OWM_API_KEY] != null ||
-            prefs[Keys.PIRATE_WEATHER_API_KEY] != null
+            prefs[Keys.PIRATE_WEATHER_API_KEY] != null ||
+            prefs[Keys.TEMPEST_ACCESS_TOKEN] != null ||
+            prefs[Keys.TEMPEST_DEVICE_ID] != null
     }
 
     private val preferencesJson = Json {
@@ -226,6 +231,8 @@ class UserPreferences @Inject constructor(
             gadgetbridgeBroadcastEnabled = prefs[Keys.GADGETBRIDGE_BROADCAST_ENABLED] ?: false,
             owmApiKey = apiKeys.owmApiKey.ifBlank { prefs[Keys.OWM_API_KEY] ?: "" },
             pirateWeatherApiKey = apiKeys.pirateWeatherApiKey.ifBlank { prefs[Keys.PIRATE_WEATHER_API_KEY] ?: "" },
+            tempestAccessToken = apiKeys.tempestAccessToken.ifBlank { prefs[Keys.TEMPEST_ACCESS_TOKEN] ?: "" },
+            tempestDeviceId = prefs[Keys.TEMPEST_DEVICE_ID] ?: "",
             onboardingComplete = prefs[Keys.ONBOARDING_COMPLETE] ?: hasExistingUserFootprint(prefs),
         )
     }
@@ -461,9 +468,19 @@ class UserPreferences @Inject constructor(
         scrubLegacyApiKeys()
     }
 
+    suspend fun setTempestAccessToken(token: String) {
+        encryptedApiKeyStore.setTempestAccessToken(token)
+        scrubLegacyApiKeys()
+    }
+
+    suspend fun setTempestDeviceId(deviceId: String) = store.edit {
+        it[Keys.TEMPEST_DEVICE_ID] = deviceId.filter(Char::isDigit).take(24)
+    }
+
     private suspend fun scrubLegacyApiKeys() = store.edit { prefs ->
         prefs.remove(Keys.OWM_API_KEY)
         prefs.remove(Keys.PIRATE_WEATHER_API_KEY)
+        prefs.remove(Keys.TEMPEST_ACCESS_TOKEN)
     }
 
     suspend fun migrateEncryptedApiKeys() {
@@ -569,6 +586,8 @@ data class NimbusSettings(
     val gadgetbridgeBroadcastEnabled: Boolean = false,
     val owmApiKey: String = "",
     val pirateWeatherApiKey: String = "",
+    val tempestAccessToken: String = "",
+    val tempestDeviceId: String = "",
     val onboardingComplete: Boolean = false,
 ) {
     /** Cache TTL in milliseconds. */

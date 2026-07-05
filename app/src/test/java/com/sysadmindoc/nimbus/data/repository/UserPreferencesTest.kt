@@ -409,6 +409,7 @@ class UserPreferencesTest {
         val keys = extractApiKeysFromPreferencesProto(ByteArray(0))
         assertEquals("", keys.owmApiKey)
         assertEquals("", keys.pirateWeatherApiKey)
+        assertEquals("", keys.tempestAccessToken)
     }
 
     @Test
@@ -416,6 +417,7 @@ class UserPreferencesTest {
         val keys = extractApiKeysFromPreferencesProto(byteArrayOf(0xFF.toByte(), 0x01, 0x02))
         assertEquals("", keys.owmApiKey)
         assertEquals("", keys.pirateWeatherApiKey)
+        assertEquals("", keys.tempestAccessToken)
     }
 
     @Test
@@ -423,10 +425,12 @@ class UserPreferencesTest {
         val proto = buildPreferencesProto(
             "owm_api_key" to "owm-secret-123",
             "pirate_weather_api_key" to "pirate-secret-456",
+            "tempest_access_token" to "tempest-secret-789",
         )
         val keys = extractApiKeysFromPreferencesProto(proto)
         assertEquals("owm-secret-123", keys.owmApiKey)
         assertEquals("pirate-secret-456", keys.pirateWeatherApiKey)
+        assertEquals("tempest-secret-789", keys.tempestAccessToken)
     }
 
     @Test
@@ -438,6 +442,7 @@ class UserPreferencesTest {
         val keys = extractApiKeysFromPreferencesProto(proto)
         assertEquals("my-owm-key", keys.owmApiKey)
         assertEquals("", keys.pirateWeatherApiKey)
+        assertEquals("", keys.tempestAccessToken)
     }
 
     /**

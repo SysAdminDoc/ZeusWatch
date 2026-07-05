@@ -99,6 +99,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
@@ -251,6 +252,8 @@ internal data class SettingsActions(
     val onGadgetbridgeBroadcastEnabled: (Boolean) -> Unit = {},
     val onOwmApiKey: (String) -> Unit = {},
     val onPirateWeatherApiKey: (String) -> Unit = {},
+    val onTempestAccessToken: (String) -> Unit = {},
+    val onTempestDeviceId: (String) -> Unit = {},
     val onExportSettings: () -> Unit = {},
     val onImportSettings: () -> Unit = {},
     val onExportProviderDiagnostics: () -> Unit = {},
@@ -916,8 +919,11 @@ private fun SettingsApiKeyFields(
         sourceConfig.forecastFallback == WeatherSourceProvider.PIRATE_WEATHER ||
         settings.alertSourcePref == AlertSourcePreference.AUTO ||
         settings.alertSourcePref == AlertSourcePreference.ALL_SOURCES
+    val needsTempestConfig = CardType.PWS_OBSERVATION.name !in settings.disabledCards ||
+        settings.tempestAccessToken.isNotBlank() ||
+        settings.tempestDeviceId.isNotBlank()
 
-    if (needsOwmKey || needsPirateKey) {
+    if (needsOwmKey || needsPirateKey || needsTempestConfig) {
         Spacer(modifier = Modifier.height(12.dp))
         Text(stringResource(R.string.settings_api_keys), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
     }
@@ -926,6 +932,21 @@ private fun SettingsApiKeyFields(
     }
     if (needsPirateKey) {
         ApiKeyField(stringResource(R.string.settings_pirate_key), settings.pirateWeatherApiKey, actions.onPirateWeatherApiKey)
+    }
+    if (needsTempestConfig) {
+        ApiKeyField(
+            label = stringResource(R.string.settings_tempest_access_token),
+            value = settings.tempestAccessToken,
+            onValueChange = actions.onTempestAccessToken,
+        )
+        ApiKeyField(
+            label = stringResource(R.string.settings_tempest_device_id),
+            value = settings.tempestDeviceId,
+            onValueChange = actions.onTempestDeviceId,
+            isSecret = false,
+            keyboardType = KeyboardType.Number,
+            placeholder = stringResource(R.string.settings_enter_value),
+        )
     }
 }
 
@@ -2075,6 +2096,9 @@ private fun ApiKeyField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
+    isSecret: Boolean = true,
+    keyboardType: KeyboardType = KeyboardType.Password,
+    placeholder: String? = null,
 ) {
     var text by remember(label) { mutableStateOf(value) }
     var isFocused by remember { mutableStateOf(false) }
@@ -2084,6 +2108,7 @@ private fun ApiKeyField(
     // lambda is captured once, so direct captures would go stale.
     val currentValue by rememberUpdatedState(value)
     val currentOnValueChange by rememberUpdatedState(onValueChange)
+    val effectivePlaceholder = placeholder ?: stringResource(R.string.settings_enter_api_key)
 
     LaunchedEffect(value, isFocused) {
         if (!isFocused && value != text) {
@@ -2126,9 +2151,9 @@ private fun ApiKeyField(
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium.copy(color = NimbusTextPrimary),
             cursorBrush = SolidColor(NimbusBlueAccent),
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = if (isSecret) PasswordVisualTransformation() else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
+                keyboardType = keyboardType,
                 imeAction = ImeAction.Done,
             ),
             keyboardActions = KeyboardActions(
@@ -2167,7 +2192,7 @@ private fun ApiKeyField(
                 ) {
                     if (text.isEmpty()) {
                         Text(
-                            text = stringResource(R.string.settings_enter_api_key),
+                            text = effectivePlaceholder,
                             style = MaterialTheme.typography.bodyMedium,
                             color = NimbusTextTertiary,
                         )
