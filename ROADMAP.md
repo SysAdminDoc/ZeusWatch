@@ -1,7 +1,7 @@
 # ZeusWatch Roadmap
 
 **Current Version**: v1.25.0 (phone versionCode 105, wear versionCode 77)
-**Architecture**: Kotlin 2.1.0 / Jetpack Compose / Hilt / MVVM / multi-module (phone + wear)
+**Architecture**: Kotlin 2.3.21 / Jetpack Compose / Hilt / MVVM / multi-module (phone + wear)
 **Flavors**: `standard` (Google Play services, Gemini Nano, Firestore, Wear DataLayer) / `freenet` (F-Droid clean)
 **License**: LGPL-3.0
 
@@ -36,14 +36,11 @@
 
 ### N-10. Dependency runway and platform compatibility pass · **T-RELIABILITY** / **T-PERF**
 Split into remaining lanes:
-- **Lane C**: architecture-affecting upgrades (Retrofit 3, OkHttp 5, MapLibre 13, Kotlin 2.3+, Gradle 9, AGP 9) only after migration risk/rollback are documented.
+- **Lane C**: architecture-affecting upgrades (OkHttp 5, MapLibre 13, Gradle 9, AGP 9) only after migration risk/rollback are documented.
 
 ---
 
 ## NEXT — 2-3 release cycles out (target v1.25 - v1.27)
-
-### NX-11. Vico chart migration for trend cards · **T-PERF** / UX
-Replace custom Canvas trend charts with Vico 3.x. Keep `TemperatureGraph` custom. Removes ~600 lines. Effort: medium.
 
 ### NX-13. ContentProvider for ecosystem · **T-ECOSYSTEM**
 Gadgetbridge broadcast already shipped (v1.23.0). Remaining: read-only ContentProvider mirroring Breezy's schema for Tasker/KWGT compatibility. Opt-in toggle. Effort: medium.
@@ -177,8 +174,8 @@ Open question: needs measurement.
 | Lib | Current | Target | Notes |
 |---|---|---|---|
 | Compose BOM | 2025.04.01 | 2026.05.00 | M3 Expressive. N-10 scope. |
-| Kotlin | 2.1.0 | 2.3.x stable | KSP/Hilt compat risk. |
-| Hilt | 2.53.1 | 2.59.2 | Bump cautiously. |
+| Kotlin | 2.3.21 | — | Current verified K2/KSP2 line. |
+| Hilt | 2.58 | 2.59.2 | 2.59.x requires AGP 9; stay on 2.58 while AGP remains 8.x. |
 | Room | 2.7.2 | — | Current verified 2.7.x line; 2.8.x blocked by KSP schema export crash. |
 | WorkManager | 2.11.2 | — | Current. |
 | MapLibre | 11.5.2 | 13.2.0 | After NX-21. |
@@ -188,7 +185,7 @@ Open question: needs measurement.
 | Wear Compose M3 | alpha27 | stable | Gates UC-6. |
 | Tiles | 1.4.1 | 1.6.0 | Tile regression tests needed. |
 | ProtoLayout | 1.2.1 | 1.4.0 | Gates L-11. |
-| Vico | not added | 3.0.x | NX-11 dep. |
+| Vico | 3.2.3 | — | Current for trend-card charts. |
 
 ---
 

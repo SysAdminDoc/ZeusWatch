@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -33,12 +34,13 @@ fun ClimateOutlookCard(
     data: ClimateOutlookData,
     modifier: Modifier = Modifier,
 ) {
+    val locale = LocalConfiguration.current.locales[0]
     val deltaSign = if (data.highDelta >= 0) "+" else ""
     val desc = stringResource(
         R.string.climate_semantics,
-        formatOneDecimal(data.projectedAvgHigh),
-        formatOneDecimal(data.baselineAvgHigh),
-        formatSignedOneDecimal(data.highDelta),
+        formatOneDecimal(data.projectedAvgHigh, locale),
+        formatOneDecimal(data.baselineAvgHigh, locale),
+        formatSignedOneDecimal(data.highDelta, locale),
     )
 
     WeatherCard(
@@ -66,12 +68,12 @@ fun ClimateOutlookCard(
                     color = NimbusTextTertiary,
                 )
                 Text(
-                    text = stringResource(R.string.climate_temp_value, formatOneDecimal(data.projectedAvgHigh)),
+                    text = stringResource(R.string.climate_temp_value, formatOneDecimal(data.projectedAvgHigh, locale)),
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                     color = NimbusTextSecondary,
                 )
             }
-            DeltaBadge(delta = data.highDelta)
+            DeltaBadge(delta = data.highDelta, locale = locale)
         }
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -86,7 +88,7 @@ fun ClimateOutlookCard(
                     color = NimbusTextTertiary,
                 )
                 Text(
-                    text = stringResource(R.string.climate_temp_value, formatOneDecimal(data.baselineAvgHigh)),
+                    text = stringResource(R.string.climate_temp_value, formatOneDecimal(data.baselineAvgHigh, locale)),
                     style = MaterialTheme.typography.bodyLarge,
                     color = NimbusTextTertiary,
                 )
@@ -98,7 +100,7 @@ fun ClimateOutlookCard(
                     color = NimbusTextTertiary,
                 )
                 Text(
-                    text = stringResource(R.string.climate_delta_value, formatSignedOneDecimal(data.lowDelta)),
+                    text = stringResource(R.string.climate_delta_value, formatSignedOneDecimal(data.lowDelta, locale)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = deltaColor(data.lowDelta),
                 )
@@ -120,7 +122,7 @@ fun ClimateOutlookCard(
             } else 0.0
             val precipSign = if (precipPct >= 0) "+" else ""
             Text(
-                text = String.format(Locale.getDefault(), "%s%.0f%%", precipSign, precipPct),
+                text = String.format(locale, "%s%.0f%%", precipSign, precipPct),
                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                 color = NimbusTextTertiary,
             )
@@ -129,10 +131,10 @@ fun ClimateOutlookCard(
 }
 
 @Composable
-private fun DeltaBadge(delta: Double) {
+private fun DeltaBadge(delta: Double, locale: Locale) {
     val color = deltaColor(delta)
     Text(
-        text = "${formatSignedOneDecimal(delta)}°",
+        text = "${formatSignedOneDecimal(delta, locale)}°",
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
         color = color,
         modifier = Modifier
@@ -151,8 +153,8 @@ private fun deltaColor(delta: Double): Color = when {
     else -> Color(0xFF9E9E9E)
 }
 
-private fun formatOneDecimal(value: Double): String =
-    String.format(Locale.getDefault(), "%.1f", value)
+private fun formatOneDecimal(value: Double, locale: Locale): String =
+    String.format(locale, "%.1f", value)
 
-private fun formatSignedOneDecimal(value: Double): String =
-    String.format(Locale.getDefault(), "%s%.1f", if (value >= 0) "+" else "", value)
+private fun formatSignedOneDecimal(value: Double, locale: Locale): String =
+    String.format(locale, "%s%.1f", if (value >= 0) "+" else "", value)

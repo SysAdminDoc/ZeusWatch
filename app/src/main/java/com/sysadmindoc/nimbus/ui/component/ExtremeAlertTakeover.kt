@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -47,9 +46,8 @@ fun ExtremeAlertTakeover(
     onAlertClick: (WeatherAlert) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    val severityLabel = context.getString(alert.severity.labelRes)
-    val urgencyLabel = context.getString(alert.urgency.labelRes)
+    val severityLabel = stringResource(alert.severity.labelRes)
+    val urgencyLabel = stringResource(alert.urgency.labelRes)
     val instruction = alert.instruction
         ?.trim()
         ?.takeIf { it.isNotBlank() }

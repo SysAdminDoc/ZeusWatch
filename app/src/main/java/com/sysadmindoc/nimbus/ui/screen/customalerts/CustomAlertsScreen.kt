@@ -62,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -617,15 +618,18 @@ private fun RuleThresholdFeedback(
             style = MaterialTheme.typography.bodySmall,
             color = Color(0xFFFFB4AB),
         )
-        else -> AlertHintBadge(
-            text = stringResource(
-                R.string.custom_alerts_trigger_preview,
-                stringResource(metric.labelRes).lowercase(Locale.getDefault()),
-                stringResource(operator.labelRes),
-                thresholdText,
-                displayUnit,
-            ),
-        )
+        else -> {
+            val locale = LocalConfiguration.current.locales[0]
+            AlertHintBadge(
+                text = stringResource(
+                    R.string.custom_alerts_trigger_preview,
+                    stringResource(metric.labelRes).lowercase(locale),
+                    stringResource(operator.labelRes),
+                    thresholdText,
+                    displayUnit,
+                ),
+            )
+        }
     }
 }
 
