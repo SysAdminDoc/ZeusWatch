@@ -210,14 +210,7 @@ Open question: needs measurement.
 
 ### P2 — Platform Opportunities
 
-[Moved to Roadmap_Blocked.md: Android 17 MetricStyle (needs compileSdk 37)]
-
-- [ ] P2 — Compose Grid layout for forecast grids · T-PERF / UX
-  Why: Compose BOM 2026.06.01 is now active, so the prior BOM blocker for Grid-based forecast layouts is gone.
-  Evidence: The repo now compiles on Compose BOM 2026.06.01.
-  Touches: `DailyForecastList.kt`, `WeatherDetailsGrid.kt`.
-  Acceptance: Forecast-grid surfaces use Compose Grid where it reduces layout complexity; rendered layout remains equivalent or better; tests and lint pass.
-  Complexity: M
+[Moved to Roadmap_Blocked.md: Android 17 MetricStyle (needs compileSdk 37), Compose Grid (non-lazy Grid API absent in Compose BOM 2026.06.01)]
 
 [Moved to Roadmap_Blocked.md: Glance widget picker previews (needs Glance 1.2.0 stable)]
 
