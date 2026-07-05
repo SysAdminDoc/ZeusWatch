@@ -36,7 +36,7 @@
 
 ### N-10. Dependency runway and platform compatibility pass · **T-RELIABILITY** / **T-PERF**
 Split into remaining lanes:
-- **Lane C**: architecture-affecting upgrades (OkHttp 5, MapLibre 13, Gradle 9, AGP 9) only after migration risk/rollback are documented.
+- **Lane C**: architecture-affecting upgrades (MapLibre 13, Gradle 9, AGP 9) only after migration risk/rollback are documented.
 
 ---
 
@@ -176,7 +176,7 @@ Open question: needs measurement.
 | Room | 2.7.2 | — | Current verified 2.7.x line; 2.8.x blocked by KSP schema export crash. |
 | WorkManager | 2.11.2 | — | Current. |
 | MapLibre | 11.5.2 | 13.2.0 | After NX-21. |
-| OkHttp | 4.12.0 | 5.3.2 | `redactQueryParameters` in 5.x. |
+| OkHttp | 5.3.2 | — | Current; debug logging uses built-in query-parameter redaction plus ZeusWatch's Pirate Weather path-key scrubber. |
 | Retrofit | 3.0.0 | — | Current. |
 | Glance | 1.1.1 | 1.2.0 stable | Enables widget unit tests. |
 | Wear Compose M3 | alpha27 | stable | Gates UC-6. |
