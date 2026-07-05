@@ -31,6 +31,16 @@ interface WeatherDao {
         schemaVersion: Int,
     ): WeatherDataCacheEntity?
 
+    @Query(
+        """
+        SELECT * FROM weather_data_cache
+        WHERE schemaVersion = :schemaVersion
+        ORDER BY cachedAt DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getLatestWeatherData(schemaVersion: Int): WeatherDataCacheEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: WeatherCacheEntity)
 

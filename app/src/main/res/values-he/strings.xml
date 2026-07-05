@@ -1441,4 +1441,11 @@
     <string name="summary_rain_likely_later_today">with rain likely later today</string>
     <string name="summary_chance_showers">with a chance of showers</string>
     <string name="summary_slight_chance_rain">with a slight chance of rain</string>
+
+    <!-- Smartspacer -->
+    <string name="smartspacer_weather_target_label">ZeusWatch weather</string>
+    <string name="smartspacer_weather_target_description">Current conditions and next-hour rain risk from the ZeusWatch cache.</string>
+    <string name="smartspacer_weather_complication_label">ZeusWatch temperature</string>
+    <string name="smartspacer_weather_complication_description">Current ZeusWatch temperature for Smartspacer.</string>
+    <string name="smartspacer_weather_requires_android_q">Smartspacer weather requires Android 10 or newer.</string>
 </resources>

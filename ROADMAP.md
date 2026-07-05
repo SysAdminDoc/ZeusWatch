@@ -79,9 +79,6 @@ Bare-bones AA module: alerts + radar + driving conditions card. Investigate GMS 
 ### L-5. Android TV variant · **T-ECOSYSTEM**
 Gated on demand signal.
 
-### L-6. Smartspacer target plugin · **T-ECOSYSTEM**
-Pixel "At a Glance" without root. Out-of-tree plugin preferred.
-
 ### L-7. Home Assistant integration · **T-ECOSYSTEM**
 Publish weather entities via ContentProvider (NX-13) or MQTT. Separate module.
 
@@ -209,14 +206,6 @@ Open question: needs measurement.
 [Moved to Roadmap_Blocked.md: Glance widget picker previews (needs Glance 1.2.0 stable)]
 
 ### P3 — Polish & Future
-
-- [ ] P3 — Smartspacer target plugin for At a Glance · **T-ECOSYSTEM**
-  Why: Smartspacer (9.7k GitHub stars) replaces Pixel's At a Glance widget without root. It has an SDK for third-party plugins. ZeusWatch could provide a weather target (current conditions + next-hour precipitation) and complication (temperature). Smartspacer is actively maintained for Android 16+.
-  Evidence: Smartspacer GitHub (github.com/KieronQuinn/Smartspacer); Smartspacer SDK documentation.
-  Touches: New out-of-tree module or in-tree `smartspacer/` module with Smartspacer SDK dependency. Implements `SmartspacerTargetProvider` and `SmartspacerComplicationProvider`. Reads from `WeatherRepository` cache.
-  Acceptance: ZeusWatch appears as a Smartspacer target/complication provider; shows current temp, condition, and next-hour precipitation on the home screen.
-  Complexity: M
-
 
 ## Research-Driven Additions (2026-06-09, Round 3)
 
