@@ -5,7 +5,7 @@ import javax.inject.Singleton
 
 /**
  * No-op [SummaryEngine] for the freenet (F-Droid) build flavor.
- * AI summary generation is not available without Google AI Core.
+ * AI summary generation is not available without ML Kit GenAI/AICore.
  */
 @Singleton
 class FreenetSummaryEngine @Inject constructor() : SummaryEngine {

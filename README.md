@@ -73,7 +73,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 |---------|-------------|
 | **Current Conditions** | Large temp display, feels-like with wind chill/heat index explanation, condition, high/low, sky gradients |
 | **Yesterday Comparison** | "5° warmer than yesterday" label in hero header with color-coded warm/cool indicator |
-| **Weather Summary** | Time-aware natural language forecast ("Clear skies this morning") via Gemini Nano AI (default) or template engine, with UV/humidity warnings |
+| **Weather Summary** | Time-aware natural language forecast ("Clear skies this morning") via Gemini Nano through ML Kit GenAI Prompt API (default) or template engine, with UV/humidity warnings |
 | **Hourly Forecast** | 72h scrollable strip with temp, animated Lottie icons, wind direction arrows, precip probability, smart rain timeline ("Rain likely within 3h"), feels-like when significantly different |
 | **16-Day Forecast** | Expandable daily rows with temperature range bars, rain hours, sunshine, snowfall, wind gusts, UV max. "Warmest" day highlighted |
 | **Temperature Graph** | Interactive Canvas graph with drag-to-inspect, precipitation bars, forecast average normals band, optional confidence bands, and detail-sheet uncertainty explanations |
@@ -303,7 +303,7 @@ When providers publish localized condition or alert text, matching user-locale s
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Stack:** Kotlin 2.3.21, Jetpack Compose (BOM 2026.06.01), Hilt 2.58, Retrofit 3.0.0, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, Open-Meteo SDK 1.10.0 FlatBuffers decoder, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
+**Stack:** Kotlin 2.3.21, Jetpack Compose (BOM 2026.06.01), Hilt 2.58, Retrofit 3.0.0, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, Open-Meteo SDK 1.10.0 FlatBuffers decoder, ML Kit GenAI Prompt 1.0.0-beta2, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
 
 ---
 
@@ -363,7 +363,7 @@ Community reports use an anonymous append-only Firestore model: users can read r
 
 | Flavor | Description |
 |--------|-------------|
-| `standard` | Includes Google Play Services for FusedLocationProvider + Gemini Nano AI |
+| `standard` | Includes Google Play Services for FusedLocationProvider + Gemini Nano through ML Kit GenAI Prompt |
 | `freenet` | F-Droid compatible — no proprietary dependencies (uses Android LocationManager) |
 
 ```bash

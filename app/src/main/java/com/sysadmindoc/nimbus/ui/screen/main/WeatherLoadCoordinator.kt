@@ -245,7 +245,7 @@ class WeatherLoadCoordinator @Inject constructor(
             )
         }
 
-        if (settings.summaryStyle == SummaryStyle.AI_GENERATED && summaryEngine.isAvailable()) {
+        if (settings.summaryStyle == SummaryStyle.AI_GENERATED) {
             scope.launch {
                 val aiSummary = withContext(defaultDispatcher) {
                     WeatherSummaryEngine.generateWithStyle(

@@ -21,6 +21,7 @@ activity-compose = "1.9.3"
 core-ktx = "1.15.0"
 play-services-location = "21.3.0"
 play-services-wearable = "20.0.1"
+mlkit-genai-prompt = "1.0.0-beta2"
 lottie = "6.7.1"
 glance = "1.1.1"
 work = "2.11.2"
@@ -104,6 +105,7 @@ coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp"
 # Location
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "play-services-location" }
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "play-services-wearable" }
+mlkit-genai-prompt = { group = "com.google.mlkit", name = "genai-prompt", version.ref = "mlkit-genai-prompt" }
 
 # Animations
 lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie" }

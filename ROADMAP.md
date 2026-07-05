@@ -235,13 +235,6 @@ Open question: needs measurement.
 
 ### P3 — Future / Evaluation
 
-- [ ] P3 — Migrate Gemini Nano off experimental AICore SDK · **T-RELIABILITY**
-  Why: `com.google.ai.edge.aicore:aicore:0.0.1-exp02` is an experimental artifact Google labels "not for production usage", effectively Pixel-9-class only. The supported successor is ML Kit GenAI (`com.google.mlkit:genai-summarization:1.0.0-beta1`, API 26+, broader OEM support) — but it is summarization-shaped (article/conversation input, 400+ chars, EN/JA/KO) while `WeatherSummaryEngine` uses free-form prompting; the general Prompt API is still AICore dev-preview. Template NLG is already primary, so this is an evaluation, not an urgent swap.
-  Evidence: developer.android.com/ai/gemini-nano (experimental access "not for production"); developers.google.com/ml-kit/genai/summarization/android; `app/build.gradle.kts:188`.
-  Touches: `app/src/standard/.../GeminiNanoSummaryEngine.kt`, `app/build.gradle.kts` (standardImplementation), ProGuard keep rules for `com.google.ai.edge.**`.
-  Acceptance: Decision documented (migrate to ML Kit GenAI / wait for Prompt API GA / drop AI fallback); if migrated, AI summaries work on at least one non-Pixel device; freenet flavor unaffected.
-  Complexity: M
-
 ## Product Improvement Ideas (2026-06-11)
 
 Net-new improvement opportunities identified during the v1.23.0 audit — distinct from the audit residuals below and from existing NOW/NEXT/LATER items. Closest existing items are cross-referenced instead of duplicated (per-location sources = P1 2026-06-09; light theme = UC-3; localization = N-1; battery instrumentation = UC-4; baseline profiles = NX-7).
