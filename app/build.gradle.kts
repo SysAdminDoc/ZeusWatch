@@ -206,8 +206,8 @@ dependencies {
     // Wearable DataLayer sync (standard flavor only)
     "standardImplementation"(libs.play.services.wearable)
 
-    // Gemini Nano on-device AI (standard flavor only — requires Google AI Core)
-    "standardImplementation"("com.google.ai.edge.aicore:aicore:0.0.1-exp02")
+    // Gemini Nano on-device AI (standard flavor only — requires ML Kit GenAI + AICore)
+    "standardImplementation"(libs.mlkit.genai.prompt)
 
     // Animations
     implementation(libs.lottie.compose)

@@ -3,7 +3,7 @@ package com.sysadmindoc.nimbus.util
 /**
  * Abstraction for on-device AI summary generation.
  *
- * - `standard` flavor: backed by [GeminiNanoSummaryEngine] (Google AI Core).
+ * - `standard` flavor: backed by [GeminiNanoSummaryEngine] (ML Kit GenAI Prompt API).
  * - `freenet` flavor: no-op implementation (AI summary unavailable).
  */
 interface SummaryEngine {

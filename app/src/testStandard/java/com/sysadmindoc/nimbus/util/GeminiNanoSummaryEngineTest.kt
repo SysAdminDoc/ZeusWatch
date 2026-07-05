@@ -1,7 +1,5 @@
 package com.sysadmindoc.nimbus.util
 
-import android.content.Context
-import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -18,19 +16,17 @@ import org.junit.Test
  *     summary quality, so its formatting is the highest-leverage thing
  *     to lock down with assertions.
  *  2. The fallback paths of an engine constructed in an environment
- *     where the AI Core runtime is not available — that's exactly what
+ *     where the ML Kit GenAI runtime is not available; that's exactly what
  *     a JVM unit test sees, and exactly what an unsupported phone sees
  *     (Pixel <8, most Samsung devices). The engine must degrade cleanly
  *     to "unavailable / generate returns null" without crashing.
  *
- * Live `generateContent` happy-path coverage isn't here on purpose —
- * the [com.google.ai.edge.aicore.GenerativeModel] class isn't openly
+ * Live `generateContent` happy-path coverage isn't here on purpose;
+ * the [com.google.mlkit.genai.prompt.GenerativeModel] class isn't openly
  * mockable, and the [WeatherSummaryEngine] tests already cover the
  * delegate-and-fallback wiring through the [SummaryEngine] interface.
  */
 class GeminiNanoSummaryEngineTest {
-
-    private val context: Context = mockk(relaxed = true)
 
     // ── buildPrompt formatting ──────────────────────────────────────────
 
@@ -121,17 +117,16 @@ class GeminiNanoSummaryEngineTest {
 
     @Test
     fun `engine reports unavailable when GenerativeModel cannot initialize`() {
-        // The AI Core runtime isn't present in the unit test JVM. The eager
-        // model construction in the constructor must catch and degrade to
-        // "unavailable" without crashing — that's exactly the path users
-        // on unsupported devices take.
-        val engine = GeminiNanoSummaryEngine(context)
+        // The ML Kit GenAI runtime isn't present in the unit test JVM. The
+        // engine must degrade to "unavailable" without crashing; that's exactly
+        // the path users on unsupported devices take.
+        val engine = GeminiNanoSummaryEngine()
         assertFalse("engine must report unavailable when model init fails", engine.isAvailable())
     }
 
     @Test
     fun `generate returns null when the engine is unavailable`() = runTest {
-        val engine = GeminiNanoSummaryEngine(context)
+        val engine = GeminiNanoSummaryEngine()
         val result = engine.generate(
             currentTemp = "72°F", condition = "Clear", high = "80°F", low = "65°F",
             humidity = 50, windSpeed = "8 mph", precipChance = 0, uvIndex = 6.0,
@@ -141,7 +136,7 @@ class GeminiNanoSummaryEngineTest {
 
     @Test
     fun `generate returns null after close even if a model would have been available`() = runTest {
-        val engine = GeminiNanoSummaryEngine(context)
+        val engine = GeminiNanoSummaryEngine()
         engine.close()
         val result = engine.generate(
             currentTemp = "72°F", condition = "Clear", high = "80°F", low = "65°F",
@@ -153,7 +148,7 @@ class GeminiNanoSummaryEngineTest {
 
     @Test
     fun `close is idempotent and never throws`() {
-        val engine = GeminiNanoSummaryEngine(context)
+        val engine = GeminiNanoSummaryEngine()
         engine.close()
         engine.close()
         engine.close()
@@ -165,7 +160,7 @@ class GeminiNanoSummaryEngineTest {
         // Type-system check: a regression here means the Hilt binding swap
         // between standard- and freenet-flavor SummaryEngine implementations
         // would silently break injection. Keep the contract explicit.
-        val engine: SummaryEngine = GeminiNanoSummaryEngine(context)
+        val engine: SummaryEngine = GeminiNanoSummaryEngine()
         assertEquals(false, engine.isAvailable())
     }
 }
