@@ -304,7 +304,7 @@ When providers publish localized condition or alert text, matching user-locale s
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Stack:** Kotlin 2.3.21, Jetpack Compose (BOM 2026.06.01), Hilt 2.58, Retrofit 3.0.0, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, Open-Meteo SDK 1.10.0 FlatBuffers decoder, Smartspacer SDK 1.1, ML Kit GenAI Prompt 1.0.0-beta2, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
+**Stack:** Kotlin 2.3.21, Jetpack Compose (BOM 2026.06.01), Hilt 2.58, Retrofit 3.0.0, OkHttp 5.3.2, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, Open-Meteo SDK 1.10.0 FlatBuffers decoder, Smartspacer SDK 1.1, ML Kit GenAI Prompt 1.0.0-beta2, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
 
 ---
 

@@ -53,22 +53,9 @@ import javax.inject.Named
 import javax.inject.Singleton
 
 /**
- * Redacts OWM/Pirate-Weather API keys from logcat output so debug builds
- * don't leak user-supplied credentials in screen recordings or bug reports.
- *
- * Lookbehind with alternation has historically been brittle in the JVM
- * regex engine, so we capture the leading `?name=` / `&name=` as group 1
- * and rewrite the value with a back-reference.
- */
-private val REDACT_REGEX = Regex(
-    "([?&](?:appid|apikey|api_key|key)=)[^&\\s]+",
-    RegexOption.IGNORE_CASE,
-)
-
-/**
  * Pirate Weather embeds its API key as a path segment
  * (`/forecast/{key}/{lat},{lon}` and `/forecast/{key},{exclude}/{lat},{lon}`),
- * so query-param redaction misses it. Anchor on the `pirateweather.net/forecast/`
+ * so OkHttp query-param redaction cannot see it. Anchor on the `pirateweather.net/forecast/`
  * host+prefix and redact the whole next segment. Host-anchoring (rather than a
  * lookahead on the following coordinate) means the key is redacted regardless of
  * how the coordinate is formatted (`+`-prefixed, percent-encoded, …), while
@@ -80,11 +67,12 @@ private val PIRATE_WEATHER_PATH_KEY_REGEX = Regex(
     RegexOption.IGNORE_CASE,
 )
 
+internal fun redactPirateWeatherPathKey(message: String): String =
+    PIRATE_WEATHER_PATH_KEY_REGEX.replace(message, "$1***")
+
 private object ApiKeyRedactingLogger : HttpLoggingInterceptor.Logger {
     override fun log(message: String) {
-        val queryRedacted = REDACT_REGEX.replace(message, "$1***")
-        val pathRedacted = PIRATE_WEATHER_PATH_KEY_REGEX.replace(queryRedacted, "$1***")
-        android.util.Log.d("OkHttp", pathRedacted)
+        android.util.Log.d("OkHttp", redactPirateWeatherPathKey(message))
     }
 }
 
@@ -121,14 +109,11 @@ object NetworkModule {
             .writeTimeout(15, TimeUnit.SECONDS)
             .apply {
                 if (BuildConfig.DEBUG) {
-                    // OkHttp 4.x's HttpLoggingInterceptor doesn't support query-param
-                    // redaction, so we route log output through a custom Logger that
-                    // scrubs user-supplied API keys (OWM ?appid=, Pirate Weather
-                    // ?apikey=) before they hit logcat.
                     addInterceptor(
                         HttpLoggingInterceptor(ApiKeyRedactingLogger).apply {
                             level = HttpLoggingInterceptor.Level.BASIC
                             redactHeader("Authorization")
+                            redactQueryParams("appid", "apikey", "api_key", "key")
                         }
                     )
                 }
