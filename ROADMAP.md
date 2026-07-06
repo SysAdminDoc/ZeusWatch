@@ -36,7 +36,7 @@
 
 ### N-10. Dependency runway and platform compatibility pass · **T-RELIABILITY** / **T-PERF**
 Split into remaining lanes:
-- **Lane C**: architecture-affecting upgrades (MapLibre 13, Gradle 9, AGP 9) only after migration risk/rollback are documented.
+- **Lane C**: architecture-affecting upgrade remaining: MapLibre 13 after NX-21 radar lifecycle/compliance hardening.
 
 ---
 
@@ -172,7 +172,7 @@ Open question: needs measurement.
 |---|---|---|---|
 | Compose BOM | 2026.06.01 | — | Current; shared-transition baseline. |
 | Kotlin | 2.3.21 | — | Current verified K2/KSP2 line. |
-| Hilt | 2.58 | 2.59.2 | 2.59.x requires AGP 9; stay on 2.58 while AGP remains 8.x. |
+| Hilt | 2.60 | — | Current AGP 9-compatible line; supports Kotlin 2.4 metadata from current dependencies. |
 | Room | 2.7.2 | — | Current verified 2.7.x line; 2.8.x blocked by KSP schema export crash. |
 | WorkManager | 2.11.2 | — | Current. |
 | MapLibre | 11.5.2 | 13.2.0 | After NX-21. |

@@ -2,13 +2,12 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.test)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.androidx.baselineprofile)
 }
 
 android {
     namespace = "com.sysadmindoc.nimbus.benchmark"
-    compileSdk = 36
+    compileSdk = 37
     targetProjectPath = ":app"
 
     defaultConfig {

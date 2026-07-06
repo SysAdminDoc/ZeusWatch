@@ -27,7 +27,7 @@ cd zeuswatch
 
 Install the APK from `app/build/outputs/apk/standard/debug/` or open in Android Studio and run directly.
 
-**Requirements:** Android Studio Hedgehog+, JDK 17, Android SDK 36
+**Requirements:** Android Studio with AGP 9.2 support, JDK 17+, Android SDK 37.0
 
 ### Download
 
@@ -304,7 +304,7 @@ When providers publish localized condition or alert text, matching user-locale s
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Stack:** Kotlin 2.3.21, Jetpack Compose (BOM 2026.06.01), Hilt 2.58, Retrofit 3.0.0, OkHttp 5.3.2, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, Open-Meteo SDK 1.10.0 FlatBuffers decoder, Smartspacer SDK 1.1, ML Kit GenAI Prompt 1.0.0-beta2, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
+**Stack:** Gradle 9.4.1, AGP 9.2.0, Kotlin 2.3.21, Jetpack Compose (BOM 2026.06.01), Hilt 2.60, Retrofit 3.0.0, OkHttp 5.3.2, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, Open-Meteo SDK 1.10.0 FlatBuffers decoder, Smartspacer SDK 1.1.2, ML Kit GenAI Prompt 1.0.0-beta2, MapLibre 11.5.2, Glance 1.1.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
 
 ---
 
@@ -538,7 +538,7 @@ npm run test:firestore-rules
 |-------|-----------|----------|
 | Unit | JUnit 4 + MockK + Turbine + coroutines-test | WeatherFormatter (20), WeatherCode (12), Accessibility contrast, AirQuality (14), Alerts (9), MainViewModel (10), LocationsViewModel (7) |
 | UI | Compose UI Test + JUnit4 + Hilt Testing | MainScreen, SettingsScreen, LocationsScreen, accessibility audit gate |
-| Performance | AndroidX Macrobenchmark + Baseline Profile Gradle plugin | Cold-start release p95 gate and standard release baseline-profile collection |
+| Performance | AndroidX Macrobenchmark 1.5.0-alpha07 + Baseline Profile Gradle plugin | Cold-start release p95 gate and standard release baseline-profile collection |
 | Firestore rules | Firebase Emulator + rules-unit-testing | Community report create/read validation, malformed/stale rejection, append-only delete/update denial |
 
 **180+ tests** across 14 test suites.
