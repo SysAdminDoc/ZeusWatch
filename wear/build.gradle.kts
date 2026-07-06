@@ -3,7 +3,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
@@ -12,7 +11,7 @@ plugins {
 
 android {
     namespace = "com.sysadmindoc.nimbus.wear"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.sysadmindoc.nimbus.wear"
@@ -106,6 +105,7 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
+    compileOnly(libs.errorprone.annotations)
 
     // Networking (shared with phone app)
     implementation(libs.retrofit)
