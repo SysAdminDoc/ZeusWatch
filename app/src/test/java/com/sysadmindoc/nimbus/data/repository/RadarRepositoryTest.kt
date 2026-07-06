@@ -113,6 +113,50 @@ class RadarRepositoryTest {
     }
 
     @Test
+    fun `cacheOnly returns cached frame metadata without calling network`() = runTest {
+        val cache = FakeRadarFrameMetadataCache(
+            cached = frameSet(source = RadarTileSource.RAINVIEWER, isFromCache = true)
+        )
+        val repository = RadarRepository(
+            FakeRainViewerApi(error = AssertionError("network should not be called")),
+            FakeRainViewerApi(error = AssertionError("network should not be called")),
+            cache,
+        )
+
+        val frameSet = repository.getRadarFrames(cacheOnly = true).getOrThrow()
+
+        assertTrue(frameSet.isFromCache)
+        assertEquals(RadarTileSource.RAINVIEWER, frameSet.source)
+        assertEquals("https://tiles.example.com/v2/radar/100/512/{z}/{x}/{y}/2/1_1.png", frameSet.past.first().tileUrl)
+    }
+
+    @Test
+    fun `getRadarFrames falls back to cached metadata when live request fails`() = runTest {
+        val cache = FakeRadarFrameMetadataCache(
+            cached = frameSet(source = RadarTileSource.LIBREWXR, isFromCache = true)
+        )
+        val repository = RadarRepository(
+            FakeRainViewerApi(error = IllegalStateException("RainViewer down")),
+            FakeRainViewerApi(error = IllegalStateException("LibreWXR down")),
+            cache,
+        )
+
+        val frameSet = repository.getRadarFrames(RadarProvider.LIBREWXR_NATIVE).getOrThrow()
+
+        assertTrue(frameSet.isFromCache)
+        assertEquals(RadarTileSource.LIBREWXR, frameSet.source)
+    }
+
+    @Test
+    fun `cached radar frame metadata expires after offline fallback window`() {
+        val cached = frameSet(source = RadarTileSource.RAINVIEWER)
+            .toCachedRadarFrameSet(cachedAtMillis = 1_000L)
+
+        assertTrue(cached.toFrameSetIfFresh(nowMillis = 1_000L + 6 * 60 * 60 * 1000L) != null)
+        assertEquals(null, cached.toFrameSetIfFresh(nowMillis = 1_000L + 6 * 60 * 60 * 1000L + 1L))
+    }
+
+    @Test
     fun `buildTileUrl forces unsupported color schemes back to Universal Blue`() {
         val tileUrl = RainViewerApi.buildTileUrl(
             path = "/v2/radar/100",
@@ -155,8 +199,40 @@ class RadarRepositoryTest {
         }
     }
 
+    private class FakeRadarFrameMetadataCache(
+        private var cached: RadarFrameSet? = null,
+    ) : RadarFrameMetadataCache {
+        override fun read(provider: RadarProvider): RadarFrameSet? = cached
+
+        override fun write(provider: RadarProvider, frameSet: RadarFrameSet) {
+            cached = frameSet
+        }
+    }
+
     private fun emptyResponse() = RainViewerResponse(
         host = "https://tiles.example.com",
         radar = RadarData(past = emptyList()),
+    )
+
+    private fun frameSet(
+        source: RadarTileSource,
+        isFromCache: Boolean = false,
+    ) = RadarFrameSet(
+        past = listOf(
+            TimedTileUrl(
+                timestamp = 100L,
+                tileUrl = "https://tiles.example.com/v2/radar/100/512/{z}/{x}/{y}/2/1_1.png",
+                isPast = true,
+            )
+        ),
+        forecast = emptyList(),
+        source = source,
+        maxTileZoom = if (source == RadarTileSource.LIBREWXR) {
+            RainViewerApi.LIBREWXR_MAX_TILE_ZOOM
+        } else {
+            RainViewerApi.MAX_TILE_ZOOM
+        },
+        isFromCache = isFromCache,
+        cachedAtMillis = if (isFromCache) 1_000L else null,
     )
 }

@@ -137,7 +137,7 @@ class RadarViewModelTest {
 
     @Test
     fun `togglePlayback keeps stopped when fewer than two frames are loaded`() = runTest(scheduler) {
-        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE) } returns Result.success(
+        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, any()) } returns Result.success(
             frameSet(totalFrames = 1)
         )
         val viewModel = createViewModel()
@@ -151,7 +151,7 @@ class RadarViewModelTest {
 
     @Test
     fun `togglePlayback starts playback when multiple frames are available`() = runTest(scheduler) {
-        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE) } returns Result.success(
+        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, any()) } returns Result.success(
             frameSet(totalFrames = 3)
         )
         val viewModel = createViewModel()
@@ -168,7 +168,7 @@ class RadarViewModelTest {
 
     @Test
     fun `map interaction pauses and resumes playback when animation is available`() = runTest(scheduler) {
-        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE) } returns Result.success(
+        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, any()) } returns Result.success(
             frameSet(totalFrames = 3)
         )
         val viewModel = createViewModel()
@@ -192,7 +192,7 @@ class RadarViewModelTest {
 
     @Test
     fun `loadFrames skips immediate duplicate fetch when frames are already loaded`() = runTest(scheduler) {
-        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE) } returns Result.success(
+        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, any()) } returns Result.success(
             frameSet(totalFrames = 3)
         )
         val viewModel = createViewModel()
@@ -203,12 +203,12 @@ class RadarViewModelTest {
         viewModel.loadFrames()
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE) }
+        coVerify(exactly = 1) { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, any()) }
     }
 
     @Test
     fun `loadFrames force reload bypasses duplicate fetch guard`() = runTest(scheduler) {
-        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE) } returns Result.success(
+        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, any()) } returns Result.success(
             frameSet(totalFrames = 3)
         )
         val viewModel = createViewModel()
@@ -219,15 +219,31 @@ class RadarViewModelTest {
         viewModel.loadFrames(force = true)
         advanceUntilIdle()
 
-        coVerify(exactly = 2) { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE) }
+        coVerify(exactly = 2) { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, any()) }
+    }
+
+    @Test
+    fun `loadFrames forwards cache-only radar requests`() = runTest(scheduler) {
+        coEvery {
+            radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, cacheOnly = true)
+        } returns Result.success(frameSet(totalFrames = 2, isFromCache = true))
+        val viewModel = createViewModel()
+
+        viewModel.loadFrames(cacheOnly = true)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.frameSet?.isFromCache == true)
+        coVerify(exactly = 1) {
+            radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, cacheOnly = true)
+        }
     }
 
     @Test
     fun `loadFrames reloads when radar provider changes`() = runTest(scheduler) {
-        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE) } returns Result.success(
+        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, any()) } returns Result.success(
             frameSet(totalFrames = 2)
         )
-        coEvery { radarRepository.getRadarFrames(RadarProvider.LIBREWXR_NATIVE) } returns Result.success(
+        coEvery { radarRepository.getRadarFrames(RadarProvider.LIBREWXR_NATIVE, any()) } returns Result.success(
             frameSet(totalFrames = 4)
         )
         val viewModel = createViewModel()
@@ -239,15 +255,15 @@ class RadarViewModelTest {
         advanceUntilIdle()
 
         assertEquals(4, viewModel.uiState.value.totalFrames)
-        coVerify(exactly = 1) { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE) }
-        coVerify(exactly = 1) { radarRepository.getRadarFrames(RadarProvider.LIBREWXR_NATIVE) }
+        coVerify(exactly = 1) { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, any()) }
+        coVerify(exactly = 1) { radarRepository.getRadarFrames(RadarProvider.LIBREWXR_NATIVE, any()) }
     }
 
     @Test
     fun `forced reload cancels the in-flight request so a stale response cannot clobber newer state`() =
         runTest(scheduler) {
             var calls = 0
-            coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE) } coAnswers {
+            coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, any()) } coAnswers {
                 calls++
                 if (calls == 1) {
                     // Slow first request: still in flight when the forced reload lands.
@@ -267,19 +283,19 @@ class RadarViewModelTest {
 
             // The stale 2-frame response must not overwrite the forced 3-frame result.
             assertEquals(3, viewModel.uiState.value.totalFrames)
-            coVerify(exactly = 2) { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE) }
+            coVerify(exactly = 2) { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, any()) }
         }
 
     @Test
     fun `creating the view model does not eagerly fetch radar frames`() = runTest(scheduler) {
-        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE) } returns Result.success(
+        coEvery { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, any()) } returns Result.success(
             frameSet(totalFrames = 3)
         )
 
         createViewModel()
         advanceUntilIdle()
 
-        coVerify(exactly = 0) { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE) }
+        coVerify(exactly = 0) { radarRepository.getRadarFrames(RadarProvider.NATIVE_MAPLIBRE, any()) }
     }
 
     @Test
@@ -416,7 +432,7 @@ class RadarViewModelTest {
         )
     }
 
-    private fun frameSet(totalFrames: Int): RadarFrameSet {
+    private fun frameSet(totalFrames: Int, isFromCache: Boolean = false): RadarFrameSet {
         val frames = List(totalFrames) { index ->
             TimedTileUrl(
                 timestamp = 1_000L + index,
@@ -428,6 +444,8 @@ class RadarViewModelTest {
         return RadarFrameSet(
             past = frames.take(pastCount),
             forecast = frames.drop(pastCount),
+            isFromCache = isFromCache,
+            cachedAtMillis = if (isFromCache) 10_000L else null,
         )
     }
 

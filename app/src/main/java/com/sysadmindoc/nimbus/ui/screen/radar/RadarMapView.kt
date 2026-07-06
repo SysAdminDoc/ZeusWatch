@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -84,6 +85,7 @@ fun RadarMapView(
 
     val mapView = remember {
         MapView(context).apply {
+            onCreate(null)
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -92,24 +94,7 @@ fun RadarMapView(
         }
     }
 
-    // Lifecycle management
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_START -> mapView.onStart()
-                Lifecycle.Event.ON_RESUME -> mapView.onResume()
-                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
-                Lifecycle.Event.ON_STOP -> mapView.onStop()
-                Lifecycle.Event.ON_DESTROY -> mapView.onDestroy()
-                else -> {}
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            mapView.onDestroy()
-        }
-    }
+    MapViewLifecycleEffect(mapView, lifecycleOwner)
 
     // Update radar tile layer when frame changes
     LaunchedEffect(currentTileUrl, previousTileUrl, radarMaxZoom) {
@@ -233,6 +218,42 @@ fun RadarMapView(
         },
         modifier = modifier,
     )
+}
+
+@Composable
+private fun MapViewLifecycleEffect(mapView: MapView, lifecycleOwner: LifecycleOwner) {
+    DisposableEffect(mapView, lifecycleOwner) {
+        var destroyed = false
+        fun destroyMapOnce() {
+            if (!destroyed) {
+                mapView.onDestroy()
+                destroyed = true
+            }
+        }
+        val observer = LifecycleEventObserver { _, event ->
+            if (destroyed) return@LifecycleEventObserver
+            when (event) {
+                Lifecycle.Event.ON_START -> mapView.onStart()
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                Lifecycle.Event.ON_STOP -> mapView.onStop()
+                Lifecycle.Event.ON_DESTROY -> destroyMapOnce()
+                else -> Unit
+            }
+        }
+        val lifecycle = lifecycleOwner.lifecycle
+        lifecycle.addObserver(observer)
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            mapView.onStart()
+        }
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            mapView.onResume()
+        }
+        onDispose {
+            lifecycle.removeObserver(observer)
+            destroyMapOnce()
+        }
+    }
 }
 
 private fun updateRadarLayers(
@@ -368,11 +389,7 @@ private fun updateLightningLayer(
         return
     }
 
-    // Build GeoJSON FeatureCollection from strike points
-    val features = strikes.map { strike ->
-        Feature.fromGeometry(Point.fromLngLat(strike.lon, strike.lat))
-    }
-    val featureCollection = FeatureCollection.fromFeatures(features)
+    val featureCollection = lightningFeatureCollection(strikes)
 
     // Update or create the GeoJSON source
     val existingSource = style.getSourceAs<GeoJsonSource>(LIGHTNING_SOURCE_ID)
@@ -405,6 +422,13 @@ private fun updateLightningLayer(
         }
         style.addLayer(pointLayer)
     }
+}
+
+internal fun lightningFeatureCollection(strikes: List<LightningStrike>): FeatureCollection {
+    val features = strikes.takeLast(MAX_LIGHTNING_FEATURES_FOR_MAP).map { strike ->
+        Feature.fromGeometry(Point.fromLngLat(strike.lon, strike.lat))
+    }
+    return FeatureCollection.fromFeatures(features)
 }
 
 private fun updateCommunityReports(
@@ -576,6 +600,7 @@ private const val ALERT_COLOR_PROPERTY = "alertColor"
 private const val MIN_POLYGON_POINTS = 3
 private const val MIN_CLOSED_POLYGON_POINTS = 4
 private const val CAMERA_RECENTER_EPSILON_DEGREES = 0.001
+private const val MAX_LIGHTNING_FEATURES_FOR_MAP = 250
 
 /** Marker layers radar rasters must always render beneath. */
 private val RADAR_ANCHOR_LAYER_IDS = setOf(

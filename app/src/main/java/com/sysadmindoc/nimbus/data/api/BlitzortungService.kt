@@ -1,12 +1,18 @@
 package com.sysadmindoc.nimbus.data.api
 
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -45,11 +51,15 @@ class BlitzortungService @Inject constructor(
 
     @Volatile private var webSocket: WebSocket? = null
     @Volatile private var isConnected = false
+    @Volatile private var shouldReconnect = false
+    @Volatile private var reconnectAttempts = 0
+    @Volatile private var reconnectJob: Job? = null
 
     private val strikeBuffer = mutableListOf<LightningStrike>()
     private val bufferLock = Any()
     @Volatile private var lastEmitTime = 0L
     @Volatile private var pendingSinceLastEmit = 0
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val webSocketClient: OkHttpClient = okHttpClient.newBuilder()
         .retryOnConnectionFailure(true)
         .build()
@@ -68,6 +78,7 @@ class BlitzortungService @Inject constructor(
     @Synchronized
     fun connect() {
         if (webSocket != null) return
+        shouldReconnect = true
 
         val request = Request.Builder()
             .url(WS_URL)
@@ -79,6 +90,9 @@ class BlitzortungService @Inject constructor(
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 Log.d(TAG, "Blitzortung WebSocket connected")
                 isConnected = true
+                reconnectAttempts = 0
+                reconnectJob?.cancel()
+                reconnectJob = null
                 // Subscribe to global lightning data (area 11 = worldwide)
                 webSocket.send(SUBSCRIBE_MESSAGE)
             }
@@ -92,12 +106,12 @@ class BlitzortungService @Inject constructor(
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 Log.w(TAG, "Blitzortung WebSocket failure: ${t.message}")
-                onSocketTerminated(webSocket)
+                onSocketTerminated(webSocket, reconnect = true)
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 Log.d(TAG, "Blitzortung WebSocket closed: $reason")
-                onSocketTerminated(webSocket)
+                onSocketTerminated(webSocket, reconnect = code != NORMAL_CLOSURE)
             }
         })
     }
@@ -108,10 +122,27 @@ class BlitzortungService @Inject constructor(
      * null out the newer socket, or the next connect() would open a duplicate stream.
      */
     @Synchronized
-    private fun onSocketTerminated(socket: WebSocket) {
+    private fun onSocketTerminated(socket: WebSocket, reconnect: Boolean) {
         if (webSocket === socket) {
             isConnected = false
             webSocket = null
+            if (reconnect && shouldReconnect) {
+                scheduleReconnect()
+            }
+        }
+    }
+
+    @Synchronized
+    private fun scheduleReconnect() {
+        if (reconnectJob?.isActive == true) return
+        val delayMs = blitzortungReconnectDelayMs(reconnectAttempts)
+        reconnectAttempts++
+        reconnectJob = serviceScope.launch {
+            delay(delayMs)
+            reconnectJob = null
+            if (shouldReconnect) {
+                connect()
+            }
         }
     }
 
@@ -120,6 +151,10 @@ class BlitzortungService @Inject constructor(
      */
     @Synchronized
     fun disconnect() {
+        shouldReconnect = false
+        reconnectJob?.cancel()
+        reconnectJob = null
+        reconnectAttempts = 0
         webSocket?.close(NORMAL_CLOSURE, "User navigated away")
         webSocket = null
         isConnected = false
@@ -186,7 +221,12 @@ class BlitzortungService @Inject constructor(
         private const val NORMAL_CLOSURE = 1000
         private const val MAX_BUFFER_SIZE = 500
         private const val MAX_AGE_MS = 10 * 60 * 1000L // 10 minutes
-        private const val EMIT_THROTTLE_MS = 500L
-        private const val EMIT_BATCH_SIZE = 10
+        private const val EMIT_THROTTLE_MS = 1_000L
+        private const val EMIT_BATCH_SIZE = 25
     }
+}
+
+internal fun blitzortungReconnectDelayMs(attempt: Int): Long {
+    val shift = attempt.coerceIn(0, 5)
+    return 1_000L * (1L shl shift)
 }

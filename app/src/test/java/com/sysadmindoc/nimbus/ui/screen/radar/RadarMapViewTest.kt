@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.ui.screen.radar
 
+import com.sysadmindoc.nimbus.data.api.LightningStrike
 import com.sysadmindoc.nimbus.data.model.AlertCoordinate
 import com.sysadmindoc.nimbus.data.model.AlertGeometry
 import com.sysadmindoc.nimbus.data.model.AlertPolygon
@@ -54,6 +55,24 @@ class RadarMapViewTest {
         )
 
         assertTrue(collection.features().orEmpty().isEmpty())
+    }
+
+    @Test
+    fun `lightningFeatureCollection caps GeoJSON points to latest strikes`() {
+        val collection = lightningFeatureCollection(
+            List(300) { index ->
+                LightningStrike(
+                    lat = index.toDouble(),
+                    lon = -index.toDouble(),
+                    timestamp = index.toLong(),
+                )
+            }
+        )
+
+        val features = collection.features().orEmpty()
+        assertEquals(250, features.size)
+        assertEquals(50.0, (features.first().geometry() as org.maplibre.geojson.Point).latitude(), 0.0)
+        assertEquals(299.0, (features.last().geometry() as org.maplibre.geojson.Point).latitude(), 0.0)
     }
 
     private fun weatherAlert(id: String, geometry: AlertGeometry?): WeatherAlert {

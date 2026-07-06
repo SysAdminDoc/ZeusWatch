@@ -95,11 +95,13 @@ class RadarViewModel @Inject constructor(
     fun loadFrames(
         provider: RadarProvider = RadarProvider.NATIVE_MAPLIBRE,
         force: Boolean = false,
+        cacheOnly: Boolean = false,
     ) {
         val state = _uiState.value
         val providerChanged = state.frameSet != null && lastFrameProvider != provider
         val requestProviderChanged = frameLoadJob?.isActive == true && frameLoadProvider != provider
-        val forceLoad = force || providerChanged || requestProviderChanged
+        val cachedFrameNeedsLiveRefresh = state.frameSet?.isFromCache == true && !cacheOnly
+        val forceLoad = force || providerChanged || requestProviderChanged || cachedFrameNeedsLiveRefresh
         if (!shouldLoadRadarFrames(
                 state = state,
                 isRequestInFlight = frameLoadJob?.isActive == true,
@@ -120,7 +122,7 @@ class RadarViewModel @Inject constructor(
             val thisJob = coroutineContext[Job]
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                radarRepository.getRadarFrames(provider).fold(
+                radarRepository.getRadarFrames(provider, cacheOnly = cacheOnly).fold(
                     onSuccess = { frameSet ->
                         lastSuccessfulFrameLoadAtMillis = System.currentTimeMillis()
                         lastFrameProvider = provider
