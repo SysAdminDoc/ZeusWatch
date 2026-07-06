@@ -39,6 +39,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
@@ -87,6 +88,7 @@ fun MapLocationPickerScreen(
 
     val mapView = remember {
         MapView(context).apply {
+            onCreate(null)
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -95,22 +97,7 @@ fun MapLocationPickerScreen(
         }
     }
 
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_START -> mapView.onStart()
-                Lifecycle.Event.ON_RESUME -> mapView.onResume()
-                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
-                Lifecycle.Event.ON_STOP -> mapView.onStop()
-                Lifecycle.Event.ON_DESTROY -> mapView.onDestroy()
-                else -> Unit
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
+    MapPickerLifecycleEffect(mapView, lifecycleOwner)
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
@@ -220,6 +207,42 @@ fun MapLocationPickerScreen(
             ) {
                 Text(stringResource(R.string.map_picker_save))
             }
+        }
+    }
+}
+
+@Composable
+private fun MapPickerLifecycleEffect(mapView: MapView, lifecycleOwner: LifecycleOwner) {
+    DisposableEffect(mapView, lifecycleOwner) {
+        var destroyed = false
+        fun destroyMapOnce() {
+            if (!destroyed) {
+                mapView.onDestroy()
+                destroyed = true
+            }
+        }
+        val observer = LifecycleEventObserver { _, event ->
+            if (destroyed) return@LifecycleEventObserver
+            when (event) {
+                Lifecycle.Event.ON_START -> mapView.onStart()
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                Lifecycle.Event.ON_STOP -> mapView.onStop()
+                Lifecycle.Event.ON_DESTROY -> destroyMapOnce()
+                else -> Unit
+            }
+        }
+        val lifecycle = lifecycleOwner.lifecycle
+        lifecycle.addObserver(observer)
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            mapView.onStart()
+        }
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            mapView.onResume()
+        }
+        onDispose {
+            lifecycle.removeObserver(observer)
+            destroyMapOnce()
         }
     }
 }

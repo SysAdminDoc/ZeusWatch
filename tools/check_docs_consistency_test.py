@@ -228,7 +228,7 @@ hilt = "2.53.1"
 retrofit = "3.0.0"
 room = "2.6.1"
 datastore = "1.2.1"
-maplibre = "11.5.2"
+maplibre = "13.3.1"
 glance = "1.1.1"
 work = "2.11.2"
 lottie = "6.7.1"
@@ -241,7 +241,7 @@ def _stack_line(datastore: str) -> str:
     return (
         "**Stack:** Kotlin 2.1.0, Jetpack Compose (BOM 2025.04.01), "
         "Hilt 2.53.1, Retrofit 3.0.0, Room 2.6.1, "
-        f"DataStore {datastore}, MapLibre 11.5.2, Glance 1.1.1, "
+        f"DataStore {datastore}, MapLibre 13.3.1, Glance 1.1.1, "
         "WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, "
         "Firebase Firestore (BOM 34.12.0)\n"
     )

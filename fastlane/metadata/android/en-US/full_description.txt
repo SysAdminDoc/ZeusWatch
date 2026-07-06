@@ -66,4 +66,4 @@ Data attribution:
 - Lightning: Blitzortung
 - Icons: Meteocons by Bas Milius (MIT)
 
-Built with Kotlin 2.1.0, Jetpack Compose, Hilt, Retrofit, Room, MapLibre 11, Glance, WorkManager, Lottie, and Coil. Targets Android 8.0+ (API 26). Licensed LGPL-3.0.
+Built with Kotlin 2.3.21, Jetpack Compose, Hilt, Retrofit, Room, MapLibre 13, Glance, WorkManager, Lottie, and Coil. Targets Android 8.0+ (API 26). Licensed LGPL-3.0.
