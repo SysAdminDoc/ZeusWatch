@@ -32,14 +32,6 @@
 
 ---
 
-## NOW — Current cycle (target v1.24.x)
-
-### N-10. Dependency runway and platform compatibility pass · **T-RELIABILITY** / **T-PERF**
-Split into remaining lanes:
-- **Lane C**: architecture-affecting upgrade remaining: MapLibre 13 compatibility audit.
-
----
-
 ## NEXT — 2-3 release cycles out (target v1.25 - v1.27)
 
 ### NX-13. ContentProvider for ecosystem · **T-ECOSYSTEM**
@@ -78,9 +70,6 @@ Gated on demand signal.
 
 ### L-7. Home Assistant integration · **T-ECOSYSTEM**
 Publish weather entities via ContentProvider (NX-13) or MQTT. Separate module.
-
-### L-8. MapLibre 13.x radar compatibility audit · **T-PERF**
-Measure radar tab open time, tile load, memory, crash rate.
 
 ### L-9. Marine / Aviation power-user mode · **T-SOURCES**
 Storm Glass / METAR/TAF/NOTAM. Gate behind explicit "power-user mode" preference.
@@ -172,7 +161,7 @@ Open question: needs measurement.
 | Hilt | 2.60 | — | Current AGP 9-compatible line; supports Kotlin 2.4 metadata from current dependencies. |
 | Room | 2.7.2 | — | Current verified 2.7.x line; 2.8.x blocked by KSP schema export crash. |
 | WorkManager | 2.11.2 | — | Current. |
-| MapLibre | 11.5.2 | 13.2.0 | Compatibility audit pending. |
+| MapLibre | 13.3.1 | — | Current; 13.x Vulkan-backed default verified with radar/location `MapView` lifecycle hardening. |
 | OkHttp | 5.3.2 | — | Current; debug logging uses built-in query-parameter redaction plus ZeusWatch's Pirate Weather path-key scrubber. |
 | Retrofit | 3.0.0 | — | Current. |
 | Glance | 1.1.1 | 1.2.0 stable | Enables widget unit tests. |
