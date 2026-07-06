@@ -1251,6 +1251,9 @@
     <string name="radar_attribution_rainviewer_limited">Radar: RainViewer \u2022 past only \u2022 max zoom 7 \u2022 Universal Blue</string>
     <string name="radar_attribution_librewxr">Radar: LibreWXR \u2022 past + nowcast \u2022 max zoom 12 \u2022 Viper HD</string>
     <string name="radar_attribution_librewxr_fallback">Radar: LibreWXR unavailable \u2022 using RainViewer fallback \u2022 max zoom 7</string>
+    <string name="radar_attribution_rainviewer_limited_cached">Radar: cached RainViewer frames \u2022 past only \u2022 max zoom 7</string>
+    <string name="radar_attribution_librewxr_cached">Radar: cached LibreWXR frames \u2022 past + nowcast \u2022 max zoom 12</string>
+    <string name="radar_attribution_librewxr_fallback_cached">Radar: cached RainViewer fallback \u2022 LibreWXR unavailable \u2022 max zoom 7</string>
     <string name="settings_custom_template_label">Template</string>
     <string name="settings_custom_template_help">Variables: {condition} {time} {temp} {high} {low} {humidity} {wind} {wind_speed} {uv} {precip} {precip_max} {pressure} {dewpoint}. Max 8,000 characters.</string>
     <string name="weather_source_open_meteo">Open-Meteo</string>

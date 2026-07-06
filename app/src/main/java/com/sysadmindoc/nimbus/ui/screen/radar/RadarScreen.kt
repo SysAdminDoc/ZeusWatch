@@ -170,7 +170,7 @@ fun RadarScreen(
         selectedLayer = selectedLayer,
         provider = settings.radarProvider,
         isOffline = isOffline,
-        loadFrames = { viewModel.loadFrames(settings.radarProvider) },
+        loadFrames = { cacheOnly -> viewModel.loadFrames(settings.radarProvider, cacheOnly = cacheOnly) },
         pausePlayback = viewModel::pausePlayback,
         connectLightning = viewModel::connectLightning,
         disconnectLightning = viewModel::disconnectLightning,
@@ -281,7 +281,7 @@ fun RadarTab(
         selectedLayer = selectedLayer,
         provider = settings.radarProvider,
         isOffline = isOffline,
-        loadFrames = { viewModel.loadFrames(settings.radarProvider) },
+        loadFrames = { cacheOnly -> viewModel.loadFrames(settings.radarProvider, cacheOnly = cacheOnly) },
         pausePlayback = viewModel::pausePlayback,
         connectLightning = viewModel::connectLightning,
         disconnectLightning = viewModel::disconnectLightning,
@@ -397,21 +397,21 @@ private fun RadarPlaybackConnectionEffect(
     selectedLayer: RadarLayer,
     provider: RadarProvider,
     isOffline: Boolean,
-    loadFrames: () -> Unit,
+    loadFrames: (cacheOnly: Boolean) -> Unit,
     pausePlayback: () -> Unit,
     connectLightning: () -> Unit,
     disconnectLightning: () -> Unit,
 ) {
     LaunchedEffect(selectedLayer, provider, isOffline) {
-        val useNativeRadar = provider.supportsNativePlayback && !isOffline
+        val useNativeRadar = provider.supportsNativePlayback
         if (useNativeRadar && selectedLayer == RadarLayer.RADAR) {
-            loadFrames()
+            loadFrames(isOffline)
         } else {
             // Frame playback is only meaningful on the native radar layer; stop
             // the loop when the provider or layer switches away from it.
             pausePlayback()
         }
-        if (useNativeRadar && (selectedLayer == RadarLayer.LIGHTNING || selectedLayer == RadarLayer.RADAR)) {
+        if (useNativeRadar && !isOffline && (selectedLayer == RadarLayer.LIGHTNING || selectedLayer == RadarLayer.RADAR)) {
             connectLightning()
         } else {
             disconnectLightning()
@@ -464,7 +464,7 @@ private fun BoxScope.RadarMapSurface(
     actions: RadarActions,
 ) {
     when {
-        state.isOffline -> RadarOfflineCard()
+        state.isOffline && state.radarState.frameSet == null -> RadarOfflineCard()
         state.settings.radarProvider.supportsNativePlayback -> RadarNativeContent(state, coordinates, actions)
         else -> RadarWebContent(state.settings.radarProvider, coordinates, actions.onBack)
     }
@@ -510,6 +510,7 @@ private fun BoxScope.RadarNativeContent(
         RadarAttribution(
             provider = state.settings.radarProvider,
             source = state.radarState.frameSet?.source,
+            isCached = state.radarState.frameSet?.isFromCache == true,
             modifier = Modifier.align(Alignment.BottomStart),
         )
     }
@@ -519,12 +520,17 @@ private fun BoxScope.RadarNativeContent(
 private fun RadarAttribution(
     provider: RadarProvider,
     source: RadarTileSource?,
+    isCached: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val attributionRes = when {
+        isCached && source == RadarTileSource.LIBREWXR -> R.string.radar_attribution_librewxr_cached
         source == RadarTileSource.LIBREWXR -> R.string.radar_attribution_librewxr
+        isCached && provider == RadarProvider.LIBREWXR_NATIVE && source == RadarTileSource.RAINVIEWER ->
+            R.string.radar_attribution_librewxr_fallback_cached
         provider == RadarProvider.LIBREWXR_NATIVE && source == RadarTileSource.RAINVIEWER ->
             R.string.radar_attribution_librewxr_fallback
+        isCached -> R.string.radar_attribution_rainviewer_limited_cached
         else -> R.string.radar_attribution_rainviewer_limited
     }
     Text(

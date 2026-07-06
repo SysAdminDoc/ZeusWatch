@@ -129,13 +129,13 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | Feature | Description |
 |---------|-------------|
 | **Radar Providers** | User-selectable: Windy Radar WebView, LibreWXR Native MapLibre playback with nowcast tiles (max zoom 12, Viper HD), RainViewer Native MapLibre playback with past-radar tiles (max zoom 7, Universal Blue), NWS Radar (US), or NWS Radar Lite (US) |
-| **Animated Radar Playback** | Play/pause, frame slider, recent-past labels, timestamp overlay (native mode) |
+| **Animated Radar Playback** | Play/pause, frame slider, recent-past labels, timestamp overlay, cached frame metadata fallback (native mode) |
 | **Radar Preview Card** | Recent selected native radar tile + CartoDB dark basemap on the Today tab |
 | **Radar Tab** | Full-screen radar in the bottom nav with provider-aware rendering |
 | **Route Weather Overlay** | Radar includes a foreground route planner for sampled waypoint weather and risk timing |
 | **Map Layer Selector** | Overlay layers: Radar, Lightning, Satellite, Clouds |
 | **Active Warning Polygons** | Native radar renders NWS warning polygons with severity colors and tappable alert details |
-| **Lightning Strike Overlay** | Real-time global lightning data via Blitzortung WebSocket with GeoJSON rendering |
+| **Lightning Strike Overlay** | Real-time global lightning data via Blitzortung WebSocket with capped GeoJSON rendering and reconnect backoff |
 | **Community Weather Reports** | Firebase Firestore-backed crowd-sourced condition reporting with rate limiting |
 
 ### Multi-Source Forecast System
