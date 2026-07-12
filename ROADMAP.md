@@ -139,7 +139,7 @@ Non-Latin numeral systems + alternate calendars. Gated on core extraction.
 | Compose BOM | 2026.06.01 | — | Current; shared-transition baseline. |
 | Kotlin | 2.3.21 | — | Current verified K2/KSP2 line. |
 | Hilt | 2.60 | — | Current AGP 9-compatible line; supports Kotlin 2.4 metadata from current dependencies. |
-| Room | 2.7.2 | — | Current verified 2.7.x line; 2.8.x blocked by KSP schema export crash. |
+| Room | 2.8.4 | — | Current; 2.8.4 verified on Kotlin 2.3.21 / KSP 2.3.9 with schema export intact (prior 2.1.0 KSP crash resolved). |
 | WorkManager | 2.11.2 | — | Current. |
 | MapLibre | 13.3.1 | — | Current; 13.x Vulkan-backed default verified with radar/location `MapView` lifecycle hardening. |
 | OkHttp | 5.3.2 | — | Current; debug logging uses built-in query-parameter redaction plus ZeusWatch's Pirate Weather path-key scrubber. |
@@ -305,13 +305,6 @@ ROADMAP items). L-11 Lottie-on-tiles is now unblocked (ProtoLayout already 1.4.0
   Evidence: `util/WeatherNotificationHelper.kt:74` (`setSmallIcon(weatherNotificationIcon(...))`); WeatherMaster demand https://github.com/PranshulGG/WeatherMaster/issues/437
   Touches: `util/WeatherNotificationHelper.kt`, a new temp-glyph bitmap generator, Settings toggle in `UserPreferences.kt`
   Acceptance: opt-in setting renders current temperature as the status-bar small icon (unit-aware, DPI-safe bitmap), falls back to the weather glyph when disabled; JVM test covers glyph text formatting.
-  Complexity: M
-
-- [ ] P2 — Re-attempt Room 2.7.2 → 2.8.4 under Kotlin 2.3.21 / KSP2
-  Why: the blocked KSP schema-export crash was on Kotlin 2.1.0; the tree is now Kotlin 2.3.21, and 2.8.4 adds a prepared-statement connection-pool cache benefiting the TTL-evicting weather cache.
-  Evidence: `Roadmap_Blocked.md` "Room 2.8.x upgrade"; https://developer.android.com/jetpack/androidx/releases/room
-  Touches: `gradle/libs.versions.toml`, `data/api/NimbusDatabase.kt`, `app/schemas/`, migration tests
-  Acceptance: `:app:kspStandardDebugKotlin` compiles with `room.schemaLocation` still exported, existing schema JSON reads, migration/unit tests green. If the crash persists, update the blocked entry with the current-toolchain repro.
   Complexity: M
 
 - [ ] P2 — Time-travel: arbitrary past/future date forecast + history scrub
