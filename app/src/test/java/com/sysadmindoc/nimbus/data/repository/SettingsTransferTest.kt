@@ -48,6 +48,14 @@ class SettingsTransferTest {
     }
 
     @Test
+    fun `settings backup round-trips status bar temperature toggle`() {
+        val backup = NimbusSettings(statusBarTemperature = true).toBackup()
+        val encoded = json.encodeToString(SettingsBackup(settings = backup))
+        assertTrue(encoded.contains("\"statusBarTemperature\":true"))
+        assertTrue(backup.toSettings().statusBarTemperature)
+    }
+
+    @Test
     fun `settings backup preserves custom summary template`() {
         val template = "Start with {condition}, then mention {high} and {low}."
         val backup = SettingsBackup(

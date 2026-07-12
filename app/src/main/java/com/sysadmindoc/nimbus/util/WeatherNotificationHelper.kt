@@ -70,8 +70,7 @@ object WeatherNotificationHelper {
         val low = WeatherFormatter.formatTemperature(data.current.dailyLow, s)
         val feelsLike = WeatherFormatter.formatTemperature(data.current.feelsLike, s)
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(weatherNotificationIcon(data.current.weatherCode, data.current.isDay))
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(
                 context.getString(
                     R.string.current_weather_notification_title,
@@ -89,7 +88,13 @@ object WeatherNotificationHelper {
             .setContentIntent(pendingIntent)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .build()
+
+        if (s.statusBarTemperature) {
+            builder.setSmallIcon(StatusBarTempIcon.build(temp))
+        } else {
+            builder.setSmallIcon(weatherNotificationIcon(data.current.weatherCode, data.current.isDay))
+        }
+        val notification = builder.build()
 
         try {
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)

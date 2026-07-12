@@ -1020,6 +1020,8 @@
     <string name="settings_alert_source">Fuente de alertas</string>
     <string name="settings_persistent_notification">Notificación meteorológica persistente</string>
     <string name="settings_persistent_notification_desc">Notificación siempre activa con condiciones actuales</string>
+    <string name="settings_status_bar_temperature">Temperatura en la barra de estado</string>
+    <string name="settings_status_bar_temperature_desc">Muestra la temperatura actual como icono de la notificación en la barra de estado</string>
     <string name="settings_daily_briefing">Resumen diario</string>
     <string name="settings_daily_briefing_desc">Enviar un resumen tranquilo del pronóstico cada mañana</string>
     <string name="settings_daily_briefing_time">Hora del resumen</string>

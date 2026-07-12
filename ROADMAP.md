@@ -286,13 +286,6 @@ ROADMAP items). L-11 Lottie-on-tiles is now unblocked (ProtoLayout already 1.4.0
 > abstract with no public constructor or factory, so a third-party app cannot
 > build a `Metric`. Blocked on a usable public `MetricValue` API, not compileSdk.
 
-- [ ] P2 — Status-bar temperature readout in the persistent notification
-  Why: persistent notification shows a weather glyph, not the temperature; a status-bar temp number is a high-demand competitor feature and works on all API levels.
-  Evidence: `util/WeatherNotificationHelper.kt:74` (`setSmallIcon(weatherNotificationIcon(...))`); WeatherMaster demand https://github.com/PranshulGG/WeatherMaster/issues/437
-  Touches: `util/WeatherNotificationHelper.kt`, a new temp-glyph bitmap generator, Settings toggle in `UserPreferences.kt`
-  Acceptance: opt-in setting renders current temperature as the status-bar small icon (unit-aware, DPI-safe bitmap), falls back to the weather glyph when disabled; JVM test covers glyph text formatting.
-  Complexity: M
-
 - [ ] P2 — Time-travel: arbitrary past/future date forecast + history scrub
   Why: On This Day exists but there is no date picker to view any past or upcoming date; competitors paywall this and the data is already wired.
   Evidence: CARROT Time Travel https://support.meetcarrot.com/weather/; existing `OpenMeteoArchiveApi` + forecast endpoints

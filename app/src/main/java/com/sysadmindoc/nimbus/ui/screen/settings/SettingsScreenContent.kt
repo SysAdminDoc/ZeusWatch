@@ -223,6 +223,7 @@ internal data class SettingsActions(
     val onMoveCard: (CardType, Int) -> Unit = { _, _ -> },
     val onResetCardPreferences: () -> Unit = {},
     val onPersistentWeatherNotif: (Boolean) -> Unit = {},
+    val onStatusBarTemperature: (Boolean) -> Unit = {},
     val onNowcastingAlerts: (Boolean) -> Unit = {},
     val onDailyBriefingEnabled: (Boolean) -> Unit = {},
     val onDailyBriefingMinutes: (Int) -> Unit = {},
@@ -672,6 +673,9 @@ private fun SettingsNotificationsSection(
         }
         Spacer(modifier = Modifier.height(4.dp))
         SettingToggle(stringResource(R.string.settings_persistent_notification), stringResource(R.string.settings_persistent_notification_desc), settings.persistentWeatherNotif, actions.onPersistentWeatherNotif)
+        if (settings.persistentWeatherNotif) {
+            SettingToggle(stringResource(R.string.settings_status_bar_temperature), stringResource(R.string.settings_status_bar_temperature_desc), settings.statusBarTemperature, actions.onStatusBarTemperature)
+        }
         SettingToggle(stringResource(R.string.settings_daily_briefing), stringResource(R.string.settings_daily_briefing_desc), settings.dailyBriefingEnabled, actions.onDailyBriefingEnabled)
         if (settings.dailyBriefingEnabled) {
             DailyBriefingTimeSetting(settings, actions.onDailyBriefingMinutes)
