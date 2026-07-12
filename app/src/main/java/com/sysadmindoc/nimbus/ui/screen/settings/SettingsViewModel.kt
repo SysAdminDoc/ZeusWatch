@@ -115,6 +115,9 @@ class SettingsViewModel @Inject constructor(
             WeatherNotificationHelper.dismiss(appContext)
         }
     }
+    fun setStatusBarTemperature(enabled: Boolean) = viewModelScope.launch {
+        prefs.setStatusBarTemperature(enabled)
+    }
     fun setNowcastingAlerts(enabled: Boolean) = viewModelScope.launch {
         prefs.setNowcastingAlerts(enabled)
         if (enabled) {

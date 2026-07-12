@@ -71,6 +71,7 @@ class UserPreferences @Inject constructor(
 
         // Notifications
         val PERSISTENT_WEATHER_NOTIF = booleanPreferencesKey("persistent_weather_notif")
+        val STATUS_BAR_TEMPERATURE = booleanPreferencesKey("status_bar_temperature")
         val NOWCASTING_ALERTS = booleanPreferencesKey("nowcasting_alerts")
         val DAILY_BRIEFING_ENABLED = booleanPreferencesKey("daily_briefing_enabled")
         val DAILY_BRIEFING_MINUTES = stringPreferencesKey("daily_briefing_minutes")
@@ -189,6 +190,7 @@ class UserPreferences @Inject constructor(
             disabledCards = prefs[Keys.DISABLED_CARDS] ?: DEFAULT_DISABLED_CARDS,
             // Notifications
             persistentWeatherNotif = prefs[Keys.PERSISTENT_WEATHER_NOTIF] ?: true,
+            statusBarTemperature = prefs[Keys.STATUS_BAR_TEMPERATURE] ?: false,
             nowcastingAlerts = prefs[Keys.NOWCASTING_ALERTS] ?: true,
             dailyBriefingEnabled = prefs[Keys.DAILY_BRIEFING_ENABLED] ?: false,
             dailyBriefingMinutes = normalizeDailyBriefingMinutes(
@@ -350,6 +352,7 @@ class UserPreferences @Inject constructor(
 
     // Notifications
     suspend fun setPersistentWeatherNotif(enabled: Boolean) = store.edit { it[Keys.PERSISTENT_WEATHER_NOTIF] = enabled }
+    suspend fun setStatusBarTemperature(enabled: Boolean) = store.edit { it[Keys.STATUS_BAR_TEMPERATURE] = enabled }
     suspend fun setNowcastingAlerts(enabled: Boolean) = store.edit { it[Keys.NOWCASTING_ALERTS] = enabled }
     suspend fun setDailyBriefingEnabled(enabled: Boolean) = store.edit { it[Keys.DAILY_BRIEFING_ENABLED] = enabled }
     suspend fun setDailyBriefingMinutes(minutes: Int) = store.edit {
@@ -571,6 +574,7 @@ data class NimbusSettings(
     val cardOrder: List<CardType> = DEFAULT_CARD_ORDER,
     // Notifications
     val persistentWeatherNotif: Boolean = true,
+    val statusBarTemperature: Boolean = false,
     val nowcastingAlerts: Boolean = true,
     val dailyBriefingEnabled: Boolean = false,
     val dailyBriefingMinutes: Int = DEFAULT_DAILY_BRIEFING_MINUTES,

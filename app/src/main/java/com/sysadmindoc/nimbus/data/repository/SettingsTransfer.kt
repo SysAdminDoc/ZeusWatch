@@ -160,6 +160,7 @@ data class SettingsBackupPreferences(
     val disabledCards: Set<String> = DEFAULT_DISABLED_CARDS,
     val cardOrder: List<String> = DEFAULT_CARD_ORDER.map { it.name },
     val persistentWeatherNotif: Boolean = true,
+    val statusBarTemperature: Boolean = false,
     val nowcastingAlerts: Boolean = true,
     val dailyBriefingEnabled: Boolean = false,
     val dailyBriefingMinutes: Int = DEFAULT_DAILY_BRIEFING_MINUTES,
@@ -363,6 +364,7 @@ fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPrefere
     disabledCards = disabledCards,
     cardOrder = cardOrder.map { it.name },
     persistentWeatherNotif = persistentWeatherNotif,
+    statusBarTemperature = statusBarTemperature,
     nowcastingAlerts = nowcastingAlerts,
     dailyBriefingEnabled = dailyBriefingEnabled,
     dailyBriefingMinutes = dailyBriefingMinutes,
@@ -414,6 +416,7 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
     disabledCards = disabledCards.filter { runCatching { CardType.valueOf(it) }.isSuccess }.toSet(),
     cardOrder = parseCardOrder(cardOrder.joinToString(",")),
     persistentWeatherNotif = persistentWeatherNotif,
+    statusBarTemperature = statusBarTemperature,
     nowcastingAlerts = nowcastingAlerts,
     dailyBriefingEnabled = dailyBriefingEnabled,
     dailyBriefingMinutes = normalizeDailyBriefingMinutes(dailyBriefingMinutes),
@@ -537,6 +540,7 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
         .filterNot { it.name in settings.disabledCards }
         .forEach { setCardEnabled(it, true) }
     setPersistentWeatherNotif(settings.persistentWeatherNotif)
+    setStatusBarTemperature(settings.statusBarTemperature)
     setNowcastingAlerts(settings.nowcastingAlerts)
     setDailyBriefingEnabled(settings.dailyBriefingEnabled)
     setDailyBriefingMinutes(settings.dailyBriefingMinutes)

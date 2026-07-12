@@ -1048,6 +1048,8 @@
     <string name="settings_alert_source">Alert source</string>
     <string name="settings_persistent_notification">Persistent Weather Notification</string>
     <string name="settings_persistent_notification_desc">Always-on notification showing current conditions</string>
+    <string name="settings_status_bar_temperature">Temperature in status bar</string>
+    <string name="settings_status_bar_temperature_desc">Show the current temperature as the notification icon in the status bar</string>
     <string name="settings_daily_briefing">Daily Briefing</string>
     <string name="settings_daily_briefing_desc">Send one calm forecast summary each morning</string>
     <string name="settings_daily_briefing_time">Briefing time</string>

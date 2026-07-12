@@ -210,6 +210,7 @@ fun SettingsScreen(
                     viewModel.setPersistentWeatherNotif(false)
                 }
             },
+            onStatusBarTemperature = viewModel::setStatusBarTemperature,
             onNowcastingAlerts = { enabled ->
                 if (enabled) {
                     enableNotificationsIfPermitted { viewModel.setNowcastingAlerts(true) }
