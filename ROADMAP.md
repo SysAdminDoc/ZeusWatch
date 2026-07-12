@@ -44,7 +44,11 @@ Shipped: dew point, feels-like, snowfall, pressure, AQI. Remaining: severe weath
 Contrast audit of weather-adaptive palettes, font scaling stress test at 1.3/1.5/1.8, touch target 48dp audit, extend a11y checks to all screens. Effort: medium.
 
 ### NX-20. Provider metadata registry + regional auto-suggestion · **T-SOURCES** / **T-RELIABILITY**
-Add `ProviderMetadata` registry with `dataTypes`, coverage, `authMode`, attribution, license, quota, `freenetAllowed`, fallback role, cache namespace. Replace Settings hardcoded key checks. Add regional resolver for default bundles. Effort: medium-high.
+`dataTypes`/`authMode` already on `WeatherSourceProvider`, and Settings API-key
+gating is now registry-driven (`SourceConfig.selectedProviders()` + `requiresApiKey`).
+Remaining: enrich the registry with coverage, attribution, license, quota,
+`freenetAllowed`, fallback role, and cache namespace (needs verified per-provider
+license/quota data), then add a regional resolver for default source bundles. Effort: medium.
 
 ---
 
