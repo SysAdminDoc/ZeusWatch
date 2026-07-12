@@ -302,12 +302,8 @@ ROADMAP items). L-11 Lottie-on-tiles is now unblocked (ProtoLayout already 1.4.0
   Acceptance: widget renders the most recent cached radar tile bitmap for its configured location with a freshness badge; tap opens the Radar tab; no live map engine in-widget; refreshes with the widget worker.
   Complexity: M
 
-- [ ] P3 — In-app source capability matrix (Breezy parity, builds on NX-20)
-  Why: users cannot see which selectable source supplies which data type (forecast/AQ/pollen/nowcast/alerts/normals); Breezy exposes this and it drives informed source choice.
-  Evidence: Breezy `docs/SOURCES.md` https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md; depends on NX-20 `ProviderMetadata`
-  Touches: `data/repository/WeatherSourceManager.kt` metadata, `ui/screen/settings/` Data Sources section
-  Acceptance: Data Sources shows a per-source capability grid (dataTypes, coverage, auth, freenet-allowed); accessible + non-color cues; no new network calls.
-  Complexity: M
+> In-app source capability matrix moved to `Roadmap_Blocked.md` (blocked on the
+> NX-20 `ProviderMetadata` registry, which must land first).
 
 > Location Button adoption moved to `Roadmap_Blocked.md` (blocked on the
 > `androidx.core.locationbutton` artifact leaving alpha).
