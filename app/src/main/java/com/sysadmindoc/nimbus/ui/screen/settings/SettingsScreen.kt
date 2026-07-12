@@ -250,6 +250,7 @@ fun SettingsScreen(
             onSourceMinutely = viewModel::setSourceMinutely,
             onOpenMeteoFlatBuffersEnabled = viewModel::setOpenMeteoFlatBuffersEnabled,
             onGadgetbridgeBroadcastEnabled = viewModel::setGadgetbridgeBroadcastEnabled,
+            onWeatherContentProviderEnabled = viewModel::setWeatherContentProviderEnabled,
             onOwmApiKey = viewModel::setOwmApiKey,
             onPirateWeatherApiKey = viewModel::setPirateWeatherApiKey,
             onTempestAccessToken = viewModel::setTempestAccessToken,

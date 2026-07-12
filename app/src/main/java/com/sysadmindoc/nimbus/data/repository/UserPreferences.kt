@@ -114,6 +114,7 @@ class UserPreferences @Inject constructor(
         val SOURCE_MINUTELY = stringPreferencesKey("source_minutely")
         val OPEN_METEO_FLATBUFFERS_ENABLED = booleanPreferencesKey("open_meteo_flatbuffers_enabled")
         val GADGETBRIDGE_BROADCAST_ENABLED = booleanPreferencesKey("gadgetbridge_broadcast_enabled")
+        val WEATHER_CONTENT_PROVIDER_ENABLED = booleanPreferencesKey("weather_content_provider_enabled")
 
         // API keys for third-party providers
         val OWM_API_KEY = owmApiKeyPreferenceKey
@@ -231,6 +232,7 @@ class UserPreferences @Inject constructor(
             ).normalized(),
             openMeteoFlatBuffersEnabled = prefs[Keys.OPEN_METEO_FLATBUFFERS_ENABLED] ?: false,
             gadgetbridgeBroadcastEnabled = prefs[Keys.GADGETBRIDGE_BROADCAST_ENABLED] ?: false,
+            weatherContentProviderEnabled = prefs[Keys.WEATHER_CONTENT_PROVIDER_ENABLED] ?: false,
             owmApiKey = apiKeys.owmApiKey.ifBlank { prefs[Keys.OWM_API_KEY] ?: "" },
             pirateWeatherApiKey = apiKeys.pirateWeatherApiKey.ifBlank { prefs[Keys.PIRATE_WEATHER_API_KEY] ?: "" },
             tempestAccessToken = apiKeys.tempestAccessToken.ifBlank { prefs[Keys.TEMPEST_ACCESS_TOKEN] ?: "" },
@@ -461,6 +463,15 @@ class UserPreferences @Inject constructor(
     suspend fun setGadgetbridgeBroadcastEnabled(enabled: Boolean) = store.edit {
         it[Keys.GADGETBRIDGE_BROADCAST_ENABLED] = enabled
     }
+    suspend fun setWeatherContentProviderEnabled(enabled: Boolean) = store.edit {
+        it[Keys.WEATHER_CONTENT_PROVIDER_ENABLED] = enabled
+    }
+
+    suspend fun weatherContentProviderEnabled(): Boolean =
+        store.data
+            .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+            .map { prefs -> prefs[Keys.WEATHER_CONTENT_PROVIDER_ENABLED] ?: false }
+            .first()
 
     // API keys
     suspend fun setOwmApiKey(key: String) {
@@ -590,6 +601,7 @@ data class NimbusSettings(
     val sourceConfig: SourceConfig = SourceConfig(),
     val openMeteoFlatBuffersEnabled: Boolean = false,
     val gadgetbridgeBroadcastEnabled: Boolean = false,
+    val weatherContentProviderEnabled: Boolean = false,
     val owmApiKey: String = "",
     val pirateWeatherApiKey: String = "",
     val tempestAccessToken: String = "",

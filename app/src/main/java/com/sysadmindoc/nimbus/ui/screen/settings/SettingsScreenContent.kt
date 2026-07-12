@@ -251,6 +251,7 @@ internal data class SettingsActions(
     val onSourceMinutely: (WeatherSourceProvider) -> Unit = {},
     val onOpenMeteoFlatBuffersEnabled: (Boolean) -> Unit = {},
     val onGadgetbridgeBroadcastEnabled: (Boolean) -> Unit = {},
+    val onWeatherContentProviderEnabled: (Boolean) -> Unit = {},
     val onOwmApiKey: (String) -> Unit = {},
     val onPirateWeatherApiKey: (String) -> Unit = {},
     val onTempestAccessToken: (String) -> Unit = {},
@@ -899,6 +900,13 @@ private fun SettingsDataSourcesSection(
             stringResource(R.string.settings_gadgetbridge_broadcast_desc),
             settings.gadgetbridgeBroadcastEnabled,
             actions.onGadgetbridgeBroadcastEnabled,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        SettingToggle(
+            stringResource(R.string.settings_weather_content_provider),
+            stringResource(R.string.settings_weather_content_provider_desc),
+            settings.weatherContentProviderEnabled,
+            actions.onWeatherContentProviderEnabled,
         )
         SettingsApiKeyFields(settings, actions)
         ProviderHealthPanel(
