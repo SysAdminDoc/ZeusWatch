@@ -189,6 +189,9 @@ class SettingsViewModel @Inject constructor(
         prefs.setGadgetbridgeBroadcastEnabled(enabled)
         if (enabled) WidgetRefreshWorker.sync(appContext, true)
     }
+    fun setWeatherContentProviderEnabled(enabled: Boolean) = viewModelScope.launch {
+        prefs.setWeatherContentProviderEnabled(enabled)
+    }
 
     // API keys
     fun setOwmApiKey(key: String) = viewModelScope.launch { prefs.setOwmApiKey(key) }

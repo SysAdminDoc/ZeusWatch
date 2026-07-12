@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ZeusWatch</string>
+    <string name="permission_read_provider_label">Leer proveedor de clima de ZeusWatch</string>
+    <string name="permission_read_provider_description">Permite que otra app lea ubicaciones guardadas y pronosticos en cache de ZeusWatch cuando esta activado.</string>
 
     <!-- Widgets -->
     <string name="widget_small_label">ZeusWatch actual</string>
@@ -1079,6 +1081,8 @@
     <string name="settings_open_meteo_flatbuffers_desc">Usa el formato binario del SDK de Open-Meteo para el pronóstico principal y vuelve a JSON si la decodificación falla.</string>
     <string name="settings_gadgetbridge_broadcast">Difusión del clima a Gadgetbridge</string>
     <string name="settings_gadgetbridge_broadcast_desc">Envía el clima actual a relojes compatibles con Gadgetbridge después de cada actualización.</string>
+    <string name="settings_weather_content_provider">Proveedor de clima para apps</string>
+    <string name="settings_weather_content_provider_desc">Expone ubicaciones guardadas y pronosticos en cache a apps con el permiso de proveedor de ZeusWatch. Las consultas externas nunca descargan clima en vivo.</string>
     <string name="settings_api_keys">Claves API</string>
     <string name="settings_owm_key">Clave API de OpenWeatherMap</string>
     <string name="settings_pirate_key">Clave API de Pirate Weather</string>

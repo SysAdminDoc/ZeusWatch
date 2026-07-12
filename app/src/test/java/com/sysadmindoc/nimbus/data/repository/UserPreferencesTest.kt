@@ -92,6 +92,7 @@ class UserPreferencesTest {
         assertEquals(30, settings.cacheTtlMinutes)
         assertEquals(5.0, settings.migrainePressureThreshold, 0.01)
         assertTrue(settings.hapticFeedbackForAlerts)
+        assertFalse(settings.weatherContentProviderEnabled)
     }
 
     @Test

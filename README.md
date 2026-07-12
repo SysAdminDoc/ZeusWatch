@@ -164,6 +164,8 @@ Forecasts are cached as normalized `WeatherData` per location and provider, so s
 
 Settings > Data Sources includes an opt-in Open-Meteo FlatBuffers mode. When enabled, the main Open-Meteo forecast and historical On This Day archive calls request `format=flatbuffers`, decode through `com.open-meteo:sdk`, and automatically fall back to the existing JSON path if the binary response cannot be fetched or decoded.
 
+Settings > Data Sources also includes an opt-in read-only ecosystem ContentProvider at `content://com.sysadmindoc.nimbus.provider.weather/` with Breezy-compatible `version`, `locations`, and `weather` paths for Tasker, KWGT, and similar tools. External queries require the `com.sysadmindoc.nimbus.READ_PROVIDER` permission and read cached data only; they never trigger live network refreshes.
+
 When providers publish localized condition or alert text, matching user-locale source wording is preferred before falling back to app WMO labels.
 
 ### Widgets (Jetpack Glance)
@@ -231,6 +233,7 @@ When providers publish localized condition or alert text, matching user-locale s
 | **Live Weather Wallpaper** | Rain, snow, thunderstorm, sun rays, cloud wisps, fog particle effects over existing wallpaper |
 | **Wear OS Companion** | Watch app, Material3 animated weather tile, and complications for temperature, condition/high-low, UV, and icon slots |
 | **Smartspacer Plugin** | Optional Smartspacer target and temperature complication read the ZeusWatch cache for Pixel At a Glance-style current conditions |
+| **Ecosystem ContentProvider** | Optional Breezy-compatible read-only provider exposes saved locations and cached forecasts to Tasker, KWGT, and similar tools with an Android permission gate |
 | **Premium State Polish** | Focused, pressed, disabled, loading, empty, and recovery states use consistent dark glass chrome across phone, widgets, and Wear OS |
 | **Accessibility** | TalkBack descriptions on all Canvas components, alert icons, non-color risk cues on color-coded weather surfaces, and merged card semantics with liveRegion alerts |
 | **Localization Foundation** | Core navigation, Today shell states/card headers/card microcopy/alert dialogs/report sheet, Settings controls/enums, Home Card labels, Custom Alerts, Locations, Compare, widgets, and Wear OS state copy use Android string resources with Spanish plus Arabic/Hebrew RTL resources; provider-native condition and alert text is preferred when upstream language matches the user's locale |
@@ -475,7 +478,7 @@ app/src/main/java/com/sysadmindoc/nimbus/
 | **Health** | Migraine alerts with pressure threshold (3.0/5.0/7.0/10.0 hPa/3h) |
 | **Accessibility** | Haptic feedback for alerts |
 | **Visual Effects** | Weather particle animations |
-| **Data Sources** | App-wide primary + fallback defaults per data type, Open-Meteo FlatBuffers opt-in, API keys (collapsed by default) |
+| **Data Sources** | App-wide primary + fallback defaults per data type, Open-Meteo FlatBuffers opt-in, Gadgetbridge broadcast, ecosystem ContentProvider, API keys (collapsed by default) |
 | **Advanced** | Cache TTL (15/30/60/120 min) (collapsed by default) |
 | **About** | Version, data source, license |
 
