@@ -34,9 +34,6 @@
 
 ## NEXT — 2-3 release cycles out (target v1.25 - v1.27)
 
-### NX-13. ContentProvider for ecosystem · **T-ECOSYSTEM**
-Gadgetbridge broadcast already shipped (v1.23.0). Remaining: read-only ContentProvider mirroring Breezy's schema for Tasker/KWGT compatibility. Opt-in toggle. Effort: medium.
-
 ### NX-14. Reproducible builds badge for F-Droid · **T-RELIABILITY**
 Audit locale/timezone hashes, Hilt-generated code stability, AGP lockfile. Effort: medium.
 
@@ -284,12 +281,10 @@ ROADMAP items). L-11 Lottie-on-tiles is now unblocked (ProtoLayout already 1.4.0
 
 ### P2 — Now-actionable platform features (compileSdk 37 gate cleared)
 
-- [ ] P2 — API 37 `Notification.MetricStyle` weather notification (3 metrics)
-  Why: previously toolchain-blocked; compileSdk is now 37, so a Temp/UV/AQI AOD + lock-screen metric card is compilable behind a runtime guard.
-  Evidence: `Roadmap_Blocked.md` "Android 17 Notification.MetricStyle" (gated on compileSdk 37, now met); `AlertNotificationHelper.kt` already uses ProgressStyle; https://developer.android.com/develop/ui/views/notifications/metric-style
-  Touches: `util/WeatherNotificationHelper.kt`, `util/AlertNotificationHelper.kt`, notification channel wiring
-  Acceptance: on API >=37 the persistent weather notification renders up to 3 semantic metrics; API <=36 keeps existing BigText/glyph; `POST_PROMOTED_NOTIFICATIONS` handled; unit test covers metric selection. Retire the corresponding blocked entry.
-  Complexity: M
+> `Notification.MetricStyle` moved to `Roadmap_Blocked.md`: the platform-37.0
+> stub exposes `MetricStyle`/`Metric` but `Notification.Metric.MetricValue` is
+> abstract with no public constructor or factory, so a third-party app cannot
+> build a `Metric`. Blocked on a usable public `MetricValue` API, not compileSdk.
 
 - [ ] P2 — Status-bar temperature readout in the persistent notification
   Why: persistent notification shows a weather glyph, not the temperature; a status-bar temp number is a high-demand competitor feature and works on all API levels.
