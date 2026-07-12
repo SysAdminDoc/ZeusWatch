@@ -97,28 +97,8 @@ Non-Latin numeral systems + alternate calendars. Gated on core extraction.
 
 ---
 
-## UNDER CONSIDERATION
-
-### UC-1. Self-hosted ACRA crash report endpoint
-Open question: is email volume a problem yet?
-
-### UC-2. Anonymous usage telemetry (opt-in)
-Plausible-style. Open question: can we live with blindness on provider/card usage?
-
-### UC-3. Light theme / weather-adaptive light mode
-Open question: opt-in scheduled light theme, or no?
-
-### UC-4. Background-fetch budget controls
-Open question: is current battery loss material? Instrument first (depends on UC-2).
-
-### UC-5. AccuWeather adapter via bundled key
-Open question: accept brittleness of bundled revokable key?
-
-### UC-6. Pixel Watch / Wear OS 6 M3 Expressive UI refresh
-Wait for wear-compose-material3 stable.
-
-### UC-7. ScrollAware widget refresh on home-screen interaction
-Open question: needs measurement.
+> Decision-pending items (former UNDER CONSIDERATION UC-1..UC-7) moved to
+> `Roadmap_Blocked.md` under "Product / Decision Pending".
 
 ---
 
@@ -291,3 +271,71 @@ Three parallel code audits (health/architecture, performance/Compose, testing/re
 ### P1
 
 ### P2
+
+
+## Research-Driven Additions (2026-07-12)
+
+Post-toolchain-migration sweep. The AGP 9 / compileSdk 37 migration (`33c59b0`,
+`8295a00`, `c2af40e`) cleared gates on several `Roadmap_Blocked.md` items and the
+Wear module still ships an alpha UI lib on a release path. Items below are
+verified against the current tree and are net-new (not duplicating active
+ROADMAP items). L-11 Lottie-on-tiles is now unblocked (ProtoLayout already 1.4.0)
+— leave it in LATER but treat as active. UC-6 is unblocked by item R-1.
+
+### P1 — Reliability (ship off pre-release deps)
+
+- [ ] P1 — Migrate Wear `wear-compose-material3` off `1.0.0-alpha27` to stable 1.5.x
+  Why: a release watch app is shipping an alpha UI library; stable has existed since Aug 2025.
+  Evidence: `wear/build.gradle.kts:89`; https://developer.android.com/jetpack/androidx/releases/wear-compose-m3
+  Touches: `wear/build.gradle.kts`, wear Compose screens/tile/complication UI, `gradle/libs.versions.toml`
+  Acceptance: wear module builds on `compose-material3` >=1.5.x stable, tile/complication/app UI unregressed on Wear OS 5+, unblocks UC-6.
+  Complexity: M
+
+### P2 — Now-actionable platform features (compileSdk 37 gate cleared)
+
+- [ ] P2 — API 37 `Notification.MetricStyle` weather notification (3 metrics)
+  Why: previously toolchain-blocked; compileSdk is now 37, so a Temp/UV/AQI AOD + lock-screen metric card is compilable behind a runtime guard.
+  Evidence: `Roadmap_Blocked.md` "Android 17 Notification.MetricStyle" (gated on compileSdk 37, now met); `AlertNotificationHelper.kt` already uses ProgressStyle; https://developer.android.com/develop/ui/views/notifications/metric-style
+  Touches: `util/WeatherNotificationHelper.kt`, `util/AlertNotificationHelper.kt`, notification channel wiring
+  Acceptance: on API >=37 the persistent weather notification renders up to 3 semantic metrics; API <=36 keeps existing BigText/glyph; `POST_PROMOTED_NOTIFICATIONS` handled; unit test covers metric selection. Retire the corresponding blocked entry.
+  Complexity: M
+
+- [ ] P2 — Status-bar temperature readout in the persistent notification
+  Why: persistent notification shows a weather glyph, not the temperature; a status-bar temp number is a high-demand competitor feature and works on all API levels.
+  Evidence: `util/WeatherNotificationHelper.kt:74` (`setSmallIcon(weatherNotificationIcon(...))`); WeatherMaster demand https://github.com/PranshulGG/WeatherMaster/issues/437
+  Touches: `util/WeatherNotificationHelper.kt`, a new temp-glyph bitmap generator, Settings toggle in `UserPreferences.kt`
+  Acceptance: opt-in setting renders current temperature as the status-bar small icon (unit-aware, DPI-safe bitmap), falls back to the weather glyph when disabled; JVM test covers glyph text formatting.
+  Complexity: M
+
+- [ ] P2 — Re-attempt Room 2.7.2 → 2.8.4 under Kotlin 2.3.21 / KSP2
+  Why: the blocked KSP schema-export crash was on Kotlin 2.1.0; the tree is now Kotlin 2.3.21, and 2.8.4 adds a prepared-statement connection-pool cache benefiting the TTL-evicting weather cache.
+  Evidence: `Roadmap_Blocked.md` "Room 2.8.x upgrade"; https://developer.android.com/jetpack/androidx/releases/room
+  Touches: `gradle/libs.versions.toml`, `data/api/NimbusDatabase.kt`, `app/schemas/`, migration tests
+  Acceptance: `:app:kspStandardDebugKotlin` compiles with `room.schemaLocation` still exported, existing schema JSON reads, migration/unit tests green. If the crash persists, update the blocked entry with the current-toolchain repro.
+  Complexity: M
+
+- [ ] P2 — Time-travel: arbitrary past/future date forecast + history scrub
+  Why: On This Day exists but there is no date picker to view any past or upcoming date; competitors paywall this and the data is already wired.
+  Evidence: CARROT Time Travel https://support.meetcarrot.com/weather/; existing `OpenMeteoArchiveApi` + forecast endpoints
+  Touches: `data/repository/WeatherRepository.kt` (archive/forecast reuse), a new date-scrub UI entry (Compare screen or a card action), `ui/screen/main/`
+  Acceptance: user picks a date within the archive/forecast horizon and sees temperature/precip/conditions for the current location; offline shows a clear unavailable state; timezone-anchored to the viewed location.
+  Complexity: M
+
+### P3 — Product & polish
+
+- [ ] P3 — Map/radar home-screen Glance widget
+  Why: none of the 8 Glance widgets shows radar; a cached-tile radar widget is a common competitor surface and reuses existing tile URLs.
+  Evidence: CARROT radar widget https://support.meetcarrot.com/weather/; `data/repository/RadarRepository.kt`
+  Touches: new `widget/NimbusRadarWidget.kt`, `RadarRepository`, `widget/WidgetRefreshWorker.kt`, `WidgetConfigActivity`
+  Acceptance: widget renders the most recent cached radar tile bitmap for its configured location with a freshness badge; tap opens the Radar tab; no live map engine in-widget; refreshes with the widget worker.
+  Complexity: M
+
+- [ ] P3 — In-app source capability matrix (Breezy parity, builds on NX-20)
+  Why: users cannot see which selectable source supplies which data type (forecast/AQ/pollen/nowcast/alerts/normals); Breezy exposes this and it drives informed source choice.
+  Evidence: Breezy `docs/SOURCES.md` https://github.com/breezy-weather/breezy-weather/blob/main/docs/SOURCES.md; depends on NX-20 `ProviderMetadata`
+  Touches: `data/repository/WeatherSourceManager.kt` metadata, `ui/screen/settings/` Data Sources section
+  Acceptance: Data Sources shows a per-source capability grid (dataTypes, coverage, auth, freenet-allowed); accessible + non-color cues; no new network calls.
+  Complexity: M
+
+> Location Button adoption moved to `Roadmap_Blocked.md` (blocked on the
+> `androidx.core.locationbutton` artifact leaving alpha).
