@@ -792,6 +792,8 @@
     <string name="on_this_day_delta_warmer">%1$d%2$s más cálido</string>
     <string name="on_this_day_delta_cooler">%1$d%2$s más fresco</string>
     <string name="on_this_day_explore_dates">Explorar otras fechas</string>
+    <string name="on_this_day_selected_high_low">%1$s / %2$s</string>
+    <string name="on_this_day_selected_semantics">El %1$s: máxima %2$s, mínima %3$s</string>
     <string name="map_picker_title">Elige una ubicación</string>
     <string name="map_picker_hint">Toca cualquier punto del mapa</string>
     <string name="map_picker_geocoding">Buscando ubicación…</string>

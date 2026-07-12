@@ -72,6 +72,7 @@ fun OnThisDayCard(
     data: OnThisDayData?,
     forecastHighC: Double?,
     onDateSelected: ((LocalDate) -> Unit)? = null,
+    selectedDay: com.sysadmindoc.nimbus.data.model.TimeTravelDay? = null,
     modifier: Modifier = Modifier,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
@@ -232,6 +233,11 @@ fun OnThisDayCard(
                 )
             }
 
+            if (selectedDay != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                SelectedDayRow(day = selectedDay, s = s)
+            }
+
             if (onDateSelected != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -244,6 +250,53 @@ fun OnThisDayCard(
                 )
             }
         }
+    }
+}
+
+/**
+ * Compact row showing the actual weather for the exact date the user scrubbed
+ * to — the archived observation (or in-window forecast) for that single day,
+ * distinct from the "across prior years" aggregate above.
+ */
+@Composable
+private fun SelectedDayRow(
+    day: com.sysadmindoc.nimbus.data.model.TimeTravelDay,
+    s: com.sysadmindoc.nimbus.data.repository.NimbusSettings,
+) {
+    val dateText = day.date.format(
+        java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.MEDIUM),
+    )
+    val highLow = stringResource(
+        R.string.on_this_day_selected_high_low,
+        WeatherFormatter.formatTemperature(day.highC, s),
+        WeatherFormatter.formatTemperature(day.lowC, s),
+    )
+    val precip = day.precipMm?.let { WeatherFormatter.formatPrecipitation(it, s) }
+    val description = stringResource(
+        R.string.on_this_day_selected_semantics,
+        dateText,
+        WeatherFormatter.formatTemperature(day.highC, s),
+        WeatherFormatter.formatTemperature(day.lowC, s),
+    )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(NimbusTextTertiary.copy(alpha = 0.10f))
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .semantics(mergeDescendants = true) { contentDescription = description },
+    ) {
+        Text(
+            text = dateText,
+            style = MaterialTheme.typography.labelMedium,
+            color = NimbusTextSecondary,
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = if (precip != null) "$highLow · $precip" else highLow,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = NimbusTextPrimary,
+        )
     }
 }
 

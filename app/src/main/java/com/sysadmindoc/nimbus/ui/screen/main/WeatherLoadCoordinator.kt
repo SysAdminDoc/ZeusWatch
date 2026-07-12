@@ -13,6 +13,7 @@ import com.sysadmindoc.nimbus.data.repository.ForecastAccuracyRepository
 import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionRepository
 import com.sysadmindoc.nimbus.data.repository.MarineRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.TimeTravelRepository
 import com.sysadmindoc.nimbus.data.repository.OnThisDayRepository
 import com.sysadmindoc.nimbus.data.repository.ProviderAgreementAnalyzer
 import com.sysadmindoc.nimbus.data.repository.ProviderWeatherSnapshot
@@ -84,6 +85,7 @@ data class WeatherLoadOptionalRepositories @Inject constructor(
     val floodRepository: FloodRepository,
     val climateRepository: ClimateRepository,
     val pwsRepository: PwsRepository,
+    val timeTravelRepository: TimeTravelRepository,
 )
 
 data class WeatherLoadCompletion(
@@ -116,6 +118,7 @@ class WeatherLoadCoordinator @Inject constructor(
     private val gadgetbridgeBroadcaster = core.gadgetbridgeBroadcaster
     private val defaultDispatcher = core.defaultDispatcher
     private val onThisDayRepository = optionalRepositories.onThisDayRepository
+    private val timeTravelRepository = optionalRepositories.timeTravelRepository
     private val forecastEvolutionRepository = optionalRepositories.forecastEvolutionRepository
     private val forecastAccuracyRepository = optionalRepositories.forecastAccuracyRepository
     private val confidenceBandRepository = optionalRepositories.confidenceBandRepository
@@ -323,7 +326,16 @@ class WeatherLoadCoordinator @Inject constructor(
                     weather.location.longitude,
                     date,
                 )
-                updateState { it.copy(onThisDay = data) }
+                // Also resolve the actual weather for the exact selected date
+                // (time-travel scrub) — the archive observation for a single past
+                // day, distinct from the "on this day across years" aggregate.
+                val exactDay = timeTravelRepository.getDay(
+                    latitude = weather.location.latitude,
+                    longitude = weather.location.longitude,
+                    date = date,
+                    forecastDaily = weather.daily,
+                )
+                updateState { it.copy(onThisDay = data, timeTravelDay = exactDay) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.w(TAG, "selectHistoricalDate failed: ${e.message}")
