@@ -145,9 +145,9 @@ Non-Latin numeral systems + alternate calendars. Gated on core extraction.
 | OkHttp | 5.3.2 | — | Current; debug logging uses built-in query-parameter redaction plus ZeusWatch's Pirate Weather path-key scrubber. |
 | Retrofit | 3.0.0 | — | Current. |
 | Glance | 1.1.1 | 1.2.0 stable | Enables widget unit tests. |
-| Wear Compose M3 | alpha27 | stable | Gates UC-6. |
-| Tiles | 1.4.1 | 1.6.0 | Tile regression tests needed. |
-| ProtoLayout | 1.2.1 | 1.4.0 | Gates L-11. |
+| Wear Compose M3 | 1.5.0 | — | On stable (migrated off alpha27); foundation/navigation aligned to 1.5.0. UC-6 Expressive redesign now unblocked. |
+| Tiles | 1.6.0 | — | Current. |
+| ProtoLayout | 1.4.0 | — | Current; L-11 Lottie-on-tiles now unblocked. |
 | Vico | 3.2.3 | — | Current for trend-card charts. |
 
 ---
@@ -281,15 +281,6 @@ Wear module still ships an alpha UI lib on a release path. Items below are
 verified against the current tree and are net-new (not duplicating active
 ROADMAP items). L-11 Lottie-on-tiles is now unblocked (ProtoLayout already 1.4.0)
 — leave it in LATER but treat as active. UC-6 is unblocked by item R-1.
-
-### P1 — Reliability (ship off pre-release deps)
-
-- [ ] P1 — Migrate Wear `wear-compose-material3` off `1.0.0-alpha27` to stable 1.5.x
-  Why: a release watch app is shipping an alpha UI library; stable has existed since Aug 2025.
-  Evidence: `wear/build.gradle.kts:89`; https://developer.android.com/jetpack/androidx/releases/wear-compose-m3
-  Touches: `wear/build.gradle.kts`, wear Compose screens/tile/complication UI, `gradle/libs.versions.toml`
-  Acceptance: wear module builds on `compose-material3` >=1.5.x stable, tile/complication/app UI unregressed on Wear OS 5+, unblocks UC-6.
-  Complexity: M
 
 ### P2 — Now-actionable platform features (compileSdk 37 gate cleared)
 
