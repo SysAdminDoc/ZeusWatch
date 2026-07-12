@@ -300,3 +300,66 @@ ROADMAP items). L-11 Lottie-on-tiles is now unblocked (ProtoLayout already 1.4.0
 
 > Location Button adoption moved to `Roadmap_Blocked.md` (blocked on the
 > `androidx.core.locationbutton` artifact leaving alpha).
+
+## Research-Driven Additions (2026-07-13)
+
+Grounded in the 2026-07-13 research pass (see RESEARCH.md). Net-new; not
+duplicating existing items. The Robolectric item is the recommended resolution of
+the existing "Fix the instrumented Compose test harness" P2 (device-independent
+strategy vs. on-device debugging) and the prerequisite that makes L-15's Roborazzi
+screenshot layer trivial.
+
+### P1 — Reliability & Security (root-cause first)
+
+- [ ] P1 — Run Compose UI tests on the JVM via Robolectric
+  Why: on-device instrumented Compose tests fail tree-wide (`No compose hierarchies found`); Robolectric runs the same `createComposeRule()` API on the JVM with no device, fixing verification and unblocking the WCAG/accessibility gate (NX-18).
+  Evidence: Robolectric 4.15.1 already in `gradle/libs.versions.toml` with zero usages; https://robolectric.org/androidx_test/ ; https://developer.android.com/develop/ui/compose/testing ; prior repro on SM-S908U1 ruled out code/rule/`ui-test-manifest` (present at `app/build.gradle.kts:276`).
+  Touches: `app/build.gradle.kts` (`testOptions { unitTests.isIncludeAndroidResources = true }`, add Robolectric + `ui-test-junit4`/`ui-test-manifest` to `testImplementation`), port `app/src/androidTest/**` Compose tests to `app/src/test/**` with `@RunWith(RobolectricTestRunner)` + `@Config(sdk=[34])` (+ `@GraphicsMode(NATIVE)` only where screenshots/pixels are asserted), `testing/AccessibilityTestHelpers.kt`, Hilt-Robolectric wiring (`HiltTestApplication`).
+  Acceptance: a ported representative test (e.g. `ForecastDetailSheetTest`) and the accessibility contrast/audit checks run green under `./gradlew :app:testStandardDebugUnitTest` with no device attached.
+  Complexity: L
+
+- [ ] P1 — Bump OkHttp 5.3.2 → 5.4.0+
+  Why: 5.4.0 caps per-response HTTP/2 headers at 256 KiB (header-flood DoS mitigation) across the app's ~20 network sources; no API changes.
+  Evidence: https://square.github.io/okhttp/changelogs/changelog/ ; current pin `gradle/libs.versions.toml:11` `okhttp = "5.3.2"`.
+  Touches: `gradle/libs.versions.toml`, verify `RateLimitInterceptor`/logging-interceptor still resolve.
+  Acceptance: build + full unit suite green on OkHttp 5.4.0+; no new lint/detekt violations; Library Watch row updated.
+  Complexity: S
+
+### P2 — Security & Source Depth
+
+- [ ] P2 — Bump Kotlin Gradle plugin 2.3.21 → 2.4.20+
+  Why: CVE-2026-53914 (build-cache unsafe deserialization, CWE-502, CVSS 6.7) is fixed in Kotlin 2.4.20; build-time toolchain hardening.
+  Evidence: https://github.com/advisories/GHSA-r937-wjx7-w2jp ; https://nvd.nist.gov/vuln/detail/CVE-2026-53914 ; current `kotlin = "2.3.21"`.
+  Touches: `gradle/libs.versions.toml` (`kotlin`, `compose-compiler`, likely `ksp`), verify Hilt/KSP2/Compose-compiler alignment; run KSP + unit suite.
+  Acceptance: `:app:kspStandardDebugKotlin` + full unit suite + `:wear` compile green on Kotlin 2.4.20; schema export intact; versions synced across catalog + README + Library Watch.
+  Complexity: M
+
+- [ ] P2 — Add selectable Open-Meteo AI models (ECMWF AIFS 0.25°, NCEP GFS GraphCast)
+  Why: Open-Meteo now exposes AI forecast models; ZeusWatch already parameterizes `models=` for regional wrappers, so adding AI models is a near-zero-cost differentiator competitors are only starting to add.
+  Evidence: https://open-meteo.com/en/docs/ecmwf-api ; https://open-meteo.com/en/docs ; existing wrappers in `data/api/OpenMeteoApi.kt` (`ukmo_seamless`, `dmi_seamless`) + `WeatherSourceProvider` registry.
+  Touches: `data/api/OpenMeteoApi.kt`, `data/repository/WeatherSource.kt` (new `OPEN_METEO_AIFS`/`OPEN_METEO_GRAPHCAST` entries + adapter bindings), `tools/check_provider_contracts.py`, Data Sources strings.
+  Acceptance: AIFS + GraphCast are selectable forecast sources with primary/fallback routing, a live/mocked contract check, and freenet parity; JVM adapter test covers the new model query values.
+  Complexity: M
+
+### P3 — Hardening, Platform & Data
+
+- [ ] P3 — Enable Arm MTE memory hardening (`android:memtagMode`)
+  Why: manifest-level heap/stack memory-tagging hardening on supported devices with no code change; Breezy shipped it in v6.2.1.
+  Evidence: https://github.com/breezy-weather/breezy-weather/blob/main/CHANGELOG.md ; no `memtagMode` in `app/src/main/AndroidManifest.xml`.
+  Touches: `app/src/main/AndroidManifest.xml` (`<application android:memtagMode="sync">` or `async`), verify no regression on release build.
+  Acceptance: release APK declares `memtagMode`; app launches and passes the unit suite; README/CLAUDE note the hardening.
+  Complexity: S
+
+- [ ] P3 — Route-weather Live Update (API 36 ProgressStyle promoted-ongoing) for an active trip
+  Why: the one API-36 notification API that genuinely fits — a segment-by-segment "trip in progress" surface for the route planner, on the AOD/lock screen/status-bar chip.
+  Evidence: https://developer.android.com/about/versions/16/features/progress-centric-notifications ; https://developer.android.com/develop/ui/compose/notifications/live-update ; existing `ProgressStyle` use in `util/AlertNotificationHelper.kt` + `RouteWeatherPlannerSheet`.
+  Touches: `util/AlertNotificationHelper.kt` (or a new helper), `RouteWeatherPlannerSheet`/`RoutePlannerUiState`, `POST_PROMOTED_NOTIFICATIONS` permission, runtime `SDK_INT >= 36` guard.
+  Acceptance: on API >=36, starting a route plan optionally shows a promoted-ongoing Live Update with per-waypoint precip/risk segments, gated to a user-initiated active trip (per Google's Live-Update policy) and dismissible; older devices unaffected.
+  Complexity: M
+
+- [ ] P3 — Satellite-derived solar radiation for the Solar card
+  Why: Open-Meteo now serves geostationary satellite radiation (EUMETSAT CM SAF SARAH3, JMA Himawari-9, DWD MTG) at higher cadence than models — a fidelity upgrade for the existing Solar/UV surface.
+  Evidence: https://open-meteo.com/en/features ; existing Solar card (`ui/component/SolarIrradianceCard`, `OpenMeteoApi` solar params).
+  Touches: `data/api/OpenMeteoApi.kt` (satellite radiation params), Solar card rendering, opt-in in Data Sources.
+  Acceptance: when available for the location, the Solar card reflects satellite-derived shortwave/direct radiation with graceful fallback to model data; parser/format test covers the new fields.
+  Complexity: M
