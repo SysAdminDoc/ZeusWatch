@@ -927,16 +927,14 @@ private fun SettingsApiKeyFields(
     actions: SettingsActions,
 ) {
     val sourceConfig = settings.sourceConfig
-    val needsOwmKey = sourceConfig.forecast == WeatherSourceProvider.OPEN_WEATHER_MAP ||
-        sourceConfig.forecastFallback == WeatherSourceProvider.OPEN_WEATHER_MAP ||
-        sourceConfig.alerts == WeatherSourceProvider.OPEN_WEATHER_MAP ||
-        sourceConfig.alertsFallback == WeatherSourceProvider.OPEN_WEATHER_MAP ||
-        sourceConfig.airQuality == WeatherSourceProvider.OPEN_WEATHER_MAP
+    // Registry-driven: a key field shows whenever its key-requiring provider is
+    // selected in any config slot, rather than comparing each slot by hand.
+    val keyedProvidersInUse = sourceConfig.selectedProviders().filter { it.requiresApiKey }
+    val needsOwmKey = WeatherSourceProvider.OPEN_WEATHER_MAP in keyedProvidersInUse
     // AUTO / ALL_SOURCES alert preferences route through the global Pirate
     // Weather alert adapter, which also needs this key — so the field must be
     // visible even when no forecast source selects Pirate Weather.
-    val needsPirateKey = sourceConfig.forecast == WeatherSourceProvider.PIRATE_WEATHER ||
-        sourceConfig.forecastFallback == WeatherSourceProvider.PIRATE_WEATHER ||
+    val needsPirateKey = WeatherSourceProvider.PIRATE_WEATHER in keyedProvidersInUse ||
         settings.alertSourcePref == AlertSourcePreference.AUTO ||
         settings.alertSourcePref == AlertSourcePreference.ALL_SOURCES
     val needsTempestConfig = CardType.PWS_OBSERVATION.name !in settings.disabledCards ||

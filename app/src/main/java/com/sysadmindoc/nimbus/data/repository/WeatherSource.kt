@@ -172,6 +172,16 @@ data class SourceConfig(
         )
     }
 
+    /**
+     * Every provider currently selected across all config slots (nulls dropped).
+     * Registry-driven UI (e.g. which API-key fields to show) should filter this
+     * by provider metadata such as [WeatherSourceProvider.requiresApiKey] rather
+     * than comparing each slot against hardcoded provider constants.
+     */
+    fun selectedProviders(): Set<WeatherSourceProvider> = setOfNotNull(
+        forecast, forecastFallback, alerts, alertsFallback, airQuality, minutely,
+    )
+
     fun withOverrides(overrides: SourceOverrides): SourceConfig {
         if (overrides.isEmpty) return normalized()
 
