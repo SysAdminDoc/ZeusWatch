@@ -202,6 +202,7 @@ class MainViewModelTest {
                         floodRepository = mockk(relaxed = true),
                         climateRepository = mockk(relaxed = true),
                         pwsRepository = pwsRepository,
+                        timeTravelRepository = mockk(relaxed = true),
                     ),
                 ),
             ),

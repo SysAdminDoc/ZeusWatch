@@ -286,11 +286,11 @@ ROADMAP items). L-11 Lottie-on-tiles is now unblocked (ProtoLayout already 1.4.0
 > abstract with no public constructor or factory, so a third-party app cannot
 > build a `Metric`. Blocked on a usable public `MetricValue` API, not compileSdk.
 
-- [ ] P2 — Time-travel: arbitrary past/future date forecast + history scrub
-  Why: On This Day exists but there is no date picker to view any past or upcoming date; competitors paywall this and the data is already wired.
-  Evidence: CARROT Time Travel https://support.meetcarrot.com/weather/; existing `OpenMeteoArchiveApi` + forecast endpoints
-  Touches: `data/repository/WeatherRepository.kt` (archive/forecast reuse), a new date-scrub UI entry (Compare screen or a card action), `ui/screen/main/`
-  Acceptance: user picks a date within the archive/forecast horizon and sees temperature/precip/conditions for the current location; offline shows a clear unavailable state; timezone-anchored to the viewed location.
+- [ ] P2 — Migrate instrumented Compose tests to the v2 `createComposeRule`
+  Why: the v1 `androidx.compose.ui.test.junit4.createComposeRule` yields "No compose hierarchies found in the app" tree-wide on Compose BOM 2026.06.01 (both `ForecastDetailSheetTest` and any new component test fail identically), so the `connectedStandardDebugAndroidTest` / `accessibilityGate` UI layer cannot currently verify anything on a physical device.
+  Evidence: connected run on SM-S908U1 (Android 16); deprecation warning points to `androidx.compose.ui.test.junit4.v2.createComposeRule` (StandardTestDispatcher).
+  Touches: `app/src/androidTest/**` compose-rule usages, `testing/AccessibilityTestHelpers.kt`.
+  Acceptance: existing instrumented Compose tests pass on a connected device again; `accessibilityGate` is green.
   Complexity: M
 
 ### P3 — Product & polish

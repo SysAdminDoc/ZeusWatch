@@ -794,6 +794,8 @@
     <string name="on_this_day_near_normal">near normal</string>
     <string name="on_this_day_delta_warmer">%1$d%2$s warmer</string>
     <string name="on_this_day_explore_dates">Explore other dates</string>
+    <string name="on_this_day_selected_high_low">%1$s / %2$s</string>
+    <string name="on_this_day_selected_semantics">On %1$s: high %2$s, low %3$s</string>
     <string name="map_picker_title">Pick a location</string>
     <string name="map_picker_hint">Tap anywhere on the map</string>
     <string name="map_picker_geocoding">Looking up location…</string>
