@@ -86,9 +86,9 @@ dependencies {
     // Compose for Wear OS
     val composeBom = platform(libs.compose.bom)
     implementation(composeBom)
-    implementation("androidx.wear.compose:compose-material3:1.0.0-alpha27")
-    implementation("androidx.wear.compose:compose-foundation:1.4.1")
-    implementation("androidx.wear.compose:compose-navigation:1.4.1")
+    implementation("androidx.wear.compose:compose-material3:1.5.0")
+    implementation("androidx.wear.compose:compose-foundation:1.5.0")
+    implementation("androidx.wear.compose:compose-navigation:1.5.0")
 
     // Wear OS Tiles
     implementation("androidx.wear.tiles:tiles:1.6.0")
