@@ -278,11 +278,12 @@ ROADMAP items). L-11 Lottie-on-tiles is now unblocked (ProtoLayout already 1.4.0
 > abstract with no public constructor or factory, so a third-party app cannot
 > build a `Metric`. Blocked on a usable public `MetricValue` API, not compileSdk.
 
-- [ ] P2 — Migrate instrumented Compose tests to the v2 `createComposeRule`
-  Why: the v1 `androidx.compose.ui.test.junit4.createComposeRule` yields "No compose hierarchies found in the app" tree-wide on Compose BOM 2026.06.01 (both `ForecastDetailSheetTest` and any new component test fail identically), so the `connectedStandardDebugAndroidTest` / `accessibilityGate` UI layer cannot currently verify anything on a physical device.
-  Evidence: connected run on SM-S908U1 (Android 16); deprecation warning points to `androidx.compose.ui.test.junit4.v2.createComposeRule` (StandardTestDispatcher).
-  Touches: `app/src/androidTest/**` compose-rule usages, `testing/AccessibilityTestHelpers.kt`.
-  Acceptance: existing instrumented Compose tests pass on a connected device again; `accessibilityGate` is green.
+- [ ] P2 — Fix the instrumented Compose test harness ("No compose hierarchies found")
+  Why: every `connectedStandardDebugAndroidTest` fails with `IllegalStateException: No compose hierarchies found in the app`, so the instrumented UI layer / `accessibilityGate` cannot verify anything on a device. Ruled out this run: it is NOT the test code (a bare `Text` in setContent fails), NOT the rule version (both `androidx.compose.ui.test.junit4.createComposeRule` and the v2 `...junit4.v2.createComposeRule` fail identically), and NOT a raw dependency misalignment (test deps use the aligned `platform(compose-bom)` and `ui-test-manifest` is on `debugImplementation`). The activity launches and renders frames, but `ComposeRootRegistry` reports no roots at assertion time — points to a Compose-BOM-2026.06.01 / Android-16 / Samsung-device root-registration issue.
+  Evidence: connected runs on SM-S908U1 (Android 16); `ForecastDetailSheetTest` and a minimal bare-`Text` probe both fail at `getAllSemanticsNodes` (TestOwner.kt:106).
+  Next steps to try: an emulator target instead of the physical device; bump/downgrade the Compose BOM; check device developer-options animation scales; add `GrantPermissionRule`/`activityRule` ordering; enable Espresso root logging to see which window the compose root lands in.
+  Touches: `app/build.gradle.kts` test deps, `app/src/androidTest/**`, `testing/AccessibilityTestHelpers.kt`.
+  Acceptance: a minimal instrumented `Text` test and `ForecastDetailSheetTest` pass on a connected target; `accessibilityGate` is green.
   Complexity: M
 
 ### P3 — Product & polish
