@@ -57,17 +57,8 @@ license/quota data), then add a regional resolver for default source bundles. Ef
 ### L-1. `freenet` flavor Wear OS sync via non-GMS path · **T-WEAR**
 Default: document that `freenet` Wear users rely on direct API calls (already works). CompanionDeviceManager + sockets only if implementable in <2 weeks.
 
-### L-2. Compose Multiplatform iOS port · **T-ECOSYSTEM**
-Deferred until freenet Wear is settled and there is an iOS user audience signal.
-
-### L-3. Provider-agnostic per-card unit override · UX
-Show wind in knots on marine card but km/h elsewhere. Gated on i18n completion.
-
 ### L-4. Android Auto / Car App Library variant · **T-ECOSYSTEM**
 Bare-bones AA module: alerts + radar + driving conditions card. Investigate GMS dependency.
-
-### L-5. Android TV variant · **T-ECOSYSTEM**
-Gated on demand signal.
 
 ### L-7. Home Assistant integration · **T-ECOSYSTEM**
 Publish weather entities via ContentProvider (NX-13) or MQTT. Separate module.
@@ -92,9 +83,6 @@ Targets: WFF data publisher, Vico chart migrations, freenet Wear path, new adapt
 
 ### L-15. Mutation testing + Compose screenshot tests · **T-RELIABILITY**
 Pitest-android for pure-function evaluators. Paparazzi/Roborazzi for golden-image diffs.
-
-### L-16. Calendar-based / alternate numeral support · **T-I18N**
-Non-Latin numeral systems + alternate calendars. Gated on core extraction.
 
 ---
 
