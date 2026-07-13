@@ -17,21 +17,13 @@ class RateLimitInterceptorTest {
     private fun buildChain(
         response: () -> Response,
         recorder: MutableList<Request> = mutableListOf(),
-    ): Interceptor.Chain = object : Interceptor.Chain {
+    ): Interceptor.Chain = object : FakeInterceptorChain() {
         private val req = Request.Builder().url("https://example.com/").build()
         override fun request(): Request = req
         override fun proceed(request: Request): Response {
             recorder.add(request)
             return response()
         }
-        override fun connection() = null
-        override fun call() = error("not used")
-        override fun connectTimeoutMillis() = 0
-        override fun readTimeoutMillis() = 0
-        override fun writeTimeoutMillis() = 0
-        override fun withConnectTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) = this
-        override fun withReadTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) = this
-        override fun withWriteTimeout(timeout: Int, unit: java.util.concurrent.TimeUnit) = this
     }
 
     private fun okResponse() = Response.Builder()
