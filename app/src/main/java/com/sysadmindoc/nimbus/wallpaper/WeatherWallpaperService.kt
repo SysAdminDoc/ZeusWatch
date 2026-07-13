@@ -55,7 +55,14 @@ class WeatherWallpaperService : WallpaperService() {
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
             surfaceHolder.setFormat(PixelFormat.TRANSLUCENT)
-            refreshWeatherCode()
+            // The first SharedPreferences access does synchronous disk I/O; run it
+            // off the render thread so it can't jank the wallpaper surface, then
+            // apply the result on the main thread. Later reads hit the in-memory
+            // cache and are cheap.
+            Thread {
+                val code = prefs.getInt(KEY_WEATHER_CODE, 0)
+                handler.post { applyWeatherCode(code) }
+            }.start()
         }
 
         override fun onSurfaceCreated(holder: SurfaceHolder) {
@@ -160,7 +167,11 @@ class WeatherWallpaperService : WallpaperService() {
         }
 
         private fun refreshWeatherCode() {
-            val code = prefs.getInt(KEY_WEATHER_CODE, 0)
+            // In-memory read after the initial warm in onCreate — no disk I/O.
+            applyWeatherCode(prefs.getInt(KEY_WEATHER_CODE, 0))
+        }
+
+        private fun applyWeatherCode(code: Int) {
             if (code != weatherCode) {
                 weatherCode = code
                 val effect = WeatherEffect.fromWmoCode(code)

@@ -282,4 +282,14 @@ class WeatherFormatterTest {
             ),
         )
     }
+
+    @Test
+    fun `beaufort force 0 and 1 boundary matches the standard`() {
+        // Standard Beaufort: Force 0 (Calm) is < 1 km/h; 1-5 km/h is Force 1.
+        assertEquals(0, WeatherFormatter.beaufortScale(0.5).scale)
+        assertEquals(1, WeatherFormatter.beaufortScale(1.0).scale)
+        assertEquals(1, WeatherFormatter.beaufortScale(1.9).scale)
+        assertEquals(1, WeatherFormatter.beaufortScale(5.9).scale)
+        assertEquals(2, WeatherFormatter.beaufortScale(6.0).scale)
+    }
 }

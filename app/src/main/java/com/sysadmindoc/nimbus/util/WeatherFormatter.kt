@@ -387,7 +387,9 @@ object WeatherFormatter {
     data class BeaufortInfo(val scale: Int, val label: String, val colorHex: Long)
 
     fun beaufortScale(kmh: Double): BeaufortInfo = when {
-        kmh < 2 -> BeaufortInfo(0, "Calm", 0xFFAED6F1)
+        // Standard Beaufort: Force 0 (Calm) is < 1 km/h; Force 1 (Light Air) is
+        // 1-5 km/h. The prior `< 2` mislabeled 1.0-1.9 km/h as Calm.
+        kmh < 1 -> BeaufortInfo(0, "Calm", 0xFFAED6F1)
         kmh < 6 -> BeaufortInfo(1, "Light Air", 0xFF85C1E9)
         kmh < 12 -> BeaufortInfo(2, "Light Breeze", 0xFF5DADE2)
         kmh < 20 -> BeaufortInfo(3, "Gentle Breeze", 0xFF48C9B0)
