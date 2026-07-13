@@ -331,12 +331,6 @@ screenshot layer trivial.
 
 ### P3 — Hardening, Platform & Data
 
-- [ ] P3 — Enable Arm MTE memory hardening (`android:memtagMode`)
-  Why: manifest-level heap/stack memory-tagging hardening on supported devices with no code change; Breezy shipped it in v6.2.1.
-  Evidence: https://github.com/breezy-weather/breezy-weather/blob/main/CHANGELOG.md ; no `memtagMode` in `app/src/main/AndroidManifest.xml`.
-  Touches: `app/src/main/AndroidManifest.xml` (`<application android:memtagMode="sync">` or `async`), verify no regression on release build.
-  Acceptance: release APK declares `memtagMode`; app launches and passes the unit suite; README/CLAUDE note the hardening.
-  Complexity: S
 
 - [ ] P3 — Route-weather Live Update (API 36 ProgressStyle promoted-ongoing) for an active trip
   Why: the one API-36 notification API that genuinely fits — a segment-by-segment "trip in progress" surface for the route planner, on the AOD/lock screen/status-bar chip.
