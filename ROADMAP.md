@@ -278,13 +278,10 @@ ROADMAP items). L-11 Lottie-on-tiles is now unblocked (ProtoLayout already 1.4.0
 > abstract with no public constructor or factory, so a third-party app cannot
 > build a `Metric`. Blocked on a usable public `MetricValue` API, not compileSdk.
 
-- [ ] P2 — Fix the instrumented Compose test harness ("No compose hierarchies found")
-  Why: every `connectedStandardDebugAndroidTest` fails with `IllegalStateException: No compose hierarchies found in the app`, so the instrumented UI layer / `accessibilityGate` cannot verify anything on a device. Ruled out this run: it is NOT the test code (a bare `Text` in setContent fails), NOT the rule version (both `androidx.compose.ui.test.junit4.createComposeRule` and the v2 `...junit4.v2.createComposeRule` fail identically), and NOT a raw dependency misalignment (test deps use the aligned `platform(compose-bom)` and `ui-test-manifest` is on `debugImplementation`). The activity launches and renders frames, but `ComposeRootRegistry` reports no roots at assertion time — points to a Compose-BOM-2026.06.01 / Android-16 / Samsung-device root-registration issue.
-  Evidence: connected runs on SM-S908U1 (Android 16); `ForecastDetailSheetTest` and a minimal bare-`Text` probe both fail at `getAllSemanticsNodes` (TestOwner.kt:106).
-  Next steps to try: an emulator target instead of the physical device; bump/downgrade the Compose BOM; check device developer-options animation scales; add `GrantPermissionRule`/`activityRule` ordering; enable Espresso root logging to see which window the compose root lands in.
-  Touches: `app/build.gradle.kts` test deps, `app/src/androidTest/**`, `testing/AccessibilityTestHelpers.kt`.
-  Acceptance: a minimal instrumented `Text` test and `ForecastDetailSheetTest` pass on a connected target; `accessibilityGate` is green.
-  Complexity: M
+> The on-device "No compose hierarchies found" harness fix is superseded: JVM
+> Robolectric Compose testing now works (`ForecastDetailSheetRobolectricTest`).
+> Remaining migration tracked under "Port the remaining instrumented Compose
+> tests to the proven JVM Robolectric path".
 
 ### P3 — Product & polish
 
@@ -309,16 +306,14 @@ the existing "Fix the instrumented Compose test harness" P2 (device-independent
 strategy vs. on-device debugging) and the prerequisite that makes L-15's Roborazzi
 screenshot layer trivial.
 
-### P1 — Reliability & Security (root-cause first)
+### P2 — Reliability, Security & Source Depth
 
-- [ ] P1 — Run Compose UI tests on the JVM via Robolectric
-  Why: on-device instrumented Compose tests fail tree-wide (`No compose hierarchies found`); Robolectric runs the same `createComposeRule()` API on the JVM with no device, fixing verification and unblocking the WCAG/accessibility gate (NX-18).
-  Evidence: Robolectric 4.15.1 already in `gradle/libs.versions.toml` with zero usages; https://robolectric.org/androidx_test/ ; https://developer.android.com/develop/ui/compose/testing ; prior repro on SM-S908U1 ruled out code/rule/`ui-test-manifest` (present at `app/build.gradle.kts:276`).
-  Touches: `app/build.gradle.kts` (`testOptions { unitTests.isIncludeAndroidResources = true }`, add Robolectric + `ui-test-junit4`/`ui-test-manifest` to `testImplementation`), port `app/src/androidTest/**` Compose tests to `app/src/test/**` with `@RunWith(RobolectricTestRunner)` + `@Config(sdk=[34])` (+ `@GraphicsMode(NATIVE)` only where screenshots/pixels are asserted), `testing/AccessibilityTestHelpers.kt`, Hilt-Robolectric wiring (`HiltTestApplication`).
-  Acceptance: a ported representative test (e.g. `ForecastDetailSheetTest`) and the accessibility contrast/audit checks run green under `./gradlew :app:testStandardDebugUnitTest` with no device attached.
+- [ ] P2 — Port the remaining instrumented Compose tests to the proven JVM Robolectric path
+  Why: the JVM Robolectric Compose harness is now working (`ForecastDetailSheetRobolectricTest` in `src/test` runs green with no device); the other 5 `androidTest` Compose tests still only run on the broken on-device harness, so the `accessibilityGate` remains red. Migrate them to `src/test` to restore the gate.
+  Evidence: `app/src/test/.../ForecastDetailSheetRobolectricTest.kt` (proof); broken on-device suite (`MainScreenTest`, `SettingsScreenTest`, `LocationsScreenTest`, `AccessibilityAuditTest`, `ReportSubmitSheetTest`).
+  Touches: `app/src/androidTest/**` Compose tests → `app/src/test/**` with `@RunWith(RobolectricTestRunner)` + `@Config(sdk=[34], application=...)` (Hilt-Robolectric `HiltTestApplication` where injection is needed; `@GraphicsMode(NATIVE)` for screenshots), port `testing/AccessibilityTestHelpers.kt`, rewire the `accessibilityGate` task to `:app:testStandardDebugUnitTest`.
+  Acceptance: all former instrumented Compose tests run green under `:app:testStandardDebugUnitTest` with no device; `accessibilityGate` green.
   Complexity: L
-
-### P2 — Security & Source Depth
 
 - [ ] P2 — Bump Kotlin Gradle plugin 2.3.21 → 2.4.20+
   Why: CVE-2026-53914 (build-cache unsafe deserialization, CWE-502, CVSS 6.7) is fixed in Kotlin 2.4.20; build-time toolchain hardening.
