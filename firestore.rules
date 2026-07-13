@@ -55,20 +55,28 @@ service cloud.firestore {
 
     // Community weather reports.
     match /community_reports/{reportId} {
-      // Reads require an (anonymous) account so the collection is not a fully
-      // open, unauthenticated firehose. The standard flavor signs in
-      // anonymously before any read.
-      allow read: if request.auth != null;
+      // Single-document reads require an (anonymous) account so the collection is
+      // not a fully open firehose. The standard flavor signs in anonymously
+      // before any read.
+      allow get: if request.auth != null;
 
-      // Create: requires an authenticated (anonymous) account, binds the report
-      // to that account via ownerUid, validates every field, enforces a
-      // timestamp near the server clock (+2 min future skew, -10 min past), and
-      // enforces a per-account write-rate limit via report_throttles. hasOnly()
-      // rejects payloads with unexpected extra keys.
+      // Collection queries must be bounded: cap the page size so no client can
+      // pull the whole collection in one read. The app queries geohash-prefix +
+      // timestamp windows with limit(50); rules cannot inspect where-clauses, so
+      // the enforceable server-side bound is the query limit.
+      allow list: if request.auth != null
+        && request.query.limit <= 50;
+
+      // Create: requires an authenticated (anonymous) account, validates every
+      // field, enforces a timestamp near the server clock (+2 min future skew,
+      // -10 min past), and enforces a per-account write-rate limit via
+      // report_throttles. Reports are stored WITHOUT an owner id so readers
+      // cannot correlate one account's reports into a movement history; the
+      // rate-limit binding lives entirely in the per-uid throttle ledger.
+      // hasOnly() rejects payloads with unexpected extra keys.
       allow create: if request.auth != null
-        && request.resource.data.keys().hasAll(['latitude', 'longitude', 'geohash', 'condition', 'ownerUid', 'timestamp'])
-        && request.resource.data.keys().hasOnly(['latitude', 'longitude', 'geohash', 'condition', 'ownerUid', 'timestamp', 'note'])
-        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.keys().hasAll(['latitude', 'longitude', 'geohash', 'condition', 'timestamp'])
+        && request.resource.data.keys().hasOnly(['latitude', 'longitude', 'geohash', 'condition', 'timestamp', 'note'])
         && request.resource.data.latitude is number
         && request.resource.data.latitude >= -90
         && request.resource.data.latitude <= 90

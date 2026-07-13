@@ -19,11 +19,11 @@ import javax.inject.Singleton
 /**
  * Repository for submitting and querying community weather reports via Firebase Firestore.
  *
- * Identity model: reports are bound to an anonymous Firebase Auth account (no
- * personal accounts, no hardware identifiers). The server-side Firestore rules
- * require `request.auth != null`, bind each report to `ownerUid == request.auth.uid`,
- * and enforce a per-account write-rate limit via the `report_throttles/{uid}` doc
- * that is bumped to the commit time in the same atomic batch as the report create.
+ * Identity model: writes require an anonymous Firebase Auth account (no personal
+ * accounts, no hardware identifiers), but reports are stored WITHOUT an owner id
+ * so readers cannot correlate one account's reports into a movement history. The
+ * per-account write-rate limit lives entirely in the `report_throttles/{uid}` doc,
+ * which is bumped to the commit time in the same atomic batch as the report create.
  *
  * IMPORTANT: This requires a valid google-services.json in the app/ directory AND
  * Anonymous Authentication enabled in the Firebase console
@@ -73,7 +73,6 @@ class CommunityReportRepository @Inject constructor(
                 id = docRef.id,
                 latitude = safeLat,
                 longitude = safeLon,
-                ownerUid = uid,
                 timestamp = now,
                 geohash = CommunityReportGeo.geohash(safeLat, safeLon),
             )
@@ -173,7 +172,6 @@ class CommunityReportRepository @Inject constructor(
         "condition" to report.condition.name,
         "note" to report.note.trim().take(100),
         "timestamp" to report.timestamp,
-        "ownerUid" to report.ownerUid,
     )
 
     private fun mapToReportOrNull(id: String, data: Map<String, Any>?): CommunityReport? {
@@ -198,7 +196,6 @@ class CommunityReportRepository @Inject constructor(
             },
             note = (data["note"] as? String) ?: "",
             timestamp = (data["timestamp"] as? Number)?.toLong() ?: 0L,
-            ownerUid = (data["ownerUid"] as? String) ?: "",
         )
     }
 

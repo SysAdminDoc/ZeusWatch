@@ -10,6 +10,8 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  limit,
+  query,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -35,17 +37,23 @@ function test(name, fn) {
   tests.push({ name, fn });
 }
 
-function report(uid, overrides = {}) {
+// Reports are stored without an owner id (readers must not be able to correlate
+// one account's reports); the rate-limit binding is the separate throttle ledger.
+function report(overrides = {}) {
   return {
     latitude: 39.7392,
     longitude: -104.9903,
     geohash: "9xj64",
     condition: "RAIN",
-    ownerUid: uid,
     timestamp: Date.now(),
     note: "Light rain starting",
     ...overrides,
   };
+}
+
+// A bounded nearby-style query, matching the app's geohash+timestamp+limit(50) read.
+function boundedQuery(db) {
+  return query(collection(db, COLLECTION), limit(50));
 }
 
 function dbFor(uid = null) {
@@ -58,7 +66,7 @@ function dbFor(uid = null) {
 // report doc and bumps the per-account throttle ledger to the commit time.
 function submit(db, uid, reportId, overrides = {}) {
   const batch = writeBatch(db);
-  batch.set(doc(db, COLLECTION, reportId), report(uid, overrides));
+  batch.set(doc(db, COLLECTION, reportId), report(overrides));
   batch.set(doc(db, THROTTLES, uid), { lastReportAt: serverTimestamp() });
   return batch.commit();
 }
@@ -71,12 +79,22 @@ async function seedReport(id, data) {
 
 test("requires an authenticated account for reads and creates", async () => {
   const anon = dbFor();
-  await assertFails(getDocs(collection(anon, COLLECTION)));
+  await assertFails(getDocs(boundedQuery(anon)));
   await assertFails(submit(anon, UID, "anon-create"));
 
   const db = dbFor(UID);
   await assertSucceeds(submit(db, UID, "valid"));
-  await assertSucceeds(getDocs(collection(db, COLLECTION)));
+  await assertSucceeds(getDocs(boundedQuery(db)));
+});
+
+test("caps collection query page size and denies unbounded reads", async () => {
+  const db = dbFor(UID);
+  // A bounded page (the app queries with limit(50)) is allowed.
+  await assertSucceeds(getDocs(query(collection(db, COLLECTION), limit(50))));
+  // An oversized page is rejected server-side.
+  await assertFails(getDocs(query(collection(db, COLLECTION), limit(51))));
+  // An unbounded collection read (the whole-firehose case) is rejected.
+  await assertFails(getDocs(collection(db, COLLECTION)));
 });
 
 test("enforces a per-account server-side write-rate limit", async () => {
@@ -94,18 +112,19 @@ test("enforces a per-account server-side write-rate limit", async () => {
 test("rejects a report create without the matching throttle bump", async () => {
   const db = dbFor(UID);
   // Report alone, no throttle write -> getAfter() rate-limit check fails.
-  await assertFails(setDoc(doc(db, COLLECTION, "no-throttle"), report(UID)));
+  await assertFails(setDoc(doc(db, COLLECTION, "no-throttle"), report()));
 
   // Throttle doc that backdates lastReportAt instead of using the commit time.
   const batch = writeBatch(db);
-  batch.set(doc(db, COLLECTION, "backdated"), report(UID));
+  batch.set(doc(db, COLLECTION, "backdated"), report());
   batch.set(doc(db, THROTTLES, UID), { lastReportAt: Date.now() - 60_000 });
   await assertFails(batch.commit());
 });
 
-test("rejects ownerUid spoofing", async () => {
+test("rejects reports carrying an owner id field", async () => {
+  // Reports must not store an owner id (correlation vector); hasOnly() rejects it.
   const db = dbFor(UID);
-  await assertFails(submit(db, UID, "spoofed", { ownerUid: OTHER_UID }));
+  await assertFails(submit(db, UID, "with-owner", { ownerUid: UID }));
 });
 
 test("rejects malformed report payloads", async () => {
@@ -115,7 +134,6 @@ test("rejects malformed report payloads", async () => {
   missingLon.set(doc(db, COLLECTION, "missing-longitude"), {
     latitude: 39.7392,
     condition: "RAIN",
-    ownerUid: UID,
     timestamp: Date.now(),
   });
   missingLon.set(doc(db, THROTTLES, UID), { lastReportAt: serverTimestamp() });
@@ -128,7 +146,7 @@ test("rejects malformed report payloads", async () => {
 test("requires a valid geohash on new report creates", async () => {
   const db = dbFor(UID);
 
-  const missingGeohash = report(UID);
+  const missingGeohash = report();
   delete missingGeohash.geohash;
   const missingBatch = writeBatch(db);
   missingBatch.set(doc(db, COLLECTION, "missing-geohash"), missingGeohash);
@@ -141,11 +159,11 @@ test("requires a valid geohash on new report creates", async () => {
 });
 
 test("allows reading recent legacy reports that predate geohash writes", async () => {
-  const legacy = report(UID);
+  const legacy = report();
   delete legacy.geohash;
   await seedReport("legacy-without-geohash", legacy);
 
-  await assertSucceeds(getDocs(collection(dbFor(UID), COLLECTION)));
+  await assertSucceeds(getDocs(boundedQuery(dbFor(UID))));
 });
 
 test("rejects stale and future report timestamps", async () => {
@@ -160,8 +178,8 @@ test("rejects invalid report conditions", async () => {
 });
 
 test("denies updates and deletes under append-only anonymous model", async () => {
-  await seedReport("owned", report(UID));
-  await seedReport("other", report(OTHER_UID));
+  await seedReport("owned", report());
+  await seedReport("other", report());
 
   const ownerDb = dbFor(UID);
   const otherDb = dbFor(OTHER_UID);

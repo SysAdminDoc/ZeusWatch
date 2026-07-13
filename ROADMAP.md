@@ -364,15 +364,6 @@ data-correctness). Every item verified against source at the cited file:line;
 these are the actionable content of L-14 (adversarial audit round 5). Not
 duplicating existing items.
 
-### P1 — Privacy (root cause)
-
-- [ ] P1 — Bound Firestore community-report reads; stop exposing ownerUid to readers
-  Why: `firestore.rules` lets any anonymously-authenticated client read the entire `community_reports` collection at full-precision coordinates plus a stable `ownerUid`, enabling per-user movement correlation — contradicts the zero-telemetry philosophy; client-side limit/radius is cosmetic.
-  Evidence: `firestore.rules:61` (`allow read: if request.auth != null`); `app/src/standard/.../CommunityReportRepository.kt` client-side `.limit(50)`/radius filtering.
-  Touches: `firestore.rules`, `CommunityReportRepository.kt` (query must carry geohash-prefix + `timestamp > now-2h` + limit), a firestore emulator rules test, possibly an owner-private subdoc for `ownerUid`.
-  Acceptance: rules reject an unbounded/whole-collection read and any read returning `ownerUid`; the nearby-report query still works; `npm run test:firestore-rules` covers the new bounds.
-  Complexity: M
-
 ### P2 — Correctness & Reliability
 
 - [ ] P2 — Fix snowfall custom-alert unit mismatch (cm vs mm, ~10x error)
