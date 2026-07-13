@@ -131,7 +131,7 @@ Pitest-android for pure-function evaluators. Paparazzi/Roborazzi for golden-imag
 | Room | 2.8.4 | — | Current; 2.8.4 verified on Kotlin 2.3.21 / KSP 2.3.9 with schema export intact (prior 2.1.0 KSP crash resolved). |
 | WorkManager | 2.11.2 | — | Current. |
 | MapLibre | 13.3.1 | — | Current; 13.x Vulkan-backed default verified with radar/location `MapView` lifecycle hardening. |
-| OkHttp | 5.3.2 | — | Current; debug logging uses built-in query-parameter redaction plus ZeusWatch's Pirate Weather path-key scrubber. |
+| OkHttp | 5.4.0 | — | Current; 5.4.0 caps per-response HTTP/2 headers at 256 KiB. Note: 5.4.0 widened `Interceptor.Chain` — test doubles extend `FakeInterceptorChain`. |
 | Retrofit | 3.0.0 | — | Current. |
 | Glance | 1.1.1 | 1.2.0 stable | Enables widget unit tests. |
 | Wear Compose M3 | 1.5.0 | — | On stable (migrated off alpha27); foundation/navigation aligned to 1.5.0. UC-6 Expressive redesign now unblocked. |
@@ -317,13 +317,6 @@ screenshot layer trivial.
   Touches: `app/build.gradle.kts` (`testOptions { unitTests.isIncludeAndroidResources = true }`, add Robolectric + `ui-test-junit4`/`ui-test-manifest` to `testImplementation`), port `app/src/androidTest/**` Compose tests to `app/src/test/**` with `@RunWith(RobolectricTestRunner)` + `@Config(sdk=[34])` (+ `@GraphicsMode(NATIVE)` only where screenshots/pixels are asserted), `testing/AccessibilityTestHelpers.kt`, Hilt-Robolectric wiring (`HiltTestApplication`).
   Acceptance: a ported representative test (e.g. `ForecastDetailSheetTest`) and the accessibility contrast/audit checks run green under `./gradlew :app:testStandardDebugUnitTest` with no device attached.
   Complexity: L
-
-- [ ] P1 — Bump OkHttp 5.3.2 → 5.4.0+
-  Why: 5.4.0 caps per-response HTTP/2 headers at 256 KiB (header-flood DoS mitigation) across the app's ~20 network sources; no API changes.
-  Evidence: https://square.github.io/okhttp/changelogs/changelog/ ; current pin `gradle/libs.versions.toml:11` `okhttp = "5.3.2"`.
-  Touches: `gradle/libs.versions.toml`, verify `RateLimitInterceptor`/logging-interceptor still resolve.
-  Acceptance: build + full unit suite green on OkHttp 5.4.0+; no new lint/detekt violations; Library Watch row updated.
-  Complexity: S
 
 ### P2 — Security & Source Depth
 

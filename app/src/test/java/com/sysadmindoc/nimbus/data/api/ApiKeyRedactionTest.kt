@@ -1,9 +1,6 @@
 package com.sysadmindoc.nimbus.data.api
 
 import com.sysadmindoc.nimbus.di.redactPirateWeatherPathKey
-import okhttp3.Call
-import okhttp3.Connection
-import okhttp3.Interceptor
 import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
@@ -13,7 +10,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.concurrent.TimeUnit
 
 /**
  * Query-param redaction is provided by OkHttp 5. The app keeps only the
@@ -89,7 +85,7 @@ class ApiKeyRedactionTest {
 
     private class StaticResponseChain(
         private val request: Request,
-    ) : Interceptor.Chain {
+    ) : FakeInterceptorChain() {
         override fun request(): Request = request
 
         override fun proceed(request: Request): Response =
@@ -100,21 +96,5 @@ class ApiKeyRedactionTest {
                 .message("No Content")
                 .body("".toResponseBody())
                 .build()
-
-        override fun connection(): Connection? = null
-
-        override fun call(): Call = error("unused")
-
-        override fun connectTimeoutMillis(): Int = 15_000
-
-        override fun withConnectTimeout(timeout: Int, unit: TimeUnit): Interceptor.Chain = this
-
-        override fun readTimeoutMillis(): Int = 15_000
-
-        override fun withReadTimeout(timeout: Int, unit: TimeUnit): Interceptor.Chain = this
-
-        override fun writeTimeoutMillis(): Int = 15_000
-
-        override fun withWriteTimeout(timeout: Int, unit: TimeUnit): Interceptor.Chain = this
     }
 }
