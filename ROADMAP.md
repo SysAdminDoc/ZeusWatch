@@ -361,13 +361,6 @@ duplicating existing items.
 
 ### P2 — Correctness & Reliability
 
-- [ ] P2 — BlitzortungService: close onFailure Response and synchronize reconnect
-  Why: `onFailure` ignores the non-null `Response` (leaked connection bodies under backoff), and the reconnect coroutine mutates `@Synchronized`-guarded `reconnectJob`/`shouldReconnect` outside the monitor, racing `disconnect()` into duplicate sockets.
-  Evidence: `data/api/BlitzortungService.kt:107` (`onFailure(..., response: Response?)` unclosed); reconnect body near `:140` mutates guarded state off-lock.
-  Touches: `BlitzortungService.kt` (`response?.close()`; move reconnect null-set + `shouldReconnect` re-check + `connect()` under the monitor; reference-count connect/disconnect for the `@Singleton`).
-  Acceptance: no leaked responses on repeated handshake failures; rapid radar-layer flipping cannot open two concurrent sockets; existing lightning tests green.
-  Complexity: M
-
 - [ ] P2 — Make notification/widget dedupe state race-safe
   Why: `CustomAlertWorker`/`HealthAlertWorker` dedupe via non-atomic SharedPreferences read-modify-write, and `WidgetRefreshWorker` runs manual vs periodic work under different unique names (no WorkManager serialization) — dedupe races (double notifications) and lost-update widget-state writes.
   Evidence: `util/CustomAlertWorker.kt` `markAndCheckNew`; `util/HealthAlertWorker.kt` `record/prune`; `widget/WidgetRefreshWorker.kt` (`nimbus_widget_refresh` vs `nimbus_widget_refresh_manual_refresh`).
