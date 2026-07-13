@@ -1,84 +1,77 @@
 # Research - ZeusWatch
 
 ## Executive Summary
-ZeusWatch (pkg `com.sysadmindoc.nimbus`, LGPL-3.0) is a mature, no-required-key Android weather app at v1.25.0: 37 reorderable Compose cards, multi-source forecasts with primary/fallback failover, multi-region severe alerts, native MapLibre radar + Blitzortung lightning, 8 Glance widgets, a Wear OS companion, live wallpaper, route weather planner, custom/health/driving/pet alerts, on-device summaries, community Firestore reports, a Breezy-compatible ContentProvider, settings export/import, and a time-travel history scrub. The tree is disciplined (clean MVVM, 100 test files, zero TODO/FIXME). The single highest-value finding this pass is a **reliability root cause, not a feature**: the on-device instrumented Compose test suite fails tree-wide (`No compose hierarchies found`), and the fix is not more on-device debugging — it is to run Compose UI tests on the JVM via **Robolectric (already a declared-but-unused dependency, 4.15.1)**, which sidesteps the device entirely and unblocks the WCAG gate (NX-18) plus all future UI verification. After that, the actionable wins are two verified dependency/security bumps and a few low-cost, differentiating Open-Meteo data additions.
+ZeusWatch (pkg `com.sysadmindoc.nimbus`, LGPL-3.0) is a mature, privacy-first, no-required-key Android weather app at v1.25.0: 37 reorderable Compose cards, multi-source forecasts with primary/fallback failover, multi-region severe alerts, native MapLibre radar + Blitzortung lightning, 8 Glance widgets, a Wear OS companion, live wallpaper, route planner, custom/health/driving/pet alerts, community Firestore reports, a Breezy-compatible ContentProvider, and a time-travel history scrub. The feature surface and dependency/toolchain runway are already exhaustively tracked in ROADMAP.md and Roadmap_Blocked.md; three prior research passes covered competitors, platform APIs, and dependency bumps (Robolectric JVM tests, OkHttp 5.4.0, Kotlin 2.4.20, AI models — all still open in the roadmap). **This pass is a deep code audit** (three parallel read-only audits: concurrency/reliability, security/privacy, data-correctness), and it surfaces concrete, file:line-grounded defects the feature-focused passes missed. The highest-value direction now is defect remediation over new features: one genuine privacy-rule gap, a user-facing unit bug, and a cluster of reliability races.
 
-Top opportunities, priority order:
-1. Verified: pivot Compose UI tests to Robolectric JVM (`src/test`, `isIncludeAndroidResources = true`) — device-independent, fixes the tree-wide harness failure; Robolectric 4.15.1 is already in `gradle/libs.versions.toml` but has zero usages.
-2. Verified: bump OkHttp 5.3.2 → 5.4.0+ — 5.4.0 caps HTTP/2 response headers at 256 KiB (header-flood DoS mitigation).
-3. Verified: bump the Kotlin Gradle plugin 2.3.21 → 2.4.20+ — CVE-2026-53914 (build-cache unsafe deserialization, CWE-502) is fixed in Kotlin 2.4.20; larger toolchain change (Compose-compiler + KSP alignment).
-4. Verified: expose Open-Meteo AI models (ECMWF AIFS 0.25°, NCEP GFS GraphCast) as selectable sources — extends the existing `models=` wrapper pattern for near-zero cost.
-5. Likely: adopt Arm MTE memory hardening (`android:memtagMode`) — Breezy shipped this in v6.2.1; a manifest-level hardening with no code change.
-6. Likely: a route-weather Live Update (API 36 `ProgressStyle` promoted-ongoing) for an active "trip in progress" flow — the one platform API that genuinely fits, scoped to user-initiated navigation per Google policy.
-7. Likely: satellite-derived solar radiation (SARAH3 / Himawari-9 / DWD MTG) to upgrade the existing Solar card.
+Top findings (verified against source), priority order:
+1. Verified (privacy, P1): `firestore.rules:61` allows any anonymously-authenticated client to read the **entire** `community_reports` collection — full-precision coordinates + stable `ownerUid` — with no server-side geohash/time/limit bound; client-side `.limit(50)`/radius filtering is cosmetic. Contradicts the zero-telemetry philosophy and enables movement-history correlation by `ownerUid`.
+2. Verified (correctness, P2): snowfall custom-alert unit mismatch — `CustomAlertEvaluator.kt:61` sums Open-Meteo `snowfall` (centimeters, per `WeatherFormatter.formatSnowfall(cm)`) against a threshold declared `CustomAlertUnit.MM` (`CustomAlertRule.kt:72`) and converts inches with `/25.4` instead of `/2.54` — an ~10× magnitude error on a safety-adjacent alert.
+3. Verified (reliability, P2): `BlitzortungService.kt` reconnect coroutine mutates `@Synchronized`-guarded state (`reconnectJob`, `shouldReconnect`) outside the monitor (line ~140), racing `disconnect()` into duplicate sockets; `onFailure` (line 107) ignores the non-null `Response`, leaking connection bodies under backoff.
+4. Verified (correctness, P2): `AirQualityRepository.kt:157` labels a moonset as next-day whenever the moon sets before it rises on the same calendar day — a normal astronomical case — so moonset renders ~24h late.
+5. Verified (reliability/battery, P2): `WeatherLoadCoordinator.kt:253` launches the AI summary on the ViewModel `scope` fire-and-forget with no prior-job cancellation; rapid location/tab switching stacks uncancelled `generateWithStyle` jobs on the default dispatcher.
+6. Verified (reliability, P2): notification dedupe stores do non-atomic SharedPreferences read-modify-write (`CustomAlertWorker.kt`, `HealthAlertWorker.kt`), and `WidgetRefreshWorker` runs manual vs periodic work under **different** unique names (no serialization) — dedupe races (double notifications) and lost-update widget writes.
+7. Verified (security, P2/P3): `network_security_config.xml:7` `<certificateTransparency enabled="true"/>` is not an AOSP NSC element and no CT library is in the dependency graph — a silent no-op giving false MITM assurance.
 
 ## Product Map
-- Core workflows: onboard + sequential permissions; review current/hourly/daily for the current or a saved location; search / map-pick / per-location source override; radar + lightning + community map; create custom alert rules; plan route weather; widget/Wear/background refresh; export/import settings; scrub to an arbitrary date.
+- Core workflows: onboard + sequential permissions; review current/hourly/daily for current or saved location; search / map-pick / per-location source override; radar + lightning + community map; create custom alert rules; plan route weather; widget/Wear/background refresh; export/import settings; scrub to an arbitrary date.
 - User personas: privacy-first FOSS users; severe-weather + radar watchers; multi-location travelers; widget/Wear-first users; freenet/F-Droid users; source-comparison power users.
-- Platforms/distribution: phone/tablet minSdk 26, compileSdk 37, targetSdk 36 (meets the Aug 31 2026 Play API-36 bar — no bump needed); Wear module; `standard` vs `freenet` flavors; local signed per-ABI APK releases + provenance manifest; GitHub Releases (not Play).
-- Integrations/data flows: Open-Meteo family (forecast/AQ/pollen/minutely/archive/single-runs/ensemble/climate/flood/marine + model wrappers), MET Norway, Environment Canada, FMI, HKO, BMKG, GeoSphere Austria, Bright Sky, OWM/Pirate (optional keys), Tempest PWS; NWS/MeteoAlarm/JMA/ECCC/HKO/BMKG/WMO alerts; LibreWXR/RainViewer/Windy/NWS radar; Blitzortung; Firebase Auth/Firestore/App Check; Gadgetbridge broadcast; ContentProvider; Wear DataLayer.
+- Platforms/distribution: minSdk 26, compileSdk 37, targetSdk 36 (meets the Aug-2026 Play API-36 bar); Wear module; `standard` vs `freenet` flavors; local signed per-ABI APK releases + provenance manifest; GitHub Releases.
+- Integrations/data flows: Open-Meteo family + model wrappers, MET Norway, ECCC, FMI, HKO, BMKG, GeoSphere Austria, Bright Sky, OWM/Pirate (optional keys), Tempest PWS; NWS/MeteoAlarm/JMA/ECCC/HKO/BMKG/WMO alerts; LibreWXR/RainViewer/Windy/NWS radar; Blitzortung; Firebase Auth/Firestore/App Check; Gadgetbridge broadcast; ContentProvider; Wear DataLayer.
 
 ## Competitive Landscape
-- **Breezy Weather** (v6.2.1, 2026-06-07): added Infoplaza as a worldwide source, per-model selection (ECMWF IFS HRES 9 km, NCEP NAM), and **enabled Arm MTE** for hardening. Learn: MTE manifest hardening (free win); per-model granularity in the source picker. Avoid: chasing raw source count without the metadata/contract discipline ZeusWatch already enforces.
-- **WeatherMaster** (v3.6.0, 2026-06-30): deep per-widget customization (icon/font sizing, multiple layout variants), humidity/pressure/visibility as first-class daily fields, Kvaesitso launcher weather sharing (#145). Learn: per-widget size/variant tuning is a real UX axis ZeusWatch lacks. Avoid: FCM-coupled push in the freenet flavor.
-- **CARROT / Windy** (unchanged since prior pass): time-travel (now shipped in ZeusWatch), model-vs-model comparison (covered by existing confidence-band + provider-agreement cards). Learn: nothing net-new this pass. Avoid: aviation/marine bloat ahead of reliability.
-- **Roborazzi / Now-in-Android testing** (adjacent): JVM Robolectric-based Compose screenshot + interaction testing is now the mainstream pattern for device-free UI verification. Learn: this is the direct answer to ZeusWatch's broken on-device harness. Avoid: keeping the entire UI suite on-device where flakiness and device-specific root registration break it.
+(Unchanged since the 2026-07-13 pass — no new competitor signal this cycle; this pass is a code audit.)
+- **Breezy Weather** (v6.2.1): Arm MTE hardening, Infoplaza source, per-model granularity — MTE is already a tracked P3.
+- **WeatherMaster** (v3.6): per-widget size/variant/font customization — a real UX axis ZeusWatch lacks (candidate, not added here to keep this pass defect-focused).
+- **Roborazzi / NowInAndroid testing**: JVM Robolectric Compose testing — already the tracked P1 resolution for the broken on-device harness.
 
 ## Security, Privacy, and Reliability
-- Verified (reliability, highest impact): on-device instrumented Compose tests fail tree-wide with `IllegalStateException: No compose hierarchies found` from `getAllSemanticsNodes`. Prior investigation ruled out test code (bare `Text` fails), rule version (v1 and v2 `createComposeRule` both fail), and the common missing-`ui-test-manifest` cause (it is present at `app/build.gradle.kts:276`). The robust resolution is the Robolectric JVM path, not further on-device debugging.
-- Verified (security): `okhttp = "5.3.2"` (`gradle/libs.versions.toml:11`). OkHttp 5.4.0 (2026-06-08) caps per-response HTTP/2 headers at 256 KiB — a header-flood DoS mitigation ZeusWatch does not yet have across its ~20 network sources.
-- Verified (security): Kotlin 2.3.21. CVE-2026-53914 (GHSA-r937-wjx7-w2jp, CVSS 6.7) is a Kotlin build-cache unsafe-deserialization issue fixed in Kotlin 2.4.20. It is a build-time toolchain risk, not a runtime app risk, but still roadmap-eligible.
-- Verified (hardening gap): no `android:memtagMode` in `AndroidManifest.xml` — Breezy enabled Arm MTE in v6.2.1; ZeusWatch has not.
-- Missing guardrails: no device-independent UI verification (all Compose tests are on-device androidTest); the `accessibilityGate` therefore cannot run, so WCAG regressions (NX-18) go unverified.
-- Recovery/rollback needs (carried, still valid): stale imported settings pointing at unavailable providers should fall back with a warning; provider-contract checks should fail deterministically when a selectable no-key provider drifts.
-- Unverified (needs a lockfile advisory scan, not web search): 2026 CVE status for Firestore, Coil 3.x, Lottie, Glance, Room — web search surfaced none, which is not proof of absence.
+- Verified (P1): `firestore.rules:61` global authenticated read of `community_reports` with full-precision coords + `ownerUid`; server-side bounds absent. Fix: bounded geohash-prefix + `timestamp > now-2h` reads, enforce `request.query.limit`, and move `ownerUid` to an owner-private subdoc so readers can't correlate.
+- Verified (P2): `BlitzortungService.kt:107` unclosed `onFailure` `Response`; reconnect state mutated outside the `@Synchronized` monitor → duplicate sockets / leaked bodies under flaky networks.
+- Verified (P2/P3): `network_security_config.xml:7` no-op `certificateTransparency` element (no CT lib present) — remove or wire an OkHttp CT interceptor.
+- Verified (P3): cert pinning (`ApiCertificatePins.kt`) covers only OWM/Pirate; the Open-Meteo **geocoding** host (which carries the user's typed search text — a privacy signal) is unpinned. Add SPKI pins.
+- Verified (P3, mitigated): `ZeusWatchWeatherProvider` is `exported` behind a `protectionLevel="dangerous"` permission (`AndroidManifest.xml:12`) serving full-precision coords, but it is opt-in default-off (`weather_content_provider_enabled` = false) and enforced at query time (`ZeusWatchWeatherProvider.kt:124,141`). Residual risk: a user enabling it + granting a malicious app. Consider coordinate coarsening or a per-consumer allowlist. (Note: `signature` level would break the intended Tasker/KWGT use.)
+- Verified (P3, low): `MainActivity.kt:120` auto-navigates on any external `ACTION_SEND text/plain` into the route flow with an unvalidated string; add an in-app confirmation.
+- Sound (checked, no defect): `EncryptedApiKeyStore` (Tink AES-GCM + Keystore, atomic writes, corrupt-keyset self-heal); backup/device-transfer exclusion of secrets (`data_extraction_rules.xml`); DEBUG-only log key redaction; ACRA consent-gated + PII-stripped; Firestore owner-binding/timestamp/throttle-ledger rules; ContentProvider id path is `toLongOrNull`→parameterized Room (no injection); the "Windy WebView" is actually MapLibre GL (no JS bridge).
 
 ## Architecture Assessment
-- `app/build.gradle.kts` test config is the highest-value boundary: `testOptions { unitTests.isReturnDefaultValues = true }` is set but `isIncludeAndroidResources = true` is not, and Compose tests live only in `src/androidTest`. Robolectric-based Compose tests belong in `src/test` with Hilt-Robolectric wiring (`HiltTestApplication`), reusing the existing `testing/AccessibilityTestHelpers.kt`.
-- `data/api/OpenMeteoApi.kt` + `data/repository/WeatherSource.kt` (`WeatherSourceProvider` registry) already parameterize `models=` (`ukmo_seamless`, `dmi_seamless`, …); adding AIFS/GraphCast is a registry + query-value addition, not new plumbing.
-- `util/AlertNotificationHelper.kt` already uses `ProgressStyle`; a route-weather Live Update is a new promoted-ongoing notification driven by `RouteWeatherPlannerSheet` state, guarded to an active trip.
-- `ui/component/SolarIrradianceCard` + `OpenMeteoApi` solar params are the boundary for satellite-radiation data.
-- Test/doc gaps: no JVM UI test exists; once Robolectric lands, L-15's Roborazzi screenshot layer becomes a thin add-on; document the JVM-vs-device test split in CLAUDE.md.
+- `util/CustomAlertEvaluator.kt` + `data/model/CustomAlertRule.kt`: the canonical-unit model lacks a `CM` unit, forcing the snowfall bug; introducing `CustomAlertUnit.CM` (or normalizing snowfall cm→mm at read) is the clean fix and prevents recurrence for future snow-based metrics.
+- `data/api/BlitzortungService.kt`: connect/disconnect need reference counting (it is an `@Singleton` driven by one screen's `LaunchedEffect`/`onDispose`) and a single monitor covering the reconnect coroutine; also add a trailing-flush/periodic tick so a passing storm's final partial batch and the 10-minute age-out still emit.
+- `ui/screen/main/WeatherLoadCoordinator.kt`: the AI-summary launch should hold a cancellable `Job` (cancel prior on new request) or run inside the structured `coroutineScope`.
+- Notification/widget dedupe state (`CustomAlertWorker`, `HealthAlertWorker`, `WidgetRefreshWorker`): move dedupe to a single DataStore transaction or a process lock, and serialize manual+periodic widget work under one unique name.
+- `data/repository/AirQualityRepository.kt` hosts moon astronomy day-rollover logic — the moonset/rise pairing should be computed as a chronologically-ordered pair.
+- Test/doc gaps: the moonset, snowfall-unit, Beaufort-boundary, and evaluator-threshold bugs are all pure-function and belong in the existing JVM unit suite; add regression tests with each fix. L-14 ("adversarial audit round 5") is effectively this pass — its output is the roadmap items below.
 
 ## Rejected Ideas
-- targetSdk 36 → 37 bump for Play compliance: rejected — the Aug 31 2026 Play bar is API 36 (support.google.com/11926878); ZeusWatch already targets 36 and declares `USE_FULL_SCREEN_INTENT`, so it is compliant. Bumping would only drag in Health-Connect permission + full-screen-intent rework for no gain.
-- Android's `com.android.compose.screenshot` (`screenshotTest` source set): rejected as the harness fix — it is alpha and only tests `@Preview` composables, so it cannot replace the failing interaction/semantics tests. Robolectric + `createComposeRule` is the correct substitute; Roborazzi (L-15) is the screenshot layer.
-- Kvaesitso launcher weather provider (WeatherMaster #145): rejected — the existing Breezy-compatible ContentProvider + Smartspacer already cover launcher integration; a bespoke Kvaesitso adapter is redundant.
-- Infoplaza worldwide source (Breezy v6.2.0): rejected near-term — provider breadth is gated on the NX-20 metadata registry, and Open-Meteo AIFS/GraphCast deliver more differentiation per unit effort.
-- Wear OS 6.1 location-based automatic time zone: rejected — niche; the Wear companion already anchors sun/time to the synced location.
-- Live Updates for passive/ambient weather: rejected — Google explicitly restricts Live Updates to user-initiated active activities (navigation/rideshare), so only the active-trip route flow qualifies.
+- Change the ContentProvider permission to `signature` (audit suggestion): rejected — it is designed for third-party Tasker/KWGT consumers, which are not same-signature; opt-in default-off + a coarsening/allowlist option is the right mitigation.
+- Health frontal-proxy total rewrite: rejected — the min/max-span heuristic over-fires on ordinary diurnal swings, but the fix is a co-timed/signed-delta tweak, not a redesign (see P3 item).
+- Adding a dedicated storm-passage lightning timer thread: rejected — a coroutine trailing-flush on the existing scope covers the stale-batch case without a new thread.
+- Re-opening the "Windy WebView" JS-bridge hardening (from stale README naming): rejected — the radar is MapLibre GL, no WebView/JS bridge exists.
 
 ## Sources
-Test harness / JVM UI testing:
-https://robolectric.org/androidx_test/
-https://robolectric.org/javadoc/4.15/org/robolectric/annotation/GraphicsMode.html
-https://github.com/takahirom/roborazzi
-https://developer.android.com/studio/preview/compose-screenshot-testing
-https://developer.android.com/develop/ui/compose/testing
-https://issuetracker.google.com/issues/361250553
-https://developer.android.com/training/testing/espresso/setup
+Code audit (in-repo, file:line):
+firestore.rules
+app/src/main/java/com/sysadmindoc/nimbus/util/CustomAlertEvaluator.kt
+app/src/main/java/com/sysadmindoc/nimbus/data/model/CustomAlertRule.kt
+app/src/main/java/com/sysadmindoc/nimbus/util/WeatherFormatter.kt
+app/src/main/java/com/sysadmindoc/nimbus/data/api/BlitzortungService.kt
+app/src/main/java/com/sysadmindoc/nimbus/ui/screen/main/WeatherLoadCoordinator.kt
+app/src/main/java/com/sysadmindoc/nimbus/data/repository/AirQualityRepository.kt
+app/src/main/java/com/sysadmindoc/nimbus/util/CustomAlertWorker.kt
+app/src/main/java/com/sysadmindoc/nimbus/util/HealthAlertWorker.kt
+app/src/main/java/com/sysadmindoc/nimbus/widget/WidgetRefreshWorker.kt
+app/src/main/java/com/sysadmindoc/nimbus/util/HealthAlertEvaluator.kt
+app/src/main/java/com/sysadmindoc/nimbus/util/PetSafetyEvaluator.kt
+app/src/main/res/xml/network_security_config.xml
+app/src/main/java/com/sysadmindoc/nimbus/data/api/ApiCertificatePins.kt
+app/src/main/AndroidManifest.xml
+app/src/main/java/com/sysadmindoc/nimbus/MainActivity.kt
 
-Security / dependencies:
-https://square.github.io/okhttp/changelogs/changelog/
+External (standards for the correctness fixes):
+https://open-meteo.com/en/docs
+https://www.weather.gov/media/epz/wxcalc/windChill.pdf
+https://en.wikipedia.org/wiki/Beaufort_scale
 https://square.github.io/okhttp/security/security/
-https://github.com/advisories/GHSA-r937-wjx7-w2jp
-https://nvd.nist.gov/vuln/detail/CVE-2026-53914
-https://github.com/maplibre/maplibre-native/releases
-
-Competitors:
-https://github.com/breezy-weather/breezy-weather/blob/main/CHANGELOG.md
-https://github.com/breezy-weather/breezy-weather/releases
-https://github.com/PranshulGG/WeatherMaster/releases
-https://github.com/PranshulGG/WeatherMaster/issues
-
-Platform / data:
-https://developer.android.com/about/versions/16/features/progress-centric-notifications
-https://developer.android.com/develop/ui/compose/notifications/live-update
-https://support.google.com/googleplay/android-developer/answer/11926878
-https://open-meteo.com/en/docs/ecmwf-api
-https://open-meteo.com/en/features
-https://open-meteo.com/en/docs/model-updates
 
 ## Open Questions
-- Needs live validation: under Robolectric 4.15.1 + Compose BOM 2026.06.01, does `createComposeRule()` + `@HiltAndroidTest` + `HiltTestApplication` run green on the JVM for a representative existing test (e.g. the ported `ForecastDetailSheetTest`), and does `AccessibilityTestHelpers.setContentWithAccessibilityChecks` work under `@GraphicsMode(NATIVE)`? This determines whether the WCAG gate can move to JVM wholesale or needs a thin on-device remainder.
-- Needs live validation: does bumping the Kotlin Gradle plugin to 2.4.20 keep the Compose compiler + KSP 2.x + Hilt toolchain green (the same class of migration that previously required care), or does it require coordinated version bumps?
+- Needs live validation: does Firestore already have a companion index/composite that would make a bounded geohash-prefix + timestamp read rule enforceable without breaking the existing `CommunityReportRepository` query, and can `ownerUid` be moved to an owner-private subdoc without losing the throttle-ledger's owner binding?
+- Needs live validation: is the snowfall custom-alert metric in active user configs (migration concern) — i.e. must a `CM` unit change re-interpret already-stored `thresholdCanonical` values, or is a one-time ×10 migration of existing snowfall rules required?
