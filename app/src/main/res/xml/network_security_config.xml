@@ -4,6 +4,9 @@
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
-        <certificateTransparency enabled="true" />
+        <!-- No <certificateTransparency> here: it is not an AOSP
+             network-security-config element and no CT library is bundled, so it
+             was silently ignored (false MITM assurance). Cert pinning
+             (ApiCertificatePins) provides the actual MITM protection. -->
     </base-config>
 </network-security-config>

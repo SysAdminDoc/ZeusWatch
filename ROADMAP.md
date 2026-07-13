@@ -363,13 +363,6 @@ duplicating existing items.
 
 ### P3 — Hardening & Polish
 
-- [ ] P3 — Remove or implement the no-op certificateTransparency config
-  Why: `<certificateTransparency enabled="true"/>` is not an AOSP network-security-config element and no CT library is present, so it is silently ignored — false MITM assurance.
-  Evidence: `app/src/main/res/xml/network_security_config.xml:7`; no CT dependency in `gradle/libs.versions.toml`.
-  Touches: `network_security_config.xml` (delete the element) or add an OkHttp CT interceptor wired in `NetworkModule`.
-  Acceptance: either the element is gone, or CT is actually enforced on the OkHttp client with a test; no misleading config remains.
-  Complexity: S
-
 - [ ] P3 — Pin the Open-Meteo geocoding endpoint
   Why: cert pinning covers only OWM/Pirate; the geocoding host carries the typed place-name search text over an unpinned channel — a privacy signal in a zero-telemetry app.
   Evidence: `data/api/ApiCertificatePins.kt:46-57` (only OWM/Pirate hosts); geocoding client provided in `NetworkModule.kt`.
@@ -391,9 +384,3 @@ duplicating existing items.
   Acceptance: an opt-in "share coarse location only" mode rounds provider coordinates; default behavior documented; consumer contract unchanged when disabled.
   Complexity: S
 
-- [ ] P3 — Small correctness/main-thread polish (Beaufort boundary, wallpaper prefs I/O)
-  Why: Beaufort labels 1.0-1.9 km/h as Calm (`<2` vs standard `<1`); the live wallpaper does first-load SharedPreferences disk I/O on the render/main thread on create and every 5 min.
-  Evidence: `util/WeatherFormatter.kt:390` (`kmh < 2 -> Calm`); `wallpaper/WeatherWallpaperService.kt` `refreshWeatherCode()` main-thread prefs read.
-  Touches: `WeatherFormatter.kt` (force-0 boundary `< 1`), `WeatherWallpaperService.kt` (warm/cache prefs off-thread), formatter unit test.
-  Acceptance: Beaufort force 0/1 boundary matches the standard; wallpaper no longer reads prefs on the main thread; formatter test updated.
-  Complexity: S
