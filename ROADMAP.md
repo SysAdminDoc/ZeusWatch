@@ -361,13 +361,6 @@ duplicating existing items.
 
 ### P2 — Correctness & Reliability
 
-- [ ] P2 — Make notification/widget dedupe state race-safe
-  Why: `CustomAlertWorker`/`HealthAlertWorker` dedupe via non-atomic SharedPreferences read-modify-write, and `WidgetRefreshWorker` runs manual vs periodic work under different unique names (no WorkManager serialization) — dedupe races (double notifications) and lost-update widget-state writes.
-  Evidence: `util/CustomAlertWorker.kt` `markAndCheckNew`; `util/HealthAlertWorker.kt` `record/prune`; `widget/WidgetRefreshWorker.kt` (`nimbus_widget_refresh` vs `nimbus_widget_refresh_manual_refresh`).
-  Touches: dedupe stores to a single DataStore transaction or process lock; widget worker to one shared unique name (or `APPEND_OR_REPLACE`) so manual+periodic serialize.
-  Acceptance: concurrent worker runs cannot emit a duplicate custom/health notification for the same (rule,date); manual + periodic widget refresh cannot interleave writes; tests cover the dedupe path.
-  Complexity: M
-
 ### P3 — Hardening & Polish
 
 - [ ] P3 — Remove or implement the no-op certificateTransparency config
