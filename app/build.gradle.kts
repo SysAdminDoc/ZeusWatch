@@ -122,6 +122,10 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // Required for Robolectric to load Android resources so JVM-side Compose
+        // UI tests can render (the on-device instrumented harness is broken —
+        // see ROADMAP "Fix the instrumented Compose test harness").
+        unitTests.isIncludeAndroidResources = true
     }
 
     packaging {
@@ -262,6 +266,16 @@ dependencies {
     testImplementation(libs.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.core.testing)
+
+    // JVM-side Compose UI tests via Robolectric (device-free). The on-device
+    // instrumented harness is broken tree-wide; these run under
+    // :app:testStandardDebugUnitTest with no emulator.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.junit.ext)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.compose.ui.test.junit4.accessibility)
+    testImplementation(libs.compose.ui.test.manifest)
 
     // Instrumented / Compose UI Tests
     androidTestImplementation(platform(libs.compose.bom))
