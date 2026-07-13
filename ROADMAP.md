@@ -363,3 +363,93 @@ screenshot layer trivial.
   Touches: `data/api/OpenMeteoApi.kt` (satellite radiation params), Solar card rendering, opt-in in Data Sources.
   Acceptance: when available for the location, the Solar card reflects satellite-derived shortwave/direct radiation with graceful fallback to model data; parser/format test covers the new fields.
   Complexity: M
+
+## Research-Driven Additions (2026-07-13, Code Audit)
+
+Output of three parallel read-only code audits (concurrency, security/privacy,
+data-correctness). Every item verified against source at the cited file:line;
+these are the actionable content of L-14 (adversarial audit round 5). Not
+duplicating existing items.
+
+### P1 — Privacy (root cause)
+
+- [ ] P1 — Bound Firestore community-report reads; stop exposing ownerUid to readers
+  Why: `firestore.rules` lets any anonymously-authenticated client read the entire `community_reports` collection at full-precision coordinates plus a stable `ownerUid`, enabling per-user movement correlation — contradicts the zero-telemetry philosophy; client-side limit/radius is cosmetic.
+  Evidence: `firestore.rules:61` (`allow read: if request.auth != null`); `app/src/standard/.../CommunityReportRepository.kt` client-side `.limit(50)`/radius filtering.
+  Touches: `firestore.rules`, `CommunityReportRepository.kt` (query must carry geohash-prefix + `timestamp > now-2h` + limit), a firestore emulator rules test, possibly an owner-private subdoc for `ownerUid`.
+  Acceptance: rules reject an unbounded/whole-collection read and any read returning `ownerUid`; the nearby-report query still works; `npm run test:firestore-rules` covers the new bounds.
+  Complexity: M
+
+### P2 — Correctness & Reliability
+
+- [ ] P2 — Fix snowfall custom-alert unit mismatch (cm vs mm, ~10x error)
+  Why: `SNOWFALL_SUM_NEXT_24H` is declared `CustomAlertUnit.MM` but the evaluator sums Open-Meteo `snowfall` in centimeters and converts inches with `/25.4` (mm) instead of `/2.54` (cm) — snow alerts misfire by an order of magnitude.
+  Evidence: `data/model/CustomAlertRule.kt:72`; `util/CustomAlertEvaluator.kt:61` sums raw `it.snowfall`; conversion `/25.4` at `CustomAlertEvaluator.kt:128`; `WeatherFormatter.formatSnowfall(cm)` confirms cm.
+  Touches: `CustomAlertRule.kt` (add `CustomAlertUnit.CM`), `CustomAlertEvaluator.kt` (convert/label), one-time migration for stored snowfall thresholds, `CustomAlertEvaluatorTest`.
+  Acceptance: a 20 cm rule triggers at 20 cm (not 20 mm); inch display uses 2.54; existing stored snowfall rules re-interpreted correctly; unit test covers cm math.
+  Complexity: S
+
+- [ ] P2 — BlitzortungService: close onFailure Response and synchronize reconnect
+  Why: `onFailure` ignores the non-null `Response` (leaked connection bodies under backoff), and the reconnect coroutine mutates `@Synchronized`-guarded `reconnectJob`/`shouldReconnect` outside the monitor, racing `disconnect()` into duplicate sockets.
+  Evidence: `data/api/BlitzortungService.kt:107` (`onFailure(..., response: Response?)` unclosed); reconnect body near `:140` mutates guarded state off-lock.
+  Touches: `BlitzortungService.kt` (`response?.close()`; move reconnect null-set + `shouldReconnect` re-check + `connect()` under the monitor; reference-count connect/disconnect for the `@Singleton`).
+  Acceptance: no leaked responses on repeated handshake failures; rapid radar-layer flipping cannot open two concurrent sockets; existing lightning tests green.
+  Complexity: M
+
+- [ ] P2 — Fix moonset mislabeled as next-day
+  Why: moonset is pushed to `date+1` whenever the moon sets before it rises on the same calendar day — a normal case — so moonset renders ~24h late.
+  Evidence: `data/repository/AirQualityRepository.kt:157` (`if (times.rise != null && setTime.isBefore(times.rise)) date.plusDays(1)`); `MoonAstronomy.riseSetForDate` returns first rise/set within the same day.
+  Touches: `AirQualityRepository.kt` (compute rise/set as a chronologically-ordered pair; same-day for set), moon astronomy unit test.
+  Acceptance: a same-day set-before-rise produces a same-day moonset timestamp; regression test with a morning-set/evening-rise fixture.
+  Complexity: S
+
+- [ ] P2 — Cancel the previous AI-summary job on new weather requests
+  Why: the AI summary is launched fire-and-forget on the ViewModel `scope` with no prior-job cancellation, so rapid location/tab switching stacks uncancelled `generateWithStyle` jobs on the default dispatcher (CPU/battery).
+  Evidence: `ui/screen/main/WeatherLoadCoordinator.kt:253` (`scope.launch { ... generateWithStyle ... }`).
+  Touches: `WeatherLoadCoordinator.kt` (hold a cancellable `Job?`, cancel on new request, or run inside the structured `coroutineScope`).
+  Acceptance: switching locations N times leaves at most one in-flight summary job; existing MainViewModel tests green.
+  Complexity: S
+
+- [ ] P2 — Make notification/widget dedupe state race-safe
+  Why: `CustomAlertWorker`/`HealthAlertWorker` dedupe via non-atomic SharedPreferences read-modify-write, and `WidgetRefreshWorker` runs manual vs periodic work under different unique names (no WorkManager serialization) — dedupe races (double notifications) and lost-update widget-state writes.
+  Evidence: `util/CustomAlertWorker.kt` `markAndCheckNew`; `util/HealthAlertWorker.kt` `record/prune`; `widget/WidgetRefreshWorker.kt` (`nimbus_widget_refresh` vs `nimbus_widget_refresh_manual_refresh`).
+  Touches: dedupe stores to a single DataStore transaction or process lock; widget worker to one shared unique name (or `APPEND_OR_REPLACE`) so manual+periodic serialize.
+  Acceptance: concurrent worker runs cannot emit a duplicate custom/health notification for the same (rule,date); manual + periodic widget refresh cannot interleave writes; tests cover the dedupe path.
+  Complexity: M
+
+### P3 — Hardening & Polish
+
+- [ ] P3 — Remove or implement the no-op certificateTransparency config
+  Why: `<certificateTransparency enabled="true"/>` is not an AOSP network-security-config element and no CT library is present, so it is silently ignored — false MITM assurance.
+  Evidence: `app/src/main/res/xml/network_security_config.xml:7`; no CT dependency in `gradle/libs.versions.toml`.
+  Touches: `network_security_config.xml` (delete the element) or add an OkHttp CT interceptor wired in `NetworkModule`.
+  Acceptance: either the element is gone, or CT is actually enforced on the OkHttp client with a test; no misleading config remains.
+  Complexity: S
+
+- [ ] P3 — Pin the Open-Meteo geocoding endpoint
+  Why: cert pinning covers only OWM/Pirate; the geocoding host carries the typed place-name search text over an unpinned channel — a privacy signal in a zero-telemetry app.
+  Evidence: `data/api/ApiCertificatePins.kt:46-57` (only OWM/Pirate hosts); geocoding client provided in `NetworkModule.kt`.
+  Touches: `ApiCertificatePins.kt` (add SPKI leaf+intermediate pins for the Open-Meteo geocoding host), pin-verification test.
+  Acceptance: geocoding requests fail closed on pin mismatch; `ApiCertificatePinsTest` covers the new host.
+  Complexity: S
+
+- [ ] P3 — Reduce false positives in health frontal-proxy and pet pavement alerts
+  Why: the migraine/frontal heuristic uses independent min/max spans (not co-timed/directional) so ordinary diurnal swings trigger it when pressure is absent; the pet pavement WARNING fires on air temp alone even when the pavement estimate is far below the burn floor.
+  Evidence: `util/HealthAlertEvaluator.kt:154` (`humidities.max()-min()` paired with a temp span); `util/PetSafetyEvaluator.kt:55` (air-temp OR clause bypasses `pavementEstimate`).
+  Touches: `HealthAlertEvaluator.kt` (consecutive signed deltas / correlation), `PetSafetyEvaluator.kt` (gate WARNING on the pavement estimate), evaluator tests.
+  Acceptance: clear-day diurnal swings no longer raise a frontal/migraine warning; a sunny 25°C morning with low pavement estimate no longer shows a pavement WARNING; tests cover both.
+  Complexity: S
+
+- [ ] P3 — ContentProvider location-precision hardening
+  Why: the ecosystem provider serves full-precision saved-location coordinates behind a user-grantable `dangerous` permission; already opt-in default-off + query-time enforced, but a coarsening/allowlist option would bound residual exposure.
+  Evidence: `AndroidManifest.xml:12` (`protectionLevel="dangerous"`); `ecosystem/ZeusWatchWeatherProvider.kt:124,141` (opt-in enforcement); `UserPreferences` `weather_content_provider_enabled` default false.
+  Touches: `ZeusWatchWeatherProvider.kt` (optional coordinate coarsening), Settings copy noting the exposure.
+  Acceptance: an opt-in "share coarse location only" mode rounds provider coordinates; default behavior documented; consumer contract unchanged when disabled.
+  Complexity: S
+
+- [ ] P3 — Small correctness/main-thread polish (Beaufort boundary, wallpaper prefs I/O)
+  Why: Beaufort labels 1.0-1.9 km/h as Calm (`<2` vs standard `<1`); the live wallpaper does first-load SharedPreferences disk I/O on the render/main thread on create and every 5 min.
+  Evidence: `util/WeatherFormatter.kt:390` (`kmh < 2 -> Calm`); `wallpaper/WeatherWallpaperService.kt` `refreshWeatherCode()` main-thread prefs read.
+  Touches: `WeatherFormatter.kt` (force-0 boundary `< 1`), `WeatherWallpaperService.kt` (warm/cache prefs off-thread), formatter unit test.
+  Acceptance: Beaufort force 0/1 boundary matches the standard; wallpaper no longer reads prefs on the main thread; formatter test updated.
+  Complexity: S
