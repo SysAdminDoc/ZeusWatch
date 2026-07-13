@@ -361,13 +361,6 @@ duplicating existing items.
 
 ### P2 — Correctness & Reliability
 
-- [ ] P2 — Fix snowfall custom-alert unit mismatch (cm vs mm, ~10x error)
-  Why: `SNOWFALL_SUM_NEXT_24H` is declared `CustomAlertUnit.MM` but the evaluator sums Open-Meteo `snowfall` in centimeters and converts inches with `/25.4` (mm) instead of `/2.54` (cm) — snow alerts misfire by an order of magnitude.
-  Evidence: `data/model/CustomAlertRule.kt:72`; `util/CustomAlertEvaluator.kt:61` sums raw `it.snowfall`; conversion `/25.4` at `CustomAlertEvaluator.kt:128`; `WeatherFormatter.formatSnowfall(cm)` confirms cm.
-  Touches: `CustomAlertRule.kt` (add `CustomAlertUnit.CM`), `CustomAlertEvaluator.kt` (convert/label), one-time migration for stored snowfall thresholds, `CustomAlertEvaluatorTest`.
-  Acceptance: a 20 cm rule triggers at 20 cm (not 20 mm); inch display uses 2.54; existing stored snowfall rules re-interpreted correctly; unit test covers cm math.
-  Complexity: S
-
 - [ ] P2 — BlitzortungService: close onFailure Response and synchronize reconnect
   Why: `onFailure` ignores the non-null `Response` (leaked connection bodies under backoff), and the reconnect coroutine mutates `@Synchronized`-guarded `reconnectJob`/`shouldReconnect` outside the monitor, racing `disconnect()` into duplicate sockets.
   Evidence: `data/api/BlitzortungService.kt:107` (`onFailure(..., response: Response?)` unclosed); reconnect body near `:140` mutates guarded state off-lock.

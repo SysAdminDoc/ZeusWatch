@@ -58,7 +58,11 @@ internal fun evaluateCustomAlertRules(
             CustomAlertMetric.DEW_POINT_NOW -> data.current.dewPoint
             CustomAlertMetric.FEELS_LIKE_NOW -> data.current.feelsLike
             CustomAlertMetric.SNOWFALL_SUM_NEXT_24H ->
-                if (next24h.any { it.snowfall != null }) next24h.sumOf { it.snowfall ?: 0.0 } else null
+                // Open-Meteo snowfall is centimeters; the rule threshold is stored
+                // in canonical millimeters (CustomAlertUnit.MM), so convert cm -> mm
+                // (x10) before comparing. Without this, a "20 mm" rule only fired at
+                // 20 cm (= 200 mm) of snow — a 10x error.
+                if (next24h.any { it.snowfall != null }) next24h.sumOf { (it.snowfall ?: 0.0) * 10.0 } else null
             CustomAlertMetric.PRESSURE_NOW -> data.current.pressure.takeIf { it > 0.0 }
             CustomAlertMetric.AQI_NOW -> airQuality?.usAqi?.toDouble()?.takeIf { it > 0.0 }
         } ?: continue
