@@ -368,20 +368,6 @@ duplicating existing items.
   Acceptance: no leaked responses on repeated handshake failures; rapid radar-layer flipping cannot open two concurrent sockets; existing lightning tests green.
   Complexity: M
 
-- [ ] P2 — Fix moonset mislabeled as next-day
-  Why: moonset is pushed to `date+1` whenever the moon sets before it rises on the same calendar day — a normal case — so moonset renders ~24h late.
-  Evidence: `data/repository/AirQualityRepository.kt:157` (`if (times.rise != null && setTime.isBefore(times.rise)) date.plusDays(1)`); `MoonAstronomy.riseSetForDate` returns first rise/set within the same day.
-  Touches: `AirQualityRepository.kt` (compute rise/set as a chronologically-ordered pair; same-day for set), moon astronomy unit test.
-  Acceptance: a same-day set-before-rise produces a same-day moonset timestamp; regression test with a morning-set/evening-rise fixture.
-  Complexity: S
-
-- [ ] P2 — Cancel the previous AI-summary job on new weather requests
-  Why: the AI summary is launched fire-and-forget on the ViewModel `scope` with no prior-job cancellation, so rapid location/tab switching stacks uncancelled `generateWithStyle` jobs on the default dispatcher (CPU/battery).
-  Evidence: `ui/screen/main/WeatherLoadCoordinator.kt:253` (`scope.launch { ... generateWithStyle ... }`).
-  Touches: `WeatherLoadCoordinator.kt` (hold a cancellable `Job?`, cancel on new request, or run inside the structured `coroutineScope`).
-  Acceptance: switching locations N times leaves at most one in-flight summary job; existing MainViewModel tests green.
-  Complexity: S
-
 - [ ] P2 — Make notification/widget dedupe state race-safe
   Why: `CustomAlertWorker`/`HealthAlertWorker` dedupe via non-atomic SharedPreferences read-modify-write, and `WidgetRefreshWorker` runs manual vs periodic work under different unique names (no WorkManager serialization) — dedupe races (double notifications) and lost-update widget-state writes.
   Evidence: `util/CustomAlertWorker.kt` `markAndCheckNew`; `util/HealthAlertWorker.kt` `record/prune`; `widget/WidgetRefreshWorker.kt` (`nimbus_widget_refresh` vs `nimbus_widget_refresh_manual_refresh`).
