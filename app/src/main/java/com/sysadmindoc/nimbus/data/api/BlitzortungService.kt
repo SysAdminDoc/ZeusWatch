@@ -106,6 +106,10 @@ class BlitzortungService @Inject constructor(
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 Log.w(TAG, "Blitzortung WebSocket failure: ${t.message}")
+                // A handshake that completed before failing hands back a Response
+                // whose body the caller must close, or it leaks a connection under
+                // repeated backoff reconnects.
+                response?.close()
                 onSocketTerminated(webSocket, reconnect = true)
             }
 
@@ -139,10 +143,20 @@ class BlitzortungService @Inject constructor(
         reconnectAttempts++
         reconnectJob = serviceScope.launch {
             delay(delayMs)
-            reconnectJob = null
-            if (shouldReconnect) {
-                connect()
-            }
+            performReconnect()
+        }
+    }
+
+    /**
+     * Clear the completed reconnect job and reconnect — but only under the monitor
+     * and only if a concurrent [disconnect] hasn't since cleared [shouldReconnect].
+     * Running this off-lock would race disconnect() into a duplicate socket.
+     */
+    @Synchronized
+    private fun performReconnect() {
+        reconnectJob = null
+        if (shouldReconnect) {
+            connect()
         }
     }
 
