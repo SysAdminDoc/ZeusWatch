@@ -315,12 +315,12 @@ screenshot layer trivial.
   Acceptance: all former instrumented Compose tests run green under `:app:testStandardDebugUnitTest` with no device; `accessibilityGate` green.
   Complexity: L
 
-- [ ] P2 — Bump Kotlin Gradle plugin 2.3.21 → 2.4.20+
-  Why: CVE-2026-53914 (build-cache unsafe deserialization, CWE-502, CVSS 6.7) is fixed in Kotlin 2.4.20; build-time toolchain hardening.
-  Evidence: https://github.com/advisories/GHSA-r937-wjx7-w2jp ; https://nvd.nist.gov/vuln/detail/CVE-2026-53914 ; current `kotlin = "2.3.21"`.
-  Touches: `gradle/libs.versions.toml` (`kotlin`, `compose-compiler`, likely `ksp`), verify Hilt/KSP2/Compose-compiler alignment; run KSP + unit suite.
-  Acceptance: `:app:kspStandardDebugKotlin` + full unit suite + `:wear` compile green on Kotlin 2.4.20; schema export intact; versions synced across catalog + README + Library Watch.
-  Complexity: M
+> Kotlin 2.4.20 bump (CVE-2026-53914) moved to `Roadmap_Blocked.md`: the
+> `org.jetbrains.kotlin.plugin.compose:...:2.4.20` plugin artifact does not
+> resolve from Maven Central / the Gradle Plugin Portal, so the cited fix version
+> is not currently available. Revisit when 2.4.20 (or the next patched line) is
+> published; the CVE is build-time-only (build-cache) and low practical risk for
+> this repo's local-only builds.
 
 - [ ] P2 — Add selectable Open-Meteo AI models (ECMWF AIFS 0.25°, NCEP GFS GraphCast)
   Why: Open-Meteo now exposes AI forecast models; ZeusWatch already parameterizes `models=` for regional wrappers, so adding AI models is a near-zero-cost differentiator competitors are only starting to add.
