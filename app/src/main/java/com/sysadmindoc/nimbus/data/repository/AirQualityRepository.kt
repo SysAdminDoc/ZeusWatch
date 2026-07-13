@@ -152,14 +152,13 @@ class AirQualityRepository @Inject constructor(
             lonDeg = longitude,
             zone = zoneId,
         )
+        // riseSetForDate returns the rise and set that occur ON this calendar date;
+        // the moon commonly sets in the morning and rises again that evening, so a
+        // set time earlier than the rise time is still the SAME day's set — do not
+        // roll it to the next day (that mislabeled moonset ~24h late).
         val moonrise = times.rise?.let { LocalDateTime.of(now.toLocalDate(), it).format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME) }
         val moonset = times.set?.let { setTime ->
-            val setDate = if (times.rise != null && setTime.isBefore(times.rise)) {
-                now.toLocalDate().plusDays(1)
-            } else {
-                now.toLocalDate()
-            }
-            LocalDateTime.of(setDate, setTime).format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            LocalDateTime.of(now.toLocalDate(), setTime).format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         }
 
         // Day length from sunrise/sunset

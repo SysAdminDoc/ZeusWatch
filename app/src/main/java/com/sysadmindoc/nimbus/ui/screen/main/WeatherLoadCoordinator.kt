@@ -51,6 +51,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -127,6 +128,10 @@ class WeatherLoadCoordinator @Inject constructor(
     private val floodRepository = optionalRepositories.floodRepository
     private val climateRepository = optionalRepositories.climateRepository
     private val pwsRepository = optionalRepositories.pwsRepository
+
+    // The on-device AI summary can take seconds; a rapid location/tab switch must
+    // cancel the previous generation so jobs don't stack on the default dispatcher.
+    private var aiSummaryJob: Job? = null
 
     suspend fun finishSuccessfulWeatherLoad(
         completion: WeatherLoadCompletion,
@@ -249,7 +254,8 @@ class WeatherLoadCoordinator @Inject constructor(
         }
 
         if (settings.summaryStyle == SummaryStyle.AI_GENERATED) {
-            scope.launch {
+            aiSummaryJob?.cancel()
+            aiSummaryJob = scope.launch {
                 val aiSummary = withContext(defaultDispatcher) {
                     WeatherSummaryEngine.generateWithStyle(
                         current = data.current,
