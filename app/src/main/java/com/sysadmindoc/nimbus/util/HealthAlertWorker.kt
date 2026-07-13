@@ -81,16 +81,18 @@ class HealthAlertWorker @AssistedInject constructor(
         val today = weatherReferenceDate(data).toString()
 
         for (alert in alerts) {
-            // Key includes severity so a same-day escalation isn't suppressed:
-            // a morning ADVISORY must not swallow an afternoon WARNING. The
-            // reverse (ADVISORY after WARNING) stays suppressed.
-            val key = "${alert.type.name}:${alert.severity.name}:$today"
-            if (store.isNotifiedAtOrAbove(alert.type, alert.severity, today)) {
-                Log.d(TAG, "Already notified for $key (or higher severity) today")
+            // Atomically claim the slot before notifying so two concurrent runs
+            // can't both notify. Key includes severity so a same-day escalation
+            // isn't suppressed: a morning ADVISORY must not swallow an afternoon
+            // WARNING; the reverse (ADVISORY after WARNING) stays suppressed.
+            if (!store.claimIfNew(alert.type, alert.severity, today)) {
+                Log.d(TAG, "Already notified for ${alert.type.name}:${alert.severity.name} (or higher) today")
                 continue
             }
 
-            val delivered = AlertNotificationHelper.showHealthNotification(
+            // Slot already claimed above; notify (claim-before-notify mirrors the
+            // custom-alert worker so a rare delivery failure won't re-fire today).
+            AlertNotificationHelper.showHealthNotification(
                 context = applicationContext,
                 type = alert.type,
                 title = applicationContext.getString(alert.type.labelRes),
@@ -98,9 +100,6 @@ class HealthAlertWorker @AssistedInject constructor(
                 detail = alert.detailRes?.let { applicationContext.healthAlertText(it, alert.detailArgs) } ?: "",
                 severity = alert.severity,
             )
-            if (delivered) {
-                store.record(key)
-            }
         }
 
         // Prune old entries (keep last 7 days)
@@ -171,12 +170,20 @@ private class HealthNotificationStore(context: Context) {
             .filter { it.ordinal <= severity.ordinal }
             .any { prefs.getBoolean("${type.name}:${it.name}:$date", false) }
 
-    fun record(key: String) {
-        prefs.edit().putBoolean(key, true).apply()
-    }
+    /**
+     * Atomically claim the (type, severity, date) slot: if not already notified
+     * at or above [severity], record it and return true. Serialized so two
+     * concurrent worker runs can't both pass the check and double-notify.
+     */
+    fun claimIfNew(type: HealthAlertType, severity: HealthSeverity, date: String): Boolean =
+        synchronized(LOCK) {
+            if (isNotifiedAtOrAbove(type, severity, date)) return@synchronized false
+            prefs.edit().putBoolean("${type.name}:${severity.name}:$date", true).apply()
+            true
+        }
 
     /** Remove entries older than 7 days to prevent unbounded growth. */
-    fun prune(referenceDate: String) {
+    fun prune(referenceDate: String) = synchronized(LOCK) {
         val cutoff = LocalDate.parse(referenceDate).minusDays(7).toString()
         val editor = prefs.edit()
         prefs.all.keys.forEach { key ->
@@ -188,5 +195,11 @@ private class HealthNotificationStore(context: Context) {
             }
         }
         editor.apply()
+    }
+
+    companion object {
+        // Static so it serializes claim/prune across separate store instances
+        // (one per worker run) sharing the same process + SharedPreferences.
+        private val LOCK = Any()
     }
 }

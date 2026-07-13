@@ -126,14 +126,14 @@ private class CustomAlertDedupeStore(context: Context) {
     private val prefs = context.getSharedPreferences("nimbus_custom_alert_dedupe", Context.MODE_PRIVATE)
 
     /** Returns true if [key] was newly added (i.e. not already notified). */
-    fun markAndCheckNew(key: String): Boolean {
+    fun markAndCheckNew(key: String): Boolean = synchronized(LOCK) {
         val seen = prefs.getStringSet(KEY_SET, emptySet()).orEmpty().toMutableSet()
-        if (!seen.add(key)) return false
+        if (!seen.add(key)) return@synchronized false
         prefs.edit().putStringSet(KEY_SET, seen).apply()
-        return true
+        true
     }
 
-    fun remove(key: String) {
+    fun remove(key: String) = synchronized(LOCK) {
         val seen = prefs.getStringSet(KEY_SET, emptySet()).orEmpty().toMutableSet()
         if (seen.remove(key)) {
             prefs.edit().putStringSet(KEY_SET, seen).apply()
@@ -141,7 +141,7 @@ private class CustomAlertDedupeStore(context: Context) {
     }
 
     /** Drop dedupe keys older than 7 days so the set doesn't grow unbounded. */
-    fun pruneOld(referenceDate: String) {
+    fun pruneOld(referenceDate: String) = synchronized(LOCK) {
         val cutoff = LocalDate.parse(referenceDate).minusDays(7).toString()
         val current = prefs.getStringSet(KEY_SET, emptySet()).orEmpty()
         val keep = current.filter { key ->
@@ -159,5 +159,11 @@ private class CustomAlertDedupeStore(context: Context) {
 
     companion object {
         private const val KEY_SET = "notified_keys"
+
+        // Static so it serializes the non-atomic get/modify/put across separate
+        // store instances (each worker run makes its own). Workers share one
+        // process, so a JVM monitor is sufficient; without it a concurrent run can
+        // drop a key and re-fire a deduped alert.
+        private val LOCK = Any()
     }
 }
