@@ -28,6 +28,18 @@ class CommunityReportGeoTest {
     }
 
     @Test
+    fun `small-radius query bounds still match reports stored at write precision`() {
+        // Reports are always written at the fixed 4-character precision. A
+        // radius below 20 km used to derive 5+ character query prefixes, which
+        // can never range-match a shorter stored hash → silent zero rows.
+        val stored = CommunityReportGeo.geohash(39.7392, -104.9903)
+        val bounds = CommunityReportGeo.queryBounds(39.7392, -104.9903, radiusKm = 5.0)
+
+        assertTrue(bounds.all { it.start.length <= stored.length })
+        assertTrue(bounds.any { stored >= it.start && stored < it.end })
+    }
+
+    @Test
     fun `sortNearby keeps legacy blank-geohash reports from crashing distance filtering`() {
         val reports = listOf(
             report(id = "same-lat-far-lon", lon = -90.0, timestamp = 3),

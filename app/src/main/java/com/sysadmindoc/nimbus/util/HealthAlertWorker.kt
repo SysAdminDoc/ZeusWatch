@@ -32,9 +32,12 @@ import java.util.concurrent.TimeUnit
  * Silently skips if:
  *  - user toggled `healthAlertsEnabled` off
  *  - no GPS-derived background alert location known
- *  - POST_NOTIFICATIONS permission not granted
  *  - weather fetch fails
  *  - already notified for this alert type today
+ *
+ * If POST_NOTIFICATIONS is not granted, delivery fails and the dedupe claim
+ * is released so the alert can still fire later the same day once the
+ * permission is restored.
  */
 private const val TAG = "HealthAlertWorker"
 
@@ -90,9 +93,10 @@ class HealthAlertWorker @AssistedInject constructor(
                 continue
             }
 
-            // Slot already claimed above; notify (claim-before-notify mirrors the
-            // custom-alert worker so a rare delivery failure won't re-fire today).
-            AlertNotificationHelper.showHealthNotification(
+            // Slot already claimed above; notify. If delivery fails (e.g.
+            // POST_NOTIFICATIONS revoked), roll the claim back — mirroring the
+            // custom-alert worker — so today's alert isn't silently burned.
+            val delivered = AlertNotificationHelper.showHealthNotification(
                 context = applicationContext,
                 type = alert.type,
                 title = applicationContext.getString(alert.type.labelRes),
@@ -100,6 +104,9 @@ class HealthAlertWorker @AssistedInject constructor(
                 detail = alert.detailRes?.let { applicationContext.healthAlertText(it, alert.detailArgs) } ?: "",
                 severity = alert.severity,
             )
+            if (!delivered) {
+                store.release(alert.type, alert.severity, today)
+            }
         }
 
         // Prune old entries (keep last 7 days)
@@ -180,6 +187,15 @@ private class HealthNotificationStore(context: Context) {
             if (isNotifiedAtOrAbove(type, severity, date)) return@synchronized false
             prefs.edit().putBoolean("${type.name}:${severity.name}:$date", true).apply()
             true
+        }
+
+    /**
+     * Roll back a claim whose notification could not be delivered so the next
+     * run can re-attempt the same (type, severity) today.
+     */
+    fun release(type: HealthAlertType, severity: HealthSeverity, date: String) =
+        synchronized(LOCK) {
+            prefs.edit().remove("${type.name}:${severity.name}:$date").apply()
         }
 
     /** Remove entries older than 7 days to prevent unbounded growth. */

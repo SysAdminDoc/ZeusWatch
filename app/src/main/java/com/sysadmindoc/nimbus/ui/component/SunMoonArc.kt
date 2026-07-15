@@ -126,7 +126,7 @@ private data class SunArcTimes(
     val moonset: LocalDateTime?,
 )
 
-private data class MoonArcState(
+internal data class MoonArcState(
     val progress: Float,
     val isUp: Boolean,
 )
@@ -175,18 +175,23 @@ private fun twilightLabel(
     }
 }
 
-private fun moonArcState(
+internal fun moonArcState(
     moonrise: LocalDateTime?,
     moonset: LocalDateTime?,
     now: LocalDateTime,
 ): MoonArcState? {
     if (moonrise == null || moonset == null) return null
-    val moonTotal = Duration.between(moonrise, moonset).toMinutes().toFloat()
+    // Providers label both events with the same calendar date, so roughly half
+    // the lunar month the moon "sets" before it rises that day (an overnight
+    // transit). Roll the set forward a day for the arc math; display labels
+    // keep the producer's timestamps.
+    val arcMoonset = if (moonset.isAfter(moonrise)) moonset else moonset.plusDays(1)
+    val moonTotal = Duration.between(moonrise, arcMoonset).toMinutes().toFloat()
     if (moonTotal <= 0f) return null
     val moonElapsed = Duration.between(moonrise, now).toMinutes().toFloat()
     return MoonArcState(
         progress = (moonElapsed / moonTotal).coerceIn(0f, 1f),
-        isUp = now.isAfter(moonrise) && now.isBefore(moonset),
+        isUp = now.isAfter(moonrise) && now.isBefore(arcMoonset),
     )
 }
 

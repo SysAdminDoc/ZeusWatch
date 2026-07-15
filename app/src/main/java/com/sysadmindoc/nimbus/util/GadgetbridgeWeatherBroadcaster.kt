@@ -183,8 +183,8 @@ private fun WeatherData.toGadgetbridgeWeatherSpec(
         visibility = current.visibility?.toFloat() ?: 0f,
         sunRise = dateTimeStringToEpochSeconds(current.sunrise, today, zone),
         sunSet = dateTimeStringToEpochSeconds(current.sunset, today, zone),
-        latitude = location.latitude.toFloat(),
-        longitude = location.longitude.toFloat(),
+        latitude = location.latitude.toCoarseCoordinate(),
+        longitude = location.longitude.toCoarseCoordinate(),
         feelsLikeTemp = current.feelsLike.toKelvinInt(),
         forecasts = daily
             .filter { it.date.isAfter(today) }
@@ -250,6 +250,12 @@ private fun LocalDateTime.toEpochSeconds(zone: ZoneId): Int =
 
 private fun Double.toKelvinInt(): Int =
     (this + 273.15).roundToInt().coerceAtLeast(0)
+
+// The Gadgetbridge action is a public broadcast any installed app can resolve,
+// so round coordinates to 2 decimals (~1.1 km — the community-report
+// precision) instead of leaking a full-precision location fix.
+private fun Double.toCoarseCoordinate(): Float =
+    ((this * 100.0).roundToInt() / 100.0).toFloat()
 
 private fun gzipUtf8(value: String): ByteArray {
     val output = ByteArrayOutputStream()
