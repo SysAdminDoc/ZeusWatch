@@ -35,6 +35,7 @@ import com.sysadmindoc.nimbus.data.repository.SourceOverrides
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.sourceOverrides
+import com.sysadmindoc.nimbus.ui.component.TimeTravelStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
@@ -578,9 +579,18 @@ class MainViewModel @Inject constructor(
     }
 
     fun selectHistoricalDate(date: java.time.LocalDate) {
+        // Capture the id synchronously so a location swap that starts while the
+        // archive fetch is in flight invalidates this scrub's response.
+        val requestId = weatherRequestCounter.get()
         viewModelScope.launch {
             val weather = _uiState.value.weatherData ?: return@launch
-            weatherLoadCoordinator.selectHistoricalDate(date, weather, ::updateUiState)
+            weatherLoadCoordinator.selectHistoricalDate(
+                date = date,
+                weather = weather,
+                requestId = requestId,
+                updateState = ::updateUiState,
+                isLatestRequest = ::isLatestWeatherRequest,
+            )
         }
     }
 
@@ -851,6 +861,7 @@ data class MainUiState(
     val isOffline: Boolean = false,
     val onThisDay: com.sysadmindoc.nimbus.data.model.OnThisDayData? = null,
     val timeTravelDay: com.sysadmindoc.nimbus.data.model.TimeTravelDay? = null,
+    val timeTravelStatus: TimeTravelStatus = TimeTravelStatus.IDLE,
     val auroraKpData: AuroraKpData? = null,
     val activityIndices: ImmutableList<ActivityIndex> = persistentListOf(),
     val marineData: MarineData? = null,
@@ -896,6 +907,7 @@ private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
     goldenHourTimes = null,
     onThisDay = null,
     timeTravelDay = null,
+    timeTravelStatus = TimeTravelStatus.IDLE,
     auroraKpData = null,
     activityIndices = persistentListOf(),
     marineData = null,

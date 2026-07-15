@@ -6,6 +6,7 @@ import com.sysadmindoc.nimbus.data.location.LocationProvider
 import com.sysadmindoc.nimbus.data.model.*
 import com.sysadmindoc.nimbus.data.repository.*
 import com.sysadmindoc.nimbus.sync.WearSyncManager
+import com.sysadmindoc.nimbus.ui.component.TimeTravelStatus
 import com.sysadmindoc.nimbus.util.ConnectivityObserver
 import com.sysadmindoc.nimbus.util.SummaryEngine
 import io.mockk.*
@@ -20,6 +21,7 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -41,6 +43,7 @@ class MainViewModelTest {
     private lateinit var onThisDayRepository: OnThisDayRepository
     private lateinit var forecastEvolutionRepository: ForecastEvolutionRepository
     private lateinit var pwsRepository: PwsRepository
+    private lateinit var timeTravelRepository: TimeTravelRepository
 
     private lateinit var viewModel: MainViewModel
 
@@ -112,6 +115,8 @@ class MainViewModelTest {
         onThisDayRepository = mockk(relaxed = true)
         forecastEvolutionRepository = mockk(relaxed = true)
         pwsRepository = mockk(relaxed = true)
+        timeTravelRepository = mockk()
+        coEvery { timeTravelRepository.getDay(any(), any(), any(), any(), any()) } returns null
         every { connectivityObserver.isOnline } returns flowOf(true)
         every { summaryEngine.isAvailable() } returns false
         every { summaryEngine.close() } just Runs
@@ -202,7 +207,7 @@ class MainViewModelTest {
                         floodRepository = mockk(relaxed = true),
                         climateRepository = mockk(relaxed = true),
                         pwsRepository = pwsRepository,
-                        timeTravelRepository = mockk(relaxed = true),
+                        timeTravelRepository = timeTravelRepository,
                     ),
                 ),
             ),
@@ -637,5 +642,134 @@ class MainViewModelTest {
         assertEquals("Chicago", state.weatherData?.location?.name)
         assertEquals(chicago.latitude, state.weatherData?.location?.latitude ?: 0.0, 0.0001)
         assertNull(state.error)
+    }
+
+    // --- Time-travel scrub (selectHistoricalDate) ---
+
+    private val sampleOnThisDay = OnThisDayData(
+        priorYears = listOf(
+            PriorYearEntry(year = 2025, highC = 20.0, lowC = 8.0, precipMm = null),
+            PriorYearEntry(year = 2024, highC = 18.0, lowC = 6.0, precipMm = 1.2),
+        ),
+        averageHighC = 19.0,
+        averageLowC = 7.0,
+        recordHighC = 20.0,
+        recordLowC = 6.0,
+    )
+
+    private val sampleTimeTravelDay = TimeTravelDay(
+        date = LocalDate.of(2020, 6, 1),
+        weatherCode = WeatherCode.CLEAR_SKY,
+        highC = 25.0,
+        lowC = 12.0,
+        precipMm = 0.0,
+        isHistorical = true,
+    )
+
+    @Test
+    fun `selectHistoricalDate success sets scrub day and clears status`() = runTest {
+        stubLocationSuccess()
+        coEvery { timeTravelRepository.getDay(any(), any(), any(), any(), any()) } returns sampleTimeTravelDay
+        viewModel = createAndAdvance()
+
+        viewModel.selectHistoricalDate(LocalDate.of(2020, 6, 1))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(sampleTimeTravelDay, state.timeTravelDay)
+        assertEquals(TimeTravelStatus.IDLE, state.timeTravelStatus)
+    }
+
+    @Test
+    fun `selectHistoricalDate shows loading while fetch is in flight`() = runTest {
+        stubLocationSuccess()
+        val scrubStarted = CompletableDeferred<Unit>()
+        val releaseScrub = CompletableDeferred<Unit>()
+        coEvery { timeTravelRepository.getDay(any(), any(), any(), any(), any()) } coAnswers {
+            scrubStarted.complete(Unit)
+            releaseScrub.await()
+            sampleTimeTravelDay
+        }
+        viewModel = createAndAdvance()
+
+        viewModel.selectHistoricalDate(LocalDate.of(2020, 6, 1))
+        scrubStarted.await()
+        assertEquals(TimeTravelStatus.LOADING, viewModel.uiState.value.timeTravelStatus)
+
+        releaseScrub.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(TimeTravelStatus.IDLE, viewModel.uiState.value.timeTravelStatus)
+        assertEquals(sampleTimeTravelDay, viewModel.uiState.value.timeTravelDay)
+    }
+
+    @Test
+    fun `selectHistoricalDate failure keeps previous data and flags error`() = runTest {
+        stubLocationSuccess()
+        coEvery { onThisDayRepository.getOnThisDay(any(), any(), any()) } returns sampleOnThisDay
+        coEvery { timeTravelRepository.getDay(any(), any(), any(), any(), any()) } returns sampleTimeTravelDay
+        viewModel = createAndAdvance()
+
+        viewModel.selectHistoricalDate(LocalDate.of(2020, 6, 1))
+        advanceUntilIdle()
+        assertEquals(sampleTimeTravelDay, viewModel.uiState.value.timeTravelDay)
+
+        coEvery { timeTravelRepository.getDay(any(), any(), any(), any(), any()) } throws java.io.IOException("network down")
+        viewModel.selectHistoricalDate(LocalDate.of(2019, 3, 2))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(TimeTravelStatus.ERROR, state.timeTravelStatus)
+        // Previous scrub result and aggregate must survive the failed fetch.
+        assertEquals(sampleTimeTravelDay, state.timeTravelDay)
+        assertEquals(sampleOnThisDay, state.onThisDay)
+    }
+
+    @Test
+    fun `selectHistoricalDate with no archive data keeps previous day and flags unavailable`() = runTest {
+        stubLocationSuccess()
+        coEvery { timeTravelRepository.getDay(any(), any(), any(), any(), any()) } returns sampleTimeTravelDay
+        viewModel = createAndAdvance()
+
+        viewModel.selectHistoricalDate(LocalDate.of(2020, 6, 1))
+        advanceUntilIdle()
+        assertEquals(sampleTimeTravelDay, viewModel.uiState.value.timeTravelDay)
+
+        coEvery { timeTravelRepository.getDay(any(), any(), any(), any(), any()) } returns null
+        viewModel.selectHistoricalDate(LocalDate.now().minusDays(1))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(TimeTravelStatus.DATE_UNAVAILABLE, state.timeTravelStatus)
+        assertEquals(sampleTimeTravelDay, state.timeTravelDay)
+    }
+
+    @Test
+    fun `stale scrub response after location swap does not repopulate state`() = runTest {
+        every { locationProvider.hasLocationPermission } returns false
+        savedLocationsFlow.value = listOf(seattle, chicago)
+        val scrubStarted = CompletableDeferred<Unit>()
+        val releaseScrub = CompletableDeferred<Unit>()
+        coEvery { timeTravelRepository.getDay(any(), any(), any(), any(), any()) } coAnswers {
+            scrubStarted.complete(Unit)
+            releaseScrub.await()
+            sampleTimeTravelDay
+        }
+        viewModel = createAndAdvance()
+
+        viewModel.onPageChanged(0) // load Seattle
+        advanceUntilIdle()
+        viewModel.selectHistoricalDate(LocalDate.of(2020, 6, 1))
+        scrubStarted.await()
+
+        viewModel.onPageChanged(1) // swap to Chicago while the scrub is in flight
+        advanceUntilIdle()
+        releaseScrub.complete(Unit)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("Chicago", state.weatherData?.location?.name)
+        // The stale Seattle archive response must not land under Chicago.
+        assertNull(state.timeTravelDay)
+        assertEquals(TimeTravelStatus.IDLE, state.timeTravelStatus)
     }
 }

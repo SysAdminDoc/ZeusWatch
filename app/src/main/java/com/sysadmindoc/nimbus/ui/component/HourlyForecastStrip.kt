@@ -106,7 +106,12 @@ fun HourlyForecastStrip(
     val headerSummary = remember(activeTab, forecastHours, referenceTime, s, context) {
         hourlyHeaderSummary(context, activeTab, forecastHours, referenceTime, s)
     }
-    var selectedHour by remember { mutableStateOf<HourlyConditions?>(null) }
+    // Track the selected TIME (keyed on the hourly payload) and resolve it
+    // against the current list each composition: a location swap or refresh
+    // replaces the list, so the detail panel can never keep showing a stale
+    // hour from the previous city/payload.
+    var selectedHourTime by remember(hourly) { mutableStateOf<java.time.LocalDateTime?>(null) }
+    val selectedHour = selectedHourTime?.let { time -> forecastHours.firstOrNull { it.time == time } }
 
     SharedTransitionLayout(modifier = modifier) {
         val sharedTransitionScope = this
@@ -158,7 +163,7 @@ fun HourlyForecastStrip(
                     key = { _, item -> item.time },
                     contentType = { _, _ -> activeTab.name },
                 ) { index, hour ->
-                    val openDetail = { selectedHour = hour }
+                    val openDetail = { selectedHourTime = hour.time }
                     val highlighted = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime)
                     AnimatedVisibility(
                         visible = selectedHour?.time != hour.time,
@@ -206,7 +211,7 @@ fun HourlyForecastStrip(
                                 hour = detailHour,
                                 referenceTime = referenceTime,
                                 confidenceBands = confidenceBands,
-                                onDismiss = { selectedHour = null },
+                                onDismiss = { selectedHourTime = null },
                             )
                         }
                     }

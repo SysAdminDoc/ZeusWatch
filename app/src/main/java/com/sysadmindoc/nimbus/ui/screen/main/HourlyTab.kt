@@ -282,7 +282,7 @@ private fun HourlyRow(
         // Precip probability
         if (hour.precipitationProbability > 0) {
             Text(
-                "${hour.precipitationProbability}%",
+                stringResource(R.string.forecast_hourly_rain_chance, hour.precipitationProbability),
                 style = MaterialTheme.typography.labelMedium,
                 color = NimbusBlueAccent,
             )

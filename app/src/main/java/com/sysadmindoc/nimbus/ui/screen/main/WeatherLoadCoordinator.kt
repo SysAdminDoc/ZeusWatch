@@ -29,6 +29,7 @@ import com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider
 import com.sysadmindoc.nimbus.data.repository.toZoneIdOrNull
 import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import com.sysadmindoc.nimbus.sync.WearSyncManager
+import com.sysadmindoc.nimbus.ui.component.TimeTravelStatus
 import com.sysadmindoc.nimbus.util.ActivityIndexEvaluator
 import com.sysadmindoc.nimbus.util.ClothingSuggestion
 import com.sysadmindoc.nimbus.util.ClothingSuggestionEvaluator
@@ -323,8 +324,12 @@ class WeatherLoadCoordinator @Inject constructor(
     suspend fun selectHistoricalDate(
         date: LocalDate,
         weather: WeatherData,
+        requestId: Long,
         updateState: ((MainUiState) -> MainUiState) -> Unit,
+        isLatestRequest: (Long) -> Boolean,
     ) {
+        if (!isLatestRequest(requestId)) return
+        updateState { it.copy(timeTravelStatus = TimeTravelStatus.LOADING) }
         withContext(defaultDispatcher) {
             try {
                 val data = onThisDayRepository.getOnThisDay(
@@ -335,16 +340,36 @@ class WeatherLoadCoordinator @Inject constructor(
                 // Also resolve the actual weather for the exact selected date
                 // (time-travel scrub) — the archive observation for a single past
                 // day, distinct from the "on this day across years" aggregate.
+                // "Today" is anchored to the viewed location's timezone so the
+                // archive/forecast routing matches what that location's calendar says.
+                val locationZone = weather.location.timeZone.toZoneIdOrNull() ?: ZoneId.systemDefault()
                 val exactDay = timeTravelRepository.getDay(
                     latitude = weather.location.latitude,
                     longitude = weather.location.longitude,
                     date = date,
                     forecastDaily = weather.daily,
+                    today = LocalDate.now(locationZone),
                 )
-                updateState { it.copy(onThisDay = data, timeTravelDay = exactDay) }
+                if (!isLatestRequest(requestId)) return@withContext
+                if (exactDay == null) {
+                    // Keep the previous onThisDay/timeTravelDay — wiping them would
+                    // drop the card's own "explore dates" entry point.
+                    updateState { it.copy(timeTravelStatus = TimeTravelStatus.DATE_UNAVAILABLE) }
+                } else {
+                    updateState {
+                        it.copy(
+                            onThisDay = data ?: it.onThisDay,
+                            timeTravelDay = exactDay,
+                            timeTravelStatus = TimeTravelStatus.IDLE,
+                        )
+                    }
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.w(TAG, "selectHistoricalDate failed: ${e.message}")
+                if (isLatestRequest(requestId)) {
+                    updateState { it.copy(timeTravelStatus = TimeTravelStatus.ERROR) }
+                }
             }
         }
     }
@@ -353,6 +378,7 @@ class WeatherLoadCoordinator @Inject constructor(
         try {
             WeatherWallpaperService.publishWeatherCode(appContext, data.current.weatherCode.code)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w(TAG, "Wallpaper weather publish failed", e)
         }
     }
@@ -365,6 +391,7 @@ class WeatherLoadCoordinator @Inject constructor(
                 airQuality = currentState().airQuality,
             )
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.w(TAG, "Wear sync failed", e)
         }
     }

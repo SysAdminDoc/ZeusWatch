@@ -9,15 +9,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -31,11 +35,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +51,9 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.OnThisDayData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.TempUnit
+import com.sysadmindoc.nimbus.data.repository.TimeTravelRange
+import com.sysadmindoc.nimbus.data.repository.TimeTravelSource
+import com.sysadmindoc.nimbus.data.repository.toZoneIdOrNull
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
@@ -56,6 +65,9 @@ import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
 
+/** UI status of the time-travel scrub fetch for the selected date. */
+enum class TimeTravelStatus { IDLE, LOADING, ERROR, DATE_UNAVAILABLE }
+
 /**
  * "On This Day" card — surfaces historical context for today's forecast by
  * comparing the forecast high to the 10-year average high for this calendar
@@ -66,49 +78,24 @@ import kotlin.math.min
  * network). Loading is handled upstream — if [data] is null and we are
  * still fetching, the card is not rendered at all.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnThisDayCard(
     data: OnThisDayData?,
     forecastHighC: Double?,
     onDateSelected: ((LocalDate) -> Unit)? = null,
     selectedDay: com.sysadmindoc.nimbus.data.model.TimeTravelDay? = null,
+    timeTravelStatus: TimeTravelStatus = TimeTravelStatus.IDLE,
+    locationTimeZone: String? = null,
     modifier: Modifier = Modifier,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
 
     if (showDatePicker && onDateSelected != null) {
-        val yesterday = LocalDate.now().minusDays(1)
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = yesterday.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+        ExploreDatesDialog(
+            locationTimeZone = locationTimeZone,
+            onDismiss = { showDatePicker = false },
+            onDateSelected = onDateSelected,
         )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDatePicker = false
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val selected = Instant.ofEpochMilli(millis)
-                                .atZone(ZoneOffset.UTC)
-                                .toLocalDate()
-                            if (selected.isBefore(LocalDate.now())) {
-                                onDateSelected(selected)
-                            }
-                        }
-                    },
-                ) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-            },
-        ) {
-            DatePicker(state = datePickerState)
-        }
     }
     val s = LocalUnitSettings.current
     val semanticDescription = if (data == null || data.priorYears.isEmpty()) {
@@ -233,24 +220,160 @@ fun OnThisDayCard(
                 )
             }
 
-            if (selectedDay != null) {
-                Spacer(modifier = Modifier.height(10.dp))
-                SelectedDayRow(day = selectedDay, s = s)
-            }
-
-            if (onDateSelected != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.on_this_day_explore_dates),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = NimbusBlueAccent,
-                    modifier = Modifier
-                        .clickable { showDatePicker = true }
-                        .padding(vertical = 4.dp),
-                )
-            }
+            ScrubSection(
+                selectedDay = selectedDay,
+                status = timeTravelStatus,
+                s = s,
+                onExploreDates = if (onDateSelected != null) {
+                    { showDatePicker = true }
+                } else {
+                    null
+                },
+            )
         }
     }
+}
+
+/**
+ * Date picker bounded to the range the time-travel lookup can actually answer:
+ * the Open-Meteo archive floor (1940) through today plus the loaded forecast
+ * horizon. Today and near-future dates resolve against the loaded forecast,
+ * which also covers the archive's ~2-day publication lag. "Today" is anchored
+ * to the viewed location's timezone when known, else the device zone.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExploreDatesDialog(
+    locationTimeZone: String?,
+    onDismiss: () -> Unit,
+    onDateSelected: (LocalDate) -> Unit,
+) {
+    val today = remember(locationTimeZone) {
+        LocalDate.now(locationTimeZone.toZoneIdOrNull() ?: ZoneId.systemDefault())
+    }
+    val maxDate = TimeTravelRange.maxSelectableDate(today)
+    val datePickerState = rememberDatePickerState(
+        // Default to today: it always resolves from the loaded forecast, while
+        // yesterday usually sits inside the archive's publication lag.
+        initialSelectedDateMillis = today.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+        yearRange = TimeTravelRange.MIN_DATE.year..maxDate.year,
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                val date = Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneOffset.UTC).toLocalDate()
+                return TimeTravelRange.classify(date, today) != TimeTravelSource.OUT_OF_RANGE
+            }
+
+            override fun isSelectableYear(year: Int): Boolean =
+                year in TimeTravelRange.MIN_DATE.year..maxDate.year
+        },
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        onDateSelected(
+                            Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate(),
+                        )
+                    }
+                },
+            ) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    ) {
+        DatePicker(state = datePickerState)
+    }
+}
+
+/**
+ * Scrub result area: the selected-date row plus the fetch status. On failure
+ * or an unavailable date the previous result stays visible and a calm inline
+ * row explains what happened — the "explore" entry point never disappears.
+ */
+@Composable
+private fun ScrubSection(
+    selectedDay: com.sysadmindoc.nimbus.data.model.TimeTravelDay?,
+    status: TimeTravelStatus,
+    s: NimbusSettings,
+    onExploreDates: (() -> Unit)?,
+) {
+    if (status == TimeTravelStatus.LOADING) {
+        Spacer(modifier = Modifier.height(10.dp))
+        ScrubLoadingRow()
+    } else {
+        if (selectedDay != null) {
+            Spacer(modifier = Modifier.height(10.dp))
+            SelectedDayRow(day = selectedDay, s = s)
+        }
+        if (status == TimeTravelStatus.ERROR) {
+            Spacer(modifier = Modifier.height(8.dp))
+            ScrubStatusRow(textRes = R.string.on_this_day_scrub_error)
+        }
+        if (status == TimeTravelStatus.DATE_UNAVAILABLE) {
+            Spacer(modifier = Modifier.height(8.dp))
+            ScrubStatusRow(textRes = R.string.on_this_day_date_unavailable)
+        }
+    }
+
+    if (onExploreDates != null) {
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.on_this_day_explore_dates),
+            style = MaterialTheme.typography.labelMedium,
+            color = NimbusBlueAccent,
+            modifier = Modifier
+                .heightIn(min = 48.dp) // a11y minimum touch target
+                .clickable(onClick = onExploreDates, role = Role.Button)
+                .wrapContentHeight()
+                .padding(vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun ScrubLoadingRow() {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(NimbusTextTertiary.copy(alpha = 0.10f))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(14.dp),
+            strokeWidth = 2.dp,
+            color = NimbusBlueAccent,
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = stringResource(R.string.on_this_day_loading),
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+        )
+    }
+}
+
+@Composable
+private fun ScrubStatusRow(textRes: Int) {
+    Text(
+        text = stringResource(textRes),
+        style = MaterialTheme.typography.bodySmall,
+        color = NimbusTextTertiary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(NimbusTextTertiary.copy(alpha = 0.10f))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    )
 }
 
 /**
@@ -374,7 +497,7 @@ private fun PriorYearsSparkline(
             color = avgLineColor,
             start = Offset(0f, avgY.coerceIn(0f, h)),
             end = Offset(w, avgY.coerceIn(0f, h)),
-            strokeWidth = 1f,
+            strokeWidth = 1.dp.toPx(),
         )
 
         // Polyline
@@ -388,7 +511,7 @@ private fun PriorYearsSparkline(
                     color = lineColor,
                     start = p,
                     end = pt,
-                    strokeWidth = 3f,
+                    strokeWidth = 2.dp.toPx(),
                     cap = StrokeCap.Round,
                 )
             }
@@ -401,9 +524,9 @@ private fun PriorYearsSparkline(
             val y = h - ((v - minY) / range * h).toFloat()
             drawCircle(
                 color = pointColor,
-                radius = 3f,
+                radius = 2.5.dp.toPx(),
                 center = Offset(x, y.coerceIn(0f, h)),
-                style = Stroke(width = 2f),
+                style = Stroke(width = 1.5.dp.toPx()),
             )
         }
     }
