@@ -523,6 +523,86 @@ class AlertRepositoryTest {
         coVerify(exactly = 1) { api.getActiveAlerts(any(), any(), any()) }
     }
 
+    @Test
+    fun `two-character CJK country hint falls through to geocoder detection`() = runTest {
+        // Pre-fix bug: `trimmed.filter { it.isLetter() }` accepted "日本" as an
+        // ISO alpha-2 code (two letters), suppressed the geocoder fallback,
+        // and routed alerts against a garbage "日本" country code.
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+            features = listOf(makeFeature())
+        )
+
+        // setup() mocks the geocoder to return US: the CJK hint must be
+        // rejected so detection runs and NWS is queried.
+        val result = repository.getAlerts(
+            latitude = 39.7,
+            longitude = -104.9,
+            countryHint = "日本",
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrThrow().size)
+        coVerify(exactly = 1) { api.getActiveAlerts(any(), any(), any()) }
+    }
+
+    @Test
+    fun `lowercase padded two-letter hint normalizes to an ISO code`() = runTest {
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+            features = listOf(makeFeature())
+        )
+
+        // " jp " → JP; only NWS is registered so nothing is queried, and the
+        // US geocoder result must NOT override the valid hint.
+        val result = repository.getAlerts(
+            latitude = 35.6,
+            longitude = 139.7,
+            countryHint = " jp ",
+        )
+
+        assertTrue(result.isSuccess)
+        assertTrue(result.getOrThrow().isEmpty())
+        coVerify(exactly = 0) { api.getActiveAlerts(any(), any(), any()) }
+    }
+
+    @Test
+    fun `unassigned two-letter hint falls through to geocoder detection`() = runTest {
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+            features = listOf(makeFeature())
+        )
+
+        // "ZZ" is ASCII but not an assigned ISO 3166-1 code → ignore the hint
+        // and use the (US) geocoder result.
+        val result = repository.getAlerts(
+            latitude = 39.7,
+            longitude = -104.9,
+            countryHint = "ZZ",
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrThrow().size)
+        coVerify(exactly = 1) { api.getActiveAlerts(any(), any(), any()) }
+    }
+
+    @Test
+    fun `three-letter alias hint still resolves through the name table`() = runTest {
+        val jpAddress = mockk<Address>()
+        every { jpAddress.countryCode } returns "JP"
+        every { anyConstructed<Geocoder>().getFromLocation(any(), any(), any()) } returns listOf(jpAddress)
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+            features = listOf(makeFeature())
+        )
+
+        val result = repository.getAlerts(
+            latitude = 39.7,
+            longitude = -104.9,
+            countryHint = "USA",
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrThrow().size)
+        coVerify(exactly = 1) { api.getActiveAlerts(any(), any(), any()) }
+    }
+
     private fun fakeAdapter(
         id: String,
         result: Result<List<WeatherAlert>>? = null,

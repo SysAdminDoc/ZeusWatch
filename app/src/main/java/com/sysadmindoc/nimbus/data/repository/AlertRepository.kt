@@ -309,8 +309,13 @@ class AlertRepository @Inject constructor(
     private fun normalizeCountryHint(countryHint: String?): String? {
         val trimmed = countryHint?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         val alphaOnly = trimmed.filter { it.isLetter() }
-        if (alphaOnly.length == 2) {
-            return alphaOnly.uppercase(Locale.ROOT)
+        // Only trust two letters as an ISO 3166-1 alpha-2 code when they are
+        // ASCII and actually assigned: two-character localized country names
+        // ("日本", "中国") would otherwise masquerade as codes, suppress the
+        // geocoder fallback, and misroute alerts to the wrong adapter.
+        if (alphaOnly.length == 2 && alphaOnly.all { it in 'A'..'Z' || it in 'a'..'z' }) {
+            val code = alphaOnly.uppercase(Locale.ROOT)
+            if (code in Locale.getISOCountries()) return code
         }
         return countryNameToCode(trimmed)
     }

@@ -75,6 +75,20 @@ class GadgetbridgeWeatherBroadcasterTest {
     }
 
     @Test
+    fun `payload coarsens coordinates to two decimals`() {
+        // The Gadgetbridge action is a public broadcast: any installed app can
+        // register for it, so full-precision GPS coordinates must never leak.
+        val payloads = buildGadgetbridgeWeatherPayloads(
+            primary = weatherData("Home", latitude = 39.123456, longitude = -104.987654),
+        )
+
+        val primaryJson = json.parseToJsonElement(payloads.primaryJson).jsonObject
+
+        assertEquals(39.12, primaryJson["latitude"]!!.jsonPrimitive.double, 1e-4)
+        assertEquals(-104.99, primaryJson["longitude"]!!.jsonPrimitive.double, 1e-4)
+    }
+
+    @Test
     fun `payload caps Gadgetbridge broadcasts to three locations`() {
         val payloads = buildGadgetbridgeWeatherPayloads(
             primary = weatherData("Primary"),

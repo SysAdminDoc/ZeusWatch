@@ -141,6 +141,58 @@ class HealthAlertWorkerTest {
         }
     }
 
+    @Test
+    fun `failed delivery releases the claim so a later run can re-notify today`() = runTest {
+        val context = mockk<Context>(relaxed = true)
+        val params = mockk<WorkerParameters>(relaxed = true)
+        val weatherRepository = mockk<WeatherRepository>()
+        val prefs = mockk<UserPreferences>()
+        wireMapBackedHealthStore(context)
+
+        mockkObject(AlertNotificationHelper)
+        try {
+            every { prefs.settings } returns flowOf(
+                NimbusSettings(
+                    healthAlertsEnabled = true,
+                    migraineAlerts = true,
+                )
+            )
+            every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+            coEvery { weatherRepository.getWeather(39.7, -104.9, "Denver") } returns
+                Result.success(weatherWithPressures(WARNING_PRESSURES))
+
+            val worker = HealthAlertWorker(context, params, weatherRepository, prefs)
+
+            // Run 1: POST_NOTIFICATIONS revoked → delivery fails. The claim
+            // must be rolled back instead of burning the daily slot.
+            every {
+                AlertNotificationHelper.showHealthNotification(any(), any(), any(), any(), any(), any())
+            } returns false
+            worker.doWork()
+
+            // Run 2, same forecast day: permission restored → must re-notify.
+            every {
+                AlertNotificationHelper.showHealthNotification(any(), any(), any(), any(), any(), any())
+            } returns true
+            worker.doWork()
+            verify(exactly = 2) {
+                AlertNotificationHelper.showHealthNotification(
+                    any(), any(), any(), any(), any(), HealthSeverity.WARNING,
+                )
+            }
+
+            // Run 3, same day: the successful delivery now dedupes normally.
+            worker.doWork()
+            verify(exactly = 2) {
+                AlertNotificationHelper.showHealthNotification(
+                    any(), any(), any(), any(), any(), HealthSeverity.WARNING,
+                )
+            }
+        } finally {
+            unmockkObject(AlertNotificationHelper)
+        }
+    }
+
     /**
      * Wires a map-backed [SharedPreferences] fake into the relaxed context so
      * [HealthAlertWorker]'s dedupe store persists across `doWork()` calls.

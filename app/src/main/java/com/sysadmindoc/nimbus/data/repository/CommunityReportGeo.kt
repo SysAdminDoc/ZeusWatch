@@ -22,7 +22,14 @@ internal data class GeohashQueryBound(
 )
 
 internal object CommunityReportGeo {
-    fun geohash(latitude: Double, longitude: Double, precision: Int = precisionForRadius(50.0)): String {
+    /**
+     * Precision reports are stored at. Query prefixes must never exceed this:
+     * a prefix longer than the stored hash can never range-match it, so
+     * lookups with a smaller radius would silently return zero rows.
+     */
+    private const val WRITE_PRECISION = 4
+
+    fun geohash(latitude: Double, longitude: Double, precision: Int = WRITE_PRECISION): String {
         val lat = latitude.coerceIn(-90.0, 90.0)
         val lon = normalizeLongitude(longitude)
         var latRange = -90.0..90.0
@@ -66,7 +73,10 @@ internal object CommunityReportGeo {
     }
 
     fun queryBounds(latitude: Double, longitude: Double, radiusKm: Double): List<GeohashQueryBound> {
-        val precision = precisionForRadius(radiusKm)
+        // Shorter prefixes match MORE stored hashes, so only clamp the upper
+        // end: a derived precision finer than WRITE_PRECISION would produce
+        // prefixes longer than any stored hash and match nothing.
+        val precision = min(precisionForRadius(radiusKm), WRITE_PRECISION)
         return prefixesFor(latitude, longitude, radiusKm, precision).map { prefix ->
             GeohashQueryBound(start = prefix, end = "$prefix~")
         }

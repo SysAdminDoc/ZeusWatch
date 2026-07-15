@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.wear.tile
 
 import androidx.wear.tiles.Material3TileService
 import com.sysadmindoc.nimbus.wear.R
+import com.sysadmindoc.nimbus.wear.data.DataSource
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
 import com.sysadmindoc.nimbus.wear.data.WearWeatherData
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
@@ -40,6 +41,7 @@ class WeatherTileServiceTest {
             isDay = true,
             weatherCode = 0,
         )
+        every { syncedStore.lastSyncTimestamp() } returns 1_720_000_000_000L
         val repository = mockk<WearWeatherRepository>(relaxed = true)
         val locationProvider = mockk<WearLocationProvider>(relaxed = true)
         val service = Robolectric.buildService(WeatherTileService::class.java).get()
@@ -51,6 +53,10 @@ class WeatherTileServiceTest {
 
         assertEquals(72, data!!.temperature)
         assertEquals("Seattle", data.locationName)
+        // Synced data must carry source + sync age so the tile's freshness
+        // label renders on the dominant phone-sync path, not just API loads.
+        assertEquals(DataSource.PHONE_SYNC, data.dataSource)
+        assertEquals(1_720_000_000_000L, data.syncedAtMs)
         coVerify(exactly = 0) { locationProvider.getLocation() }
         coVerify(exactly = 0) { repository.getCurrentWeather(any(), any(), any()) }
     }

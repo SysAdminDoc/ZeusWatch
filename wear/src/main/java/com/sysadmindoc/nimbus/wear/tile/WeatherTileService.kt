@@ -22,6 +22,7 @@ import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.TileBuilders
 import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.WearMainActivity
+import com.sysadmindoc.nimbus.wear.data.DataSource
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
 import com.sysadmindoc.nimbus.wear.data.WearUnitFormatter
 import com.sysadmindoc.nimbus.wear.data.WearWeatherData
@@ -54,7 +55,10 @@ class WeatherTileService : Material3TileService(
     internal suspend fun loadTileData(): WearWeatherData? {
         // Prefer phone-synced data to avoid network calls from the watch.
         val synced = syncedStore.getFreshData()
-        return synced ?: run {
+        return synced?.copy(
+            dataSource = DataSource.PHONE_SYNC,
+            syncedAtMs = syncedStore.lastSyncTimestamp(),
+        ) ?: run {
             val loc = locationProvider.getLocation()
             repository.getCurrentWeather(loc.lat, loc.lon, loc.name).getOrNull()
         }
