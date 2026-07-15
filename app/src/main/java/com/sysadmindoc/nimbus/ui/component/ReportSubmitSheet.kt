@@ -121,77 +121,11 @@ fun ReportSubmitSheet(
                 .imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = stringResource(R.string.report_sheet_title),
-                color = NimbusTextPrimary,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = stringResource(R.string.report_sheet_body),
-                color = NimbusTextSecondary,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = stringResource(R.string.report_retention_notice),
-                color = NimbusTextTertiary,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Condition selection grid
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .selectableGroup(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                ReportCondition.entries.forEach { condition ->
-                    val isSelected = selectedCondition == condition
-                    ConditionChip(
-                        condition = condition,
-                        isSelected = isSelected,
-                        onClick = { selectedCondition = condition },
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Optional note
-            OutlinedTextField(
-                value = noteText,
-                onValueChange = { if (it.length <= 100) noteText = it },
-                label = { Text(stringResource(R.string.report_note_label), color = NimbusTextTertiary) },
-                placeholder = { Text(stringResource(R.string.report_note_placeholder), color = NimbusTextTertiary) },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = NimbusTextPrimary,
-                    unfocusedTextColor = NimbusTextPrimary,
-                    cursorColor = NimbusBlueAccent,
-                    focusedBorderColor = NimbusBlueAccent,
-                    unfocusedBorderColor = NimbusCardBorder,
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                supportingText = {
-                    Text(
-                        text = stringResource(R.string.report_note_count, noteText.length, 100),
-                        color = NimbusTextTertiary,
-                        fontSize = 12.sp,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.End,
-                    )
-                },
+            ReportSheetFormFields(
+                selectedCondition = selectedCondition,
+                onConditionSelected = { selectedCondition = it },
+                noteText = noteText,
+                onNoteChange = { noteText = it },
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -203,8 +137,8 @@ fun ReportSubmitSheet(
                 },
                 enabled = selectedCondition != null && !isSubmitting,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = NimbusBlueAccent,
-                    contentColor = NimbusTextPrimary,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                     disabledContainerColor = NimbusNavyMid,
                     disabledContentColor = NimbusTextTertiary,
                 ),
@@ -264,6 +198,89 @@ fun ReportSubmitSheet(
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
+}
+
+/** Header copy, condition selection grid, and the optional note field. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ReportSheetFormFields(
+    selectedCondition: ReportCondition?,
+    onConditionSelected: (ReportCondition) -> Unit,
+    noteText: String,
+    onNoteChange: (String) -> Unit,
+) {
+    Text(
+        text = stringResource(R.string.report_sheet_title),
+        color = NimbusTextPrimary,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+    )
+
+    Spacer(modifier = Modifier.height(4.dp))
+
+    Text(
+        text = stringResource(R.string.report_sheet_body),
+        color = NimbusTextSecondary,
+        style = MaterialTheme.typography.bodyMedium,
+        textAlign = TextAlign.Center,
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Text(
+        text = stringResource(R.string.report_retention_notice),
+        color = NimbusTextTertiary,
+        style = MaterialTheme.typography.bodySmall,
+        textAlign = TextAlign.Center,
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Condition selection grid
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ReportCondition.entries.forEach { condition ->
+            val isSelected = selectedCondition == condition
+            ConditionChip(
+                condition = condition,
+                isSelected = isSelected,
+                onClick = { onConditionSelected(condition) },
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Optional note
+    OutlinedTextField(
+        value = noteText,
+        onValueChange = { if (it.length <= 100) onNoteChange(it) },
+        label = { Text(stringResource(R.string.report_note_label), color = NimbusTextTertiary) },
+        placeholder = { Text(stringResource(R.string.report_note_placeholder), color = NimbusTextTertiary) },
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = NimbusTextPrimary,
+            unfocusedTextColor = NimbusTextPrimary,
+            cursorColor = NimbusBlueAccent,
+            focusedBorderColor = NimbusBlueAccent,
+            unfocusedBorderColor = NimbusCardBorder,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+        supportingText = {
+            Text(
+                text = stringResource(R.string.report_note_count, noteText.length, 100),
+                color = NimbusTextTertiary,
+                fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End,
+            )
+        },
+    )
 }
 
 @Composable

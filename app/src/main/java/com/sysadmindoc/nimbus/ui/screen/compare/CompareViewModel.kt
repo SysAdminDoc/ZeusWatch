@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
+import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherDataType
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
@@ -30,6 +31,7 @@ class CompareViewModel @Inject constructor(
     private val weatherRepository: WeatherRepository,
     private val locationRepository: LocationRepository,
     private val weatherSourceManager: WeatherSourceManager,
+    private val userPreferences: UserPreferences,
 ) : ViewModel() {
 
     private enum class Slot { PRIMARY, SECONDARY }
@@ -46,6 +48,11 @@ class CompareViewModel @Inject constructor(
     private var activeLoads = 0
 
     init {
+        viewModelScope.launch {
+            userPreferences.settings.collect { settings ->
+                applyPersistedOverlayVisibility(settings.showCompareChartOverlay)
+            }
+        }
         viewModelScope.launch {
             locationRepository.savedLocations.collect { locations ->
                 syncSavedLocations(locations)
@@ -64,6 +71,7 @@ class CompareViewModel @Inject constructor(
                 overlayForecasts = emptyList(),
                 isOverlayLoading = false,
                 overlayUnavailable = false,
+                overlayLoadFailed = false,
             )
         }
         fetchWeather(location, Slot.PRIMARY, primaryRequestToken)
@@ -83,6 +91,7 @@ class CompareViewModel @Inject constructor(
                 overlayForecasts = emptyList(),
                 isOverlayLoading = false,
                 overlayUnavailable = false,
+                overlayLoadFailed = false,
             )
         }
         val loc1 = _uiState.value.location1
@@ -99,6 +108,32 @@ class CompareViewModel @Inject constructor(
 
     fun setChartOverlayVisible(visible: Boolean) {
         _uiState.update { it.copy(showChartOverlay = visible) }
+        viewModelScope.launch { userPreferences.setShowCompareChartOverlay(visible) }
+        if (visible) fetchChartOverlayIfMissing()
+    }
+
+    fun retryChartOverlay() {
+        val state = _uiState.value
+        val location = state.location1 ?: return
+        val weather = state.weather1 ?: return
+        if (!state.showChartOverlay || state.isOverlayLoading) return
+        fetchChartOverlay(location, weather, primaryRequestToken)
+    }
+
+    private fun applyPersistedOverlayVisibility(visible: Boolean) {
+        if (_uiState.value.showChartOverlay == visible) return
+        _uiState.update { it.copy(showChartOverlay = visible) }
+        if (visible) fetchChartOverlayIfMissing()
+    }
+
+    /** Lazy fetch for the case where the overlay was toggled on after weather loaded. */
+    private fun fetchChartOverlayIfMissing() {
+        val state = _uiState.value
+        val location = state.location1 ?: return
+        val weather = state.weather1 ?: return
+        if (state.isOverlayLoading || state.overlayUnavailable) return
+        if (state.overlayForecasts.size >= 2) return
+        fetchChartOverlay(location, weather, primaryRequestToken)
     }
 
     private fun syncSavedLocations(locations: List<SavedLocationEntity>) {
@@ -137,6 +172,7 @@ class CompareViewModel @Inject constructor(
                 overlayForecasts = if (keepOverlay) state.overlayForecasts else emptyList(),
                 isOverlayLoading = if (keepOverlay) state.isOverlayLoading else false,
                 overlayUnavailable = if (keepOverlay) state.overlayUnavailable else false,
+                overlayLoadFailed = if (keepOverlay) state.overlayLoadFailed else false,
             )
         }
 
@@ -160,7 +196,11 @@ class CompareViewModel @Inject constructor(
                                     _uiState.update {
                                         it.copy(weather1 = data, failedLocation1 = null)
                                     }
-                                    fetchChartOverlay(location, data, requestToken)
+                                    // Don't burn network on an overlay the user has hidden;
+                                    // setChartOverlayVisible fetches lazily on re-enable.
+                                    if (_uiState.value.showChartOverlay) {
+                                        fetchChartOverlay(location, data, requestToken)
+                                    }
                                 }
                             }
                             Slot.SECONDARY -> {
@@ -185,6 +225,7 @@ class CompareViewModel @Inject constructor(
                                             overlayForecasts = emptyList(),
                                             isOverlayLoading = false,
                                             overlayUnavailable = false,
+                                            overlayLoadFailed = false,
                                         )
                                     }
                                 }
@@ -222,6 +263,7 @@ class CompareViewModel @Inject constructor(
                     overlayForecasts = emptyList(),
                     isOverlayLoading = true,
                     overlayUnavailable = false,
+                    overlayLoadFailed = false,
                 )
             }
 
@@ -238,6 +280,7 @@ class CompareViewModel @Inject constructor(
                     weather = primaryData.copy(sourceProvider = primaryProvider.displayName),
                 )
             )
+            var fetchFailureCount = 0
             val alternateForecasts = coroutineScope {
                 candidates
                     .filterNot { it == primaryProvider }
@@ -258,6 +301,7 @@ class CompareViewModel @Inject constructor(
                     onSuccess = { CompareOverlayForecast(provider = provider, weather = it) },
                     onFailure = {
                         Log.d(TAG, "Compare overlay ${provider.displayName} unavailable: ${it.message}")
+                        fetchFailureCount += 1
                         null
                     },
                 )
@@ -266,11 +310,15 @@ class CompareViewModel @Inject constructor(
             val usableForecasts = forecasts.filter { it.weather.hourly.size >= 2 }
 
             if (!isCurrentOverlayRequest(location, parentRequestToken, token)) return@launch
+            // Failed source fetches are retryable load errors; too few usable
+            // forecasts without any fetch failure is a genuine capability gap.
+            val notEnoughSources = usableForecasts.size < 2
             _uiState.update {
                 it.copy(
                     overlayForecasts = usableForecasts,
                     isOverlayLoading = false,
-                    overlayUnavailable = usableForecasts.size < 2,
+                    overlayUnavailable = notEnoughSources && fetchFailureCount == 0,
+                    overlayLoadFailed = notEnoughSources && fetchFailureCount > 0,
                 )
             }
         }
@@ -287,6 +335,7 @@ class CompareViewModel @Inject constructor(
                 overlayForecasts = emptyList(),
                 isOverlayLoading = false,
                 overlayUnavailable = true,
+                overlayLoadFailed = false,
             )
         }
     }
@@ -331,6 +380,7 @@ data class CompareUiState(
     val isLoading: Boolean = false,
     val isOverlayLoading: Boolean = false,
     val overlayUnavailable: Boolean = false,
+    val overlayLoadFailed: Boolean = false,
     val showChartOverlay: Boolean = true,
     val failedLocation1: SavedLocationEntity? = null,
     val failedLocation2: SavedLocationEntity? = null,

@@ -222,7 +222,7 @@ private fun ForecastDetailPanelFrame(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(12.dp)
     val backDescription = stringResource(R.string.common_back)
     ForecastDetailContent(
         title = title,

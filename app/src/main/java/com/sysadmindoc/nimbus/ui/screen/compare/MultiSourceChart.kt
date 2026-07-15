@@ -4,12 +4,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -18,6 +18,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -28,6 +29,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -38,6 +40,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
@@ -67,8 +70,10 @@ internal fun MultiSourceChartCard(
     forecasts: List<CompareOverlayForecast>,
     isLoading: Boolean,
     unavailable: Boolean,
+    loadFailed: Boolean,
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
+    onRetry: () -> Unit,
     settings: NimbusSettings,
     modifier: Modifier = Modifier,
 ) {
@@ -135,6 +140,8 @@ internal fun MultiSourceChartCard(
                 chartSeries = chartSeries,
                 isLoading = isLoading,
                 unavailable = unavailable,
+                loadFailed = loadFailed,
+                onRetry = onRetry,
                 summary = summary,
                 chartDescription = chartDescription,
                 settings = settings,
@@ -148,6 +155,8 @@ private fun MultiSourceChartBody(
     chartSeries: List<MultiSourceChartSeries>,
     isLoading: Boolean,
     unavailable: Boolean,
+    loadFailed: Boolean,
+    onRetry: () -> Unit,
     summary: CompareOverlaySummary?,
     chartDescription: String,
     settings: NimbusSettings,
@@ -172,6 +181,8 @@ private fun MultiSourceChartBody(
                 color = NimbusTextSecondary,
             )
         }
+
+        loadFailed && chartSeries.size < 2 -> MultiSourceLoadFailedNotice(onRetry = onRetry)
 
         unavailable || chartSeries.size < 2 -> Text(
             text = stringResource(R.string.compare_chart_overlay_unavailable),
@@ -199,6 +210,34 @@ private fun MultiSourceChartBody(
 }
 
 @Composable
+private fun MultiSourceLoadFailedNotice(onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(NimbusSurfaceVariant.copy(alpha = 0.62f))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.compare_overlay_error),
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+        )
+        TextButton(
+            onClick = onRetry,
+            modifier = Modifier.heightIn(min = 48.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.compare_overlay_retry),
+                style = MaterialTheme.typography.labelLarge,
+                color = NimbusBlueAccent,
+            )
+        }
+    }
+}
+
+@Composable
 private fun MultiSourceLegend(
     chartSeries: List<MultiSourceChartSeries>,
     settings: NimbusSettings,
@@ -211,11 +250,9 @@ private fun MultiSourceLegend(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 18.dp, height = 4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(colors[index % colors.size]),
+                MultiSourceLegendSwatch(
+                    color = colors[index % colors.size],
+                    dashPatternDp = chartLineDashPatternDp(index),
                 )
                 Text(
                     text = series.label,
@@ -235,6 +272,23 @@ private fun MultiSourceLegend(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun MultiSourceLegendSwatch(
+    color: Color,
+    dashPatternDp: List<Float>?,
+) {
+    Canvas(modifier = Modifier.size(width = 18.dp, height = 4.dp)) {
+        drawLine(
+            color = color,
+            start = Offset(0f, size.height / 2f),
+            end = Offset(size.width, size.height / 2f),
+            strokeWidth = size.height,
+            cap = StrokeCap.Round,
+            pathEffect = dashPatternDp?.toDashPathEffect(this),
+        )
     }
 }
 
@@ -264,8 +318,15 @@ private fun MultiSourceTemperatureCanvas(
         val minTemp = floor(allPoints.minOf { it.displayTemperature }) - 1.0
         val maxTemp = ceil(allPoints.maxOf { it.displayTemperature }) + 1.0
         val tempSpan = (maxTemp - minTemp).coerceAtLeast(4.0)
-        val maxPointCount = series.maxOf { it.points.size }.coerceAtLeast(2)
+        // Shared time domain across all series: series with different start
+        // hours or lengths must not be stretched onto the same index grid.
+        val domain = overlayTimeDomain(series) ?: return@Canvas
         val isRtl = layoutDirection == LayoutDirection.Rtl
+
+        fun xFor(time: LocalDateTime): Float {
+            val logicalX = chartLeft + chartWidth * overlayTimeFraction(time, domain.first, domain.second)
+            return if (isRtl) size.width - logicalX else logicalX
+        }
 
         repeat(4) { line ->
             val y = chartTop + chartHeight * line / 3f
@@ -277,20 +338,13 @@ private fun MultiSourceTemperatureCanvas(
             )
         }
 
-        val maxPrecip = series
-            .flatMap { it.points }
-            .maxOfOrNull { it.precipitationProbability }
-            ?.takeIf { it > 0 }
+        val bars = buildOverlayPrecipBars(series)
+        val maxPrecip = bars.maxOfOrNull { it.probability }?.takeIf { it > 0 }
         if (maxPrecip != null) {
-            val barWidth = chartWidth / maxPointCount * 0.58f
-            repeat(maxPointCount) { index ->
-                val probability = series
-                    .mapNotNull { it.points.getOrNull(index)?.precipitationProbability }
-                    .maxOrNull()
-                    ?: 0
-                val barHeight = chartHeight * (probability / maxPrecip.toFloat()) * 0.24f
-                val logicalX = chartLeft + chartWidth * index / (maxPointCount - 1).toFloat()
-                val x = if (isRtl) size.width - logicalX else logicalX
+            val barWidth = chartWidth / bars.size.coerceAtLeast(2) * 0.58f
+            bars.forEach { bar ->
+                val barHeight = chartHeight * (bar.probability / maxPrecip.toFloat()) * 0.24f
+                val x = xFor(bar.time)
                 drawRect(
                     color = NimbusRainBlue.copy(alpha = 0.18f),
                     topLeft = Offset(x - barWidth / 2f, chartBottom - barHeight),
@@ -301,10 +355,10 @@ private fun MultiSourceTemperatureCanvas(
 
         series.forEachIndexed { index, item ->
             val color = colors[index % colors.size]
+            val pathEffect = chartLineDashPatternDp(index)?.toDashPathEffect(this)
             val path = Path()
             item.points.forEachIndexed { pointIndex, point ->
-                val logicalX = chartLeft + chartWidth * pointIndex / (item.points.size - 1).toFloat()
-                val x = if (isRtl) size.width - logicalX else logicalX
+                val x = xFor(point.time)
                 val normalized = ((point.displayTemperature - minTemp) / tempSpan).toFloat()
                 val y = chartBottom - chartHeight * normalized
                 if (pointIndex == 0) {
@@ -320,17 +374,21 @@ private fun MultiSourceTemperatureCanvas(
                     width = 3.dp.toPx(),
                     cap = StrokeCap.Round,
                     join = StrokeJoin.Round,
+                    pathEffect = pathEffect,
                 ),
             )
             item.points.lastOrNull()?.let { point ->
-                val logicalX = chartLeft + chartWidth
-                val x = if (isRtl) size.width - logicalX else logicalX
+                val x = xFor(point.time)
                 val normalized = ((point.displayTemperature - minTemp) / tempSpan).toFloat()
                 val y = chartBottom - chartHeight * normalized
                 drawCircle(color = color, radius = 3.5.dp.toPx(), center = Offset(x, y))
             }
         }
     }
+}
+
+private fun List<Float>.toDashPathEffect(density: Density): PathEffect = with(density) {
+    PathEffect.dashPathEffect(map { it.dp.toPx() }.toFloatArray(), 0f)
 }
 
 @Composable
@@ -399,6 +457,57 @@ internal data class CompareOverlaySummary(
     val maxTemperatureSpreadCelsius: Double,
     val maxPrecipitationSpreadPoints: Int,
 )
+
+internal data class OverlayPrecipBar(
+    val time: LocalDateTime,
+    val probability: Int,
+)
+
+/**
+ * Union time range across every series so all lines and bars share one x axis.
+ * Returns null when there are no points at all.
+ */
+internal fun overlayTimeDomain(
+    series: List<MultiSourceChartSeries>,
+): Pair<LocalDateTime, LocalDateTime>? {
+    val times = series.flatMap { item -> item.points.map { it.time } }
+    val start = times.minOrNull() ?: return null
+    val end = times.maxOrNull() ?: return null
+    return start to end
+}
+
+/** Fractional x position of [time] inside the shared chart time domain. */
+internal fun overlayTimeFraction(
+    time: LocalDateTime,
+    start: LocalDateTime,
+    end: LocalDateTime,
+): Float {
+    val totalMinutes = ChronoUnit.MINUTES.between(start, end).coerceAtLeast(1L)
+    val offsetMinutes = ChronoUnit.MINUTES.between(start, time)
+    return (offsetMinutes.toFloat() / totalMinutes.toFloat()).coerceIn(0f, 1f)
+}
+
+/**
+ * Timestamp-aligned precipitation bars: one bar per distinct hour holding the
+ * maximum probability reported by any source for that hour.
+ */
+internal fun buildOverlayPrecipBars(series: List<MultiSourceChartSeries>): List<OverlayPrecipBar> =
+    series
+        .flatMap { it.points }
+        .groupBy { it.time }
+        .map { (time, points) -> OverlayPrecipBar(time, points.maxOf { it.precipitationProbability }) }
+        .sortedBy { it.time }
+
+/**
+ * Non-color series differentiation: solid / dashed / dotted line patterns
+ * (dp interval pairs), mirrored in the legend swatches so the sources stay
+ * distinguishable when the palette hues collapse for color-blind users.
+ */
+internal fun chartLineDashPatternDp(index: Int): List<Float>? = when (index % 3) {
+    1 -> listOf(6f, 4f)
+    2 -> listOf(1.5f, 4.5f)
+    else -> null
+}
 
 internal fun buildMultiSourceChartSeries(
     forecasts: List<CompareOverlayForecast>,

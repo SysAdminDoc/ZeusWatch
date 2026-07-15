@@ -7,10 +7,13 @@ import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
@@ -38,7 +41,9 @@ class CompareViewModelTest {
     private lateinit var weatherRepository: WeatherRepository
     private lateinit var locationRepository: LocationRepository
     private lateinit var weatherSourceManager: WeatherSourceManager
+    private lateinit var userPreferences: UserPreferences
     private lateinit var savedLocationsFlow: MutableStateFlow<List<SavedLocationEntity>>
+    private lateinit var settingsFlow: MutableStateFlow<NimbusSettings>
     private lateinit var viewModel: CompareViewModel
 
     private val currentLocation = SavedLocationEntity(
@@ -83,7 +88,10 @@ class CompareViewModelTest {
         weatherRepository = mockk()
         locationRepository = mockk()
         weatherSourceManager = mockk()
+        userPreferences = mockk(relaxed = true)
         savedLocationsFlow = MutableStateFlow(listOf(currentLocation, seattle, chicago, miami))
+        settingsFlow = MutableStateFlow(NimbusSettings())
+        every { userPreferences.settings } returns settingsFlow
 
         coEvery { weatherRepository.getWeather(currentLocation) } returns Result.success(weatherFor(currentLocation.name))
         coEvery { weatherRepository.getWeather(seattle) } returns Result.success(weatherFor(seattle.name))
@@ -108,7 +116,7 @@ class CompareViewModelTest {
         coEvery { weatherRepository.getWeather(chicago) } coAnswers { chicagoResult.await() }
         coEvery { weatherRepository.getWeather(miami) } coAnswers { miamiResult.await() }
 
-        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager)
+        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager, userPreferences)
         advanceUntilIdle()
 
         viewModel.selectLocation1(chicago)
@@ -128,7 +136,7 @@ class CompareViewModelTest {
     fun `failed comparison request records failed location without raw error copy`() = runTest {
         coEvery { weatherRepository.getWeather(seattle) } returns Result.failure(Exception("raw network failure"))
 
-        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager)
+        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager, userPreferences)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -162,7 +170,7 @@ class CompareViewModelTest {
             )
         )
 
-        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager)
+        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager, userPreferences)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -175,7 +183,7 @@ class CompareViewModelTest {
     }
 
     @Test
-    fun `source overlay marks unavailable when only primary source has hourly data`() = runTest {
+    fun `source overlay surfaces retryable load failure when alternate fetches fail`() = runTest {
         coEvery { weatherRepository.getWeather(currentLocation) } returns Result.success(
             weatherFor(
                 name = currentLocation.name,
@@ -184,13 +192,127 @@ class CompareViewModelTest {
             )
         )
 
-        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager)
+        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager, userPreferences)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isOverlayLoading)
+        assertTrue(state.overlayLoadFailed)
+        assertFalse(state.overlayUnavailable)
+        assertEquals(1, state.overlayForecasts.size)
+    }
+
+    @Test
+    fun `source overlay marks unavailable when alternate source lacks hourly data`() = runTest {
+        coEvery { weatherRepository.getWeather(currentLocation) } returns Result.success(
+            weatherFor(
+                name = currentLocation.name,
+                sourceProvider = WeatherSourceProvider.OPEN_METEO.displayName,
+                hourlyBaseTemp = 20.0,
+            )
+        )
+        // Alternate source responds successfully but has no hourly forecast:
+        // a genuine capability gap, not a retryable load failure.
+        coEvery {
+            weatherSourceManager.getWeatherFromProvider(any(), any(), any(), any(), any())
+        } returns Result.success(
+            weatherFor(
+                name = currentLocation.name,
+                sourceProvider = WeatherSourceProvider.MET_NORWAY.displayName,
+            )
+        )
+
+        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager, userPreferences)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertFalse(state.isOverlayLoading)
         assertTrue(state.overlayUnavailable)
+        assertFalse(state.overlayLoadFailed)
         assertEquals(1, state.overlayForecasts.size)
+    }
+
+    @Test
+    fun `retry after overlay load failure fetches alternate sources again`() = runTest {
+        coEvery { weatherRepository.getWeather(currentLocation) } returns Result.success(
+            weatherFor(
+                name = currentLocation.name,
+                sourceProvider = WeatherSourceProvider.OPEN_METEO.displayName,
+                hourlyBaseTemp = 20.0,
+            )
+        )
+
+        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager, userPreferences)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.overlayLoadFailed)
+
+        coEvery {
+            weatherSourceManager.getWeatherFromProvider(any(), any(), any(), any(), any())
+        } returns Result.success(
+            weatherFor(
+                name = currentLocation.name,
+                sourceProvider = WeatherSourceProvider.MET_NORWAY.displayName,
+                hourlyBaseTemp = 22.0,
+            )
+        )
+        viewModel.retryChartOverlay()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.overlayLoadFailed)
+        assertFalse(state.overlayUnavailable)
+        assertEquals(2, state.overlayForecasts.size)
+    }
+
+    @Test
+    fun `overlay fetch is skipped while toggle is off and runs lazily when re-enabled`() = runTest {
+        settingsFlow.value = NimbusSettings(showCompareChartOverlay = false)
+        coEvery { weatherRepository.getWeather(currentLocation) } returns Result.success(
+            weatherFor(
+                name = currentLocation.name,
+                sourceProvider = WeatherSourceProvider.OPEN_METEO.displayName,
+                hourlyBaseTemp = 20.0,
+            )
+        )
+
+        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager, userPreferences)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.showChartOverlay)
+        coVerify(exactly = 0) {
+            weatherSourceManager.getWeatherFromProvider(any(), any(), any(), any(), any())
+        }
+
+        coEvery {
+            weatherSourceManager.getWeatherFromProvider(any(), any(), any(), any(), any())
+        } returns Result.success(
+            weatherFor(
+                name = currentLocation.name,
+                sourceProvider = WeatherSourceProvider.MET_NORWAY.displayName,
+                hourlyBaseTemp = 22.0,
+            )
+        )
+        viewModel.setChartOverlayVisible(true)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.showChartOverlay)
+        assertEquals(2, state.overlayForecasts.size)
+        coVerify(atLeast = 1) {
+            weatherSourceManager.getWeatherFromProvider(any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `chart overlay toggle persists to preferences`() = runTest {
+        viewModel = CompareViewModel(weatherRepository, locationRepository, weatherSourceManager, userPreferences)
+        advanceUntilIdle()
+
+        viewModel.setChartOverlayVisible(false)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.showChartOverlay)
+        coVerify { userPreferences.setShowCompareChartOverlay(false) }
     }
 
     private fun weatherFor(
