@@ -17,8 +17,8 @@ android {
         applicationId = "com.sysadmindoc.nimbus.wear"
         minSdk = 30
         targetSdk = 35
-        versionCode = 77
-        versionName = "1.25.0"
+        versionCode = 78
+        versionName = "1.26.0"
     }
 
     // Same conditional-signing pattern as :app — absent keystore produces
