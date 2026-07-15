@@ -1502,6 +1502,8 @@ private fun RenderDetailCard(
             forecastHighC = data.daily.firstOrNull()?.temperatureHigh,
             onDateSelected = context.onHistoricalDateSelected,
             selectedDay = context.state.timeTravelDay,
+            timeTravelStatus = context.state.timeTravelStatus,
+            locationTimeZone = data.location.timeZone,
             modifier = modifier,
         )
         CardType.AURORA_KP -> {
