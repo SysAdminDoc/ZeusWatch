@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.data.repository.CardType
 import com.sysadmindoc.nimbus.data.repository.StarterCardSet
 import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
@@ -388,7 +389,7 @@ private fun CardSetOption(
     val notSelectedLabel = stringResource(R.string.common_not_selected)
     val setLabel = stringResource(set.labelRes())
     val setDescription = stringResource(set.descriptionRes())
-    val setCount = stringResource(set.countRes())
+    val setCount = set.countLabel()
     val tint = when (set) {
         StarterCardSet.MINIMAL -> NimbusSuccess
         StarterCardSet.STANDARD -> NimbusBlueAccent
@@ -499,8 +500,8 @@ private fun OnboardingActions(
                 .heightIn(min = 50.dp),
             shape = RoundedCornerShape(10.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = NimbusBlueAccent,
-                contentColor = NimbusTextPrimary,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 disabledContainerColor = NimbusCardBorder,
                 disabledContentColor = NimbusTextTertiary,
             ),
@@ -550,8 +551,13 @@ private fun StarterCardSet.descriptionRes(): Int = when (this) {
     StarterCardSet.EVERYTHING -> R.string.onboarding_cards_everything_desc
 }
 
-private fun StarterCardSet.countRes(): Int = when (this) {
-    StarterCardSet.MINIMAL -> R.string.onboarding_cards_minimal_count
-    StarterCardSet.STANDARD -> R.string.onboarding_cards_standard_count
-    StarterCardSet.EVERYTHING -> R.string.onboarding_cards_everything_count
+@Composable
+private fun StarterCardSet.countLabel(): String = when (this) {
+    StarterCardSet.MINIMAL -> stringResource(R.string.onboarding_cards_minimal_count)
+    StarterCardSet.STANDARD -> stringResource(R.string.onboarding_cards_standard_count)
+    // Derived from the registry so the count can never drift as cards are added.
+    StarterCardSet.EVERYTHING -> stringResource(
+        R.string.onboarding_cards_everything_count,
+        CardType.entries.size,
+    )
 }

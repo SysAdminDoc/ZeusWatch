@@ -157,8 +157,8 @@ fun CustomAlertsScreen(
                 if (editing == null) {
                     FloatingActionButton(
                         onClick = startNewAlert,
-                        containerColor = NimbusBlueAccent,
-                        contentColor = NimbusTextPrimary,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .navigationBarsPadding()
@@ -785,8 +785,8 @@ private fun RuleEditorActions(
                 .heightIn(min = 50.dp),
             shape = RoundedCornerShape(10.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = NimbusBlueAccent,
-                contentColor = NimbusTextPrimary,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 disabledContainerColor = NimbusCardBorder.copy(alpha = 0.72f),
                 disabledContentColor = NimbusTextTertiary,
             ),

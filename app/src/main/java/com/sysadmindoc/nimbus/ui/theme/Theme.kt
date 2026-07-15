@@ -5,13 +5,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 
 private val NimbusDarkScheme = darkColorScheme(
     primary = NimbusBlueAccent,
-    onPrimary = NimbusTextPrimary,
+    onPrimary = NimbusNavyDark,
     primaryContainer = NimbusNavyLight,
-    onPrimaryContainer = NimbusNavyDark,
+    onPrimaryContainer = NimbusTextPrimary,
     secondary = NimbusRainBlue,
     onSecondary = NimbusNavyDark,
     secondaryContainer = NimbusSurfaceElevated,
@@ -27,7 +29,7 @@ private val NimbusDarkScheme = darkColorScheme(
     outline = NimbusCardBorder,
     outlineVariant = Color(0xFF203A61),
     error = NimbusError,
-    onError = NimbusTextPrimary,
+    onError = NimbusNavyDark,
     surfaceTint = NimbusBlueAccent,
     scrim = NimbusNavyDark.copy(alpha = 0.72f),
 )
@@ -36,7 +38,7 @@ private val NimbusDarkScheme = darkColorScheme(
  * Weather-adaptive color scheme variants.
  * Shifts the primary/accent colors based on current conditions.
  */
-private fun weatherAdaptiveScheme(weatherCode: WeatherCode?, isDay: Boolean): ColorScheme {
+internal fun weatherAdaptiveScheme(weatherCode: WeatherCode?, isDay: Boolean): ColorScheme {
     if (weatherCode == null) return NimbusDarkScheme
 
     val accentColor = when {
@@ -75,10 +77,25 @@ private fun weatherAdaptiveScheme(weatherCode: WeatherCode?, isDay: Boolean): Co
         else -> NimbusBlueAccent
     }
 
+    val tertiaryColor = accentColor.copy(alpha = 0.7f)
     return NimbusDarkScheme.copy(
         primary = accentColor,
-        tertiary = accentColor.copy(alpha = 0.7f),
+        onPrimary = accentOnColor(accentColor),
+        tertiary = tertiaryColor,
+        onTertiary = accentOnColor(tertiaryColor.compositeOver(NimbusNavyDark)),
     )
+}
+
+/**
+ * Picks the text color (deep navy or near-white) with the higher WCAG contrast
+ * ratio against [accent], so accent containers never render near-invisible
+ * text regardless of how light or dark the weather-adaptive accent is.
+ */
+internal fun accentOnColor(accent: Color): Color {
+    val accentLuminance = accent.luminance()
+    val darkTextContrast = (accentLuminance + 0.05f) / (NimbusNavyDark.luminance() + 0.05f)
+    val lightTextContrast = (NimbusTextPrimary.luminance() + 0.05f) / (accentLuminance + 0.05f)
+    return if (darkTextContrast >= lightTextContrast) NimbusNavyDark else NimbusTextPrimary
 }
 
 @Composable

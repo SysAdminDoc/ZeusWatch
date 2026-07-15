@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.ui.theme
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import com.sysadmindoc.nimbus.data.model.WeatherCode
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.pow
@@ -41,6 +42,31 @@ class AccessibilityContrastTest {
         )
 
         pairs.assertContrast()
+    }
+
+    @Test
+    fun onColorRolesMeetWcagAaTextContrastOnEveryScheme() {
+        val schemes = buildList {
+            add("default" to weatherAdaptiveScheme(weatherCode = null, isDay = true))
+            WeatherCode.entries.forEach { code ->
+                add("${code.name} day" to weatherAdaptiveScheme(code, isDay = true))
+                add("${code.name} night" to weatherAdaptiveScheme(code, isDay = false))
+            }
+        }
+
+        schemes.flatMap { (name, scheme) ->
+            // Adaptive tertiary is translucent, so judge it as rendered over the
+            // app background — same as the card-background cases above.
+            val tertiaryBackground = scheme.tertiary.compositeOver(NimbusNavyDark)
+            listOf(
+                ContrastPair("[$name] onPrimary on primary", scheme.onPrimary, scheme.primary, WCAG_AA_TEXT),
+                ContrastPair("[$name] onPrimaryContainer on primaryContainer", scheme.onPrimaryContainer, scheme.primaryContainer, WCAG_AA_TEXT),
+                ContrastPair("[$name] onSecondary on secondary", scheme.onSecondary, scheme.secondary, WCAG_AA_TEXT),
+                ContrastPair("[$name] onSecondaryContainer on secondaryContainer", scheme.onSecondaryContainer, scheme.secondaryContainer, WCAG_AA_TEXT),
+                ContrastPair("[$name] onTertiary on tertiary", scheme.onTertiary, tertiaryBackground, WCAG_AA_TEXT),
+                ContrastPair("[$name] onError on error", scheme.onError, scheme.error, WCAG_AA_TEXT),
+            )
+        }.assertContrast()
     }
 
     private fun List<ContrastPair>.assertContrast() {

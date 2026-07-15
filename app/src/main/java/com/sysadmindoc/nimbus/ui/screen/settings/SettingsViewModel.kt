@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.IconPack
+import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.repository.*
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
@@ -21,10 +22,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -38,10 +42,21 @@ class SettingsViewModel @Inject constructor(
     private val iconPackManager: IconPackManager,
     private val settingsTransferManager: SettingsTransferManager,
     private val providerHealthRepository: ProviderHealthRepository,
+    locationRepository: LocationRepository,
 ) : ViewModel() {
 
     val settings = prefs.settings
     val providerHealth = providerHealthRepository.snapshot
+
+    /**
+     * Providers referenced only by saved locations' per-location source
+     * overrides. The API-key fields must also account for these — a keyed
+     * provider selected solely as a location override still needs its key.
+     */
+    val locationOverrideProviders: Flow<Set<WeatherSourceProvider>> =
+        locationRepository.savedLocations
+            .map { locations -> savedLocationOverrideProviders(locations) }
+            .distinctUntilChanged()
 
     /**
      * Discovered icon packs (bundled + external APKs). Exposed as a StateFlow
@@ -322,6 +337,16 @@ class SettingsViewModel @Inject constructor(
         _pendingImportPreview.value = null
     }
 }
+
+/** Collects every provider referenced by any saved location's source overrides. */
+internal fun savedLocationOverrideProviders(
+    locations: List<SavedLocationEntity>,
+): Set<WeatherSourceProvider> = locations
+    .flatMap { location ->
+        val overrides = location.sourceOverrides()
+        listOfNotNull(overrides.forecast, overrides.alerts)
+    }
+    .toSet()
 
 enum class SettingsTransferStatusTone {
     SUCCESS,

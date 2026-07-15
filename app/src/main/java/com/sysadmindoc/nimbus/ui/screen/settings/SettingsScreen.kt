@@ -148,6 +148,7 @@ fun SettingsScreen(
 
     val availableIconPacks by viewModel.availableIconPacks.collectAsStateWithLifecycle()
     val providerHealth by viewModel.providerHealth.collectAsStateWithLifecycle(initialValue = ProviderHealthSnapshot())
+    val locationOverrideProviders by viewModel.locationOverrideProviders.collectAsStateWithLifecycle(initialValue = emptySet())
     val transferStatus by viewModel.transferStatus.collectAsStateWithLifecycle()
     val transferInProgress by viewModel.transferInProgress.collectAsStateWithLifecycle()
     val pendingImportPreview by viewModel.pendingImportPreview.collectAsStateWithLifecycle()
@@ -176,6 +177,7 @@ fun SettingsScreen(
         transferStatus = transferStatus,
         transferInProgress = transferInProgress,
         pendingImportPreview = pendingImportPreview,
+        locationOverrideProviders = locationOverrideProviders,
         actions = SettingsActions(
             onTempUnit = viewModel::setTempUnit,
             onWindUnit = viewModel::setWindUnit,
