@@ -23,8 +23,10 @@ const COLLECTION = "community_reports";
 const THROTTLES = "report_throttles";
 const UID = "anon-user-1";
 const OTHER_UID = "anon-user-2";
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
 const rules = await readFile("firestore.rules", "utf8");
+const indexes = JSON.parse(await readFile("firestore.indexes.json", "utf8"));
 
 const testEnv = await initializeTestEnvironment({
   projectId: PROJECT_ID,
@@ -40,12 +42,14 @@ function test(name, fn) {
 // Reports are stored without an owner id (readers must not be able to correlate
 // one account's reports); the rate-limit binding is the separate throttle ledger.
 function report(overrides = {}) {
+  const timestamp = overrides.timestamp ?? Date.now();
   return {
-    latitude: 39.7392,
-    longitude: -104.9903,
+    latitude: 39.74,
+    longitude: -104.99,
     geohash: "9xj64",
     condition: "RAIN",
-    timestamp: Date.now(),
+    timestamp,
+    expiresAt: new Date(timestamp + TWO_HOURS_MS),
     note: "Light rain starting",
     ...overrides,
   };
@@ -85,6 +89,20 @@ test("requires an authenticated account for reads and creates", async () => {
   const db = dbFor(UID);
   await assertSucceeds(submit(db, UID, "valid"));
   await assertSucceeds(getDocs(boundedQuery(db)));
+});
+
+test("declares a non-indexed TTL policy for report expiry", async () => {
+  assert.deepEqual(
+    indexes.fieldOverrides.find(
+      (field) => field.collectionGroup === COLLECTION && field.fieldPath === "expiresAt",
+    ),
+    {
+      collectionGroup: COLLECTION,
+      fieldPath: "expiresAt",
+      ttl: true,
+      indexes: [],
+    },
+  );
 });
 
 test("caps collection query page size and denies unbounded reads", async () => {
@@ -143,6 +161,18 @@ test("rejects malformed report payloads", async () => {
   await assertFails(submit(db, UID, "bad-latitude", { latitude: "39.7" }));
 });
 
+test("rejects exact coordinates that bypass area rounding", async () => {
+  const db = dbFor(UID);
+  await assertFails(submit(db, UID, "exact-location", {
+    latitude: 39.7392,
+    longitude: -104.9903,
+  }));
+  await assertSucceeds(submit(db, UID, "coarsened-location", {
+    latitude: 39.74,
+    longitude: -104.99,
+  }));
+});
+
 test("requires a valid geohash on new report creates", async () => {
   const db = dbFor(UID);
 
@@ -170,6 +200,31 @@ test("rejects stale and future report timestamps", async () => {
   const db = dbFor(UID);
   await assertFails(submit(db, UID, "stale", { timestamp: Date.now() - 11 * 60 * 1000 }));
   await assertFails(submit(db, UID, "future", { timestamp: Date.now() + 3 * 60 * 1000 }));
+});
+
+test("requires a timestamp expiry approximately two hours after creation", async () => {
+  const db = dbFor(UID);
+  const timestamp = Date.now();
+
+  const missingExpiry = report({ timestamp });
+  delete missingExpiry.expiresAt;
+  const missingBatch = writeBatch(db);
+  missingBatch.set(doc(db, COLLECTION, "missing-expiry"), missingExpiry);
+  missingBatch.set(doc(db, THROTTLES, UID), { lastReportAt: serverTimestamp() });
+  await assertFails(missingBatch.commit());
+
+  await assertFails(submit(db, UID, "numeric-expiry", {
+    timestamp,
+    expiresAt: timestamp + TWO_HOURS_MS,
+  }));
+  await assertFails(submit(db, UID, "short-retention", {
+    timestamp,
+    expiresAt: new Date(timestamp + 90 * 60 * 1000),
+  }));
+  await assertFails(submit(db, UID, "long-retention", {
+    timestamp,
+    expiresAt: new Date(timestamp + 3 * 60 * 60 * 1000),
+  }));
 });
 
 test("rejects invalid report conditions", async () => {

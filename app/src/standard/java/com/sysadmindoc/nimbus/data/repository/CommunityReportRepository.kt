@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.data.repository
 
 import android.content.Context
 import android.util.Log
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -13,6 +14,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -67,14 +69,17 @@ class CommunityReportRepository @Inject constructor(
         return try {
             val uid = ensureSignedIn()
             val docRef = collection.document()
-            val safeLat = report.latitude.coerceIn(-90.0, 90.0)
-            val safeLon = report.longitude.coerceIn(-180.0, 180.0)
+            val location = CommunityReportPrivacy.coarsenLocation(
+                latitude = report.latitude,
+                longitude = report.longitude,
+            )
             val reportWithId = report.copy(
                 id = docRef.id,
-                latitude = safeLat,
-                longitude = safeLon,
+                latitude = location.latitude,
+                longitude = location.longitude,
                 timestamp = now,
-                geohash = CommunityReportGeo.geohash(safeLat, safeLon),
+                expiresAt = CommunityReportPrivacy.expiresAt(now),
+                geohash = CommunityReportGeo.geohash(location.latitude, location.longitude),
             )
 
             // Atomic batch: the report create + the throttle bump must land in the
@@ -107,7 +112,8 @@ class CommunityReportRepository @Inject constructor(
     ): Result<List<CommunityReport>> {
         return try {
             ensureSignedIn()
-            val twoHoursAgo = System.currentTimeMillis() - TWO_HOURS_MS
+            val queryTime = System.currentTimeMillis()
+            val twoHoursAgo = queryTime - CommunityReportPrivacy.RETENTION_MS
             val reports = coroutineScope {
                 CommunityReportGeo.queryBounds(lat, lon, radiusKm).map { bound ->
                     async {
@@ -128,7 +134,7 @@ class CommunityReportRepository @Inject constructor(
 
             Result.success(
                 CommunityReportGeo.sortNearby(
-                    reports = reports,
+                    reports = CommunityReportPrivacy.visibleReports(reports, queryTime),
                     latitude = lat,
                     longitude = lon,
                     radiusKm = radiusKm,
@@ -163,16 +169,18 @@ class CommunityReportRepository @Inject constructor(
 
     // --- Mapping helpers ---
 
-    private fun reportToMap(report: CommunityReport): Map<String, Any> = mapOf(
-        "latitude" to report.latitude.coerceIn(-90.0, 90.0),
-        "longitude" to report.longitude.coerceIn(-180.0, 180.0),
-        "geohash" to report.geohash.ifBlank {
-            CommunityReportGeo.geohash(report.latitude, report.longitude)
-        },
-        "condition" to report.condition.name,
-        "note" to report.note.trim().take(100),
-        "timestamp" to report.timestamp,
-    )
+    private fun reportToMap(report: CommunityReport): Map<String, Any> {
+        val location = CommunityReportPrivacy.coarsenLocation(report.latitude, report.longitude)
+        return mapOf(
+            "latitude" to location.latitude,
+            "longitude" to location.longitude,
+            "geohash" to CommunityReportGeo.geohash(location.latitude, location.longitude),
+            "condition" to report.condition.name,
+            "note" to report.note.trim().take(100),
+            "timestamp" to report.timestamp,
+            "expiresAt" to Timestamp(Date(CommunityReportPrivacy.expiresAt(report.timestamp))),
+        )
+    }
 
     private fun mapToReportOrNull(id: String, data: Map<String, Any>?): CommunityReport? {
         return try {
@@ -184,6 +192,7 @@ class CommunityReportRepository @Inject constructor(
     }
 
     private fun mapToReport(id: String, data: Map<String, Any>): CommunityReport {
+        val timestamp = (data["timestamp"] as? Number)?.toLong() ?: 0L
         return CommunityReport(
             id = id,
             latitude = (data["latitude"] as? Number)?.toDouble() ?: 0.0,
@@ -195,7 +204,12 @@ class CommunityReportRepository @Inject constructor(
                 ReportCondition.SUNNY
             },
             note = (data["note"] as? String) ?: "",
-            timestamp = (data["timestamp"] as? Number)?.toLong() ?: 0L,
+            timestamp = timestamp,
+            expiresAt = when (val expiresAt = data["expiresAt"]) {
+                is Timestamp -> expiresAt.toDate().time
+                is Date -> expiresAt.time
+                else -> CommunityReportPrivacy.expiresAt(timestamp)
+            },
         )
     }
 
@@ -205,7 +219,6 @@ class CommunityReportRepository @Inject constructor(
         private const val THROTTLE_COLLECTION_NAME = "report_throttles"
         private const val THROTTLE_FIELD = "lastReportAt"
         private const val RATE_LIMIT_MS = 5 * 60 * 1000L // 5 minutes
-        private const val TWO_HOURS_MS = 2 * 60 * 60 * 1000L
         private const val MAX_RESULTS = 200
         private const val MAX_RESULTS_PER_GEOHASH_QUERY = 50L
     }

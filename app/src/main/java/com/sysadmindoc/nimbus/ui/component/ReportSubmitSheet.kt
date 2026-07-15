@@ -137,6 +137,15 @@ fun ReportSubmitSheet(
                 textAlign = TextAlign.Center,
             )
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = stringResource(R.string.report_retention_notice),
+                color = NimbusTextTertiary,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // Condition selection grid

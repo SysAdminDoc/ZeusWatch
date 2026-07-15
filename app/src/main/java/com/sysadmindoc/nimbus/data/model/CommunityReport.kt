@@ -14,6 +14,7 @@ data class CommunityReport(
     val condition: ReportCondition = ReportCondition.SUNNY,
     val note: String = "",
     val timestamp: Long = System.currentTimeMillis(),
+    val expiresAt: Long = 0L,
     val geohash: String = "",
 )
 
