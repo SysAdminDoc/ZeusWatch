@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.data.repository
 
+import android.content.Context
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.api.GeocodingApi
 import com.sysadmindoc.nimbus.data.api.OpenMeteoApi
 import com.sysadmindoc.nimbus.data.api.WeatherDao
@@ -9,6 +11,7 @@ import com.sysadmindoc.nimbus.util.DrivingAlert
 import com.sysadmindoc.nimbus.util.DrivingAlertType
 import com.sysadmindoc.nimbus.util.DrivingConditionEvaluator
 import com.sysadmindoc.nimbus.util.DrivingSeverity
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -28,6 +31,7 @@ import javax.inject.Singleton
 
 @Singleton
 class WeatherRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val weatherApi: OpenMeteoApi,
     private val geocodingApi: GeocodingApi,
     private val reverseGeocoder: ReverseGeocoder,
@@ -193,7 +197,11 @@ class WeatherRepository @Inject constructor(
     ): Result<DrivingRouteWeatherPlan> = withContext(Dispatchers.IO) {
         try {
             val destination = routeGeometry?.points?.last()?.let { point ->
-                LocationInfo(name = "GPX destination", latitude = point.latitude, longitude = point.longitude)
+                LocationInfo(
+                    name = context.getString(R.string.route_waypoint_gpx_destination),
+                    latitude = point.latitude,
+                    longitude = point.longitude,
+                )
             } ?: resolveRouteEndpoint(
                 query = destinationQuery,
                 fallback = null,
@@ -201,7 +209,11 @@ class WeatherRepository @Inject constructor(
                 notFoundReason = DrivingRoutePlanningFailure.DESTINATION_NOT_FOUND,
             )
             val origin = routeGeometry?.points?.first()?.let { point ->
-                LocationInfo(name = "GPX start", latitude = point.latitude, longitude = point.longitude)
+                LocationInfo(
+                    name = context.getString(R.string.route_waypoint_gpx_start),
+                    latitude = point.latitude,
+                    longitude = point.longitude,
+                )
             } ?: resolveRouteEndpoint(
                 query = originQuery,
                 fallback = fallbackOrigin,
@@ -219,11 +231,14 @@ class WeatherRepository @Inject constructor(
                 departureTime = departureTime,
                 averageSpeedKmh = averageSpeedKmh,
             )
+            // Anchor the departure on the device zone once so each waypoint's
+            // arrival can be re-expressed in that waypoint's own timezone.
+            val departureInstant = departureTime.atZone(ZoneId.systemDefault()).toInstant()
             val waypoints = geometryPlan.samples.map { sample ->
                 val waypointLabel = when (sample.index) {
                     0 -> origin.name
                     geometryPlan.samples.lastIndex -> destination.name
-                    else -> "Waypoint ${sample.index + 1}"
+                    else -> context.getString(R.string.route_waypoint_generic, sample.index + 1)
                 }
                 val weatherResult = getWeatherOrCached(
                     latitude = sample.latitude,
@@ -248,7 +263,18 @@ class WeatherRepository @Inject constructor(
                     )
                 }
                 val weather = weatherResult.getOrThrow()
-                val hourly = weather.hourly.nearestTo(sample.arrivalTime)
+                // Hourly forecast times are local to the waypoint's timezone,
+                // while the planner's arrival times are device-local. Compare in
+                // the waypoint's own zone or cross-timezone routes match the
+                // wrong forecast hour.
+                val hourly = weather.hourly.nearestTo(
+                    waypointLocalArrivalTime(
+                        departureTime = departureTime,
+                        departureInstant = departureInstant,
+                        arrivalTime = sample.arrivalTime,
+                        waypointZoneId = weather.location.timeZone,
+                    )
+                )
                 val drivingAlerts = if (hourly != null) {
                     DrivingConditionEvaluator.evaluate(hourly, weather.current)
                 } else {
@@ -411,7 +437,13 @@ class WeatherRepository @Inject constructor(
                         longitude = longitude,
                     )
                 )
-                weatherDao.deleteOlderThan(System.currentTimeMillis() - cacheMaxAgeMs)
+                // Evict with the stale-fallback horizon, not the live TTL: this
+                // delete spans every location/provider, and rows up to
+                // DEFAULT_STALE_FALLBACK_MS old must survive so other locations'
+                // widgets/wear/smartspacer surfaces degrade instead of going blank.
+                weatherDao.deleteOlderThan(
+                    System.currentTimeMillis() - maxOf(cacheMaxAgeMs, DEFAULT_STALE_FALLBACK_MS)
+                )
             } catch (_: Exception) { /* Cache failure is non-fatal */ }
 
             Result.success(weatherData)
@@ -551,7 +583,12 @@ class WeatherRepository @Inject constructor(
                     ),
                 ),
             )
-            weatherDao.deleteWeatherDataOlderThan(System.currentTimeMillis() - cacheMaxAgeMs)
+            // Same stale-fallback horizon as the legacy table: TTL-based eviction
+            // here would purge other locations' rows that getWeatherOrCached and
+            // the smartspacer cache still rely on for up to 6 hours.
+            weatherDao.deleteWeatherDataOlderThan(
+                System.currentTimeMillis() - maxOf(cacheMaxAgeMs, DEFAULT_STALE_FALLBACK_MS)
+            )
         } catch (_: Exception) {
             // Cache failure is non-fatal.
         }
@@ -1073,6 +1110,24 @@ class WeatherRepository @Inject constructor(
 }
 
 internal const val DEFAULT_DRIVING_ROUTE_SPEED_KMH = 88.0
+
+/**
+ * Re-express a planner arrival time (device-local, naive) in the waypoint
+ * forecast's own timezone. The departure→arrival offset is carried as a
+ * [Duration] on the departure [Instant], so the conversion stays exact across
+ * zone boundaries. Falls back to the device-local arrival when the waypoint
+ * has no usable timezone.
+ */
+internal fun waypointLocalArrivalTime(
+    departureTime: LocalDateTime,
+    departureInstant: Instant,
+    arrivalTime: LocalDateTime,
+    waypointZoneId: String?,
+): LocalDateTime {
+    val zone = waypointZoneId.toZoneIdOrNull() ?: return arrivalTime
+    val arrivalInstant = departureInstant.plus(Duration.between(departureTime, arrivalTime))
+    return LocalDateTime.ofInstant(arrivalInstant, zone)
+}
 
 private val US_STATE_NAMES = mapOf(
     "AL" to "Alabama",

@@ -27,9 +27,11 @@ class RadarPlaybackControlsTest {
     }
 
     @Test
-    fun `display seek maps back to frame index`() {
-        assertEquals(3, radarPlaybackFrameFromDisplayValue(displayValue = 3.9f, totalFrames = 5, isRtl = false))
-        assertEquals(1, radarPlaybackFrameFromDisplayValue(displayValue = 3.9f, totalFrames = 5, isRtl = true))
+    fun `display seek rounds to the nearest frame index`() {
+        assertEquals(4, radarPlaybackFrameFromDisplayValue(displayValue = 3.9f, totalFrames = 5, isRtl = false))
+        assertEquals(0, radarPlaybackFrameFromDisplayValue(displayValue = 3.9f, totalFrames = 5, isRtl = true))
+        assertEquals(3, radarPlaybackFrameFromDisplayValue(displayValue = 3.4f, totalFrames = 5, isRtl = false))
+        assertEquals(1, radarPlaybackFrameFromDisplayValue(displayValue = 3.4f, totalFrames = 5, isRtl = true))
         assertEquals(0, radarPlaybackFrameFromDisplayValue(displayValue = 9f, totalFrames = 0, isRtl = true))
     }
 }

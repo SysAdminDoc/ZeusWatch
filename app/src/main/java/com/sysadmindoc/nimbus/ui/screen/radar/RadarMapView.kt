@@ -227,8 +227,23 @@ fun RadarMapView(
 private fun MapViewLifecycleEffect(mapView: MapView, lifecycleOwner: LifecycleOwner) {
     DisposableEffect(mapView, lifecycleOwner) {
         var destroyed = false
+        var started = false
+        var resumed = false
         fun destroyMapOnce() {
             if (!destroyed) {
+                // Disposal can happen while the lifecycle is still RESUMED (e.g.
+                // a bottom-tab switch). MapLibre only deactivates its
+                // ConnectivityReceiver/FileSource in onStop(), so walk the view
+                // down through pause/stop before destroy or each radar visit
+                // leaks an activation.
+                if (resumed) {
+                    mapView.onPause()
+                    resumed = false
+                }
+                if (started) {
+                    mapView.onStop()
+                    started = false
+                }
                 mapView.onDestroy()
                 destroyed = true
             }
@@ -236,10 +251,22 @@ private fun MapViewLifecycleEffect(mapView: MapView, lifecycleOwner: LifecycleOw
         val observer = LifecycleEventObserver { _, event ->
             if (destroyed) return@LifecycleEventObserver
             when (event) {
-                Lifecycle.Event.ON_START -> mapView.onStart()
-                Lifecycle.Event.ON_RESUME -> mapView.onResume()
-                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
-                Lifecycle.Event.ON_STOP -> mapView.onStop()
+                Lifecycle.Event.ON_START -> {
+                    started = true
+                    mapView.onStart()
+                }
+                Lifecycle.Event.ON_RESUME -> {
+                    resumed = true
+                    mapView.onResume()
+                }
+                Lifecycle.Event.ON_PAUSE -> {
+                    resumed = false
+                    mapView.onPause()
+                }
+                Lifecycle.Event.ON_STOP -> {
+                    started = false
+                    mapView.onStop()
+                }
                 Lifecycle.Event.ON_DESTROY -> destroyMapOnce()
                 else -> Unit
             }
@@ -247,9 +274,11 @@ private fun MapViewLifecycleEffect(mapView: MapView, lifecycleOwner: LifecycleOw
         val lifecycle = lifecycleOwner.lifecycle
         lifecycle.addObserver(observer)
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            started = true
             mapView.onStart()
         }
         if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            resumed = true
             mapView.onResume()
         }
         onDispose {

@@ -48,6 +48,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /**
  * Playback controls overlay for the native MapLibre radar view.
@@ -233,6 +234,8 @@ internal fun radarPlaybackFrameFromDisplayValue(
     isRtl: Boolean,
 ): Int {
     val maxFrame = (totalFrames - 1).coerceAtLeast(0)
-    val displayFrame = displayValue.toInt().coerceIn(0, maxFrame)
+    // Round instead of truncate: truncation seeks one frame low in LTR (and,
+    // mirrored, one frame high in RTL) for any drag that lands mid-step.
+    val displayFrame = displayValue.roundToInt().coerceIn(0, maxFrame)
     return if (isRtl) maxFrame - displayFrame else displayFrame
 }

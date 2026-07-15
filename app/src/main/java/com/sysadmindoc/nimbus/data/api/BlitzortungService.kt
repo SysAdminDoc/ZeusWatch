@@ -54,29 +54,40 @@ class BlitzortungService @Inject constructor(
     @Volatile private var shouldReconnect = false
     @Volatile private var reconnectAttempts = 0
     @Volatile private var reconnectJob: Job? = null
+    @Volatile private var activeClients = 0
 
     private val strikeBuffer = mutableListOf<LightningStrike>()
     private val bufferLock = Any()
     @Volatile private var lastEmitTime = 0L
-    @Volatile private var pendingSinceLastEmit = 0
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val webSocketClient: OkHttpClient = okHttpClient.newBuilder()
         .retryOnConnectionFailure(true)
         .build()
 
     /**
-     * Open the WebSocket connection and begin receiving lightning data.
-     * Safe to call multiple times — only opens a new socket if one isn't
-     * already pending or connected.
-     *
-     * Gating on `webSocket != null` (rather than `isConnected`) closes a
-     * window where the WS has been created but `onOpen` hasn't flipped
-     * `isConnected` yet: a second `connect()` call entering during that
-     * window would otherwise leak the in-flight socket and start a second
-     * subscription, doubling Blitzortung's incoming message rate.
+     * Acquire a reference on the shared WebSocket connection and begin
+     * receiving lightning data. The service is a singleton shared by multiple
+     * radar surfaces (tablet layouts compose RadarTab and RadarScreen
+     * simultaneously), so each [connect] must be balanced by one [disconnect];
+     * the socket is only torn down when the last reference is released.
      */
     @Synchronized
     fun connect() {
+        activeClients++
+        openSocketLocked()
+    }
+
+    /**
+     * Open the socket if one isn't already pending or connected.
+     *
+     * Gating on `webSocket != null` (rather than `isConnected`) closes a
+     * window where the WS has been created but `onOpen` hasn't flipped
+     * `isConnected` yet: a second call entering during that window would
+     * otherwise leak the in-flight socket and start a second subscription,
+     * doubling Blitzortung's incoming message rate.
+     */
+    @Synchronized
+    private fun openSocketLocked() {
         if (webSocket != null) return
         shouldReconnect = true
 
@@ -156,15 +167,21 @@ class BlitzortungService @Inject constructor(
     private fun performReconnect() {
         reconnectJob = null
         if (shouldReconnect) {
-            connect()
+            // Reopen the socket directly — going through connect() would take
+            // an extra client reference the reconnect never releases.
+            openSocketLocked()
         }
     }
 
     /**
-     * Close the WebSocket connection and clear the strike buffer.
+     * Release one reference on the connection. Closes the WebSocket and clears
+     * the strike buffer only when the last client disconnects, so one radar
+     * surface leaving composition cannot cut lightning off for another.
      */
     @Synchronized
     fun disconnect() {
+        if (activeClients > 0) activeClients--
+        if (activeClients > 0) return
         shouldReconnect = false
         reconnectJob?.cancel()
         reconnectJob = null
@@ -218,12 +235,13 @@ class BlitzortungService @Inject constructor(
                 strikeBuffer.removeAt(0)
             }
 
-            pendingSinceLastEmit++
+            // Time-gated only: a batch-size OR trigger defeated the 1s throttle
+            // at high strike rates (storm peaks pushed 4-40 emits/s straight
+            // into recomposition).
             val now = System.currentTimeMillis()
-            if (now - lastEmitTime >= EMIT_THROTTLE_MS || pendingSinceLastEmit >= EMIT_BATCH_SIZE) {
+            if (now - lastEmitTime >= EMIT_THROTTLE_MS) {
                 _recentStrikes.value = strikeBuffer.toList()
                 lastEmitTime = now
-                pendingSinceLastEmit = 0
             }
         }
     }
@@ -236,7 +254,6 @@ class BlitzortungService @Inject constructor(
         private const val MAX_BUFFER_SIZE = 500
         private const val MAX_AGE_MS = 10 * 60 * 1000L // 10 minutes
         private const val EMIT_THROTTLE_MS = 1_000L
-        private const val EMIT_BATCH_SIZE = 25
     }
 }
 

@@ -9,6 +9,18 @@ internal data class SharedRouteFields(
     val unreadable: Boolean = false,
 )
 
+/**
+ * Upper bound for externally supplied route text (ACTION_SEND shares and
+ * zeuswatch://radar deep links). Uncapped text would ride the nav back stack's
+ * saved state (TransactionTooLargeException on backgrounding) and feed the
+ * share-parsing regexes on the main thread.
+ */
+internal const val MAX_SHARED_ROUTE_TEXT_CHARS = 2_000
+
+/** Trim and cap external route text at the intent boundary; null when blank. */
+internal fun capSharedRouteText(rawText: String?): String? =
+    rawText?.take(MAX_SHARED_ROUTE_TEXT_CHARS)?.trim()?.takeIf { it.isNotBlank() }
+
 internal fun parseSharedRouteText(rawText: String): SharedRouteFields {
     val text = rawText.trim()
     if (text.isBlank()) return SharedRouteFields(unreadable = true)

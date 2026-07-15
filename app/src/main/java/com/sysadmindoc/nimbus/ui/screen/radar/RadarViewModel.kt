@@ -1,8 +1,10 @@
 package com.sysadmindoc.nimbus.ui.screen.radar
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.util.Log
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.api.BlitzortungService
 import com.sysadmindoc.nimbus.data.api.LightningStrike
 import com.sysadmindoc.nimbus.data.model.CommunityReport
@@ -25,6 +27,7 @@ import com.sysadmindoc.nimbus.data.repository.WeatherSourceManager
 import com.sysadmindoc.nimbus.util.ConnectivityObserver
 import com.sysadmindoc.nimbus.util.parseAlertInstant
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +51,7 @@ internal const val ALERT_OVERLAY_FAILED = "alert_overlay_failed"
 
 @HiltViewModel
 class RadarViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val radarRepository: RadarRepository,
     private val prefs: UserPreferences,
     private val blitzortungService: BlitzortungService,
@@ -92,6 +96,8 @@ class RadarViewModel @Inject constructor(
     private var lastFrameProvider: RadarProvider? = null
     private var lastAlertOverlayLoadKey: String? = null
     private var routeFallbackOrigin: LocationInfo? = null
+    private var lastAppliedSharedRouteText: String? = null
+    private var lightningConnectionHeld = false
 
     fun loadFrames(
         provider: RadarProvider = RadarProvider.NATIVE_MAPLIBRE,
@@ -241,18 +247,30 @@ class RadarViewModel @Inject constructor(
      * Returns Pair(lat, lon) with US center (39.8, -98.5) as ultimate fallback.
      */
     suspend fun resolveLocation(lat: Double, lon: Double): Pair<Double, Double> {
-        if (lat != 0.0 && lon != 0.0) return Pair(lat, lon)
+        // Only the exact (0,0) pair is the deep-link sentinel — a legitimate
+        // location on either zero meridian/equator must not be discarded.
+        if (!(lat == 0.0 && lon == 0.0)) return Pair(lat, lon)
         val saved = prefs.lastLocation.first()
         return if (saved != null) Pair(saved.latitude, saved.longitude) else Pair(39.8, -98.5)
     }
 
-    /** Start the Blitzortung WebSocket connection for lightning data. */
+    /**
+     * Start the Blitzortung WebSocket connection for lightning data.
+     *
+     * The service is a refcounted singleton shared across radar surfaces
+     * (RadarTab + RadarScreen on tablets), so each ViewModel holds at most one
+     * reference no matter how often the layer/connectivity effects re-run.
+     */
     fun connectLightning() {
+        if (lightningConnectionHeld) return
+        lightningConnectionHeld = true
         blitzortungService.connect()
     }
 
-    /** Stop the Blitzortung WebSocket connection. */
+    /** Release this ViewModel's reference on the Blitzortung connection. */
     fun disconnectLightning() {
+        if (!lightningConnectionHeld) return
+        lightningConnectionHeld = false
         blitzortungService.disconnect()
     }
 
@@ -387,7 +405,7 @@ class RadarViewModel @Inject constructor(
     fun setRouteFallbackOrigin(lat: Double, lon: Double) {
         if (lat == 0.0 && lon == 0.0) return
         routeFallbackOrigin = LocationInfo(
-            name = "Map center",
+            name = appContext.getString(R.string.route_waypoint_map_center),
             latitude = lat,
             longitude = lon,
         )
@@ -405,6 +423,12 @@ class RadarViewModel @Inject constructor(
 
     fun applySharedRouteText(sharedText: String?) {
         val text = sharedText?.trim()?.takeIf { it.isNotBlank() } ?: return
+        // One-shot consume guard: the screen's LaunchedEffect re-fires with the
+        // same nav argument after rotation or returning to the destination.
+        // Re-applying would clobber user edits/imported GPX and reopen the
+        // sheet, so a given share is applied once per ViewModel lifetime.
+        if (text == lastAppliedSharedRouteText) return
+        lastAppliedSharedRouteText = text
         val parsed = parseSharedRouteText(text)
         _routePlannerState.update { state ->
             state.copy(
@@ -496,7 +520,8 @@ class RadarViewModel @Inject constructor(
         playbackJob?.cancel()
         alertOverlayLoadJob?.cancel()
         routePlanJob?.cancel()
-        blitzortungService.disconnect()
+        // Release (not force-close) so another radar surface's connection survives.
+        disconnectLightning()
     }
 }
 

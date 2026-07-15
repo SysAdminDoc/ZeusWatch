@@ -102,9 +102,15 @@ internal class GpxRouteParser {
             isNamespaceAware = true
             isXIncludeAware = false
             isExpandEntityReferences = false
-            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-            setFeature("http://xml.org/sax/features/external-general-entities", false)
-            setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+            // Best-effort hardening only: Android's platform DocumentBuilderFactory
+            // recognises just the namespace/validation features and throws
+            // ParserConfigurationException for these Xerces flags, which would
+            // otherwise fail every on-device import as INVALID_GPX. The DOCTYPE/
+            // ENTITY prefix scan above plus isExpandEntityReferences=false keep
+            // the XXE defence when a flag is unsupported.
+            runCatching { setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
+            runCatching { setFeature("http://xml.org/sax/features/external-general-entities", false) }
+            runCatching { setFeature("http://xml.org/sax/features/external-parameter-entities", false) }
             runCatching { setAttribute(ACCESS_EXTERNAL_DTD, "") }
             runCatching { setAttribute(ACCESS_EXTERNAL_SCHEMA, "") }
         }
