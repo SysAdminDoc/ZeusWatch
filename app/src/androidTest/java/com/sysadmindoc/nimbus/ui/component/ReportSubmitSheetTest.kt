@@ -37,6 +37,10 @@ class ReportSubmitSheetTest {
         }
 
         composeTestRule.onNodeWithText("Report conditions").assertIsDisplayed()
+        composeTestRule.onNodeWithText(
+            "Location is rounded to a nearby area. Reports expire after two hours; " +
+                "backend deletion is asynchronous and may occur later.",
+        ).assertIsDisplayed()
         composeTestRule.onNodeWithText("Choose a condition").assertIsNotEnabled()
         assertNull(submittedCondition)
     }

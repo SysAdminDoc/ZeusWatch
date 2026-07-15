@@ -239,6 +239,7 @@
     <string name="alert_time_minutes_left">%1$dm left</string>
     <string name="report_sheet_title">Report conditions</string>
     <string name="report_sheet_body">Share what you see right now. Reports are anonymous, help nearby users, and cannot be edited after sending.</string>
+    <string name="report_retention_notice">يتم تقريب الموقع إلى منطقة قريبة. تنتهي صلاحية التقارير بعد ساعتين؛ حذفها من الخادم غير متزامن وقد يحدث لاحقًا.</string>
     <string name="report_note_label">Add a note (optional)</string>
     <string name="report_note_placeholder">e.g. Light drizzle starting</string>
     <string name="report_note_count">%1$d/%2$d</string>
