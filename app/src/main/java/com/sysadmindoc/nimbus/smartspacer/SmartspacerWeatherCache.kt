@@ -1,50 +1,46 @@
 package com.sysadmindoc.nimbus.smartspacer
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.PreferencesFileSerializer
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import androidx.room.Room
 import com.sysadmindoc.nimbus.data.api.NimbusDatabase
+import com.sysadmindoc.nimbus.data.model.WeatherCacheEntity
 import com.sysadmindoc.nimbus.data.model.WeatherDataCacheEntity
 import com.sysadmindoc.nimbus.data.model.WeatherDataCachePayload
 import com.sysadmindoc.nimbus.data.model.toWeatherData
 import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.io.IOException
+import java.io.File
 import java.time.Instant
-import java.time.LocalDateTime
 import java.time.ZoneId
-
-private val Context.smartspacerPrefs: DataStore<Preferences> by preferencesDataStore(name = "nimbus_prefs")
 
 internal class SmartspacerWeatherCache(
     private val context: Context,
-    private val now: () -> LocalDateTime = { LocalDateTime.now() },
     private val nowMillis: () -> Long = { System.currentTimeMillis() },
 ) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true }
     private val database: NimbusDatabase by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        Room.databaseBuilder(context, NimbusDatabase::class.java, "nimbus.db")
-            .addMigrations(NimbusDatabase.MIGRATION_1_2)
-            .addMigrations(NimbusDatabase.MIGRATION_2_3)
-            .addMigrations(NimbusDatabase.MIGRATION_3_4)
-            .addMigrations(NimbusDatabase.MIGRATION_4_5)
-            .build()
+        NimbusDatabase.buildOn(context)
     }
 
     suspend fun loadSnapshot(): SmartspacerWeatherSnapshot? = withContext(Dispatchers.IO) {
         runCatching {
-            val cached = database.weatherDao()
-                .getLatestWeatherData(WeatherDataCacheEntity.CURRENT_SCHEMA_VERSION)
+            val weatherDao = database.weatherDao()
+            val schemaVersion = WeatherDataCacheEntity.CURRENT_SCHEMA_VERSION
+            // Prefer the GPS current location's cache row: the latest row of
+            // ANY location would flip the surface to whichever secondary city
+            // happened to refresh last.
+            val cached = database.savedLocationDao().getCurrentLocation()
+                ?.let { current ->
+                    weatherDao.getLatestCurrentLocationWeatherData(
+                        currentLocationKey = WeatherCacheEntity.makeKey(current.latitude, current.longitude),
+                        schemaVersion = schemaVersion,
+                    )
+                }
+                ?: weatherDao.getLatestWeatherData(schemaVersion)
                 ?: return@runCatching null
             if (nowMillis() - cached.cachedAt > WeatherRepository.DEFAULT_STALE_FALLBACK_MS) {
                 return@runCatching null
@@ -56,19 +52,33 @@ internal class SmartspacerWeatherCache(
             val weather = payload.toWeatherData(lastUpdatedOverride = observedAt)
             buildSmartspacerWeatherSnapshot(
                 weather = weather,
-                tempUnit = readTempUnit(),
-                referenceTime = now(),
+                tempUnit = readTempUnitFromPreferencesFile(context),
+                strings = SmartspacerWeatherStrings.from(context),
+                referenceInstant = Instant.ofEpochMilli(nowMillis()),
             )
         }.getOrNull()
     }
+}
 
-    private suspend fun readTempUnit(): TempUnit {
-        val tempUnitKey = stringPreferencesKey("temp_unit")
-        return context.smartspacerPrefs.data
-            .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-            .map { prefs -> prefs[tempUnitKey].toTempUnitOrDefault() }
-            .first()
-    }
+/**
+ * Reads the temperature unit straight from the main process's preferences
+ * proto file. This process must NOT open its own DataStore on "nimbus_prefs":
+ * `UserPreferences` already declares a `preferencesDataStore` delegate for
+ * that file, and two active delegates on one file inside a single process
+ * throw IllegalStateException forever after — order-dependent and silently
+ * swallowed here. A per-call [PreferencesFileSerializer] read has no
+ * single-instance requirement, is safe against concurrent writers (DataStore
+ * commits via atomic rename), and always sees the latest committed value
+ * instead of caching the first read for the process lifetime.
+ */
+internal suspend fun readTempUnitFromPreferencesFile(context: Context): TempUnit {
+    val tempUnitKey = stringPreferencesKey("temp_unit")
+    val file = File(context.filesDir, "datastore/nimbus_prefs.preferences_pb")
+    val stored = runCatching {
+        if (!file.exists()) return@runCatching null
+        file.inputStream().use { input -> PreferencesFileSerializer.readFrom(input) }[tempUnitKey]
+    }.getOrNull()
+    return stored.toTempUnitOrDefault()
 }
 
 private fun String?.toTempUnitOrDefault(): TempUnit =

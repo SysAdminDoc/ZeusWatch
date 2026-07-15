@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus
 
 import android.app.Application
 import android.content.Context
+import android.os.Build
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil3.ImageLoader
@@ -30,6 +31,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -70,6 +72,13 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
 
     override fun onCreate() {
         super.onCreate()
+        // Satellite processes (":smartspacer", ACRA's sentinel) must not run the
+        // main-process startup block: it would spin up a second WorkManager,
+        // race the Tink keyset init in EncryptedApiKeyStore against the main
+        // process (which can wipe stored API keys), and activate the
+        // UserPreferences DataStore delegate in a process that reads the same
+        // file through its own path.
+        if (!isMainProcess()) return
         appScope = CoroutineScope(SupervisorJob() + defaultDispatcher + startupExceptionHandler)
         AlertNotificationHelper.createChannels(this)
         WeatherNotificationHelper.createChannel(this)
@@ -138,6 +147,25 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
             }
             .build()
     }
+
+    private fun isMainProcess(): Boolean {
+        val processName = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            getProcessName()
+        } else {
+            currentProcessNameFromProc()
+        }
+        // Fail open: if the process name can't be determined, behave like the
+        // main process — a duplicated startup beats one that never happens.
+        return processName.isNullOrEmpty() || processName == packageName
+    }
+
+    private fun currentProcessNameFromProc(): String? = runCatching {
+        File("/proc/self/cmdline").readBytes()
+            .toString(Charsets.UTF_8)
+            .substringBefore('\u0000')
+            .trim()
+            .takeIf { it.isNotEmpty() }
+    }.getOrNull()
 
     companion object {
         private const val TAG = "NimbusApplication"

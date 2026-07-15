@@ -41,6 +41,31 @@ interface WeatherDao {
     )
     suspend fun getLatestWeatherData(schemaVersion: Int): WeatherDataCacheEntity?
 
+    /**
+     * Latest cache row belonging to the GPS "current location" saved row, so
+     * ambient surfaces don't flip to whichever secondary city refreshed last.
+     * Matches by savedLocationId for rows cached via a SavedLocationEntity
+     * fetch, and by coordinate locationKey for the main UI's GPS path, which
+     * caches with savedLocationId = NULL ([currentLocationKey] is
+     * WeatherCacheEntity.makeKey of the current location's coordinates).
+     * Returns null when no current-location saved row — or no cache row for
+     * it — exists; callers fall back to [getLatestWeatherData].
+     */
+    @Query(
+        """
+        SELECT w.* FROM weather_data_cache w
+        INNER JOIN saved_locations l ON l.isCurrentLocation = 1
+        WHERE w.schemaVersion = :schemaVersion
+        AND (w.savedLocationId = l.id OR w.locationKey = :currentLocationKey)
+        ORDER BY w.cachedAt DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getLatestCurrentLocationWeatherData(
+        currentLocationKey: String,
+        schemaVersion: Int,
+    ): WeatherDataCacheEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: WeatherCacheEntity)
 
