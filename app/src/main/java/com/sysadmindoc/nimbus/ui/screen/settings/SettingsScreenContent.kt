@@ -72,6 +72,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -138,6 +139,7 @@ internal fun SettingsContent(
     transferStatus: SettingsTransferStatus? = null,
     transferInProgress: Boolean = false,
     pendingImportPreview: SettingsImportPreview? = null,
+    locationOverrideProviders: Set<WeatherSourceProvider> = emptySet(),
     actions: SettingsActions = SettingsActions(),
 ) {
     PredictiveBackScaffold(onBack = onBack) {
@@ -192,6 +194,7 @@ internal fun SettingsContent(
                     transferStatus = transferStatus,
                     transferInProgress = transferInProgress,
                     pendingImportPreview = pendingImportPreview,
+                    locationOverrideProviders = locationOverrideProviders,
                 ),
                 actions = actions,
             )
@@ -270,6 +273,7 @@ private data class SettingsSupportState(
     val transferStatus: SettingsTransferStatus?,
     val transferInProgress: Boolean,
     val pendingImportPreview: SettingsImportPreview?,
+    val locationOverrideProviders: Set<WeatherSourceProvider>,
 )
 
 @Composable
@@ -304,6 +308,7 @@ private fun SettingsCategoryContent(
                 settings,
                 supportState.providerHealth,
                 supportState.transferInProgress,
+                supportState.locationOverrideProviders,
                 actions,
             )
             SettingsAdvancedSection(
@@ -872,6 +877,7 @@ private fun SettingsDataSourcesSection(
     settings: NimbusSettings,
     providerHealth: ProviderHealthSnapshot,
     transferInProgress: Boolean,
+    locationOverrideProviders: Set<WeatherSourceProvider>,
     actions: SettingsActions,
 ) {
     SettingSection(
@@ -912,7 +918,7 @@ private fun SettingsDataSourcesSection(
             settings.weatherContentProviderEnabled,
             actions.onWeatherContentProviderEnabled,
         )
-        SettingsApiKeyFields(settings, actions)
+        SettingsApiKeyFields(settings, locationOverrideProviders, actions)
         ProviderHealthPanel(
             snapshot = providerHealth,
             transferInProgress = transferInProgress,
@@ -924,12 +930,16 @@ private fun SettingsDataSourcesSection(
 @Composable
 private fun SettingsApiKeyFields(
     settings: NimbusSettings,
+    locationOverrideProviders: Set<WeatherSourceProvider>,
     actions: SettingsActions,
 ) {
     val sourceConfig = settings.sourceConfig
     // Registry-driven: a key field shows whenever its key-requiring provider is
     // selected in any config slot, rather than comparing each slot by hand.
-    val keyedProvidersInUse = sourceConfig.selectedProviders().filter { it.requiresApiKey }
+    // Per-location source overrides count too — a provider selected only as a
+    // saved location's override still needs its API key field surfaced here.
+    val keyedProvidersInUse =
+        (sourceConfig.selectedProviders() + locationOverrideProviders).filter { it.requiresApiKey }
     val needsOwmKey = WeatherSourceProvider.OPEN_WEATHER_MAP in keyedProvidersInUse
     // AUTO / ALL_SOURCES alert preferences route through the global Pirate
     // Weather alert adapter, which also needs this key — so the field must be
@@ -979,7 +989,14 @@ private fun ProviderHealthPanel(
             compareBy<ProviderHealthEntry> { it.type.ordinal }.thenBy { it.provider.name },
         )
     }
-    val nowEpochMs = remember { System.currentTimeMillis() }
+    // Recompute every minute so the relative "last success/failure" timestamps
+    // don't freeze at whatever they were when the panel first composed.
+    val nowEpochMs by produceState(initialValue = System.currentTimeMillis()) {
+        while (true) {
+            kotlinx.coroutines.delay(60_000L)
+            value = System.currentTimeMillis()
+        }
+    }
 
     Spacer(modifier = Modifier.height(12.dp))
     Text(
@@ -1361,8 +1378,8 @@ private fun SettingsTransferButton(
         enabled = enabled,
         shape = RoundedCornerShape(10.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = NimbusBlueAccent,
-            contentColor = NimbusTextPrimary,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             disabledContainerColor = NimbusCardBorder.copy(alpha = 0.64f),
             disabledContentColor = NimbusTextTertiary,
         ),

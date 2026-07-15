@@ -364,8 +364,8 @@ private fun WhatsNewSheet(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = NimbusBlueAccent,
-                    contentColor = NimbusTextPrimary,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                 ),
             ) {
                 Text(stringResource(R.string.whats_new_done))

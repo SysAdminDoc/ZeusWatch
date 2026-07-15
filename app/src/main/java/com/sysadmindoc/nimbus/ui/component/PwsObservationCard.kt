@@ -18,14 +18,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.PwsObservation
 import com.sysadmindoc.nimbus.data.repository.TempestPrecipitationType
+import com.sysadmindoc.nimbus.data.repository.VisibilityUnit
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusSuccess
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
+import java.util.Locale
 
 @Composable
 fun PwsObservationCard(
@@ -42,13 +45,50 @@ fun PwsObservationCard(
     val status = observation.reportIntervalMinutes?.let {
         stringResource(R.string.pws_report_interval_badge, it)
     } ?: stringResource(R.string.pws_live_badge)
-    val semantics = stringResource(
-        R.string.pws_semantics,
-        temperature,
-        humidity,
-        wind,
-        observedTime,
-    )
+    // Detail rows are built once so the merged content description and the
+    // visible rows can never drift apart. mergeDescendants replaces child text
+    // for TalkBack, so every optional row — including the safety-relevant
+    // lightning proximity — must be part of the description too.
+    val detailRows = buildList {
+        observation.windGustKmh?.let {
+            add(stringResource(R.string.pws_gust_label) to WeatherFormatter.formatWindSpeed(it, settings))
+        }
+        observation.pressureHpa?.let {
+            add(stringResource(R.string.pws_pressure_label) to WeatherFormatter.formatPressure(it, settings))
+        }
+        observation.uvIndex?.let {
+            add(stringResource(R.string.pws_uv_label) to stringResource(R.string.pws_uv_value, it))
+        }
+        observation.rainLastMinuteMm?.let {
+            add(
+                stringResource(R.string.pws_rain_label) to stringResource(
+                    R.string.pws_rain_value,
+                    WeatherFormatter.formatPrecipitation(it, settings),
+                    stringResource(observation.precipitationType.labelRes),
+                ),
+            )
+        }
+        observation.lightningStrikeCount?.takeIf { it > 0 }?.let { count ->
+            val value = observation.lightningStrikeAverageDistanceKm?.let { distanceKm ->
+                stringResource(
+                    R.string.pws_lightning_value_with_distance,
+                    count,
+                    formatLightningDistance(distanceKm, settings),
+                )
+            } ?: stringResource(R.string.pws_lightning_value, count)
+            add(stringResource(R.string.pws_lightning_label) to value)
+        }
+    }
+    val semantics = buildString {
+        append(stringResource(R.string.pws_semantics, temperature, humidity, wind, observedTime))
+        detailRows.forEach { (label, value) ->
+            append(' ')
+            append(label)
+            append(' ')
+            append(value)
+            append('.')
+        }
+    }
 
     WeatherCard(
         titleRes = R.string.card_type_pws_observation,
@@ -91,40 +131,10 @@ fun PwsObservationCard(
         Spacer(modifier = Modifier.height(14.dp))
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            observation.windGustKmh?.let {
+            detailRows.forEach { (label, value) ->
                 PwsDetailRow(
-                    label = stringResource(R.string.pws_gust_label),
-                    value = WeatherFormatter.formatWindSpeed(it, settings),
-                )
-            }
-            observation.pressureHpa?.let {
-                PwsDetailRow(
-                    label = stringResource(R.string.pws_pressure_label),
-                    value = WeatherFormatter.formatPressure(it, settings),
-                )
-            }
-            observation.uvIndex?.let {
-                PwsDetailRow(
-                    label = stringResource(R.string.pws_uv_label),
-                    value = stringResource(R.string.pws_uv_value, it),
-                )
-            }
-            observation.rainLastMinuteMm?.let {
-                PwsDetailRow(
-                    label = stringResource(R.string.pws_rain_label),
-                    value = stringResource(
-                        R.string.pws_rain_value,
-                        WeatherFormatter.formatPrecipitation(it, settings),
-                        stringResource(observation.precipitationType.labelRes),
-                    ),
-                )
-            }
-            observation.lightningStrikeCount?.takeIf { it > 0 }?.let { count ->
-                PwsDetailRow(
-                    label = stringResource(R.string.pws_lightning_label),
-                    value = observation.lightningStrikeAverageDistanceKm?.let { distance ->
-                        stringResource(R.string.pws_lightning_value_with_distance, count, distance)
-                    } ?: stringResource(R.string.pws_lightning_value, count),
+                    label = label,
+                    value = value,
                 )
             }
         }
@@ -182,6 +192,16 @@ private fun PwsDetailRow(
         )
     }
 }
+
+/**
+ * Lightning distance arrives in kilometres; render it in the user's chosen
+ * distance unit, matching [WeatherFormatter]'s visibility formatting style.
+ */
+internal fun formatLightningDistance(distanceKm: Double, settings: NimbusSettings): String =
+    when (settings.visibilityUnit) {
+        VisibilityUnit.MILES -> String.format(Locale.US, "%.1f mi", distanceKm / 1.609344)
+        VisibilityUnit.KM -> String.format(Locale.US, "%.1f km", distanceKm)
+    }
 
 private val TempestPrecipitationType.labelRes: Int
     get() = when (this) {
