@@ -44,8 +44,10 @@ import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.CommunityReport
 import com.sysadmindoc.nimbus.data.model.ReportCondition
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import com.sysadmindoc.nimbus.util.parseAlertInstant
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.SymbolLayer
+import java.time.Instant
 import kotlin.math.abs
 
 /**
@@ -153,12 +155,13 @@ fun RadarMapView(
                     map.addOnCameraIdleListener { onCameraIdle() }
                     map.addOnMapClickListener { latLng ->
                         val screenPoint = map.projection.toScreenLocation(latLng)
-                        val alertId = map.queryRenderedFeatures(
-                            screenPoint,
-                            ALERT_BORDER_LAYER_ID,
-                            ALERT_FILL_LAYER_ID,
-                        ).firstOrNull { it.hasProperty(ALERT_ID_PROPERTY) }
-                            ?.getStringProperty(ALERT_ID_PROPERTY)
+                        val alertId = highestPriorityActiveAlertId(
+                            map.queryRenderedFeatures(
+                                screenPoint,
+                                ALERT_BORDER_LAYER_ID,
+                                ALERT_FILL_LAYER_ID,
+                            )
+                        )
                         if (alertId != null) {
                             currentOnAlertSelected(alertId)
                             true
@@ -515,6 +518,7 @@ private fun updateAlertOverlayLayer(
         setProperties(
             PropertyFactory.fillColor(Expression.get(ALERT_COLOR_PROPERTY)),
             PropertyFactory.fillOpacity(0.18f),
+            PropertyFactory.fillSortKey(Expression.get(ALERT_DRAW_PRIORITY_PROPERTY)),
         )
     }
     addOverlayLayerBelowMarkers(style, fillLayer)
@@ -524,13 +528,14 @@ private fun updateAlertOverlayLayer(
             PropertyFactory.lineColor(Expression.get(ALERT_COLOR_PROPERTY)),
             PropertyFactory.lineOpacity(0.92f),
             PropertyFactory.lineWidth(2.4f),
+            PropertyFactory.lineSortKey(Expression.get(ALERT_DRAW_PRIORITY_PROPERTY)),
         )
     }
     addOverlayLayerBelowMarkers(style, borderLayer)
 }
 
 internal fun alertOverlayFeatureCollection(alertOverlays: List<WeatherAlert>): FeatureCollection {
-    val features = alertOverlays.flatMap { alert ->
+    val features = alertOverlays.sortedWith(ALERT_DRAW_ORDER).flatMap { alert ->
         alert.geometry?.polygons?.mapNotNull { polygon ->
             alertOverlayFeature(alert, polygon)
         } ?: emptyList()
@@ -545,9 +550,49 @@ private fun alertOverlayFeature(alert: WeatherAlert, polygon: AlertPolygon): Fea
         addStringProperty(ALERT_ID_PROPERTY, alert.id)
         addStringProperty("event", alert.event)
         addStringProperty("severity", alert.severity.name)
+        addStringProperty(ALERT_URGENCY_PROPERTY, alert.urgency.name)
+        addNumberProperty(ALERT_DRAW_PRIORITY_PROPERTY, MAX_ALERT_SORT_ORDER - alert.severity.sortOrder)
+        alert.expires?.let { addStringProperty(ALERT_EXPIRES_PROPERTY, it) }
         addStringProperty(ALERT_COLOR_PROPERTY, alert.severity.overlayColor)
     }
 }
+
+internal fun highestPriorityActiveAlertId(
+    renderedFeatures: List<Feature>,
+    now: Instant = Instant.now(),
+): String? = renderedFeatures
+    .asSequence()
+    .filter { feature ->
+        val expires = feature.takeIf { it.hasProperty(ALERT_EXPIRES_PROPERTY) }
+            ?.getStringProperty(ALERT_EXPIRES_PROPERTY)
+        parseAlertInstant(expires)?.let { it.isAfter(now) } ?: true
+    }
+    .mapNotNull { feature ->
+        val alertId = feature.takeIf { it.hasProperty(ALERT_ID_PROPERTY) }
+            ?.getStringProperty(ALERT_ID_PROPERTY)
+            ?.takeIf { it.isNotBlank() }
+            ?: return@mapNotNull null
+        AlertFeaturePriority(
+            alertId = alertId,
+            severityOrder = AlertSeverity.from(feature.getStringProperty("severity")).sortOrder,
+            urgencyOrder = com.sysadmindoc.nimbus.data.model.AlertUrgency.from(
+                feature.getStringProperty(ALERT_URGENCY_PROPERTY)
+            ).sortOrder,
+        )
+    }
+    .distinctBy { it.alertId }
+    .minWithOrNull(
+        compareBy<AlertFeaturePriority> { it.severityOrder }
+            .thenBy { it.urgencyOrder }
+            .thenBy { it.alertId }
+    )
+    ?.alertId
+
+private data class AlertFeaturePriority(
+    val alertId: String,
+    val severityOrder: Int,
+    val urgencyOrder: Int,
+)
 
 private fun closedPolygonRing(polygon: AlertPolygon): List<Point> {
     val points = polygon.points
@@ -597,10 +642,18 @@ private const val ALERT_FILL_LAYER_ID = "active-alert-polygons-fill"
 private const val ALERT_BORDER_LAYER_ID = "active-alert-polygons-border"
 private const val ALERT_ID_PROPERTY = "alertId"
 private const val ALERT_COLOR_PROPERTY = "alertColor"
+private const val ALERT_URGENCY_PROPERTY = "urgency"
+private const val ALERT_EXPIRES_PROPERTY = "expires"
+private const val ALERT_DRAW_PRIORITY_PROPERTY = "alertDrawPriority"
+private const val MAX_ALERT_SORT_ORDER = 4
 private const val MIN_POLYGON_POINTS = 3
 private const val MIN_CLOSED_POLYGON_POINTS = 4
 private const val CAMERA_RECENTER_EPSILON_DEGREES = 0.001
 private const val MAX_LIGHTNING_FEATURES_FOR_MAP = 250
+
+private val ALERT_DRAW_ORDER = compareByDescending<WeatherAlert> { it.severity.sortOrder }
+    .thenByDescending { it.urgency.sortOrder }
+    .thenByDescending { it.id }
 
 /** Marker layers radar rasters must always render beneath. */
 private val RADAR_ANCHOR_LAYER_IDS = setOf(

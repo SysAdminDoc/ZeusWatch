@@ -413,6 +413,7 @@
         <item quantity="one">%1$d warning area</item>
         <item quantity="other">%1$d warning areas</item>
     </plurals>
+    <string name="radar_alert_overlay_priority">%1$s • highest severity on top</string>
     <string name="radar_alert_overlay_unavailable">Alert areas unavailable</string>
     <string name="radar_offline_title">Radar needs a connection</string>
     <string name="radar_offline_message">Reconnect to resume live radar, lightning, and community weather reports.</string>

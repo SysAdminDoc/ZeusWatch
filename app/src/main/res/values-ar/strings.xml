@@ -403,6 +403,7 @@
         <item quantity="many">%1$d warning areas</item>
         <item quantity="other">%1$d warning areas</item>
     </plurals>
+    <string name="radar_alert_overlay_priority">%1$s • الأعلى خطورة في المقدمة</string>
     <string name="radar_alert_overlay_unavailable">Alert areas unavailable</string>
     <string name="radar_offline_title">يحتاج الرادار إلى اتصال</string>
     <string name="radar_offline_message">أعد الاتصال لاستئناف الرادار المباشر والبرق وتقارير الطقس المجتمعية.</string>

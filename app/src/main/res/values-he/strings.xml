@@ -403,6 +403,7 @@
         <item quantity="many">%1$d warning areas</item>
         <item quantity="other">%1$d warning areas</item>
     </plurals>
+    <string name="radar_alert_overlay_priority">%1$s • החמורה ביותר מעל כולן</string>
     <string name="radar_alert_overlay_unavailable">Alert areas unavailable</string>
     <string name="radar_offline_title">הרדאר צריך חיבור</string>
     <string name="radar_offline_message">Reconnect to resume live radar, lightning, and community weather reports.</string>
