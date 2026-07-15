@@ -36,3 +36,8 @@ AGENTS.md
 .ai/
 PROJECT_CONTEXT.md
 CONTINUATION_PROMPT.md
+
+# Local release-verification and crash artifacts
+SHA256SUMS.txt
+*-provenance.json
+hs_err_pid*.log

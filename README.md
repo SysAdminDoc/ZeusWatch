@@ -288,7 +288,7 @@ When providers publish localized condition or alert text, matching user-locale s
 ├──────────────────────────────────────────────────────────────────────────┤
 │  Data Layer                                                              │
 │  ┌───────────────────────────────┐  ┌───────────────────────────────┐   │
-│  │ Retrofit APIs                  │  │ Room Database (v3)             │   │
+│  │ Retrofit APIs                  │  │ Room Database (v5)             │   │
 │  │  Open-Meteo Forecast           │  │  weather_cache                │   │
 │  │  Open-Meteo Geocoding          │  │  saved_locations (+sources)   │   │
 │  │  Open-Meteo Air Quality        │  │                               │   │
@@ -307,7 +307,7 @@ When providers publish localized condition or alert text, matching user-locale s
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Stack:** Gradle 9.4.1, AGP 9.2.0, Kotlin 2.3.21, Jetpack Compose (BOM 2026.06.01), Hilt 2.60, Retrofit 3.0.0, OkHttp 5.3.2, Room 2.7.2, DataStore 1.2.1 with Tink-encrypted API keys, Open-Meteo SDK 1.10.0 FlatBuffers decoder, Smartspacer SDK 1.1.2, ML Kit GenAI Prompt 1.0.0-beta2, MapLibre 13.3.1, Glance 1.1.1, Wear Tiles 1.6.1, ProtoLayout 1.4.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
+**Stack:** Gradle 9.4.1, AGP 9.2.0, Kotlin 2.3.21, Jetpack Compose (BOM 2026.06.01), Hilt 2.60, Retrofit 3.0.0, OkHttp 5.4.0, Room 2.8.4, DataStore 1.2.1 with Tink-encrypted API keys, Open-Meteo SDK 1.10.0 FlatBuffers decoder, Smartspacer SDK 1.1.2, ML Kit GenAI Prompt 1.0.0-beta2, MapLibre 13.3.1, Glance 1.1.1, Wear Tiles 1.6.1, ProtoLayout 1.4.1, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, Firebase Firestore (BOM 34.12.0)
 
 ---
 
@@ -577,7 +577,7 @@ Current planning is maintained locally in `ROADMAP.md`; research synthesis is
 maintained locally in `RESEARCH.md`. Historical phase-1 research remains in
 [docs/research-archive.md](docs/research-archive.md).
 
-**Implemented through v1.5.0:**
+**Implemented through v1.5.0 (historical snapshot; superseded by the current documentation above):**
 - 29 dynamic card types with user-configurable order and visibility
 - Gemini Nano AI weather summaries enabled by default (with template fallback)
 - Animated Meteocons Lottie icons enabled by default
@@ -611,6 +611,7 @@ maintained locally in `RESEARCH.md`. Historical phase-1 research remains in
 ZeusWatch collects **zero user data**. No analytics, no tracking, no telemetry, no location history, no advertising identifiers, no data shared with third parties.
 
 - **No accounts required.** The app works fully offline after the first forecast fetch.
+- **Foreground-only location.** The manifest declares fine/coarse location only; ZeusWatch never requests background location, and widgets/workers reuse the last foreground fix.
 - **No network requests except weather data.** All API calls go directly to the configured weather services (Open-Meteo, RainViewer, etc.) — no intermediary servers.
 - **Community reports** (`standard` flavor only) use anonymous Firebase Auth with no personal identifiers, round coordinates to two decimal degrees, disappear after two hours, and use asynchronous Firestore TTL deletion. The `freenet` flavor has zero Firebase or Google dependency.
 - **API keys/tokens** (optional, user-provided) are encrypted on-device via Android Keystore + Tink AEAD and never leave the device.

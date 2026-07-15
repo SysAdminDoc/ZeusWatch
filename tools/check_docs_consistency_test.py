@@ -109,6 +109,86 @@ enum class CardType(val label: String) {
             issues,
         )
 
+    def test_dependency_stack_checks_okhttp_version(self) -> None:
+        with _temporary_docs_repo(
+            _version_source_files(
+                readme=_stack_line(datastore="1.2.1").replace("OkHttp 5.4.0", "OkHttp 5.3.2"),
+                claude=_stack_line(datastore="1.2.1"),
+            )
+        ):
+            issues = docs.check_dependency_version_claims()
+
+        self.assertTrue(
+            any("README.md: stack claim for OkHttp does not match okhttp 5.4.0" in issue for issue in issues),
+            issues,
+        )
+
+    def test_room_schema_claims_follow_database_annotation(self) -> None:
+        with _temporary_docs_repo(
+            {
+                "README.md": "Room Database (v4)\n",
+                "CLAUDE.md": "**Room DB**: v5 — current schema\n",
+                "app/src/main/java/com/sysadmindoc/nimbus/data/api/NimbusDatabase.kt": """
+@Database(entities = [], version = 5, exportSchema = true)
+abstract class NimbusDatabase
+""",
+            }
+        ):
+            issues = docs.check_room_schema_claims()
+
+        self.assertEqual(len(issues), 1)
+        self.assertIn("README.md: Room Database architecture label v4 != NimbusDatabase v5", issues[0])
+
+    def test_deep_link_claims_follow_manifest_scheme(self) -> None:
+        with _temporary_docs_repo(
+            _manifest_contract_files(
+                readme="Deep Links: `nimbus://`\nForeground-only location.\n",
+            )
+        ):
+            issues = docs.check_manifest_contract_claims()
+
+        self.assertTrue(any("missing manifest deep-link scheme 'zeuswatch://'" in issue for issue in issues), issues)
+        self.assertTrue(any("stale deep-link scheme 'nimbus://'" in issue for issue in issues), issues)
+
+    def test_location_claim_fails_when_background_permission_is_declared(self) -> None:
+        files = _manifest_contract_files(
+            readme="Deep Links: `zeuswatch://`\nForeground-only location.\n",
+        )
+        files["app/src/main/AndroidManifest.xml"] = files["app/src/main/AndroidManifest.xml"].replace(
+            "</manifest>",
+            '<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" /></manifest>',
+        )
+        with _temporary_docs_repo(files):
+            issues = docs.check_manifest_contract_claims()
+
+        self.assertTrue(
+            any("claims foreground-only location but manifest declares" in issue for issue in issues),
+            issues,
+        )
+
+    def test_historical_scheme_and_workflow_claims_require_superseded_label(self) -> None:
+        with _temporary_docs_repo(
+            {
+                "docs/phases-pre-v1.md": "# Old plan\nDeep links use nimbus://. GitHub Actions ships releases.\n",
+            }
+        ):
+            issues = docs.check_historical_supersession_labels()
+
+        self.assertEqual(
+            issues,
+            ["docs/phases-pre-v1.md: historical deep-link/workflow claims are not labeled superseded"],
+        )
+
+    def test_local_release_posture_is_required_without_workflows(self) -> None:
+        with _temporary_docs_repo(
+            {
+                "docs/RELEASE.md": "Upload a release somehow.\n",
+            }
+        ):
+            issues = docs.check_local_release_posture()
+
+        self.assertEqual(len(issues), 3)
+
     def test_version_sync_checks_claude_header(self) -> None:
         with _temporary_docs_repo(
             _version_source_files(
@@ -226,6 +306,7 @@ kotlin = "2.1.0"
 compose-bom = "2025.04.01"
 hilt = "2.53.1"
 retrofit = "3.0.0"
+okhttp = "5.4.0"
 room = "2.6.1"
 datastore = "1.2.1"
 maplibre = "13.3.1"
@@ -240,11 +321,28 @@ coil = "3.1.0"
 def _stack_line(datastore: str) -> str:
     return (
         "**Stack:** Kotlin 2.1.0, Jetpack Compose (BOM 2025.04.01), "
-        "Hilt 2.53.1, Retrofit 3.0.0, Room 2.6.1, "
+        "Hilt 2.53.1, Retrofit 3.0.0, OkHttp 5.4.0, Room 2.6.1, "
         f"DataStore {datastore}, MapLibre 13.3.1, Glance 1.1.1, "
         "WorkManager 2.11.2, Lottie 6.7.1, Coil 3.1.0, "
         "Firebase Firestore (BOM 34.12.0)\n"
     )
+
+
+def _manifest_contract_files(readme: str) -> dict[str, str]:
+    return {
+        "README.md": readme,
+        "CLAUDE.md": "Deep links use `zeuswatch://`.\n",
+        "app/src/main/AndroidManifest.xml": """
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <application>
+        <activity>
+            <intent-filter><data android:scheme="zeuswatch" /></intent-filter>
+        </activity>
+    </application>
+</manifest>
+""",
+    }
 
 
 if __name__ == "__main__":
