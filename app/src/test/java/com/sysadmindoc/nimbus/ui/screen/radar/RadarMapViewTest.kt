@@ -11,6 +11,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.maplibre.geojson.Polygon
+import java.time.Instant
+import kotlin.random.Random
 
 class RadarMapViewTest {
 
@@ -58,6 +60,57 @@ class RadarMapViewTest {
     }
 
     @Test
+    fun `alert polygons draw least severe first regardless of input order`() {
+        val alerts = AlertSeverity.entries.map { severity ->
+            weatherAlert(
+                id = severity.name.lowercase(),
+                geometry = alertGeometry(closed = false),
+                severity = severity,
+            )
+        }
+        val expectedDrawOrder = listOf("unknown", "minor", "moderate", "severe", "extreme")
+
+        repeat(20) { seed ->
+            val collection = alertOverlayFeatureCollection(alerts.shuffled(Random(seed)))
+
+            assertEquals(
+                expectedDrawOrder,
+                collection.features().orEmpty().map { it.getStringProperty("alertId") },
+            )
+        }
+    }
+
+    @Test
+    fun `overlap selection chooses highest severity active alert deterministically`() {
+        val now = Instant.parse("2026-07-15T12:00:00Z")
+        val alerts = listOf(
+            weatherAlert(
+                id = "expired-extreme",
+                geometry = alertGeometry(closed = false),
+                severity = AlertSeverity.EXTREME,
+                expires = "2026-07-15T11:59:59Z",
+            ),
+            weatherAlert(
+                id = "moderate",
+                geometry = alertGeometry(closed = false),
+                severity = AlertSeverity.MODERATE,
+            ),
+            weatherAlert(
+                id = "severe",
+                geometry = alertGeometry(closed = false),
+                severity = AlertSeverity.SEVERE,
+            ),
+        )
+        repeat(20) { seed ->
+            val features = alertOverlayFeatureCollection(alerts.shuffled(Random(seed))).features().orEmpty()
+            assertEquals("severe", highestPriorityActiveAlertId(features, now))
+        }
+        val features = alertOverlayFeatureCollection(alerts).features().orEmpty()
+        val moderateFeature = features.single { it.getStringProperty("alertId") == "moderate" }
+        assertEquals("moderate", highestPriorityActiveAlertId(listOf(moderateFeature), now))
+    }
+
+    @Test
     fun `lightningFeatureCollection caps GeoJSON points to latest strikes`() {
         val collection = lightningFeatureCollection(
             List(300) { index ->
@@ -75,20 +128,25 @@ class RadarMapViewTest {
         assertEquals(299.0, (features.last().geometry() as org.maplibre.geojson.Point).latitude(), 0.0)
     }
 
-    private fun weatherAlert(id: String, geometry: AlertGeometry?): WeatherAlert {
+    private fun weatherAlert(
+        id: String,
+        geometry: AlertGeometry?,
+        severity: AlertSeverity = AlertSeverity.SEVERE,
+        expires: String = "2099-01-01T00:00:00Z",
+    ): WeatherAlert {
         return WeatherAlert(
             id = id,
             event = "Tornado Warning",
             headline = "Tornado Warning issued",
             description = "Take shelter now.",
             instruction = "Move to an interior room.",
-            severity = AlertSeverity.SEVERE,
+            severity = severity,
             urgency = AlertUrgency.IMMEDIATE,
             certainty = "Observed",
             senderName = "National Weather Service",
             areaDescription = "Test County",
             effective = "2026-06-17T00:00:00Z",
-            expires = "2099-01-01T00:00:00Z",
+            expires = expires,
             response = "Shelter",
             geometry = geometry,
             coversRequestedLocation = true,

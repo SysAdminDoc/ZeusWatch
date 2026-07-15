@@ -410,6 +410,7 @@
         <item quantity="one">%1$d zona de alerta</item>
         <item quantity="other">%1$d zonas de alerta</item>
     </plurals>
+    <string name="radar_alert_overlay_priority">%1$s • máxima gravedad arriba</string>
     <string name="radar_alert_overlay_unavailable">Zonas de alerta no disponibles</string>
     <string name="radar_offline_title">El radar necesita conexión</string>
     <string name="radar_offline_message">Vuelve a conectarte para reanudar radar en vivo, rayos y reportes meteorológicos comunitarios.</string>

@@ -820,11 +820,18 @@ private fun RadarAlertOverlayBadge(
 ) {
     val text = when {
         alertOverlayUnavailable -> stringResource(R.string.radar_alert_overlay_unavailable)
-        activeAlertCount > 0 -> pluralStringResource(
-            R.plurals.radar_alert_overlay_count,
-            activeAlertCount,
-            activeAlertCount,
-        )
+        activeAlertCount > 0 -> {
+            val countLabel = pluralStringResource(
+                R.plurals.radar_alert_overlay_count,
+                activeAlertCount,
+                activeAlertCount,
+            )
+            if (activeAlertCount > 1) {
+                stringResource(R.string.radar_alert_overlay_priority, countLabel)
+            } else {
+                countLabel
+            }
+        }
         else -> null
     } ?: return
 
