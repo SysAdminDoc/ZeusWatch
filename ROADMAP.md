@@ -1,6 +1,6 @@
 # ZeusWatch Roadmap
 
-**Current Version**: v1.25.0 (phone versionCode 105, wear versionCode 77)
+**Current Version**: v1.26.0 (phone versionCode 106, wear versionCode 78)
 **Architecture**: Kotlin 2.3.21 / Jetpack Compose / Hilt / MVVM / multi-module (phone + wear)
 **Flavors**: `standard` (Google Play services, Gemini Nano, Firestore, Wear DataLayer) / `freenet` (F-Droid clean)
 **License**: LGPL-3.0
@@ -450,3 +450,13 @@ duplicating existing items.
   Touches: per-widget preference schema, `WidgetConfigActivity`, shared widget layout primitives, settings cleanup on widget deletion, NX-30 structural tests.
   Acceptance: at least compact/comfortable/dense modes and metric choices persist per widget instance, obey launcher size and font scale without clipping, preserve refresh/location actions, clean up deleted-instance state, and pass NX-30 size/semantics tests; no new redundant widget receiver is added.
   Complexity: L
+
+## Audit Follow-ups (2026-07-15)
+
+- [ ] P2 — Extend accessibility instrumentation gates to the newest surfaces
+  Why: AccessibilityAuditTest fixtures skip the PWS, Provider Agreement, and On This Day cards, the route planner sheet, and the Compare overlay; the JVM contrast gate now covers theme tokens but instrumented touch-target/semantics audits do not exercise these screens.
+  Where: app/src/androidTest/.../AccessibilityAuditTest.kt (fixture card set + new screen scaffolds)
+
+- [ ] P3 — Gadgetbridge broadcast target-package selection
+  Why: coordinates are now coarsened to ~1 km, but the weather payload still broadcasts to every app resolving the public Gadgetbridge action; a user-selected target package (Breezy Weather pattern) would close the harvest channel entirely.
+  Where: util/GadgetbridgeWeatherBroadcaster.kt, Settings > Notifications

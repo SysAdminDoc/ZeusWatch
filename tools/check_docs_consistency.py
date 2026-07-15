@@ -511,6 +511,9 @@ def check_onboarding_card_count():
         if value is None:
             issues.append(f"{label}/strings.xml: missing onboarding_cards_everything_count")
             continue
+        if "%1$d" in value:
+            # Runtime-derived count (CardType.entries.size) cannot drift.
+            continue
         match = re.search(r"\b(\d+)\b", value)
         if not match:
             issues.append(
