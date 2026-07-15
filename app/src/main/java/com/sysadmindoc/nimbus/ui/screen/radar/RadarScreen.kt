@@ -2,7 +2,6 @@ package com.sysadmindoc.nimbus.ui.screen.radar
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.net.Uri
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -858,45 +857,34 @@ private fun RadarWebView(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                     )
                     webViewClient = object : WebViewClient() {
-                        private fun isAllowedUrl(uri: Uri): Boolean {
-                            if (uri.scheme in setOf("about", "blob", "data")) {
-                                return true
-                            }
-                            val host = uri.host ?: return false
-                            return when (provider) {
-                                RadarProvider.WINDY_WEBVIEW -> {
-                                    host == "embed.windy.com" ||
-                                        WINDY_ALLOWED_HOST_PATTERNS.any { it.matches(host) }
-                                }
-                                RadarProvider.NWS_WEBVIEW,
-                                RadarProvider.NWS_STANDARD_WEBVIEW -> {
-                                    host == "radar.weather.gov" ||
-                                        NWS_ALLOWED_HOST_PATTERNS.any { it.matches(host) }
-                                }
-                                RadarProvider.NATIVE_MAPLIBRE,
-                                RadarProvider.LIBREWXR_NATIVE -> false
-                            }
-                        }
                         override fun shouldOverrideUrlLoading(
                             view: WebView?,
                             request: WebResourceRequest?,
                         ): Boolean {
-                            val uri = request?.url ?: return false
-                            if (isAllowedUrl(uri)) {
-                                return false
-                            }
-                            // Blocked main-frame navigations are handed to the
-                            // browser so external links don't silently dead-end;
-                            // non-allowlisted subframe navigations are blocked
-                            // outright (same allowlist as the main frame).
-                            if (request.isForMainFrame) {
-                                try {
-                                    view?.context?.startActivity(Intent(Intent.ACTION_VIEW, uri))
-                                } catch (_: Exception) {
-                                    // No browser available — swallow and just block.
+                            val navigation = request ?: return true
+                            return when (
+                                RadarNavigationPolicy.evaluate(
+                                    provider = provider,
+                                    rawUrl = navigation.url.toString(),
+                                    isForMainFrame = navigation.isForMainFrame,
+                                    hasUserGesture = navigation.hasGesture(),
+                                )
+                            ) {
+                                RadarNavigationDecision.LOAD_IN_WEBVIEW -> false
+                                RadarNavigationDecision.OPEN_EXTERNAL_HTTPS -> {
+                                    try {
+                                        view?.context?.startActivity(
+                                            Intent(Intent.ACTION_VIEW, navigation.url).apply {
+                                                addCategory(Intent.CATEGORY_BROWSABLE)
+                                            },
+                                        )
+                                    } catch (_: Exception) {
+                                        // No browser available — swallow and block.
+                                    }
+                                    true
                                 }
+                                RadarNavigationDecision.BLOCK -> true
                             }
-                            return true
                         }
                     }
                     webChromeClient = WebChromeClient()
@@ -911,15 +899,23 @@ private fun RadarWebView(
                         mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                         allowFileAccess = false
                         allowContentAccess = false
+                        // Keep WebView's default user agent. Android 17 reduces
+                        // its OS/CPU detail and the radar policy does not depend
+                        // on user-agent parsing.
                     }
                     setBackgroundColor(android.graphics.Color.parseColor("#0F1526"))
                     webViewRef[0] = this
-                    loadUrl(radarUrl)
+                    if (RadarNavigationPolicy.canLoadInitialUrl(provider, radarUrl)) {
+                        loadUrl(radarUrl)
+                    }
                 }
             },
             update = { webView ->
                 val newUrl = buildRadarProviderUrl(provider, latitude, longitude)
-                if (webView.url != newUrl) {
+                if (
+                    webView.url != newUrl &&
+                    RadarNavigationPolicy.canLoadInitialUrl(provider, newUrl)
+                ) {
                     webView.loadUrl(newUrl)
                 }
             },
@@ -962,18 +958,6 @@ private fun buildWindyRadarUrl(lat: Double, lon: Double, zoom: Int = 8): String 
         "&forecast=12" +
         "&darkMode=true"
 }
-
-private val WINDY_ALLOWED_HOST_PATTERNS = listOf(
-    Regex(""".*\.openstreetmap\.org$"""),
-    Regex(""".*\.cartocdn\.com$"""),
-)
-
-private val NWS_ALLOWED_HOST_PATTERNS = listOf(
-    Regex("""(^|.*\.)weather\.gov$"""),
-    Regex("""(^|.*\.)noaa\.gov$"""),
-    Regex("""(^|.*\.)ncep\.noaa\.gov$"""),
-    Regex("""(^|.*\.)digitalgov\.gov$"""),
-)
 
 @Composable
 private fun RadarInfoBadge(
