@@ -28,6 +28,7 @@ import com.sysadmindoc.nimbus.ui.navigation.DeepLinkRequest
 import com.sysadmindoc.nimbus.ui.navigation.NimbusNavHost
 import com.sysadmindoc.nimbus.ui.navigation.Routes
 import com.sysadmindoc.nimbus.ui.navigation.resolveZeusWatchDeepLinkRoute
+import com.sysadmindoc.nimbus.ui.screen.radar.capSharedRouteText
 import com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import com.sysadmindoc.nimbus.ui.theme.WeatherThemeBus
@@ -119,9 +120,10 @@ class MainActivity : ComponentActivity() {
 
     private fun resolveDeepLink(intent: Intent?): String? {
         if (intent?.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true) {
-            val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
-                ?.trim()
-                ?.takeIf { it.isNotBlank() }
+            // Cap at the intent boundary: uncapped shares would land in the nav
+            // back stack's saved state (TransactionTooLargeException) and hit
+            // the share-parsing regexes on the main thread.
+            val sharedText = capSharedRouteText(intent.getStringExtra(Intent.EXTRA_TEXT))
             if (sharedText != null) return Routes.radar(0.0, 0.0, sharedText)
         }
 
@@ -132,7 +134,9 @@ class MainActivity : ComponentActivity() {
             target = uri.getQueryParameter("target"),
             card = uri.getQueryParameter("card"),
             locationId = uri.getQueryParameter("locationId"),
-            routeText = uri.getQueryParameter("route") ?: uri.getQueryParameter("destination"),
+            routeText = capSharedRouteText(
+                uri.getQueryParameter("route") ?: uri.getQueryParameter("destination"),
+            ),
         )
     }
 

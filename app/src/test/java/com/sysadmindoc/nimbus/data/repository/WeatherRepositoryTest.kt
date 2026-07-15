@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.data.repository
 
+import android.content.Context
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.api.GeocodingApi
 import com.sysadmindoc.nimbus.data.api.GeocodingResponse
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
@@ -34,6 +36,7 @@ import java.time.LocalDateTime
 
 class WeatherRepositoryTest {
 
+    private lateinit var context: Context
     private lateinit var weatherApi: OpenMeteoApi
     private lateinit var geocodingApi: GeocodingApi
     private lateinit var reverseGeocoder: ReverseGeocoder
@@ -239,6 +242,9 @@ class WeatherRepositoryTest {
 
     @Before
     fun setup() {
+        context = mockk(relaxed = true)
+        every { context.getString(R.string.route_waypoint_gpx_start) } returns "GPX start"
+        every { context.getString(R.string.route_waypoint_gpx_destination) } returns "GPX destination"
         weatherApi = mockk()
         geocodingApi = mockk()
         reverseGeocoder = mockk()
@@ -251,6 +257,7 @@ class WeatherRepositoryTest {
         coEvery { weatherDao.getCached(any()) } returns null
 
         repository = WeatherRepository(
+            context = context,
             weatherApi = weatherApi,
             geocodingApi = geocodingApi,
             reverseGeocoder = reverseGeocoder,
@@ -399,9 +406,10 @@ class WeatherRepositoryTest {
     }
 
     @Test
-    fun getWeatherDirectUsesConfiguredCacheTtlWhenPruningCache() = runTest {
+    fun getWeatherDirectPrunesCacheWithStaleFallbackHorizonNotLiveTtl() = runTest {
         every { userPreferences.settings } returns flowOf(NimbusSettings(cacheTtlMinutes = 15))
         repository = WeatherRepository(
+            context = context,
             weatherApi = weatherApi,
             geocodingApi = geocodingApi,
             reverseGeocoder = reverseGeocoder,
@@ -423,8 +431,11 @@ class WeatherRepositoryTest {
         repository.getWeatherDirect(testLat, testLon)
 
         val after = System.currentTimeMillis()
-        val expectedTtl = 15 * 60 * 1000L
-        assertTrue(cutoffSlot.captured in (before - expectedTtl)..(after - expectedTtl))
+        // Eviction must use the wider stale-fallback horizon: a 15-minute TTL
+        // cutoff would purge other locations' rows that getWeatherOrCached
+        // still serves for up to DEFAULT_STALE_FALLBACK_MS during outages.
+        val expectedHorizon = WeatherRepository.DEFAULT_STALE_FALLBACK_MS
+        assertTrue(cutoffSlot.captured in (before - expectedHorizon)..(after - expectedHorizon))
     }
 
     @Test
@@ -540,6 +551,7 @@ class WeatherRepositoryTest {
     fun getCachedWeatherHonorsConfiguredCacheTtl() = runTest {
         every { userPreferences.settings } returns flowOf(NimbusSettings(cacheTtlMinutes = 15))
         repository = WeatherRepository(
+            context = context,
             weatherApi = weatherApi,
             geocodingApi = geocodingApi,
             reverseGeocoder = reverseGeocoder,
@@ -840,6 +852,91 @@ class WeatherRepositoryTest {
         coVerify(exactly = 1) {
             geocodingApi.searchLocation("Boulder Colorado", any(), any(), any())
         }
+    }
+
+    @Test
+    fun planDrivingRouteWeatherMatchesHourlyInWaypointTimeZone() = runTest {
+        val departure = LocalDateTime.of(2026, 1, 1, 8, 0)
+        val waypointZone = java.time.ZoneId.of("Pacific/Kiritimati")
+        // Waypoint-local wall clock at the instant of departure (device zone).
+        val departureAtWaypoint = LocalDateTime.ofInstant(
+            departure.atZone(java.time.ZoneId.systemDefault()).toInstant(),
+            waypointZone,
+        )
+        val correctHour = routeWeatherData().hourly.first().copy(
+            time = departureAtWaypoint,
+            temperature = 25.0,
+        )
+        // The naive device-local match the old comparison would have picked.
+        val wrongHour = correctHour.copy(time = departure, temperature = -5.0)
+        val weather = routeWeatherData().copy(
+            location = routeWeatherData().location.copy(timeZone = waypointZone.id),
+            hourly = listOf(correctHour, wrongHour),
+        )
+        // A very short hop keeps every arrival within a minute of departure, so
+        // the correct-hour match is unambiguous regardless of the host zone.
+        val geometry = DrivingRouteGeometry(
+            points = listOf(
+                DrivingRoutePoint(1.9, -157.4),
+                DrivingRoutePoint(1.91, -157.41),
+            ),
+            estimateKind = DrivingRouteEstimateKind.GPX_ROUTE,
+        )
+        coEvery {
+            sourceManager.getWeather(any(), any(), any(), any(), any())
+        } returns Result.success(weather)
+        coEvery {
+            sourceManager.getAlertsDetailed(
+                latitude = any(),
+                longitude = any(),
+                sourceOverrides = any(),
+                includeMeteredSources = false,
+                countryHint = any(),
+            )
+        } returns AlertFetchResult(emptyList(), allAdaptersFailed = false, failedSources = emptyList())
+
+        val result = repository.planDrivingRouteWeather(
+            originQuery = "",
+            destinationQuery = "",
+            departureTime = departure,
+            routeGeometry = geometry,
+        )
+
+        assertTrue(result.isSuccess)
+        val firstWaypoint = result.getOrThrow().waypoints.first()
+        assertEquals(
+            "Hour matching must happen in the waypoint's own timezone, not naive device-local time",
+            25.0,
+            firstWaypoint.conditions!!.temperatureC,
+            0.01,
+        )
+    }
+
+    @Test
+    fun waypointLocalArrivalTimeConvertsThroughTheDepartureInstant() {
+        val departure = LocalDateTime.of(2026, 1, 1, 8, 0)
+        val departureInstant = departure.atZone(java.time.ZoneId.of("America/Denver")).toInstant()
+        val arrival = departure.plusHours(2)
+
+        // Denver 10:00 MST is Chicago 11:00 CST.
+        assertEquals(
+            LocalDateTime.of(2026, 1, 1, 11, 0),
+            waypointLocalArrivalTime(
+                departureTime = departure,
+                departureInstant = departureInstant,
+                arrivalTime = arrival,
+                waypointZoneId = "America/Chicago",
+            ),
+        )
+        // Missing or invalid waypoint zones fall back to the device-local arrival.
+        assertEquals(
+            arrival,
+            waypointLocalArrivalTime(departure, departureInstant, arrival, null),
+        )
+        assertEquals(
+            arrival,
+            waypointLocalArrivalTime(departure, departureInstant, arrival, "Not/AZone"),
+        )
     }
 
     // --- getWeatherOrCached (background-worker stale fallback) ---

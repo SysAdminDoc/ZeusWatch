@@ -47,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -190,14 +191,16 @@ fun RadarScreen(
         RouteWeatherPlannerSheet(
             state = routePlannerState,
             settings = settings,
-            onOriginChange = actions.onRouteOriginChange,
-            onDestinationChange = actions.onRouteDestinationChange,
-            onDepartureOffsetChange = actions.onRouteDepartureOffsetChange,
-            onGpxImported = actions.onGpxImported,
-            onGpxImportFailed = actions.onGpxImportFailed,
-            onClearGpx = actions.onClearGpx,
-            onPlanRoute = actions.onPlanRoute,
-            onDismiss = actions.onDismissRoutePlanner,
+            actions = RoutePlannerActions(
+                onOriginChange = actions.onRouteOriginChange,
+                onDestinationChange = actions.onRouteDestinationChange,
+                onDepartureOffsetChange = actions.onRouteDepartureOffsetChange,
+                onGpxImported = actions.onGpxImported,
+                onGpxImportFailed = actions.onGpxImportFailed,
+                onClearGpx = actions.onClearGpx,
+                onPlanRoute = actions.onPlanRoute,
+                onDismiss = actions.onDismissRoutePlanner,
+            ),
         )
         RadarSelectedAlertSheet(
             alert = radarState.alertOverlays.firstOrNull { it.id == selectedAlertId },
@@ -306,14 +309,16 @@ fun RadarTab(
     RouteWeatherPlannerSheet(
         state = routePlannerState,
         settings = settings,
-        onOriginChange = actions.onRouteOriginChange,
-        onDestinationChange = actions.onRouteDestinationChange,
-        onDepartureOffsetChange = actions.onRouteDepartureOffsetChange,
-        onGpxImported = actions.onGpxImported,
-        onGpxImportFailed = actions.onGpxImportFailed,
-        onClearGpx = actions.onClearGpx,
-        onPlanRoute = actions.onPlanRoute,
-        onDismiss = actions.onDismissRoutePlanner,
+        actions = RoutePlannerActions(
+            onOriginChange = actions.onRouteOriginChange,
+            onDestinationChange = actions.onRouteDestinationChange,
+            onDepartureOffsetChange = actions.onRouteDepartureOffsetChange,
+            onGpxImported = actions.onGpxImported,
+            onGpxImportFailed = actions.onGpxImportFailed,
+            onClearGpx = actions.onClearGpx,
+            onPlanRoute = actions.onPlanRoute,
+            onDismiss = actions.onDismissRoutePlanner,
+        ),
     )
     RadarSelectedAlertSheet(
         alert = radarState.alertOverlays.firstOrNull { it.id == selectedAlertId },
@@ -368,7 +373,9 @@ private fun RadarLocationReportsEffect(
     loadNearbyReports: (Double, Double) -> Unit,
 ) {
     LaunchedEffect(coordinates.latitude, coordinates.longitude) {
-        if (coordinates.latitude != 0.0 && coordinates.longitude != 0.0) {
+        // Only the exact (0,0) pair is the unresolved-location sentinel; a
+        // legitimate location on either zero meridian/equator still loads.
+        if (!(coordinates.latitude == 0.0 && coordinates.longitude == 0.0)) {
             loadNearbyReports(coordinates.latitude, coordinates.longitude)
         }
     }
@@ -547,11 +554,17 @@ private fun RadarAttribution(
         isCached -> R.string.radar_attribution_rainviewer_limited_cached
         else -> R.string.radar_attribution_rainviewer_limited
     }
+    // Scrim + larger/higher-contrast text: 9sp at 50% alpha directly over live
+    // map tiles was illegible, including the cached-fallback status.
     Text(
         text = stringResource(attributionRes),
-        color = NimbusTextPrimary.copy(alpha = 0.5f),
-        fontSize = 9.sp,
-        modifier = modifier.padding(start = 8.dp, bottom = 4.dp),
+        color = NimbusTextPrimary.copy(alpha = 0.85f),
+        fontSize = 10.sp,
+        modifier = modifier
+            .padding(start = 8.dp, bottom = 4.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color.Black.copy(alpha = 0.45f))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
     )
 }
 
@@ -669,8 +682,8 @@ private fun BoxScope.RadarReportFab(
             state.radarState.frameSet != null
     FloatingActionButton(
         onClick = actions.onOpenReportSheet,
-        containerColor = NimbusBlueAccent.copy(alpha = 0.95f),
-        contentColor = NimbusTextPrimary,
+        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.95f),
+        contentColor = MaterialTheme.colorScheme.onPrimary,
         shape = RoundedCornerShape(10.dp),
         modifier = Modifier
             .align(Alignment.BottomEnd)
@@ -695,8 +708,8 @@ private fun BoxScope.RadarRoutePlannerFab(
             state.radarState.frameSet != null
     FloatingActionButton(
         onClick = actions.onOpenRoutePlanner,
-        containerColor = NimbusBlueAccent.copy(alpha = if (state.routePlannerState.isSheetOpen) 1f else 0.95f),
-        contentColor = NimbusTextPrimary,
+        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = if (state.routePlannerState.isSheetOpen) 1f else 0.95f),
+        contentColor = MaterialTheme.colorScheme.onPrimary,
         shape = RoundedCornerShape(10.dp),
         modifier = Modifier
             .align(Alignment.BottomEnd)

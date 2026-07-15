@@ -346,6 +346,7 @@ class ForecastAdapterTimezoneTest {
     }
 
     private fun openMeteoRepository(api: OpenMeteoApi): WeatherRepository = WeatherRepository(
+        context = mockk<android.content.Context>(relaxed = true),
         weatherApi = api,
         geocodingApi = mockk<GeocodingApi>(relaxed = true),
         reverseGeocoder = mockk<ReverseGeocoder>(relaxed = true),

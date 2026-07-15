@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.ui.screen.radar
 
+import android.content.Context
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.api.BlitzortungService
 import com.sysadmindoc.nimbus.data.model.AlertCoordinate
 import com.sysadmindoc.nimbus.data.model.AlertGeometry
@@ -28,6 +30,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.justRun
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -52,6 +55,7 @@ class RadarViewModelTest {
     private val scheduler = TestCoroutineScheduler()
     private val testDispatcher = StandardTestDispatcher(scheduler)
 
+    private lateinit var appContext: Context
     private lateinit var radarRepository: RadarRepository
     private lateinit var prefs: UserPreferences
     private lateinit var blitzortungService: BlitzortungService
@@ -65,6 +69,8 @@ class RadarViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
 
+        appContext = mockk(relaxed = true)
+        every { appContext.getString(R.string.route_waypoint_map_center) } returns "Map center"
         radarRepository = mockk()
         prefs = mockk()
         blitzortungService = mockk(relaxed = true)
@@ -423,6 +429,63 @@ class RadarViewModelTest {
     }
 
     @Test
+    fun `applySharedRouteText applies a given share only once per view model`() {
+        val viewModel = createViewModel()
+
+        viewModel.applySharedRouteText("Denver, CO to Boulder, CO")
+        viewModel.updateRouteOrigin("Golden, CO")
+        viewModel.dismissRoutePlanner()
+
+        // The same nav argument re-fires the screen effect after rotation or
+        // returning to the destination — it must not clobber edits or reopen.
+        viewModel.applySharedRouteText("Denver, CO to Boulder, CO")
+
+        val state = viewModel.routePlannerState.value
+        assertEquals("Golden, CO", state.originQuery)
+        assertFalse(state.isSheetOpen)
+    }
+
+    @Test
+    fun `applySharedRouteText still applies a genuinely new share`() {
+        val viewModel = createViewModel()
+
+        viewModel.applySharedRouteText("Denver, CO to Boulder, CO")
+        viewModel.dismissRoutePlanner()
+        viewModel.applySharedRouteText("Golden, CO to Aspen, CO")
+
+        val state = viewModel.routePlannerState.value
+        assertTrue(state.isSheetOpen)
+        assertEquals("Golden, CO", state.originQuery)
+        assertEquals("Aspen, CO", state.destinationQuery)
+    }
+
+    @Test
+    fun `resolveLocation keeps legitimate zero-longitude coordinates`() = runTest(scheduler) {
+        val viewModel = createViewModel()
+
+        // Greenwich sits on the zero meridian; only exact (0,0) is the sentinel.
+        assertEquals(Pair(51.48, 0.0), viewModel.resolveLocation(51.48, 0.0))
+        assertEquals(Pair(0.0, 6.73), viewModel.resolveLocation(0.0, 6.73))
+        // The (0,0) sentinel with no saved location falls back to the US center.
+        assertEquals(Pair(39.8, -98.5), viewModel.resolveLocation(0.0, 0.0))
+    }
+
+    @Test
+    fun `lightning connection is refcounted once per view model`() {
+        val viewModel = createViewModel()
+
+        viewModel.connectLightning()
+        viewModel.connectLightning()
+        viewModel.disconnectLightning()
+        viewModel.disconnectLightning()
+
+        // Repeated effect runs must map to one service acquire/release pair,
+        // or the shared singleton's refcount drifts and leaks the socket.
+        verify(exactly = 1) { blitzortungService.connect() }
+        verify(exactly = 1) { blitzortungService.disconnect() }
+    }
+
+    @Test
     fun `imported GPX geometry replaces text endpoints without requiring destination`() {
         val viewModel = createViewModel()
         viewModel.updateRouteOrigin("Denver")
@@ -456,6 +519,7 @@ class RadarViewModelTest {
 
     private fun createViewModel(): RadarViewModel {
         return RadarViewModel(
+            appContext = appContext,
             radarRepository = radarRepository,
             prefs = prefs,
             blitzortungService = blitzortungService,

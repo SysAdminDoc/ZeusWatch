@@ -35,4 +35,25 @@ class RouteShareParserTest {
         assertEquals(null, fields.destination)
         assertTrue(fields.unreadable)
     }
+
+    @Test
+    fun `capSharedRouteText bounds huge external shares`() {
+        val huge = "x".repeat(500_000)
+
+        val capped = capSharedRouteText(huge)
+
+        assertEquals(MAX_SHARED_ROUTE_TEXT_CHARS, capped!!.length)
+        // The capped text must still be safe to hand to the share parser.
+        assertEquals(huge.take(MAX_SHARED_ROUTE_TEXT_CHARS), parseSharedRouteText(capped).destination)
+    }
+
+    @Test
+    fun `capSharedRouteText passes normal shares through trimmed`() {
+        assertEquals(
+            "Denver, CO to Boulder, CO",
+            capSharedRouteText("  Denver, CO to Boulder, CO  "),
+        )
+        assertEquals(null, capSharedRouteText(null))
+        assertEquals(null, capSharedRouteText("   "))
+    }
 }
