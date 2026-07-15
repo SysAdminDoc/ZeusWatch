@@ -730,8 +730,58 @@ class WeatherRepositoryTest {
         assertEquals("Boulder", plan.destination.name)
         assertTrue(plan.waypoints.size >= 2)
         assertEquals(departure, plan.waypoints.first().arrivalTime)
-        assertTrue(plan.waypoints.any { it.conditions.iceRisk })
+        assertTrue(plan.waypoints.any { it.conditions?.iceRisk == true })
         assertTrue(plan.waypoints.any { it.risk == DrivingRouteRiskLevel.HIGH })
+        assertEquals(DrivingRouteEstimateKind.STRAIGHT_LINE_CORRIDOR, plan.estimateKind)
+        assertEquals(DEFAULT_DRIVING_ROUTE_SPEED_KMH, plan.assumedSpeedKmh, 0.0)
+    }
+
+    @Test
+    fun planDrivingRouteWeatherUsesGpxGeometryAndPreservesFailedSamples() = runTest {
+        val departure = LocalDateTime.of(2026, 1, 1, 8, 0)
+        val geometry = DrivingRouteGeometry(
+            points = listOf(
+                DrivingRoutePoint(0.0, 0.0),
+                DrivingRoutePoint(0.0, 1.0),
+                DrivingRoutePoint(1.0, 1.0),
+            ),
+            estimateKind = DrivingRouteEstimateKind.GPX_ROUTE,
+        )
+        coEvery {
+            sourceManager.getWeather(0.0, 0.0, any(), null, SourceOverrides())
+        } returns Result.success(routeWeatherData())
+        coEvery {
+            sourceManager.getWeather(0.0, 1.0, any(), null, SourceOverrides())
+        } returns Result.failure(IllegalStateException("sample unavailable"))
+        coEvery {
+            sourceManager.getWeather(1.0, 1.0, any(), null, SourceOverrides())
+        } returns Result.success(routeWeatherData())
+        coEvery {
+            sourceManager.getAlertsDetailed(
+                latitude = any(),
+                longitude = any(),
+                sourceOverrides = any(),
+                includeMeteredSources = false,
+                countryHint = any(),
+            )
+        } returns AlertFetchResult(emptyList(), allAdaptersFailed = false, failedSources = emptyList())
+
+        val result = repository.planDrivingRouteWeather(
+            originQuery = "",
+            destinationQuery = "",
+            departureTime = departure,
+            routeGeometry = geometry,
+            averageSpeedKmh = 111.2,
+        )
+
+        assertTrue(result.isSuccess)
+        val plan = result.getOrThrow()
+        assertEquals(DrivingRouteEstimateKind.GPX_ROUTE, plan.estimateKind)
+        assertTrue(plan.distanceKm > 220.0)
+        assertEquals(3, plan.waypoints.size)
+        assertEquals(1, plan.unavailableWaypointCount)
+        assertEquals(null, plan.waypoints[1].conditions)
+        assertEquals(1.0, plan.waypoints[1].longitude, 0.01)
     }
 
     @Test

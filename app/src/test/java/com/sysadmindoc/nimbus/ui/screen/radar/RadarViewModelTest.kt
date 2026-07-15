@@ -10,6 +10,9 @@ import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.repository.AlertFetchResult
 import com.sysadmindoc.nimbus.data.repository.CommunityReportSource
+import com.sysadmindoc.nimbus.data.repository.DrivingRouteEstimateKind
+import com.sysadmindoc.nimbus.data.repository.DrivingRouteGeometry
+import com.sysadmindoc.nimbus.data.repository.DrivingRoutePoint
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.RadarFrameSet
@@ -417,6 +420,38 @@ class RadarViewModelTest {
         val state = viewModel.routePlannerState.value
         assertTrue(state.isSheetOpen)
         assertEquals(RoutePlannerError.SHARED_ROUTE_UNREADABLE, state.error)
+    }
+
+    @Test
+    fun `imported GPX geometry replaces text endpoints without requiring destination`() {
+        val viewModel = createViewModel()
+        viewModel.updateRouteOrigin("Denver")
+        viewModel.updateRouteDestination("Boulder")
+        val geometry = DrivingRouteGeometry(
+            points = listOf(
+                DrivingRoutePoint(39.7, -105.0),
+                DrivingRoutePoint(40.0, -105.2),
+            ),
+            estimateKind = DrivingRouteEstimateKind.GPX_TRACK,
+        )
+
+        viewModel.applyImportedRouteGeometry(geometry)
+
+        val state = viewModel.routePlannerState.value
+        assertEquals("", state.originQuery)
+        assertEquals("", state.destinationQuery)
+        assertEquals(geometry, state.routeGeometry)
+        assertEquals(null, state.error)
+        assertTrue(state.isSheetOpen)
+    }
+
+    @Test
+    fun `GPX import failures map to recoverable planner errors`() {
+        val viewModel = createViewModel()
+
+        viewModel.reportGpxImportFailure(GpxRouteParseFailure.UNSAFE_XML)
+
+        assertEquals(RoutePlannerError.GPX_UNSAFE_XML, viewModel.routePlannerState.value.error)
     }
 
     private fun createViewModel(): RadarViewModel {

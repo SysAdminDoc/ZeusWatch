@@ -117,7 +117,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | **Multi-Location Alerts** | Monitors all saved locations by default, not just current GPS |
 | **Progress Nowcast Notifications** | Android 16+ nowcast alerts use ProgressStyle segments for dry/light/steady/heavy rain timelines, with BigText fallback on older devices |
 | **Driving Condition Alerts** | Black ice, fog, low visibility, hydroplaning, high wind, snow/ice — derived from forecast data |
-| **Route Weather Planner** | Enter or share a route from Radar, choose departure timing, and review waypoint precipitation, wind, visibility, ice, and alert risk without background tracking |
+| **Route Weather Planner** | Enter/share endpoints or import a bounded GPX 1.1 route/track through Android's document picker; samples follow cumulative geometry, preserve partial results, and clearly label assumed-speed estimates as non-navigation guidance |
 | **Health Alerts** | Migraine triggers (pressure/temp swings, configurable threshold), respiratory (humidity extremes), arthritis (temp swing) |
 | **Haptic Feedback** | Severity-appropriate vibration patterns when alerts display |
 | **Expired Alert Filtering** | Skips alerts past their expiration timestamp |
@@ -132,7 +132,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | **Animated Radar Playback** | Play/pause, frame slider, recent-past labels, timestamp overlay, cached frame metadata fallback (native mode) |
 | **Radar Preview Card** | Recent selected native radar tile + CartoDB dark basemap on the Today tab |
 | **Radar Tab** | Full-screen radar in the bottom nav with provider-aware rendering |
-| **Route Weather Overlay** | Radar includes a foreground route planner for sampled waypoint weather and risk timing |
+| **Route Weather Overlay** | Radar includes a foreground route-weather estimator for straight-line corridors or imported GPX geometry, with sampled weather and risk timing |
 | **Map Layer Selector** | Overlay layers: Radar, Lightning, Satellite, Clouds |
 | **Active Warning Polygons** | Native radar renders NWS warning polygons with severity colors and tappable alert details |
 | **Lightning Strike Overlay** | Real-time global lightning data via Blitzortung WebSocket with capped GeoJSON rendering and reconnect backoff |

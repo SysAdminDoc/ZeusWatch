@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.ui.screen.radar
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -29,15 +31,20 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -45,6 +52,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.data.repository.DrivingRouteEstimateKind
+import com.sysadmindoc.nimbus.data.repository.DrivingRouteGeometry
 import com.sysadmindoc.nimbus.data.repository.DrivingRouteRiskLevel
 import com.sysadmindoc.nimbus.data.repository.DrivingRouteWaypoint
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
@@ -60,6 +69,9 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
 import com.sysadmindoc.nimbus.util.WeatherFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,12 +82,38 @@ fun RouteWeatherPlannerSheet(
     onOriginChange: (String) -> Unit,
     onDestinationChange: (String) -> Unit,
     onDepartureOffsetChange: (Int) -> Unit,
+    onGpxImported: (DrivingRouteGeometry) -> Unit,
+    onGpxImportFailed: (GpxRouteParseFailure) -> Unit,
+    onClearGpx: () -> Unit,
     onPlanRoute: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     if (!state.isSheetOpen) return
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val gpxParser = remember { GpxRouteParser() }
+    val gpxLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openInputStream(uri)?.use(gpxParser::parse)
+                            ?: throw GpxRouteParseException(GpxRouteParseFailure.INVALID_GPX)
+                    }
+                }
+                result.fold(
+                    onSuccess = onGpxImported,
+                    onFailure = { error ->
+                        onGpxImportFailed(
+                            (error as? GpxRouteParseException)?.reason ?: GpxRouteParseFailure.INVALID_GPX
+                        )
+                    },
+                )
+            }
+        }
+    }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -97,18 +135,35 @@ fun RouteWeatherPlannerSheet(
                 color = NimbusTextPrimary,
             )
 
-            RoutePlannerTextField(
-                value = state.originQuery,
-                onValueChange = onOriginChange,
-                label = stringResource(R.string.route_planner_origin_label),
-                placeholder = stringResource(R.string.route_planner_origin_placeholder),
-            )
-            RoutePlannerTextField(
-                value = state.destinationQuery,
-                onValueChange = onDestinationChange,
-                label = stringResource(R.string.route_planner_destination_label),
-                placeholder = stringResource(R.string.route_planner_destination_placeholder),
-            )
+            if (state.routeGeometry == null) {
+                RoutePlannerTextField(
+                    value = state.originQuery,
+                    onValueChange = onOriginChange,
+                    label = stringResource(R.string.route_planner_origin_label),
+                    placeholder = stringResource(R.string.route_planner_origin_placeholder),
+                )
+                RoutePlannerTextField(
+                    value = state.destinationQuery,
+                    onValueChange = onDestinationChange,
+                    label = stringResource(R.string.route_planner_destination_label),
+                    placeholder = stringResource(R.string.route_planner_destination_placeholder),
+                )
+            } else {
+                ImportedGpxSummary(
+                    geometry = state.routeGeometry,
+                    onClear = onClearGpx,
+                )
+            }
+
+            OutlinedButton(
+                onClick = {
+                    gpxLauncher.launch(arrayOf("application/gpx+xml", "application/xml", "text/xml"))
+                },
+                enabled = !state.isPlanning,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            ) {
+                Text(stringResource(R.string.route_planner_import_gpx))
+            }
 
             RouteDepartureSelector(
                 selectedMinutes = state.departureOffsetMinutes,
@@ -165,6 +220,9 @@ fun RouteWeatherPlannerSheet(
                     distanceText = formatRouteDistance(plan.distanceKm, settings),
                     durationText = formatRouteDuration(plan.estimatedDurationMinutes),
                     waypointCount = plan.waypoints.size,
+                    unavailableWaypointCount = plan.unavailableWaypointCount,
+                    estimateKind = plan.estimateKind,
+                    assumedSpeedKmh = plan.assumedSpeedKmh,
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -177,6 +235,38 @@ fun RouteWeatherPlannerSheet(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ImportedGpxSummary(
+    geometry: DrivingRouteGeometry,
+    onClear: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(NimbusCardBg.copy(alpha = 0.86f))
+            .padding(start = 12.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(
+                if (geometry.estimateKind == DrivingRouteEstimateKind.GPX_ROUTE) {
+                    R.string.route_planner_gpx_route_loaded
+                } else {
+                    R.string.route_planner_gpx_track_loaded
+                },
+                geometry.points.size,
+            ),
+            color = NimbusTextPrimary,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onClear) {
+            Text(stringResource(R.string.route_planner_gpx_clear))
         }
     }
 }
@@ -259,6 +349,9 @@ private fun RoutePlanSummary(
     distanceText: String,
     durationText: String,
     waypointCount: Int,
+    unavailableWaypointCount: Int,
+    estimateKind: DrivingRouteEstimateKind,
+    assumedSpeedKmh: Double,
 ) {
     val riskLabel = stringResource(risk.labelRes())
     Box(
@@ -292,6 +385,31 @@ private fun RoutePlanSummary(
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextTertiary,
             )
+            Text(
+                text = if (estimateKind == DrivingRouteEstimateKind.STRAIGHT_LINE_CORRIDOR) {
+                    stringResource(
+                        R.string.route_planner_corridor_disclaimer,
+                        assumedSpeedKmh.roundToInt(),
+                    )
+                } else {
+                    stringResource(
+                        R.string.route_planner_gpx_disclaimer,
+                        assumedSpeedKmh.roundToInt(),
+                    )
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
+            if (unavailableWaypointCount > 0) {
+                Text(
+                    text = stringResource(
+                        R.string.route_planner_partial_samples,
+                        unavailableWaypointCount,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusWarning,
+                )
+            }
         }
     }
 }
@@ -301,7 +419,12 @@ private fun RouteWaypointRow(
     waypoint: DrivingRouteWaypoint,
     settings: NimbusSettings,
 ) {
-    val riskLabel = stringResource(waypoint.risk.labelRes())
+    val conditions = waypoint.conditions
+    val riskLabel = if (conditions == null) {
+        stringResource(R.string.route_planner_unavailable)
+    } else {
+        stringResource(waypoint.risk.labelRes())
+    }
     val timeLabel = WeatherFormatter.formatClockTime(waypoint.arrivalTime, settings)
     val waypointDescription = stringResource(
         R.string.route_planner_waypoint_cd,
@@ -335,7 +458,18 @@ private fun RouteWaypointRow(
                     color = NimbusTextSecondary,
                 )
             }
-            RouteRiskBadge(waypoint.risk, riskLabel)
+            if (conditions != null) {
+                RouteRiskBadge(waypoint.risk, riskLabel)
+            }
+        }
+
+        if (conditions == null) {
+            Text(
+                text = stringResource(R.string.route_planner_waypoint_unavailable),
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusWarning,
+            )
+            return@Column
         }
 
         Row(
@@ -344,13 +478,13 @@ private fun RouteWaypointRow(
         ) {
             RouteMetric(
                 label = stringResource(R.string.route_planner_metric_precip),
-                value = WeatherFormatter.formatPrecipitation(waypoint.conditions.precipitationMm, settings),
+                value = WeatherFormatter.formatPrecipitation(conditions.precipitationMm, settings),
                 modifier = Modifier.weight(1f),
             )
             RouteMetric(
                 label = stringResource(R.string.route_planner_metric_wind),
                 value = WeatherFormatter.formatWindSpeed(
-                    waypoint.conditions.windGustKmh ?: waypoint.conditions.windSpeedKmh,
+                    conditions.windGustKmh ?: conditions.windSpeedKmh,
                     settings,
                 ),
                 modifier = Modifier.weight(1f),
@@ -362,13 +496,13 @@ private fun RouteWaypointRow(
         ) {
             RouteMetric(
                 label = stringResource(R.string.route_planner_metric_visibility),
-                value = WeatherFormatter.formatVisibility(waypoint.conditions.visibilityMeters, settings),
+                value = WeatherFormatter.formatVisibility(conditions.visibilityMeters, settings),
                 modifier = Modifier.weight(1f),
             )
             RouteMetric(
                 label = stringResource(R.string.route_planner_metric_ice),
                 value = stringResource(
-                    if (waypoint.conditions.iceRisk) {
+                    if (conditions.iceRisk) {
                         R.string.route_planner_ice_yes
                     } else {
                         R.string.route_planner_ice_no
@@ -443,6 +577,10 @@ private fun RoutePlannerError.messageRes(): Int = when (this) {
     RoutePlannerError.DESTINATION_NOT_FOUND -> R.string.route_planner_error_destination_not_found
     RoutePlannerError.WEATHER_UNAVAILABLE -> R.string.route_planner_error_weather_unavailable
     RoutePlannerError.SHARED_ROUTE_UNREADABLE -> R.string.route_planner_error_shared_unreadable
+    RoutePlannerError.GPX_FILE_TOO_LARGE -> R.string.route_planner_error_gpx_file_too_large
+    RoutePlannerError.GPX_TOO_MANY_POINTS -> R.string.route_planner_error_gpx_too_many_points
+    RoutePlannerError.GPX_UNSAFE_XML -> R.string.route_planner_error_gpx_unsafe_xml
+    RoutePlannerError.GPX_INVALID -> R.string.route_planner_error_gpx_invalid
 }
 
 private fun DrivingRouteRiskLevel.labelRes(): Int = when (this) {

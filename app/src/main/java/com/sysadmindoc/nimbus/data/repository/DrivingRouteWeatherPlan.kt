@@ -15,10 +15,19 @@ data class DrivingRouteWeatherPlan(
     val estimatedArrivalTime: LocalDateTime,
     val distanceKm: Double,
     val estimatedDurationMinutes: Long,
+    val estimateKind: DrivingRouteEstimateKind,
+    val assumedSpeedKmh: Double,
     val waypoints: List<DrivingRouteWaypoint>,
 ) {
     val risk: DrivingRouteRiskLevel
-        get() = waypoints.maxByOrNull { it.risk.weight }?.risk ?: DrivingRouteRiskLevel.CLEAR
+        get() = waypoints
+            .filter { it.conditions != null }
+            .maxByOrNull { it.risk.weight }
+            ?.risk
+            ?: DrivingRouteRiskLevel.CLEAR
+
+    val unavailableWaypointCount: Int
+        get() = waypoints.count { it.conditions == null }
 }
 
 @Stable
@@ -29,11 +38,17 @@ data class DrivingRouteWaypoint(
     val longitude: Double,
     val arrivalTime: LocalDateTime,
     val distanceFromStartKm: Double,
-    val conditions: DrivingRouteConditions,
+    val conditions: DrivingRouteConditions?,
     val drivingAlerts: List<DrivingAlert>,
     val weatherAlerts: List<WeatherAlert>,
     val risk: DrivingRouteRiskLevel,
 )
+
+enum class DrivingRouteEstimateKind {
+    STRAIGHT_LINE_CORRIDOR,
+    GPX_ROUTE,
+    GPX_TRACK,
+}
 
 @Stable
 data class DrivingRouteConditions(
