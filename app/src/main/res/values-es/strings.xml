@@ -138,6 +138,9 @@
     <string name="onboarding_cards_everything_count">37 tarjetas</string>
     <string name="onboarding_continue">Continuar</string>
     <string name="onboarding_finish">Iniciar ZeusWatch</string>
+    <string name="onboarding_save_error_title">La configuración no se guardó</string>
+    <string name="onboarding_save_error_body">Tus opciones siguen aquí. Intenta guardarlas de nuevo.</string>
+    <string name="onboarding_retry">Reintentar</string>
     <string name="whats_new_title">Novedades de ZeusWatch</string>
     <string name="whats_new_body">Algunas mejoras recientes están listas para tu próxima revisión del pronóstico.</string>
     <string name="whats_new_version">Versión %1$s</string>

@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -23,20 +24,39 @@ class OnboardingViewModel @Inject constructor(
         .map<NimbusSettings, Boolean?> { it.onboardingComplete }
         .distinctUntilChanged()
 
-    private val _isSaving = MutableStateFlow(false)
-    val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
+    private val _saveState = MutableStateFlow(OnboardingSaveState())
+    val saveState: StateFlow<OnboardingSaveState> = _saveState.asStateFlow()
 
     fun complete(
         tempUnit: TempUnit,
         starterCardSet: StarterCardSet,
         onComplete: () -> Unit,
     ) {
-        if (_isSaving.value) return
+        while (true) {
+            val state = _saveState.value
+            if (state.isSaving) return
+            if (_saveState.compareAndSet(state, state.copy(isSaving = true, saveFailed = false))) break
+        }
         viewModelScope.launch {
-            _isSaving.value = true
-            prefs.completeOnboarding(tempUnit, starterCardSet)
-            _isSaving.value = false
-            onComplete()
+            try {
+                prefs.completeOnboarding(tempUnit, starterCardSet)
+            } catch (error: CancellationException) {
+                _saveState.value = OnboardingSaveState()
+                throw error
+            } catch (_: Exception) {
+                _saveState.value = OnboardingSaveState(saveFailed = true)
+                return@launch
+            }
+            try {
+                onComplete()
+            } finally {
+                _saveState.value = OnboardingSaveState()
+            }
         }
     }
 }
+
+data class OnboardingSaveState(
+    val isSaving: Boolean = false,
+    val saveFailed: Boolean = false,
+)

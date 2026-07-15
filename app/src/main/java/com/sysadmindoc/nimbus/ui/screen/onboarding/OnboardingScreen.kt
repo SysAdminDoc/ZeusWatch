@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,6 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -83,7 +85,7 @@ fun OnboardingScreen(
     onComplete: () -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
-    val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
+    val saveState by viewModel.saveState.collectAsStateWithLifecycle()
     var step by rememberSaveable { mutableIntStateOf(0) }
     var tempUnitName by rememberSaveable { mutableStateOf(TempUnit.FAHRENHEIT.name) }
     var starterCardSetName by rememberSaveable { mutableStateOf(StarterCardSet.STANDARD.name) }
@@ -108,7 +110,8 @@ fun OnboardingScreen(
                 step = step,
                 tempUnit = tempUnit,
                 starterCardSet = starterCardSet,
-                isSaving = isSaving,
+                isSaving = saveState.isSaving,
+                saveFailed = saveState.saveFailed,
                 onTempUnitSelected = { tempUnitName = it.name },
                 onStarterCardSetSelected = { starterCardSetName = it.name },
                 onBack = { step = (step - 1).coerceAtLeast(0) },
@@ -137,6 +140,7 @@ private fun OnboardingPanel(
     tempUnit: TempUnit,
     starterCardSet: StarterCardSet,
     isSaving: Boolean,
+    saveFailed: Boolean,
     onTempUnitSelected: (TempUnit) -> Unit,
     onStarterCardSetSelected: (StarterCardSet) -> Unit,
     onBack: () -> Unit,
@@ -155,9 +159,19 @@ private fun OnboardingPanel(
             onTempUnitSelected = onTempUnitSelected,
             onStarterCardSetSelected = onStarterCardSetSelected,
         )
+        if (step == ONBOARDING_STEP_COUNT - 1 && saveFailed) {
+            InlineNoticeCard(
+                title = stringResource(R.string.onboarding_save_error_title),
+                message = stringResource(R.string.onboarding_save_error_body),
+                icon = Icons.Filled.Warning,
+                tint = NimbusWarning,
+                liveRegion = LiveRegionMode.Assertive,
+            )
+        }
         OnboardingActions(
             step = step,
             isSaving = isSaving,
+            saveFailed = saveFailed,
             onBack = onBack,
             onNext = onNext,
         )
@@ -454,6 +468,7 @@ private fun CardSetOption(
 private fun OnboardingActions(
     step: Int,
     isSaving: Boolean,
+    saveFailed: Boolean,
     onBack: () -> Unit,
     onNext: () -> Unit,
 ) {
@@ -500,7 +515,9 @@ private fun OnboardingActions(
             }
             Text(
                 text = if (step == ONBOARDING_STEP_COUNT - 1) {
-                    stringResource(R.string.onboarding_finish)
+                    stringResource(
+                        if (saveFailed) R.string.onboarding_retry else R.string.onboarding_finish
+                    )
                 } else {
                     stringResource(R.string.onboarding_continue)
                 },

@@ -135,6 +135,9 @@
     <string name="onboarding_cards_everything_count">37 כרטיסים</string>
     <string name="onboarding_continue">המשך</string>
     <string name="onboarding_finish">התחל את ZeusWatch</string>
+    <string name="onboarding_save_error_title">ההגדרה לא נשמרה</string>
+    <string name="onboarding_save_error_body">הבחירות שלך עדיין כאן. נסה לשמור אותן שוב.</string>
+    <string name="onboarding_retry">נסה שוב</string>
     <string name="whats_new_title">What\'s new in ZeusWatch</string>
     <string name="whats_new_body">A few recent upgrades are ready for the next time you check the forecast.</string>
     <string name="whats_new_version">Version %1$s</string>

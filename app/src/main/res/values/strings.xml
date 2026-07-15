@@ -141,6 +141,9 @@
     <string name="onboarding_cards_everything_count">37 cards</string>
     <string name="onboarding_continue">Continue</string>
     <string name="onboarding_finish">Start ZeusWatch</string>
+    <string name="onboarding_save_error_title">Setup was not saved</string>
+    <string name="onboarding_save_error_body">Your choices are still here. Try saving them again.</string>
+    <string name="onboarding_retry">Retry</string>
     <string name="whats_new_title">What\'s new in ZeusWatch</string>
     <string name="whats_new_body">A few recent upgrades are ready for the next time you check the forecast.</string>
     <string name="whats_new_version">Version %1$s</string>
