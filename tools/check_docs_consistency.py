@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Check for stale documentation references, forbidden planning files,
-release-process truth, and version/privacy metadata drift.
+"""Check documentation against live project manifests and catalogs.
 
 Flags:
 - References to COMPLETED.md, TODO.md, PROJECT_CONTEXT.md in non-gitignored markdown
 - Forbidden planning filenames in the repo root
 - README privacy wording that references the pre-auth device ID model
 - Workflow-only release claims when no checked-in workflow files exist
+- Dependency, Room schema, deep-link, location, and release-posture drift
 
 Exit 0 when clean, 1 when issues found.
 """
@@ -213,6 +213,26 @@ def parse_firebase_bom_version():
     return match.group(1) if match else None
 
 
+def parse_room_schema_version():
+    content = read_text(
+        REPO_ROOT / "app" / "src" / "main" / "java" / "com" /
+        "sysadmindoc" / "nimbus" / "data" / "api" / "NimbusDatabase.kt"
+    )
+    if content is None:
+        return None
+    match = re.search(r"@Database\s*\(.*?\bversion\s*=\s*(\d+)", content, re.DOTALL)
+    return int(match.group(1)) if match else None
+
+
+def parse_manifest_contract():
+    content = read_text(REPO_ROOT / "app" / "src" / "main" / "AndroidManifest.xml")
+    if content is None:
+        return None
+    schemes = set(re.findall(r'<data[^>]+android:scheme="([^"]+)"', content))
+    permissions = set(re.findall(r'<uses-permission[^>]+android:name="([^"]+)"', content))
+    return schemes, permissions
+
+
 def parse_radar_providers():
     content = read_text(
         REPO_ROOT / "app" / "src" / "main" / "java" / "com" /
@@ -280,8 +300,136 @@ def parse_string_value(path, name):
 
 
 def current_readme_content(content):
-    # The historical "Implemented through" section can mention old counts.
-    return content.split("**Implemented through", 1)[0]
+    # Remove only the historical inventory block; current Privacy/License
+    # sections follow it and still belong to the authoritative README.
+    return re.sub(
+        r"\*\*Implemented through.*?\n---",
+        "\n---",
+        content,
+        count=1,
+        flags=re.DOTALL,
+    )
+
+
+def current_claude_content(content):
+    return content.split("## Release History", 1)[0]
+
+
+def check_room_schema_claims():
+    issues = []
+    schema_version = parse_room_schema_version()
+    if schema_version is None:
+        return issues
+
+    claims = [
+        (
+            REPO_ROOT / "README.md",
+            current_readme_content,
+            r"Room Database \(v(\d+)\)",
+            "Room Database architecture label",
+        ),
+        (
+            REPO_ROOT / "CLAUDE.md",
+            current_claude_content,
+            r"\*\*Room DB\*\*:\s*v(\d+)\b",
+            "Room DB architecture label",
+        ),
+    ]
+    for path, current_content, pattern, label in claims:
+        content = read_text(path)
+        if content is None:
+            continue
+        match = re.search(pattern, current_content(content), re.IGNORECASE)
+        rel = path.relative_to(REPO_ROOT)
+        if not match:
+            issues.append(f"{rel}: missing {label} derived from NimbusDatabase")
+        elif int(match.group(1)) != schema_version:
+            issues.append(
+                f"{rel}: {label} v{match.group(1)} != NimbusDatabase v{schema_version}"
+            )
+    return issues
+
+
+def check_manifest_contract_claims():
+    issues = []
+    contract = parse_manifest_contract()
+    if contract is None:
+        return issues
+    schemes, permissions = contract
+
+    current_docs = [
+        (REPO_ROOT / "README.md", current_readme_content),
+        (REPO_ROOT / "CLAUDE.md", current_claude_content),
+    ]
+    for path, current_content in current_docs:
+        content = read_text(path)
+        if content is None:
+            continue
+        current = current_content(content)
+        rel = path.relative_to(REPO_ROOT)
+        for scheme in sorted(schemes):
+            scheme_label = f"{scheme}://"
+            if scheme_label not in current:
+                issues.append(f"{rel}: missing manifest deep-link scheme '{scheme_label}'")
+        if "nimbus://" in current and "nimbus" not in schemes:
+            issues.append(f"{rel}: stale deep-link scheme 'nimbus://' is not in AndroidManifest.xml")
+
+    background_permission = "android.permission.ACCESS_BACKGROUND_LOCATION"
+    has_background_location = background_permission in permissions
+    readme = read_text(REPO_ROOT / "README.md")
+    if readme:
+        foreground_claim = re.search(
+            r"foreground[- ]only location|no background location",
+            current_readme_content(readme),
+            re.IGNORECASE,
+        )
+        if has_background_location and foreground_claim:
+            issues.append(
+                "README.md: claims foreground-only location but manifest declares "
+                "ACCESS_BACKGROUND_LOCATION"
+            )
+        elif not has_background_location and not foreground_claim:
+            issues.append(
+                "README.md: missing foreground-only location claim derived from AndroidManifest.xml"
+            )
+    return issues
+
+
+def check_historical_supersession_labels():
+    issues = []
+    content = read_text(REPO_ROOT / "docs" / "phases-pre-v1.md")
+    if content is None:
+        return issues
+    contains_superseded_claim = "nimbus://" in content or re.search(
+        r"GitHub Actions|release\.yml|build\.yml", content, re.IGNORECASE
+    )
+    header = content[:700]
+    if contains_superseded_claim and not (
+        re.search(r"historical", header, re.IGNORECASE)
+        and re.search(r"superseded", header, re.IGNORECASE)
+    ):
+        issues.append(
+            "docs/phases-pre-v1.md: historical deep-link/workflow claims are not labeled superseded"
+        )
+    return issues
+
+
+def check_local_release_posture():
+    if has_checked_in_workflows():
+        return []
+    release_doc = read_text(REPO_ROOT / "docs" / "RELEASE.md")
+    if release_doc is None:
+        return ["docs/RELEASE.md: missing local release procedure"]
+    required_patterns = [
+        r"build signed release APKs locally",
+        r"Verify artifacts locally",
+        r"gh release upload",
+    ]
+    return [
+        f"docs/RELEASE.md: missing local release posture '{pattern}'"
+        for pattern in required_patterns
+        if not re.search(pattern, release_doc, re.IGNORECASE)
+    ]
 
 
 def check_readme_inventory():
@@ -439,6 +587,7 @@ def check_dependency_version_claims():
         ("Jetpack Compose", "compose-bom"),
         ("Hilt", "hilt"),
         ("Retrofit", "retrofit"),
+        ("OkHttp", "okhttp"),
         ("Room", "room"),
         ("DataStore", "datastore"),
         ("MapLibre", "maplibre"),
@@ -546,11 +695,15 @@ def main():
     issues.extend(check_stale_references())
     issues.extend(check_readme_privacy())
     issues.extend(check_release_workflow_truth())
+    issues.extend(check_local_release_posture())
     issues.extend(check_version_sync())
     issues.extend(check_readme_inventory())
     issues.extend(check_onboarding_card_count())
     issues.extend(check_radar_provider_inventory())
     issues.extend(check_dependency_version_claims())
+    issues.extend(check_room_schema_claims())
+    issues.extend(check_manifest_contract_claims())
+    issues.extend(check_historical_supersession_labels())
 
     if issues:
         print(f"Documentation consistency check found {len(issues)} issue(s):")

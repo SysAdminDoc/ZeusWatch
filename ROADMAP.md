@@ -378,3 +378,75 @@ duplicating existing items.
   Acceptance: an opt-in "share coarse location only" mode rounds provider coordinates; default behavior documented; consumer contract unchanged when disabled.
   Complexity: S
 
+## Research-Driven Additions
+
+### P0 — Now
+
+### P1 — Next
+
+- [ ] P1 — NX-26. Make runtime permissions contextual and recoverable
+  Why: automatic location/notification prompts lack rationale, permanent-denial, and disabled-location-services recovery even though manual locations work without permissions.
+  Evidence: `ui/screen/main/MainScreen.kt:193-233`, `ui/screen/settings/SettingsScreen.kt`; https://developer.android.com/training/permissions/requesting ; https://github.com/bmaroti9/Overmorrow/issues/231
+  Touches: `MainScreen.kt`, `SettingsScreen.kt`, onboarding copy/state, a shared permission-state mapper, permission-flow JVM/Robolectric tests.
+  Acceptance: app launch never triggers a permission dialog; location is requested from an explicit “Use my location” action and notifications from a notification feature action; rationale is shown when appropriate, permanent denial offers App Settings, disabled location services offers the system location panel, and search/saved places remain usable after denial.
+  Complexity: M
+
+- [ ] P1 — NX-30. Activate Glance 1.1.1 structural tests for all widgets
+  Why: Google's documented 1.1.1 test artifacts invalidate the existing “requires Glance 1.2.x” blocker, while all eight release widgets need action/semantics/size regression coverage.
+  Evidence: `Roadmap_Blocked.md` “Full Glance widget unit tests”; https://developer.android.com/develop/ui/compose/glance/testing ; `widget/WidgetSurfaceContractTest.kt`.
+  Touches: version catalog test dependencies, `app/build.gradle.kts`, widget test fixtures and one `runGlanceAppWidgetUnitTest` suite per widget family.
+  Acceptance: JVM tests compose all eight widgets across canonical size modes and assert refresh/deep-link actions, freshness semantics, location labels, empty/cached/error states, and no missing required nodes; the blocked note is removed when this item is implemented; tests make no unsupported pixel-rendering or click-execution claim.
+  Complexity: M
+
+- [ ] P1 — NX-31. Enable Dagger duplicate map-key detection
+  Why: the provider registry depends on many `@IntoMap` bindings, and a duplicate source key should fail compilation instead of producing ambiguous generated code.
+  Evidence: `di/WeatherSourceAdapterModule.kt`; https://github.com/google/dagger/releases/tag/dagger-2.60
+  Touches: `app/build.gradle.kts` KSP configuration and provider-registry architecture test.
+  Acceptance: `dagger.mapMultibindingDuplicateDetectionFix=ENABLED` applies to both app flavors, current KSP tasks pass, and a registry test proves all forecast/alert binding keys are unique and complete for their declared enums.
+  Complexity: S
+
+### P2 — Later
+
+- [ ] P2 — NX-32. Add deletion controls for recent location searches
+  Why: full geocoding results, including coordinates, persist locally with no clear-all or per-row removal action.
+  Evidence: `UserPreferences.kt:264-282`, `LocationsViewModel.kt`, `LocationsScreen.kt:476-490`.
+  Touches: `UserPreferences.kt`, `LocationsViewModel.kt`, `LocationsScreen.kt`, privacy copy, persistence/UI tests.
+  Acceptance: users can remove one recent search or clear all with an accessible confirmation; empty state updates immediately, saved locations are untouched, exported settings behavior is explicit, and tests prove removal survives restart.
+  Complexity: S
+
+- [ ] P2 — NX-33. Generate OSS notices and provider attribution
+  Why: Settings shows only ZeusWatch's LGPL label despite a large dependency/provider surface; Rain demonstrates a compact in-app licenses pattern.
+  Evidence: `SettingsScreenContent.kt:1429`, `gradle/libs.versions.toml`, `WeatherSourceProvider`; https://github.com/darkmoonight/Rain/releases/tag/v1.3.19
+  Touches: deterministic notices generator, packaged notice data, searchable About/Licenses screen; consume NX-20 provider metadata when available.
+  Acceptance: release builds expose dependency name/version/license/source plus required provider/data attribution, generation is reproducible and checked for missing/unknown licenses, links open externally, and freenet output excludes standard-only dependencies.
+  Complexity: M
+
+- [ ] P2 — NX-34. Add local background-delivery health diagnostics
+  Why: provider health is visible, but users cannot diagnose when widgets, daily briefing, Gadgetbridge, Wear sync, or alert workers last ran, failed, or will retry.
+  Evidence: `ProviderHealthPanel`, `WidgetRefreshWorker`, `DailyBriefingWorker`, `GadgetbridgeWeatherBroadcaster`; recurring widget failures in https://github.com/breezy-weather/breezy-weather/issues/937
+  Touches: bounded/redacted delivery-health store, worker/broadcaster sync outcomes, Settings diagnostics panel, retry/battery-restriction actions, tests.
+  Acceptance: diagnostics show last attempt/success, normalized failure class, next scheduled run, and manual retry for each enabled delivery surface; store contains no coordinates, URLs, keys, or raw exceptions; export/share is explicit and redacted.
+  Complexity: M
+
+- [ ] P2 — NX-35. Add opt-in update discovery for direct APK installs
+  Why: direct GitHub users see release notes only after updating and have no in-app way to discover a compatible signed release.
+  Evidence: README GitHub Releases distribution, `lastSeenVersionCode`/What's New flow; Breezy Weather's default-off standard-flavor check and browser-only freenet behavior: https://github.com/breezy-weather/breezy-weather/releases/tag/v5.2.6
+  Touches: standard-flavor release metadata client/store, Settings “Check now” and default-off periodic toggle, WorkManager, update-result UI, tests.
+  Acceptance: standard direct-APK installs can manually check and optionally enable an ETag-cached check no more than once per 24 hours; version/flavor/ABI selection is deterministic; UI links to release notes, checksums, and provenance in the browser; no APK is downloaded or installed automatically; freenet performs no GitHub check.
+  Complexity: M
+
+- [ ] P2 — NX-36. Turn Activity Index into explainable best-time windows
+  Why: the existing six-activity card scores only current conditions, while users need the best upcoming window and commercial products charge for configurable threshold planning.
+  Evidence: `util/ActivityIndexEvaluator.kt`, `ui/component/ActivityIndexCard.kt`; CARROT Smart Forecast precedent: https://apps.apple.com/app/carrot-weather/id961390574
+  Touches: hourly activity-window evaluator, activity preferences/settings transfer, `ActivityIndexCard`, accessibility descriptions, evaluator/UI tests.
+  Acceptance: each enabled activity shows its best contiguous window over the next 24 hours, score and limiting factors; users can adjust temperature/rain/wind/AQI/UV thresholds with reset-to-default; missing AQI or sparse hours lower confidence rather than invent values; settings export/import round-trips.
+  Complexity: M
+
+### P3 — Under Consideration
+
+- [ ] P3 — NX-37. Add per-widget density and metric controls
+  Why: ZeusWatch has eight fixed Glance layouts and per-location selection, while current peers converge on fewer adaptive widgets with per-instance density, text/icon scale, and metric choices.
+  Evidence: `WidgetConfigActivity.kt`, eight `Nimbus*Widget.kt` surfaces; https://github.com/PranshulGG/WeatherMaster/releases/tag/v3.6.0 ; https://github.com/breezy-weather/breezy-weather/issues/937
+  Touches: per-widget preference schema, `WidgetConfigActivity`, shared widget layout primitives, settings cleanup on widget deletion, NX-30 structural tests.
+  Acceptance: at least compact/comfortable/dense modes and metric choices persist per widget instance, obey launcher size and font scale without clipping, preserve refresh/location actions, clean up deleted-instance state, and pass NX-30 size/semantics tests; no new redundant widget receiver is added.
+  Complexity: L
