@@ -147,6 +147,9 @@ fun RadarScreen(
         onRouteOriginChange = viewModel::updateRouteOrigin,
         onRouteDestinationChange = viewModel::updateRouteDestination,
         onRouteDepartureOffsetChange = viewModel::setRouteDepartureOffsetMinutes,
+        onGpxImported = viewModel::applyImportedRouteGeometry,
+        onGpxImportFailed = viewModel::reportGpxImportFailure,
+        onClearGpx = viewModel::clearImportedRouteGeometry,
         onPlanRoute = viewModel::planRouteWeather,
     )
 
@@ -190,6 +193,9 @@ fun RadarScreen(
             onOriginChange = actions.onRouteOriginChange,
             onDestinationChange = actions.onRouteDestinationChange,
             onDepartureOffsetChange = actions.onRouteDepartureOffsetChange,
+            onGpxImported = actions.onGpxImported,
+            onGpxImportFailed = actions.onGpxImportFailed,
+            onClearGpx = actions.onClearGpx,
             onPlanRoute = actions.onPlanRoute,
             onDismiss = actions.onDismissRoutePlanner,
         )
@@ -261,6 +267,9 @@ fun RadarTab(
         onRouteOriginChange = viewModel::updateRouteOrigin,
         onRouteDestinationChange = viewModel::updateRouteDestination,
         onRouteDepartureOffsetChange = viewModel::setRouteDepartureOffsetMinutes,
+        onGpxImported = viewModel::applyImportedRouteGeometry,
+        onGpxImportFailed = viewModel::reportGpxImportFailure,
+        onClearGpx = viewModel::clearImportedRouteGeometry,
         onPlanRoute = viewModel::planRouteWeather,
     )
 
@@ -300,6 +309,9 @@ fun RadarTab(
         onOriginChange = actions.onRouteOriginChange,
         onDestinationChange = actions.onRouteDestinationChange,
         onDepartureOffsetChange = actions.onRouteDepartureOffsetChange,
+        onGpxImported = actions.onGpxImported,
+        onGpxImportFailed = actions.onGpxImportFailed,
+        onClearGpx = actions.onClearGpx,
         onPlanRoute = actions.onPlanRoute,
         onDismiss = actions.onDismissRoutePlanner,
     )
@@ -344,6 +356,9 @@ private data class RadarActions(
     val onRouteOriginChange: (String) -> Unit,
     val onRouteDestinationChange: (String) -> Unit,
     val onRouteDepartureOffsetChange: (Int) -> Unit,
+    val onGpxImported: (com.sysadmindoc.nimbus.data.repository.DrivingRouteGeometry) -> Unit,
+    val onGpxImportFailed: (GpxRouteParseFailure) -> Unit,
+    val onClearGpx: () -> Unit,
     val onPlanRoute: () -> Unit,
 )
 

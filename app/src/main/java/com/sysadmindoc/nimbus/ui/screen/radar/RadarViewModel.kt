@@ -12,6 +12,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.repository.CommunityReportSource
 import com.sysadmindoc.nimbus.data.repository.DrivingRoutePlanningException
 import com.sysadmindoc.nimbus.data.repository.DrivingRoutePlanningFailure
+import com.sysadmindoc.nimbus.data.repository.DrivingRouteGeometry
 import com.sysadmindoc.nimbus.data.repository.DrivingRouteWeatherPlan
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.RadarFrameSet
@@ -410,17 +411,50 @@ class RadarViewModel @Inject constructor(
                 originQuery = parsed.origin ?: state.originQuery,
                 destinationQuery = parsed.destination ?: state.destinationQuery,
                 isSheetOpen = true,
+                routeGeometry = null,
+                plan = null,
                 error = if (parsed.unreadable) RoutePlannerError.SHARED_ROUTE_UNREADABLE else null,
             )
         }
     }
 
     fun updateRouteOrigin(query: String) {
-        _routePlannerState.update { it.copy(originQuery = query, error = null) }
+        _routePlannerState.update {
+            it.copy(originQuery = query, routeGeometry = null, plan = null, error = null)
+        }
     }
 
     fun updateRouteDestination(query: String) {
-        _routePlannerState.update { it.copy(destinationQuery = query, error = null) }
+        _routePlannerState.update {
+            it.copy(destinationQuery = query, routeGeometry = null, plan = null, error = null)
+        }
+    }
+
+    fun applyImportedRouteGeometry(geometry: DrivingRouteGeometry) {
+        _routePlannerState.update {
+            it.copy(
+                originQuery = "",
+                destinationQuery = "",
+                routeGeometry = geometry,
+                plan = null,
+                error = null,
+                isSheetOpen = true,
+            )
+        }
+    }
+
+    fun clearImportedRouteGeometry() {
+        _routePlannerState.update { it.copy(routeGeometry = null, plan = null, error = null) }
+    }
+
+    fun reportGpxImportFailure(reason: GpxRouteParseFailure) {
+        val error = when (reason) {
+            GpxRouteParseFailure.FILE_TOO_LARGE -> RoutePlannerError.GPX_FILE_TOO_LARGE
+            GpxRouteParseFailure.TOO_MANY_POINTS -> RoutePlannerError.GPX_TOO_MANY_POINTS
+            GpxRouteParseFailure.UNSAFE_XML -> RoutePlannerError.GPX_UNSAFE_XML
+            GpxRouteParseFailure.INVALID_GPX -> RoutePlannerError.GPX_INVALID
+        }
+        _routePlannerState.update { it.copy(error = error) }
     }
 
     fun setRouteDepartureOffsetMinutes(minutes: Int) {
@@ -429,7 +463,7 @@ class RadarViewModel @Inject constructor(
 
     fun planRouteWeather() {
         val state = _routePlannerState.value
-        if (state.destinationQuery.isBlank()) {
+        if (state.routeGeometry == null && state.destinationQuery.isBlank()) {
             _routePlannerState.update { it.copy(error = RoutePlannerError.DESTINATION_REQUIRED) }
             return
         }
@@ -442,6 +476,7 @@ class RadarViewModel @Inject constructor(
                 destinationQuery = state.destinationQuery,
                 departureTime = departureTime,
                 fallbackOrigin = routeFallbackOrigin,
+                routeGeometry = state.routeGeometry,
             )
             _routePlannerState.update {
                 result.fold(
@@ -506,6 +541,7 @@ data class RoutePlannerUiState(
     val departureOffsetMinutes: Int = 0,
     val isSheetOpen: Boolean = false,
     val isPlanning: Boolean = false,
+    val routeGeometry: DrivingRouteGeometry? = null,
     val plan: DrivingRouteWeatherPlan? = null,
     val error: RoutePlannerError? = null,
 )
@@ -517,6 +553,10 @@ enum class RoutePlannerError {
     DESTINATION_NOT_FOUND,
     WEATHER_UNAVAILABLE,
     SHARED_ROUTE_UNREADABLE,
+    GPX_FILE_TOO_LARGE,
+    GPX_TOO_MANY_POINTS,
+    GPX_UNSAFE_XML,
+    GPX_INVALID,
 }
 
 internal fun canAnimateRadarPlayback(frameSet: RadarFrameSet?): Boolean =

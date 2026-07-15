@@ -23,11 +23,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.roundToLong
-import kotlin.math.sin
-import kotlin.math.sqrt
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -42,6 +37,7 @@ class WeatherRepository @Inject constructor(
     private val sourceManager: dagger.Lazy<WeatherSourceManager>,
 ) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true }
+    private val drivingRouteWeatherPlanner = DrivingRouteWeatherPlanner()
 
     private val inFlightRequests = ConcurrentHashMap<String, CompletableDeferred<Result<WeatherData>>>()
 
@@ -184,8 +180,8 @@ class WeatherRepository @Inject constructor(
         )
 
     /**
-     * Builds a foreground route-weather plan by sampling forecast and alert data
-     * along a straight-line route. No background tracking or routing vendor is used.
+     * Builds a foreground route-weather estimate from imported geometry or a
+     * straight-line corridor. No background tracking or navigation vendor is used.
      */
     suspend fun planDrivingRouteWeather(
         originQuery: String,
@@ -193,42 +189,66 @@ class WeatherRepository @Inject constructor(
         departureTime: LocalDateTime,
         fallbackOrigin: LocationInfo? = null,
         averageSpeedKmh: Double = DEFAULT_DRIVING_ROUTE_SPEED_KMH,
+        routeGeometry: DrivingRouteGeometry? = null,
     ): Result<DrivingRouteWeatherPlan> = withContext(Dispatchers.IO) {
         try {
-            val destination = resolveRouteEndpoint(
+            val destination = routeGeometry?.points?.last()?.let { point ->
+                LocationInfo(name = "GPX destination", latitude = point.latitude, longitude = point.longitude)
+            } ?: resolveRouteEndpoint(
                 query = destinationQuery,
                 fallback = null,
                 missingReason = DrivingRoutePlanningFailure.DESTINATION_REQUIRED,
                 notFoundReason = DrivingRoutePlanningFailure.DESTINATION_NOT_FOUND,
             )
-            val origin = resolveRouteEndpoint(
+            val origin = routeGeometry?.points?.first()?.let { point ->
+                LocationInfo(name = "GPX start", latitude = point.latitude, longitude = point.longitude)
+            } ?: resolveRouteEndpoint(
                 query = originQuery,
                 fallback = fallbackOrigin,
                 missingReason = DrivingRoutePlanningFailure.ORIGIN_REQUIRED,
                 notFoundReason = DrivingRoutePlanningFailure.ORIGIN_NOT_FOUND,
             )
-            val distanceKm = haversineKm(origin.latitude, origin.longitude, destination.latitude, destination.longitude)
-            val durationMinutes = ((distanceKm / averageSpeedKmh.coerceAtLeast(20.0)) * 60.0)
-                .roundToLong()
-                .coerceAtLeast(1L)
-            val waypointFractions = routeWaypointFractions(distanceKm)
-            val waypoints = waypointFractions.mapIndexed { index, fraction ->
-                val latitude = interpolate(origin.latitude, destination.latitude, fraction)
-                val longitude = interpolate(origin.longitude, destination.longitude, fraction)
-                val waypointLabel = when (index) {
+            val geometry = routeGeometry ?: DrivingRouteGeometry.straightLine(
+                originLatitude = origin.latitude,
+                originLongitude = origin.longitude,
+                destinationLatitude = destination.latitude,
+                destinationLongitude = destination.longitude,
+            )
+            val geometryPlan = drivingRouteWeatherPlanner.plan(
+                geometry = geometry,
+                departureTime = departureTime,
+                averageSpeedKmh = averageSpeedKmh,
+            )
+            val waypoints = geometryPlan.samples.map { sample ->
+                val waypointLabel = when (sample.index) {
                     0 -> origin.name
-                    waypointFractions.lastIndex -> destination.name
-                    else -> "Waypoint ${index + 1}"
+                    geometryPlan.samples.lastIndex -> destination.name
+                    else -> "Waypoint ${sample.index + 1}"
                 }
-                val arrivalTime = departureTime.plusMinutes((durationMinutes * fraction).roundToLong())
-                val weather = getWeatherOrCached(
-                    latitude = latitude,
-                    longitude = longitude,
+                val weatherResult = getWeatherOrCached(
+                    latitude = sample.latitude,
+                    longitude = sample.longitude,
                     locationName = waypointLabel,
                     locationTimeZone = null,
                     allowStaleUpToMs = DEFAULT_STALE_FALLBACK_MS,
-                ).getOrElse { throw DrivingRoutePlanningException(DrivingRoutePlanningFailure.WEATHER_UNAVAILABLE, it) }
-                val hourly = weather.hourly.nearestTo(arrivalTime)
+                )
+                weatherResult.exceptionOrNull()?.let { error ->
+                    if (error is kotlinx.coroutines.CancellationException) throw error
+                    return@map DrivingRouteWaypoint(
+                        index = sample.index,
+                        label = waypointLabel,
+                        latitude = sample.latitude,
+                        longitude = sample.longitude,
+                        arrivalTime = sample.arrivalTime,
+                        distanceFromStartKm = sample.distanceFromStartKm,
+                        conditions = null,
+                        drivingAlerts = emptyList(),
+                        weatherAlerts = emptyList(),
+                        risk = DrivingRouteRiskLevel.CLEAR,
+                    )
+                }
+                val weather = weatherResult.getOrThrow()
+                val hourly = weather.hourly.nearestTo(sample.arrivalTime)
                 val drivingAlerts = if (hourly != null) {
                     DrivingConditionEvaluator.evaluate(hourly, weather.current)
                 } else {
@@ -236,31 +256,36 @@ class WeatherRepository @Inject constructor(
                 }
                 val routeConditions = drivingRouteConditions(weather, hourly, drivingAlerts)
                 val weatherAlerts = routeWeatherAlerts(
-                    latitude = latitude,
-                    longitude = longitude,
+                    latitude = sample.latitude,
+                    longitude = sample.longitude,
                     countryHint = weather.location.country.ifBlank { null },
                 )
                 DrivingRouteWaypoint(
-                    index = index,
+                    index = sample.index,
                     label = waypointLabel,
-                    latitude = latitude,
-                    longitude = longitude,
-                    arrivalTime = arrivalTime,
-                    distanceFromStartKm = distanceKm * fraction,
+                    latitude = sample.latitude,
+                    longitude = sample.longitude,
+                    arrivalTime = sample.arrivalTime,
+                    distanceFromStartKm = sample.distanceFromStartKm,
                     conditions = routeConditions,
                     drivingAlerts = drivingAlerts,
                     weatherAlerts = weatherAlerts,
                     risk = drivingRouteRisk(drivingAlerts, weatherAlerts),
                 )
             }
+            if (waypoints.none { it.conditions != null }) {
+                throw DrivingRoutePlanningException(DrivingRoutePlanningFailure.WEATHER_UNAVAILABLE)
+            }
             Result.success(
                 DrivingRouteWeatherPlan(
                     origin = origin,
                     destination = destination,
                     departureTime = departureTime,
-                    estimatedArrivalTime = departureTime.plusMinutes(durationMinutes),
-                    distanceKm = distanceKm,
-                    estimatedDurationMinutes = durationMinutes,
+                    estimatedArrivalTime = departureTime.plusMinutes(geometryPlan.estimatedDurationMinutes),
+                    distanceKm = geometryPlan.distanceKm,
+                    estimatedDurationMinutes = geometryPlan.estimatedDurationMinutes,
+                    estimateKind = geometry.estimateKind,
+                    assumedSpeedKmh = geometryPlan.assumedSpeedKmh,
                     waypoints = waypoints,
                 )
             )
@@ -991,7 +1016,8 @@ class WeatherRepository @Inject constructor(
                 includeMeteredSources = false,
                 countryHint = countryHint,
             ).alerts
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            if (error is kotlinx.coroutines.CancellationException) throw error
             emptyList()
         }
     }
@@ -1036,37 +1062,6 @@ class WeatherRepository @Inject constructor(
     private fun List<HourlyConditions>.nearestTo(time: LocalDateTime): HourlyConditions? =
         minByOrNull { abs(Duration.between(it.time, time).toMinutes()) }
 
-    private fun routeWaypointFractions(distanceKm: Double): List<Double> {
-        val segmentCount = when {
-            distanceKm < 80.0 -> 1
-            distanceKm < 240.0 -> 2
-            distanceKm < 520.0 -> 3
-            distanceKm < 900.0 -> 4
-            else -> 5
-        }
-        return (0..segmentCount).map { index -> index.toDouble() / segmentCount.toDouble() }
-    }
-
-    private fun interpolate(start: Double, end: Double, fraction: Double): Double =
-        start + ((end - start) * fraction)
-
-    private fun haversineKm(
-        startLat: Double,
-        startLon: Double,
-        endLat: Double,
-        endLon: Double,
-    ): Double {
-        val earthRadiusKm = 6371.0
-        val dLat = Math.toRadians(endLat - startLat)
-        val dLon = Math.toRadians(endLon - startLon)
-        val lat1 = Math.toRadians(startLat)
-        val lat2 = Math.toRadians(endLat)
-        val a = sin(dLat / 2.0) * sin(dLat / 2.0) +
-            cos(lat1) * cos(lat2) * sin(dLon / 2.0) * sin(dLon / 2.0)
-        val c = 2.0 * atan2(sqrt(a), sqrt(1.0 - a))
-        return earthRadiusKm * c
-    }
-
     private fun LocationInfo.withResponseTimeZone(responseTimeZone: String?): LocationInfo {
         val validResponseTimeZone = responseTimeZone?.takeIf { it.toZoneIdOrNull() != null }
         return if (timeZone == null && validResponseTimeZone != null) {
@@ -1077,7 +1072,7 @@ class WeatherRepository @Inject constructor(
     }
 }
 
-private const val DEFAULT_DRIVING_ROUTE_SPEED_KMH = 88.0
+internal const val DEFAULT_DRIVING_ROUTE_SPEED_KMH = 88.0
 
 private val US_STATE_NAMES = mapOf(
     "AL" to "Alabama",
