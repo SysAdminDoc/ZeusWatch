@@ -89,6 +89,7 @@ class UserPreferences @Inject constructor(
         val SHOW_YESTERDAY_COMPARISON = booleanPreferencesKey("show_yesterday_comparison")
         val SHOW_FORECAST_ACCURACY = booleanPreferencesKey("show_forecast_accuracy")
         val SHOW_CONFIDENCE_BANDS = booleanPreferencesKey("show_confidence_bands")
+        val SHOW_COMPARE_CHART_OVERLAY = booleanPreferencesKey("show_compare_chart_overlay")
 
         // Health thresholds
         val MIGRAINE_PRESSURE_THRESHOLD = stringPreferencesKey("migraine_pressure_threshold")
@@ -210,6 +211,7 @@ class UserPreferences @Inject constructor(
             showYesterdayComparison = prefs[Keys.SHOW_YESTERDAY_COMPARISON] ?: true,
             showForecastAccuracy = prefs[Keys.SHOW_FORECAST_ACCURACY] ?: false,
             showConfidenceBands = prefs[Keys.SHOW_CONFIDENCE_BANDS] ?: false,
+            showCompareChartOverlay = prefs[Keys.SHOW_COMPARE_CHART_OVERLAY] ?: true,
             // Forecast range
             hourlyForecastHours = prefs[Keys.HOURLY_FORECAST_HOURS]?.toIntOrNull() ?: 72,
             // Cache
@@ -417,6 +419,7 @@ class UserPreferences @Inject constructor(
     suspend fun setShowYesterdayComparison(enabled: Boolean) = store.edit { it[Keys.SHOW_YESTERDAY_COMPARISON] = enabled }
     suspend fun setShowForecastAccuracy(enabled: Boolean) = store.edit { it[Keys.SHOW_FORECAST_ACCURACY] = enabled }
     suspend fun setShowConfidenceBands(enabled: Boolean) = store.edit { it[Keys.SHOW_CONFIDENCE_BANDS] = enabled }
+    suspend fun setShowCompareChartOverlay(enabled: Boolean) = store.edit { it[Keys.SHOW_COMPARE_CHART_OVERLAY] = enabled }
 
     // Health
     suspend fun setMigrainePressureThreshold(threshold: Double) = store.edit { it[Keys.MIGRAINE_PRESSURE_THRESHOLD] = threshold.toString() }
@@ -591,6 +594,7 @@ data class NimbusSettings(
     val showYesterdayComparison: Boolean = true,
     val showForecastAccuracy: Boolean = false,
     val showConfidenceBands: Boolean = false,
+    val showCompareChartOverlay: Boolean = true,
     // Forecast range
     val hourlyForecastHours: Int = 72,
     // Health

@@ -92,6 +92,7 @@ fun CompareScreen(
         onSelectLocation1 = viewModel::selectLocation1,
         onSelectLocation2 = viewModel::selectLocation2,
         onChartOverlayVisible = viewModel::setChartOverlayVisible,
+        onChartOverlayRetry = viewModel::retryChartOverlay,
     )
 
     PredictiveBackScaffold(onBack = onBack) {
@@ -106,6 +107,7 @@ private data class CompareScreenActions(
     val onSelectLocation1: (SavedLocationEntity) -> Unit,
     val onSelectLocation2: (SavedLocationEntity) -> Unit,
     val onChartOverlayVisible: (Boolean) -> Unit,
+    val onChartOverlayRetry: () -> Unit,
 )
 
 @Composable
@@ -402,8 +404,10 @@ private fun CompareLoadedWeather(
         forecasts = state.overlayForecasts,
         isLoading = state.isOverlayLoading,
         unavailable = state.overlayUnavailable,
+        loadFailed = state.overlayLoadFailed,
         enabled = state.showChartOverlay,
         onEnabledChange = actions.onChartOverlayVisible,
+        onRetry = actions.onChartOverlayRetry,
         settings = settings,
         modifier = Modifier.padding(horizontal = 16.dp),
     )

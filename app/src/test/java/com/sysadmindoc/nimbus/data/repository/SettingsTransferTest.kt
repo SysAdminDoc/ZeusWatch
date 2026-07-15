@@ -56,6 +56,15 @@ class SettingsTransferTest {
     }
 
     @Test
+    fun `settings backup round-trips compare chart overlay toggle`() {
+        val backup = NimbusSettings(showCompareChartOverlay = false).toBackup()
+        val encoded = json.encodeToString(SettingsBackup(settings = backup))
+        assertTrue(encoded.contains("\"showCompareChartOverlay\":false"))
+        assertFalse(backup.toSettings().showCompareChartOverlay)
+        assertTrue(NimbusSettings().toBackup().toSettings().showCompareChartOverlay)
+    }
+
+    @Test
     fun `settings backup preserves custom summary template`() {
         val template = "Start with {condition}, then mention {high} and {low}."
         val backup = SettingsBackup(

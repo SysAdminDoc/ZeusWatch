@@ -174,6 +174,7 @@ data class SettingsBackupPreferences(
     val showBeaufortColors: Boolean = true,
     val showOutdoorScore: Boolean = true,
     val showYesterdayComparison: Boolean = true,
+    val showCompareChartOverlay: Boolean = true,
     val hourlyForecastHours: Int = 72,
     val migrainePressureThreshold: Double = 5.0,
     val hapticFeedbackForAlerts: Boolean = true,
@@ -378,6 +379,7 @@ fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPrefere
     showBeaufortColors = showBeaufortColors,
     showOutdoorScore = showOutdoorScore,
     showYesterdayComparison = showYesterdayComparison,
+    showCompareChartOverlay = showCompareChartOverlay,
     hourlyForecastHours = hourlyForecastHours,
     migrainePressureThreshold = migrainePressureThreshold,
     hapticFeedbackForAlerts = hapticFeedbackForAlerts,
@@ -430,6 +432,7 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
     showBeaufortColors = showBeaufortColors,
     showOutdoorScore = showOutdoorScore,
     showYesterdayComparison = showYesterdayComparison,
+    showCompareChartOverlay = showCompareChartOverlay,
     hourlyForecastHours = hourlyForecastHours.coerceIn(24, 72),
     migrainePressureThreshold = migrainePressureThreshold.coerceIn(1.0, 20.0),
     hapticFeedbackForAlerts = hapticFeedbackForAlerts,
@@ -554,6 +557,7 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setShowBeaufortColors(settings.showBeaufortColors)
     setShowOutdoorScore(settings.showOutdoorScore)
     setShowYesterdayComparison(settings.showYesterdayComparison)
+    setShowCompareChartOverlay(settings.showCompareChartOverlay)
     setHourlyForecastHours(settings.hourlyForecastHours)
     setMigrainePressureThreshold(settings.migrainePressureThreshold)
     setHapticFeedbackForAlerts(settings.hapticFeedbackForAlerts)

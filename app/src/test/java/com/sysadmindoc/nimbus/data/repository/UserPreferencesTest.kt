@@ -82,6 +82,7 @@ class UserPreferencesTest {
         assertTrue(settings.showBeaufortColors)
         assertTrue(settings.showOutdoorScore)
         assertTrue(settings.showYesterdayComparison)
+        assertTrue(settings.showCompareChartOverlay)
     }
 
     @Test
