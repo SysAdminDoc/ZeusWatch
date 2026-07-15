@@ -135,7 +135,7 @@
     <string name="onboarding_cards_standard_count">Predeterminado</string>
     <string name="onboarding_cards_everything">Todo</string>
     <string name="onboarding_cards_everything_desc">Activa todas las tarjetas disponibles para un panel denso de usuario avanzado.</string>
-    <string name="onboarding_cards_everything_count">37 tarjetas</string>
+    <string name="onboarding_cards_everything_count">%1$d tarjetas</string>
     <string name="onboarding_continue">Continuar</string>
     <string name="onboarding_finish">Iniciar ZeusWatch</string>
     <string name="onboarding_save_error_title">La configuración no se guardó</string>
@@ -433,7 +433,7 @@
     <string name="route_planner_depart_now">Ahora</string>
     <string name="route_planner_depart_hours">+%1$dh</string>
     <string name="route_planner_plan">Estimar el tiempo en ruta</string>
-    <string name="route_planner_planning">Planificando</string>
+    <string name="route_planner_planning">Planificando…</string>
     <string name="route_planner_import_gpx">Importar ruta o track GPX 1.1</string>
     <string name="route_planner_gpx_route_loaded">Ruta GPX importada • %1$d puntos</string>
     <string name="route_planner_gpx_track_loaded">Track GPX importado • %1$d puntos</string>
@@ -441,8 +441,8 @@
     <string name="route_planner_summary">Riesgo de ruta</string>
     <string name="route_planner_distance_duration">%1$s \u2022 %2$s</string>
     <string name="route_planner_waypoint_count">Muestra %1$d puntos de ruta</string>
-    <string name="route_planner_corridor_disclaimer">Estimación de corredor en línea recta • supone %1$d km/h • la distancia y duración no son aptas para navegación.</string>
-    <string name="route_planner_gpx_disclaimer">Geometría GPX importada • supone %1$d km/h para la llegada • no ofrece indicaciones de navegación.</string>
+    <string name="route_planner_corridor_disclaimer">Estimación de corredor en línea recta • supone %1$s • la distancia y duración no son aptas para navegación.</string>
+    <string name="route_planner_gpx_disclaimer">Geometría GPX importada • supone %1$s para la llegada • no ofrece indicaciones de navegación.</string>
     <string name="route_planner_partial_samples">No hay tiempo para %1$d muestras; se conservan las muestras disponibles.</string>
     <string name="route_planner_waypoints">Puntos de ruta</string>
     <string name="route_planner_metric_precip">Lluvia</string>
@@ -587,7 +587,7 @@
     <string name="pws_rain_value">%1$s, %2$s</string>
     <string name="pws_lightning_label">Rayos</string>
     <string name="pws_lightning_value">%1$d impactos</string>
-    <string name="pws_lightning_value_with_distance">%1$d impactos, prom. %2$.0f km</string>
+    <string name="pws_lightning_value_with_distance">%1$d impactos, prom. a %2$s</string>
     <string name="pws_precip_none">sin lluvia</string>
     <string name="pws_precip_rain">lluvia</string>
     <string name="pws_precip_hail">granizo</string>
@@ -937,7 +937,7 @@
     <string name="compare_rain_summary">Lluvia %1$d%% vs %2$d%%</string>
     <string name="compare_chart_overlay_title">Superposición de gráfico</string>
     <string name="compare_chart_overlay_desc">Compara líneas de temperatura de proveedores y riesgo de lluvia para la ubicación principal.</string>
-    <string name="compare_chart_overlay_loading">Cargando pronósticos de fuentes...</string>
+    <string name="compare_chart_overlay_loading">Cargando pronósticos de fuentes…</string>
     <string name="compare_chart_overlay_unavailable">La superposición necesita al menos dos pronósticos horarios para esta ubicación.</string>
     <string name="compare_chart_overlay_semantics">Superposición de fuentes para %1$s: %2$s. Diferencia máxima de temperatura %3$s. Diferencia máxima de precipitación %4$d puntos porcentuales.</string>
     <string name="compare_chart_overlay_now_temp">%1$s ahora</string>
@@ -1112,7 +1112,7 @@
     <string name="settings_tempest_device_id">ID de dispositivo Tempest</string>
     <string name="settings_provider_health_title">Estado de fuentes</string>
     <string name="settings_provider_health_desc">Historial local de proveedores para diagnosticar alternativas. No se guardan ubicaciones, URL, claves API ni errores sin procesar.</string>
-    <string name="settings_provider_health_empty">Aun no hay comprobaciones de proveedores. Actualiza el clima una vez para completar este panel.</string>
+    <string name="settings_provider_health_empty">Aún no hay comprobaciones de fuentes. Actualiza el clima una vez para completar este panel.</string>
     <string name="settings_provider_health_export">Exportar diagnostico</string>
     <string name="settings_provider_health_export_success">Diagnostico de fuentes exportado.</string>
     <string name="settings_provider_health_export_error">Error al exportar diagnostico. Revisa el acceso al almacenamiento e intentalo de nuevo.</string>
@@ -1199,7 +1199,7 @@
     <string name="settings_api_key_field_cd">Campo de %1$s</string>
     <string name="settings_api_key_saved_hint">Guardado en este dispositivo al salir del campo</string>
     <string name="settings_enter_api_key">Ingresar clave API...</string>
-    <string name="settings_enter_value">Ingresar valor...</string>
+    <string name="settings_enter_value">Ingresar valor…</string>
     <string name="settings_no_icon_packs">No hay paquetes de iconos instalados. Coloca paquetes en assets/iconpacks/ o instala una app con el intent com.sysadmindoc.nimbus.ICON_PACK.</string>
     <string name="settings_select_icon_pack">Seleccionar paquete de iconos</string>
     <string name="settings_icon_pack_by">por %1$s</string>
@@ -1513,4 +1513,21 @@
     <string name="smartspacer_weather_complication_label">Temperatura de ZeusWatch</string>
     <string name="smartspacer_weather_complication_description">Temperatura actual de ZeusWatch para Smartspacer.</string>
     <string name="smartspacer_weather_requires_android_q">El clima de Smartspacer requiere Android 10 o posterior.</string>
+    <!-- Audit 2026-07: smartspacer localization, route waypoint labels, time-travel states -->
+    <string name="smartspacer_next_hour_rain">Lluvia próxima hora %1$d%%</string>
+    <string name="smartspacer_next_hour_rain_unavailable">Lluvia de la próxima hora no disponible</string>
+    <string name="smartspacer_current_location">Ubicación actual</string>
+    <string name="route_waypoint_gpx_start">Inicio GPX</string>
+    <string name="route_waypoint_gpx_destination">Destino GPX</string>
+    <string name="route_waypoint_generic">Punto de ruta %1$d</string>
+    <string name="route_waypoint_map_center">Centro del mapa</string>
+    <string name="route_planner_duration_short">%1$dh %2$dm</string>
+    <string name="route_planner_duration_minutes">%1$dm</string>
+    <string name="route_planner_distance_km">%1$d km</string>
+    <string name="route_planner_distance_mi">%1$d mi</string>
+    <string name="on_this_day_loading">Cargando clima histórico…</string>
+    <string name="on_this_day_scrub_error">No se pudo cargar el clima de esa fecha. Comprueba tu conexión e inténtalo de nuevo.</string>
+    <string name="on_this_day_date_unavailable">Aún no hay datos de archivo para esta fecha. Los días recientes pueden tardar un par de días en aparecer.</string>
+    <string name="compare_overlay_error">No se pudieron cargar los pronósticos de las fuentes. Comprueba tu conexión e inténtalo de nuevo.</string>
+    <string name="compare_overlay_retry">Reintentar</string>
 </resources>

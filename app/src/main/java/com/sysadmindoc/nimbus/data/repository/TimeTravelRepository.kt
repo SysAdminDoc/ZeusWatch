@@ -8,6 +8,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,6 +50,12 @@ class TimeTravelRepository @Inject constructor(
     /**
      * @param forecastDaily the currently loaded 16-day forecast, used to answer
      *   today/future dates offline. Past dates ignore it and hit the archive.
+     * @param today the archive/forecast boundary; when `null` it is computed
+     *   from [zoneId] (or the system zone as a last resort).
+     * @param zoneId the location's time zone. Forecast rows are location-local,
+     *   so "today" must be resolved in the same zone — across the dateline the
+     *   device-local date can differ and would misroute an available forecast
+     *   day to the still-lagging archive.
      * @return the day's weather, or `null` when out of range, absent from the
      *   forecast window, or the archive lookup fails (e.g. the ~2-day archive lag
      *   for very recent dates, or a network error).
@@ -58,20 +65,24 @@ class TimeTravelRepository @Inject constructor(
         longitude: Double,
         date: LocalDate,
         forecastDaily: List<DailyConditions>,
-        today: LocalDate = LocalDate.now(),
-    ): TimeTravelDay? = when (TimeTravelRange.classify(date, today)) {
-        TimeTravelSource.OUT_OF_RANGE -> null
-        TimeTravelSource.FORECAST -> forecastDaily.firstOrNull { it.date == date }?.let { d ->
-            TimeTravelDay(
-                date = date,
-                weatherCode = d.weatherCode,
-                highC = d.temperatureHigh,
-                lowC = d.temperatureLow,
-                precipMm = d.precipitationSum,
-                isHistorical = false,
-            )
+        today: LocalDate? = null,
+        zoneId: ZoneId? = null,
+    ): TimeTravelDay? {
+        val boundary = today ?: LocalDate.now(zoneId ?: ZoneId.systemDefault())
+        return when (TimeTravelRange.classify(date, boundary)) {
+            TimeTravelSource.OUT_OF_RANGE -> null
+            TimeTravelSource.FORECAST -> forecastDaily.firstOrNull { it.date == date }?.let { d ->
+                TimeTravelDay(
+                    date = date,
+                    weatherCode = d.weatherCode,
+                    highC = d.temperatureHigh,
+                    lowC = d.temperatureLow,
+                    precipMm = d.precipitationSum,
+                    isHistorical = false,
+                )
+            }
+            TimeTravelSource.ARCHIVE -> fetchArchiveDay(latitude, longitude, date)
         }
-        TimeTravelSource.ARCHIVE -> fetchArchiveDay(latitude, longitude, date)
     }
 
     private suspend fun fetchArchiveDay(

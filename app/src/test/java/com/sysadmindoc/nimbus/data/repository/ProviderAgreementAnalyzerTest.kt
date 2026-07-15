@@ -93,6 +93,48 @@ class ProviderAgreementAnalyzerTest {
         assertNull(agreement)
     }
 
+    @Test
+    fun analyzeExcludesProvidersWithoutARealHourlyWindowInsteadOfComparingInstantSamples() {
+        // HKO-style provider: current conditions only, no hourly series. Falling
+        // back to the instantaneous sample used to make the card report
+        // divergence against other providers' 24h aggregates.
+        val agreement = ProviderAgreementAnalyzer.analyze(
+            forecasts = listOf(
+                ProviderWeatherSnapshot(
+                    WeatherSourceProvider.HKO,
+                    weatherData(temperatureC = 30.0, precipitationTotalMm = 0.0).copy(hourly = emptyList()),
+                ),
+                ProviderWeatherSnapshot(
+                    WeatherSourceProvider.OPEN_METEO,
+                    weatherData(temperatureC = 20.0, precipitationTotalMm = 1.0),
+                ),
+            ),
+            referenceTime = referenceTime,
+        )
+
+        assertNull(agreement)
+    }
+
+    @Test
+    fun analyzeExcludesProvidersWithFewerThanTwelveOverlappingHours() {
+        val sparse = weatherData(temperatureC = 25.0, precipitationTotalMm = 1.0)
+        val agreement = ProviderAgreementAnalyzer.analyze(
+            forecasts = listOf(
+                ProviderWeatherSnapshot(
+                    WeatherSourceProvider.HKO,
+                    sparse.copy(hourly = sparse.hourly.take(5)),
+                ),
+                ProviderWeatherSnapshot(
+                    WeatherSourceProvider.OPEN_METEO,
+                    weatherData(temperatureC = 20.0, precipitationTotalMm = 1.0),
+                ),
+            ),
+            referenceTime = referenceTime,
+        )
+
+        assertNull(agreement)
+    }
+
     private fun weatherData(
         temperatureC: Double,
         precipitationTotalMm: Double,

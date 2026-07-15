@@ -12,6 +12,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.zip.GZIPInputStream
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -115,6 +116,70 @@ class BreezyWeatherProviderPayloadsTest {
                 .getValue("text").jsonPrimitive.content,
         )
     }
+
+    @Test
+    fun snowfallConvertsFromCanonicalCmToMillimetres() {
+        val json = snowyBlobJson(precipitationUnit = "mm")
+
+        val hourlySnow = json.hourlySnow()
+        val dailySnow = json.dailySnow()
+
+        // Canonical snowfall is cm: 1.5 cm -> 15 mm, 2.54 cm -> 25.4 mm.
+        assertEquals("mm", hourlySnow.getValue("unit").jsonPrimitive.content)
+        assertEquals(15.0, hourlySnow.getValue("value").jsonPrimitive.double, 0.001)
+        assertEquals("mm", dailySnow.getValue("unit").jsonPrimitive.content)
+        assertEquals(25.4, dailySnow.getValue("value").jsonPrimitive.double, 0.001)
+    }
+
+    @Test
+    fun snowfallConvertsFromCanonicalCmToInches() {
+        val json = snowyBlobJson(precipitationUnit = "in")
+
+        val dailySnow = json.dailySnow()
+
+        // 2.54 cm = 25.4 mm = exactly 1 inch.
+        assertEquals("in", dailySnow.getValue("unit").jsonPrimitive.content)
+        assertEquals(1.0, dailySnow.getValue("value").jsonPrimitive.double, 0.001)
+    }
+
+    @Test
+    fun snowfallPassesThroughUnchangedForCmUnit() {
+        val json = snowyBlobJson(precipitationUnit = "cm")
+
+        val hourlySnow = json.hourlySnow()
+
+        // Already cm: the value must survive the mm round-trip unchanged.
+        assertEquals("cm", hourlySnow.getValue("unit").jsonPrimitive.content)
+        assertEquals(1.5, hourlySnow.getValue("value").jsonPrimitive.double, 0.001)
+    }
+
+    private fun snowyBlobJson(precipitationUnit: String): JsonObject {
+        val base = sampleWeatherData()
+        val weather = base.copy(
+            hourly = listOf(base.hourly.first().copy(snowfall = 1.5)),
+            daily = listOf(base.daily.first().copy(snowfallSum = 2.54)),
+        )
+        val units = BreezyUnitPreferences(
+            temperatureUnit = "c",
+            precipitationUnit = precipitationUnit,
+            speedUnit = "kph",
+            distanceUnit = "km",
+            pressureUnit = "hpa",
+        )
+        val json = ungzip(weather.toBreezyWeatherBlob(units, refreshEpochMillis = 1_700_000_000_000L))
+        return Json.parseToJsonElement(json).jsonObject
+    }
+
+    private fun JsonObject.hourlySnow(): JsonObject =
+        getValue("hourly").jsonArray.first().jsonObject
+            .getValue("precipitation").jsonObject
+            .getValue("snow").jsonObject
+
+    private fun JsonObject.dailySnow(): JsonObject =
+        getValue("daily").jsonArray.first().jsonObject
+            .getValue("day").jsonObject
+            .getValue("precipitation").jsonObject
+            .getValue("snow").jsonObject
 
     private fun sampleWeatherData(): WeatherData = WeatherData(
         location = LocationInfo(

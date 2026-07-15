@@ -14,6 +14,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 class TimeTravelRepositoryTest {
 
@@ -87,6 +88,40 @@ class TimeTravelRepositoryTest {
     fun `getDay returns null for out-of-range dates`() = runTest {
         val repo = TimeTravelRepository(mockk())
         assertNull(repo.getDay(52.0, 13.0, today.plusDays(40), emptyList(), today))
+    }
+
+    @Test
+    fun `getDay resolves today in the location zone when no explicit today is given`() = runTest {
+        // UTC-12 and UTC+14 are 26 hours apart, so the UTC-12 local date is
+        // always strictly before the Kiritimati local date at any instant.
+        val laggingZone = ZoneId.of("Etc/GMT+12")
+        val leadingZone = ZoneId.of("Pacific/Kiritimati")
+        val target = LocalDate.now(laggingZone)
+        val forecast = listOf(dailyConditions(target, WeatherCode.CLEAR_SKY, high = 28.0, low = 20.0, precip = 0.0))
+
+        // In the location's own (lagging) zone the date is "today", so the
+        // loaded forecast answers it — a strict mock fails on any archive call.
+        val forecastRepo = TimeTravelRepository(mockk())
+        val day = forecastRepo.getDay(-13.9, -171.7, target, forecast, zoneId = laggingZone)
+        assertEquals(target, day?.date)
+        assertFalse(day!!.isHistorical)
+
+        // Resolved against the leading zone the same date is already in the
+        // past and must route to the archive instead.
+        val iso = target.toString()
+        val api = mockk<OpenMeteoArchiveApi>()
+        coEvery { api.getArchive(any(), any(), iso, iso) } returns ArchiveResponse(
+            daily = ArchiveDaily(
+                time = listOf(iso),
+                temperature_2m_max = listOf(10.0),
+                temperature_2m_min = listOf(2.0),
+                precipitation_sum = listOf(0.0),
+                weather_code = listOf(1),
+            ),
+        )
+        val archiveRepo = TimeTravelRepository(api)
+        val archived = archiveRepo.getDay(1.87, -157.4, target, forecast, zoneId = leadingZone)
+        assertTrue(archived!!.isHistorical)
     }
 
     private fun dailyConditions(
