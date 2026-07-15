@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.smartspacer
 
+import android.content.Context
 import androidx.annotation.DrawableRes
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.WeatherCode
@@ -7,7 +8,9 @@ import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.util.WeatherFormatter
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlin.math.roundToInt
 
 internal data class SmartspacerWeatherSnapshot(
@@ -45,10 +48,30 @@ internal enum class SmartspacerWeatherStateIcon {
     WINTRY_MIX_RAIN_SNOW,
 }
 
+/**
+ * User-facing snapshot strings, injected so the pure JVM formatter tests don't
+ * need Android resources. [from] resolves them from the localized resources.
+ */
+internal class SmartspacerWeatherStrings(
+    val nextHourRain: (Int) -> String,
+    val nextHourRainUnavailable: String,
+    val currentLocation: String,
+) {
+    companion object {
+        fun from(context: Context): SmartspacerWeatherStrings = SmartspacerWeatherStrings(
+            nextHourRain = { percent -> context.getString(R.string.smartspacer_next_hour_rain, percent) },
+            nextHourRainUnavailable = context.getString(R.string.smartspacer_next_hour_rain_unavailable),
+            currentLocation = context.getString(R.string.smartspacer_current_location),
+        )
+    }
+}
+
 internal fun buildSmartspacerWeatherSnapshot(
     weather: WeatherData,
     tempUnit: TempUnit,
-    referenceTime: LocalDateTime = LocalDateTime.now(),
+    strings: SmartspacerWeatherStrings,
+    referenceInstant: Instant = Instant.now(),
+    fallbackZone: ZoneId = ZoneId.systemDefault(),
 ): SmartspacerWeatherSnapshot {
     val settings = NimbusSettings(tempUnit = tempUnit)
     val temperature = WeatherFormatter.convertedTemp(weather.current.temperature, settings).roundToInt()
@@ -56,12 +79,19 @@ internal fun buildSmartspacerWeatherSnapshot(
     val condition = weather.current.sourceConditionText
         ?.takeIf { it.isNotBlank() }
         ?: weather.current.weatherCode.description
+    // Hourly timestamps are location-local, so the "next hour" anchor must be
+    // computed in the location's zone — a device-local LocalDateTime.now()
+    // picks the wrong hour for any saved city in another timezone.
+    val zone = weather.location.timeZone
+        ?.let { id -> runCatching { ZoneId.of(id) }.getOrNull() }
+        ?: fallbackZone
+    val referenceTime = LocalDateTime.ofInstant(referenceInstant, zone)
     val nextHourPrecipitation = weather.hourly
         .firstOrNull { !it.time.isBefore(referenceTime) }
         ?: weather.hourly.firstOrNull()
     val nextHourRain = nextHourPrecipitation?.precipitationProbability
-    val nextHourText = nextHourRain?.let { "Next hour rain $it%" } ?: "Next-hour rain unavailable"
-    val locationName = weather.location.name.takeIf { it.isNotBlank() } ?: "Current location"
+    val nextHourText = nextHourRain?.let(strings.nextHourRain) ?: strings.nextHourRainUnavailable
+    val locationName = weather.location.name.takeIf { it.isNotBlank() } ?: strings.currentLocation
     val icon = weather.current.weatherCode.toSmartspacerIcon(weather.current.isDay)
 
     return SmartspacerWeatherSnapshot(

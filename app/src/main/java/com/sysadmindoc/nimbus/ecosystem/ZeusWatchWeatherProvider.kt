@@ -5,7 +5,6 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
-import androidx.room.Room
 import com.sysadmindoc.nimbus.data.api.NimbusDatabase
 import com.sysadmindoc.nimbus.data.model.WEATHER_DATA_CACHE_SCHEMA_VERSION
 import com.sysadmindoc.nimbus.data.model.WeatherCacheEntity
@@ -52,12 +51,7 @@ class ZeusWatchWeatherProvider : ContentProvider() {
     private lateinit var appContext: android.content.Context
 
     private val database: NimbusDatabase by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        Room.databaseBuilder(appContext, NimbusDatabase::class.java, "nimbus.db")
-            .addMigrations(NimbusDatabase.MIGRATION_1_2)
-            .addMigrations(NimbusDatabase.MIGRATION_2_3)
-            .addMigrations(NimbusDatabase.MIGRATION_3_4)
-            .addMigrations(NimbusDatabase.MIGRATION_4_5)
-            .build()
+        NimbusDatabase.buildOn(appContext)
     }
 
     private val userPreferences: UserPreferences by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {

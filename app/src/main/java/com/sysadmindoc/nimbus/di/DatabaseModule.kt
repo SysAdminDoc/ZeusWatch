@@ -1,7 +1,6 @@
 package com.sysadmindoc.nimbus.di
 
 import android.content.Context
-import androidx.room.Room
 import com.sysadmindoc.nimbus.data.api.NimbusDatabase
 import com.sysadmindoc.nimbus.data.api.SavedLocationDao
 import com.sysadmindoc.nimbus.data.api.WeatherDao
@@ -18,18 +17,8 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): NimbusDatabase {
-        return Room.databaseBuilder(
-            context,
-            NimbusDatabase::class.java,
-            "nimbus.db"
-        )
-            .addMigrations(NimbusDatabase.MIGRATION_1_2)
-            .addMigrations(NimbusDatabase.MIGRATION_2_3)
-            .addMigrations(NimbusDatabase.MIGRATION_3_4)
-            .addMigrations(NimbusDatabase.MIGRATION_4_5)
-            .build()
-    }
+    fun provideDatabase(@ApplicationContext context: Context): NimbusDatabase =
+        NimbusDatabase.buildOn(context)
 
     @Provides
     @Singleton

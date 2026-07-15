@@ -1,6 +1,8 @@
 package com.sysadmindoc.nimbus.data.api
 
+import android.content.Context
 import androidx.room.Database
+import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -18,6 +20,22 @@ abstract class NimbusDatabase : RoomDatabase() {
     abstract fun savedLocationDao(): SavedLocationDao
 
     companion object {
+        const val DATABASE_NAME = "nimbus.db"
+
+        /**
+         * Single registry of every migration. All builders must go through
+         * [buildOn] (or at least this array) so a future migration only has to
+         * be registered once instead of in each hand-rolled builder.
+         */
+        fun allMigrations(): Array<Migration> =
+            arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+
+        /** Canonical builder used by Hilt and the non-Hilt satellite entry points. */
+        fun buildOn(context: Context): NimbusDatabase =
+            Room.databaseBuilder(context.applicationContext, NimbusDatabase::class.java, DATABASE_NAME)
+                .addMigrations(*allMigrations())
+                .build()
+
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
