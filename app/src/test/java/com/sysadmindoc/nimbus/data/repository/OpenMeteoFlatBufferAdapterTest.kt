@@ -39,6 +39,78 @@ class OpenMeteoFlatBufferAdapterTest {
         assertEquals("2026-01-02T07:30", daily.sunrise!!.first())
     }
 
+    @Test
+    fun decodeForecastResolvesLabelsWithNamedZoneAcrossDstTransition() {
+        val response = adapter.decodeForecast(
+            zonedPayload(timezone = "America/Denver", utcOffsetSeconds = -25200),
+        )
+        val hourly = requireNotNull(response.hourly)
+        val daily = requireNotNull(response.daily)
+
+        // 08:00Z is 01:00 MST; DST starts an hour later, so 09:00Z is 03:00 MDT.
+        // A single fixed offset cannot label both hours correctly.
+        assertEquals("2026-03-08T01:00", hourly.time[0])
+        assertEquals("2026-03-08T03:00", hourly.time[1])
+        // Summer midnight (06:00Z) must not be shifted to the previous calendar
+        // day by the stale winter offset carried in utc_offset_seconds.
+        assertEquals("2026-07-01", daily.time.first())
+    }
+
+    @Test
+    fun decodeForecastFallsBackToFixedOffsetWhenTimezoneUnusable() {
+        val response = adapter.decodeForecast(
+            zonedPayload(timezone = "", utcOffsetSeconds = -25200),
+        )
+        val hourly = requireNotNull(response.hourly)
+
+        // Blank zone: labels use the fixed -07:00 offset for the whole range.
+        assertEquals("2026-03-08T01:00", hourly.time[0])
+        assertEquals("2026-03-08T02:00", hourly.time[1])
+    }
+
+    private fun zonedPayload(timezone: String, utcOffsetSeconds: Int): ByteArray {
+        val builder = FlatBufferBuilder(1024)
+        val timezoneOffset = builder.createString(timezone)
+        val timezoneAbbreviationOffset = builder.createString("")
+        val hourly = block(
+            builder = builder,
+            // 2026-03-08T01:00 in Denver, one hour before the spring-forward jump.
+            startEpoch = epoch("2026-03-08T08:00:00Z"),
+            intervalSeconds = 3600,
+            variables = listOf(
+                series(builder, Variable.temperature, OpenMeteoUnit.celsius, 1f, 2f, altitude = 2),
+            ),
+        )
+        val daily = block(
+            builder = builder,
+            // Midnight MDT on 2026-07-01 while the reported offset is still MST.
+            startEpoch = epoch("2026-07-01T06:00:00Z"),
+            intervalSeconds = 86400,
+            variables = listOf(
+                series(builder, Variable.weather_code, OpenMeteoUnit.wmo_code, 3f),
+            ),
+        )
+        val root = WeatherApiResponse.createWeatherApiResponse(
+            builder,
+            39.75f,
+            -104.98f,
+            1600f,
+            1.25f,
+            0L,
+            0,
+            utcOffsetSeconds,
+            timezoneOffset,
+            timezoneAbbreviationOffset,
+            0,
+            daily,
+            hourly,
+            0,
+            0,
+        )
+        WeatherApiResponse.finishSizePrefixedWeatherApiResponseBuffer(builder, root)
+        return builder.sizedByteArray()
+    }
+
     private fun forecastPayload(): ByteArray {
         val builder = FlatBufferBuilder(1024)
         val timezoneOffset = builder.createString("Etc/UTC")

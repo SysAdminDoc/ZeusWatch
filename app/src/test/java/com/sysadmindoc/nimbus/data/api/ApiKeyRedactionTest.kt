@@ -38,6 +38,24 @@ class ApiKeyRedactionTest {
     }
 
     @Test
+    fun `OkHttp logger strips Tempest token from url`() {
+        val messages = mutableListOf<String>()
+        val interceptor = HttpLoggingInterceptor { message -> messages += message }.apply {
+            level = HttpLoggingInterceptor.Level.BASIC
+            redactQueryParams("appid", "apikey", "api_key", "key", "token")
+        }
+        val request = Request.Builder()
+            .url("https://swd.weatherflow.com/swd/rest/observations/station/1234?token=SECRETTOKEN")
+            .build()
+
+        interceptor.intercept(StaticResponseChain(request))
+
+        val joined = messages.joinToString("\n")
+        assertFalse("must not contain the token", joined.contains("SECRETTOKEN"))
+        assertTrue("must preserve the redacted param name", joined.contains("token="))
+    }
+
+    @Test
     fun `strips Pirate Weather path-embedded key`() {
         val line = "--> GET https://api.pirateweather.net/forecast/MYKEY/1.0,2.0"
         val redacted = redactPirateWeatherPathKey(line)

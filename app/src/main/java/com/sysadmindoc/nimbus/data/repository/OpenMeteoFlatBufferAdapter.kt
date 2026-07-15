@@ -12,6 +12,7 @@ import com.sysadmindoc.nimbus.data.model.OpenMeteoResponse
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.time.Instant
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -31,6 +32,11 @@ class OpenMeteoFlatBufferAdapter @Inject constructor() {
         buffer.position(SIZE_PREFIX_BYTES)
         val response = WeatherApiResponse.getRootAsWeatherApiResponse(buffer)
         val offsetSeconds = response.utcOffsetSeconds()
+        // Prefer the named zone so wall-clock labels stay correct across DST
+        // transitions inside the range; a single fixed offset would mislabel
+        // half of a multi-season range. Fall back to the offset when the zone
+        // is absent or unparseable.
+        val zone = response.timezone().toZoneIdOrNull() ?: fixedOffsetZone(offsetSeconds)
         return OpenMeteoResponse(
             latitude = response.latitude().toDouble(),
             longitude = response.longitude().toDouble(),
@@ -39,16 +45,16 @@ class OpenMeteoFlatBufferAdapter @Inject constructor() {
             utcOffsetSeconds = offsetSeconds,
             timezone = response.timezone(),
             timezoneAbbreviation = response.timezoneAbbreviation(),
-            current = response.current()?.toCurrentWeather(offsetSeconds),
-            hourly = response.hourly()?.toHourlyWeather(offsetSeconds),
-            daily = response.daily()?.toDailyWeather(offsetSeconds),
+            current = response.current()?.toCurrentWeather(zone),
+            hourly = response.hourly()?.toHourlyWeather(zone),
+            daily = response.daily()?.toDailyWeather(zone),
             minutely15 = null,
         )
     }
 
-    private fun VariablesWithTime.toCurrentWeather(offsetSeconds: Int): CurrentWeather {
+    private fun VariablesWithTime.toCurrentWeather(zone: ZoneId): CurrentWeather {
         return CurrentWeather(
-            time = dateTimeLabel(time(), offsetSeconds),
+            time = dateTimeLabel(time(), zone),
             interval = interval().takeIf { it > 0 },
             temperature = firstValue(Variable.temperature, altitude = 2),
             humidity = firstIntValue(Variable.relative_humidity, altitude = 2),
@@ -71,10 +77,10 @@ class OpenMeteoFlatBufferAdapter @Inject constructor() {
         )
     }
 
-    private fun VariablesWithTime.toHourlyWeather(offsetSeconds: Int): HourlyWeather {
+    private fun VariablesWithTime.toHourlyWeather(zone: ZoneId): HourlyWeather {
         val count = maxValueCount()
         return HourlyWeather(
-            time = labels(count, offsetSeconds, DATE_TIME_FORMATTER),
+            time = labels(count, zone, DATE_TIME_FORMATTER),
             temperature = values(Variable.temperature, altitude = 2),
             humidity = intValues(Variable.relative_humidity, altitude = 2),
             apparentTemperature = values(Variable.apparent_temperature, altitude = 2),
@@ -98,10 +104,10 @@ class OpenMeteoFlatBufferAdapter @Inject constructor() {
         )
     }
 
-    private fun VariablesWithTime.toDailyWeather(offsetSeconds: Int): DailyWeather {
+    private fun VariablesWithTime.toDailyWeather(zone: ZoneId): DailyWeather {
         val count = maxValueCount()
         return DailyWeather(
-            time = labels(count, offsetSeconds, DATE_FORMATTER),
+            time = labels(count, zone, DATE_FORMATTER),
             weatherCode = intValues(Variable.weather_code),
             temperatureMax = values(Variable.temperature, altitude = 2, aggregation = Aggregation.maximum),
             temperatureMin = values(Variable.temperature, altitude = 2, aggregation = Aggregation.minimum),
@@ -115,8 +121,8 @@ class OpenMeteoFlatBufferAdapter @Inject constructor() {
                 altitude = 2,
                 aggregation = Aggregation.minimum,
             ),
-            sunrise = timeValues(Variable.sunrise, count, offsetSeconds),
-            sunset = timeValues(Variable.sunset, count, offsetSeconds),
+            sunrise = timeValues(Variable.sunrise, count, zone),
+            sunset = timeValues(Variable.sunset, count, zone),
             uvIndexMax = values(Variable.uv_index, aggregation = Aggregation.maximum),
             precipitationSum = values(Variable.precipitation, aggregation = Aggregation.sum),
             precipitationProbabilityMax = intValues(
@@ -163,13 +169,13 @@ class OpenMeteoFlatBufferAdapter @Inject constructor() {
     private fun VariablesWithTime.timeValues(
         variable: Int,
         count: Int,
-        offsetSeconds: Int,
+        zone: ZoneId,
     ): List<String?>? {
         val values = variable(variable) ?: return null
         val length = values.valuesInt64Length()
         if (length <= 0) return null
         return (0 until minOf(count, length)).map { index ->
-            dateTimeLabel(values.valuesInt64(index), offsetSeconds)
+            dateTimeLabel(values.valuesInt64(index), zone)
         }
     }
 
@@ -212,26 +218,29 @@ class OpenMeteoFlatBufferAdapter @Inject constructor() {
 
     private fun VariablesWithTime.labels(
         count: Int,
-        offsetSeconds: Int,
+        zone: ZoneId,
         formatter: DateTimeFormatter,
     ): List<String> {
         val intervalSeconds = interval().takeIf { it > 0 } ?: return emptyList()
         return (0 until count).map { index ->
-            temporalLabel(time() + intervalSeconds.toLong() * index, offsetSeconds, formatter)
+            temporalLabel(time() + intervalSeconds.toLong() * index, zone, formatter)
         }
     }
 
-    private fun dateTimeLabel(epochSeconds: Long, offsetSeconds: Int): String =
-        temporalLabel(epochSeconds, offsetSeconds, DATE_TIME_FORMATTER)
+    private fun dateTimeLabel(epochSeconds: Long, zone: ZoneId): String =
+        temporalLabel(epochSeconds, zone, DATE_TIME_FORMATTER)
 
     private fun temporalLabel(
         epochSeconds: Long,
-        offsetSeconds: Int,
+        zone: ZoneId,
         formatter: DateTimeFormatter,
-    ): String = Instant.ofEpochSecond(epochSeconds + offsetSeconds)
-        .atOffset(ZoneOffset.UTC)
+    ): String = Instant.ofEpochSecond(epochSeconds)
+        .atZone(zone)
         .toLocalDateTime()
         .format(formatter)
+
+    private fun fixedOffsetZone(offsetSeconds: Int): ZoneId =
+        runCatching { ZoneOffset.ofTotalSeconds(offsetSeconds) }.getOrDefault(ZoneOffset.UTC)
 
     private fun Float.toNullableDouble(): Double? =
         takeIf { it.isFinite() }?.toDouble()

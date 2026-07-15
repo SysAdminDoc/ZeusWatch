@@ -38,6 +38,7 @@ object ProviderAgreementAnalyzer {
     private const val STRONG_PRECIP_SPREAD_MM = 2.0
     private const val MODERATE_TEMP_SPREAD_C = 3.0
     private const val MODERATE_PRECIP_SPREAD_MM = 6.0
+    private const val MIN_AGREEMENT_WINDOW_HOURS = 12
 
     fun analyze(
         forecasts: List<ProviderWeatherSnapshot>,
@@ -77,19 +78,17 @@ object ProviderAgreementAnalyzer {
             .filter { !it.time.isBefore(start) && it.time.isBefore(end) }
             .sortedBy { it.time }
 
-        val temperatures = window.map { it.temperature }.ifEmpty { listOf(current.temperature) }
-        val precipitationTotal = if (window.isEmpty()) {
-            current.precipitation
-        } else {
-            window.sumOf { it.precipitation ?: 0.0 }
-        }
+        // Providers without a real hourly series (e.g. HKO) must be skipped:
+        // comparing an instantaneous observation against other providers'
+        // 24-hour aggregates reports divergence regardless of model agreement.
+        if (window.size < MIN_AGREEMENT_WINDOW_HOURS) return null
 
         return ProviderAgreementSnapshot(
             provider = provider,
             displayName = provider.displayName,
-            averageTemperatureC = temperatures.average(),
-            precipitationTotalMm = precipitationTotal,
-            hourCount = window.size.takeIf { it > 0 } ?: 1,
+            averageTemperatureC = window.map { it.temperature }.average(),
+            precipitationTotalMm = window.sumOf { it.precipitation ?: 0.0 },
+            hourCount = window.size,
         )
     }
 

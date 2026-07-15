@@ -132,7 +132,7 @@
     <string name="onboarding_cards_standard_count">افتراضي</string>
     <string name="onboarding_cards_everything">كل شيء</string>
     <string name="onboarding_cards_everything_desc">شغل كل البطاقات المتاحة للوحة معلومات كثيفة للمستخدم المتقدم.</string>
-    <string name="onboarding_cards_everything_count">37 بطاقة</string>
+    <string name="onboarding_cards_everything_count">%1$d بطاقة</string>
     <string name="onboarding_continue">متابعة</string>
     <string name="onboarding_finish">بدء ZeusWatch</string>
     <string name="onboarding_save_error_title">تعذر حفظ الإعداد</string>
@@ -426,7 +426,7 @@
     <string name="route_planner_depart_now">Now</string>
     <string name="route_planner_depart_hours">+%1$dh</string>
     <string name="route_planner_plan">Estimate route weather</string>
-    <string name="route_planner_planning">Planning</string>
+    <string name="route_planner_planning">Planning…</string>
     <string name="route_planner_import_gpx">Import GPX 1.1 route or track</string>
     <string name="route_planner_gpx_route_loaded">Imported GPX route • %1$d points</string>
     <string name="route_planner_gpx_track_loaded">Imported GPX track • %1$d points</string>
@@ -434,8 +434,8 @@
     <string name="route_planner_summary">Route risk</string>
     <string name="route_planner_distance_duration">%1$s \u2022 %2$s</string>
     <string name="route_planner_waypoint_count">Samples %1$d route points</string>
-    <string name="route_planner_corridor_disclaimer">Straight-line corridor estimate • assumes %1$d km/h • not navigation-grade distance or duration.</string>
-    <string name="route_planner_gpx_disclaimer">Imported GPX geometry • assumes %1$d km/h for ETA • not navigation guidance.</string>
+    <string name="route_planner_corridor_disclaimer">Straight-line corridor estimate • assumes %1$s • not navigation-grade distance or duration.</string>
+    <string name="route_planner_gpx_disclaimer">Imported GPX geometry • assumes %1$s for ETA • not navigation guidance.</string>
     <string name="route_planner_partial_samples">%1$d weather samples unavailable; available samples are preserved.</string>
     <string name="route_planner_waypoints">Waypoints</string>
     <string name="route_planner_metric_precip">Precip</string>
@@ -580,7 +580,7 @@
     <string name="pws_rain_value">%1$s, %2$s</string>
     <string name="pws_lightning_label">Lightning</string>
     <string name="pws_lightning_value">%1$d strikes</string>
-    <string name="pws_lightning_value_with_distance">%1$d strikes, avg %2$.0f km away</string>
+    <string name="pws_lightning_value_with_distance">%1$d strikes, avg %2$s away</string>
     <string name="pws_precip_none">none</string>
     <string name="pws_precip_rain">rain</string>
     <string name="pws_precip_hail">hail</string>
@@ -946,7 +946,7 @@
     <string name="compare_rain_summary">Rain %1$d%% vs %2$d%%</string>
     <string name="compare_chart_overlay_title">Chart overlay</string>
     <string name="compare_chart_overlay_desc">Compare provider temperature lines and rain risk for the primary location.</string>
-    <string name="compare_chart_overlay_loading">Loading source forecasts...</string>
+    <string name="compare_chart_overlay_loading">Loading source forecasts…</string>
     <string name="compare_chart_overlay_unavailable">Source overlay needs at least two hourly forecasts for this location.</string>
     <string name="compare_chart_overlay_semantics">Source overlay for %1$s: %2$s. Maximum temperature spread %3$s. Maximum precipitation spread %4$d percentage points.</string>
     <string name="compare_chart_overlay_now_temp">%1$s now</string>
@@ -1110,7 +1110,7 @@
     <string name="settings_tempest_device_id">Tempest Device ID</string>
     <string name="settings_provider_health_title">Source health</string>
     <string name="settings_provider_health_desc">Local provider history for fallback troubleshooting. No locations, URLs, API keys, or raw errors are stored.</string>
-    <string name="settings_provider_health_empty">No provider checks recorded yet. Refresh weather once to populate this panel.</string>
+    <string name="settings_provider_health_empty">No source checks recorded yet. Refresh weather once to populate this panel.</string>
     <string name="settings_provider_health_export">Export diagnostics</string>
     <string name="settings_provider_health_export_success">Source diagnostics exported.</string>
     <string name="settings_provider_health_export_error">Diagnostics export failed. Check storage access and try again.</string>
@@ -1197,7 +1197,7 @@
     <string name="settings_api_key_field_cd">%1$s field</string>
     <string name="settings_api_key_saved_hint">Stored on this device and saved when you leave the field</string>
     <string name="settings_enter_api_key">Enter API key...</string>
-    <string name="settings_enter_value">Enter value...</string>
+    <string name="settings_enter_value">Enter value…</string>
     <string name="settings_no_icon_packs">No icon packs installed. Place packs in assets/iconpacks/ or install an app with the com.sysadmindoc.nimbus.ICON_PACK intent.</string>
     <string name="settings_select_icon_pack">Select Icon Pack</string>
     <string name="settings_icon_pack_by">by %1$s</string>
@@ -1477,4 +1477,21 @@
     <string name="smartspacer_weather_complication_label">ZeusWatch temperature</string>
     <string name="smartspacer_weather_complication_description">Current ZeusWatch temperature for Smartspacer.</string>
     <string name="smartspacer_weather_requires_android_q">Smartspacer weather requires Android 10 or newer.</string>
+    <!-- Audit 2026-07: smartspacer localization, route waypoint labels, time-travel states -->
+    <string name="smartspacer_next_hour_rain">Next hour rain %1$d%%</string>
+    <string name="smartspacer_next_hour_rain_unavailable">Next-hour rain unavailable</string>
+    <string name="smartspacer_current_location">Current location</string>
+    <string name="route_waypoint_gpx_start">GPX start</string>
+    <string name="route_waypoint_gpx_destination">GPX destination</string>
+    <string name="route_waypoint_generic">Waypoint %1$d</string>
+    <string name="route_waypoint_map_center">Map center</string>
+    <string name="route_planner_duration_short">%1$dh %2$dm</string>
+    <string name="route_planner_duration_minutes">%1$dm</string>
+    <string name="route_planner_distance_km">%1$d km</string>
+    <string name="route_planner_distance_mi">%1$d mi</string>
+    <string name="on_this_day_loading">Loading historical weather…</string>
+    <string name="on_this_day_scrub_error">Couldn\'t load weather for that date. Check your connection and try again.</string>
+    <string name="on_this_day_date_unavailable">No archive data for this date yet. Recent days can take a couple of days to appear.</string>
+    <string name="compare_overlay_error">Couldn\'t load source forecasts. Check your connection and try again.</string>
+    <string name="compare_overlay_retry">Retry</string>
 </resources>

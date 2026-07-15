@@ -174,7 +174,7 @@ private fun HourlyConditions.toBreezyHourly(
         BreezyPrecipitationPayload(
             total = amount.precipitationUnit(units),
             rain = amount.precipitationUnit(units),
-            snow = snowfall?.precipitationUnit(units),
+            snow = snowfall?.snowfallCmUnit(units),
         )
     },
     precipitationProbability = BreezyPrecipitationProbabilityPayload(
@@ -209,7 +209,7 @@ private fun DailyConditions.toBreezyDaily(
             BreezyPrecipitationPayload(
                 total = amount.precipitationUnit(units),
                 rain = amount.precipitationUnit(units),
-                snow = snowfallSum?.precipitationUnit(units),
+                snow = snowfallSum?.snowfallCmUnit(units),
             )
         },
         precipitationProbability = BreezyPrecipitationProbabilityPayload(
@@ -255,6 +255,14 @@ private fun Double.precipitationUnit(units: BreezyUnitPreferences): BreezyUnitPa
         "lpsqm" -> unit("lpsqm")
         else -> unit("mm")
     }
+
+/**
+ * Canonical snowfall (hourly `snowfall`, daily `snowfall_sum`) is stored in
+ * centimetres, unlike the millimetre rain/total fields, so convert to mm
+ * before applying the mm-based precipitation unit conversion.
+ */
+private fun Double.snowfallCmUnit(units: BreezyUnitPreferences): BreezyUnitPayload =
+    (this * 10.0).precipitationUnit(units)
 
 private fun Double.speedUnit(units: BreezyUnitPreferences): BreezyUnitPayload =
     when (units.speedUnit) {

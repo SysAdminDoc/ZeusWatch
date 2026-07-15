@@ -113,7 +113,7 @@ object NetworkModule {
                         HttpLoggingInterceptor(ApiKeyRedactingLogger).apply {
                             level = HttpLoggingInterceptor.Level.BASIC
                             redactHeader("Authorization")
-                            redactQueryParams("appid", "apikey", "api_key", "key")
+                            redactQueryParams("appid", "apikey", "api_key", "key", "token")
                         }
                     )
                 }

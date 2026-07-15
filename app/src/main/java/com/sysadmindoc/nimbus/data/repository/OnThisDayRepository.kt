@@ -21,9 +21,12 @@ import javax.inject.Singleton
  * archive endpoint.
  *
  * Historical observations for a given (location, calendar date) do not change
- * once logged, so results are cached permanently in SharedPreferences keyed by
- * `lat,lon,MM-dd`. First access per location+date costs ~10 parallel-able
- * archive requests; subsequent accesses are instant and offline-safe.
+ * once logged, but the 10-year aggregate window advances each year, so results
+ * are cached in SharedPreferences keyed by `lat,lon,yyyy-MM-dd` — the anchor
+ * year keeps a fresh fetch happening once the newest completed year becomes
+ * available, while prior-year keys age out via the entry-count eviction. First
+ * access per location+date costs ~10 parallel-able archive requests;
+ * subsequent accesses are instant and offline-safe.
  */
 @Singleton
 class OnThisDayRepository @Inject constructor(
@@ -161,8 +164,8 @@ class OnThisDayRepository @Inject constructor(
     private fun cacheKey(lat: Double, lon: Double, date: LocalDate): String =
         String.format(
             Locale.US,
-            "%.2f,%.2f,%02d-%02d",
-            lat, lon, date.monthValue, date.dayOfMonth,
+            "%.2f,%.2f,%04d-%02d-%02d",
+            lat, lon, date.year, date.monthValue, date.dayOfMonth,
         )
 
     private fun readCache(key: String): OnThisDayData? {
