@@ -294,31 +294,45 @@ class WeatherLoadCoordinator @Inject constructor(
                 forecastEvolution = null,
             )
         }
-        forecastEvolutionRepository.getForecastEvolution(lat, lon).fold(
-            onSuccess = { evolution ->
-                if (isLatestRequest(requestId)) {
-                    updateState {
-                        it.copy(
-                            forecastEvolution = evolution,
-                            isForecastEvolutionLoading = false,
-                            forecastEvolutionUnavailable = false,
-                        )
+        try {
+            forecastEvolutionRepository.getForecastEvolution(lat, lon).fold(
+                onSuccess = { evolution ->
+                    if (isLatestRequest(requestId)) {
+                        updateState {
+                            it.copy(
+                                forecastEvolution = evolution,
+                                isForecastEvolutionLoading = false,
+                                forecastEvolutionUnavailable = false,
+                            )
+                        }
                     }
-                }
-            },
-            onFailure = { e ->
-                if (isLatestRequest(requestId)) {
-                    Log.w(TAG, "Forecast evolution unavailable", e)
-                    updateState {
-                        it.copy(
-                            forecastEvolution = null,
-                            isForecastEvolutionLoading = false,
-                            forecastEvolutionUnavailable = true,
-                        )
+                },
+                onFailure = { e ->
+                    if (isLatestRequest(requestId)) {
+                        Log.w(TAG, "Forecast evolution unavailable", e)
+                        updateState {
+                            it.copy(
+                                forecastEvolution = null,
+                                isForecastEvolutionLoading = false,
+                                forecastEvolutionUnavailable = true,
+                            )
+                        }
                     }
+                },
+            )
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "fetchForecastEvolution failed", e)
+            if (isLatestRequest(requestId)) {
+                updateState {
+                    it.copy(
+                        forecastEvolution = null,
+                        isForecastEvolutionLoading = false,
+                        forecastEvolutionUnavailable = true,
+                    )
                 }
-            },
-        )
+            }
+        }
     }
 
     suspend fun selectHistoricalDate(
@@ -385,10 +399,17 @@ class WeatherLoadCoordinator @Inject constructor(
 
     private suspend fun syncWeather(data: WeatherData, currentState: () -> MainUiState) {
         try {
+            val state = currentState()
             wearSyncManager.syncWeather(
                 data = data,
-                alerts = currentState().alerts,
-                airQuality = currentState().airQuality,
+                // A failed alert fetch leaves `alerts` empty with the failure
+                // flag set — syncing that empty list would make the watch
+                // clear live alerts as "fetched, none active". null omits the
+                // key so the watch keeps its last known set. (A failed AQI
+                // fetch already leaves `airQuality` null, which the sync
+                // treats the same way.)
+                alerts = if (state.alertsFetchFailed) null else state.alerts,
+                airQuality = state.airQuality,
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -501,58 +522,67 @@ class WeatherLoadCoordinator @Inject constructor(
             )
         }
 
-        val primaryProvider = actualForecastProvider(
-            data = data,
-            settings = settings,
-            sourceOverrides = sourceOverrides,
-        )
-        val candidates = providerAgreementCandidates(primaryProvider)
-        if (candidates.size < 2) {
-            markProviderAgreementUnavailable(requestId, updateState, isLatestRequest)
-            return
-        }
+        // Guarded like the sibling supplemental fetches: an unexpected throw
+        // here would otherwise cancel the whole coroutineScope (alerts, AQI)
+        // and skip wear sync / derived recompute for the entire load.
+        try {
+            val primaryProvider = actualForecastProvider(
+                data = data,
+                settings = settings,
+                sourceOverrides = sourceOverrides,
+            )
+            val candidates = providerAgreementCandidates(primaryProvider)
+            if (candidates.size < 2) {
+                markProviderAgreementUnavailable(requestId, updateState, isLatestRequest)
+                return
+            }
 
-        val snapshots = mutableListOf(ProviderWeatherSnapshot(primaryProvider, data))
-        val additionalSnapshots = coroutineScope {
-            candidates
-                .filterNot { it == primaryProvider }
-                .map { provider ->
-                    async {
-                        provider to weatherSourceManager.getWeatherFromProvider(
-                            provider = provider,
-                            latitude = lat,
-                            longitude = lon,
-                            locationName = data.location.name,
-                            locationTimeZone = data.location.timeZone,
-                        )
+            val snapshots = mutableListOf(ProviderWeatherSnapshot(primaryProvider, data))
+            val additionalSnapshots = coroutineScope {
+                candidates
+                    .filterNot { it == primaryProvider }
+                    .map { provider ->
+                        async {
+                            provider to weatherSourceManager.getWeatherFromProvider(
+                                provider = provider,
+                                latitude = lat,
+                                longitude = lon,
+                                locationName = data.location.name,
+                                locationTimeZone = data.location.timeZone,
+                            )
+                        }
                     }
-                }
-                .awaitAll()
-        }.mapNotNull { (provider, result) ->
-            result.fold(
-                onSuccess = { ProviderWeatherSnapshot(provider, it) },
-                onFailure = {
-                    Log.d(TAG, "Provider agreement ${provider.displayName} unavailable: ${it.message}")
-                    null
-                },
-            )
-        }
-        snapshots += additionalSnapshots
+                    .awaitAll()
+            }.mapNotNull { (provider, result) ->
+                result.fold(
+                    onSuccess = { ProviderWeatherSnapshot(provider, it) },
+                    onFailure = {
+                        Log.d(TAG, "Provider agreement ${provider.displayName} unavailable: ${it.message}")
+                        null
+                    },
+                )
+            }
+            snapshots += additionalSnapshots
 
-        val agreement = withContext(defaultDispatcher) {
-            ProviderAgreementAnalyzer.analyze(
-                forecasts = snapshots,
-                referenceTime = data.current.observationTime,
-            )
-        }
+            val agreement = withContext(defaultDispatcher) {
+                ProviderAgreementAnalyzer.analyze(
+                    forecasts = snapshots,
+                    referenceTime = data.current.observationTime,
+                )
+            }
 
-        if (!isLatestRequest(requestId)) return
-        updateState {
-            it.copy(
-                providerAgreement = agreement,
-                isProviderAgreementLoading = false,
-                providerAgreementUnavailable = agreement == null,
-            )
+            if (!isLatestRequest(requestId)) return
+            updateState {
+                it.copy(
+                    providerAgreement = agreement,
+                    isProviderAgreementLoading = false,
+                    providerAgreementUnavailable = agreement == null,
+                )
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "fetchProviderAgreement failed", e)
+            markProviderAgreementUnavailable(requestId, updateState, isLatestRequest)
         }
     }
 
@@ -608,34 +638,49 @@ class WeatherLoadCoordinator @Inject constructor(
                 pwsObservationNeedsConfig = false,
             )
         }
-        pwsRepository.fetchLatestObservation(settings).fold(
-            onSuccess = { observation ->
-                if (isLatestRequest(requestId)) {
-                    updateState {
-                        it.copy(
-                            pwsObservation = observation,
-                            isPwsObservationLoading = false,
-                            pwsObservationUnavailable = false,
-                            pwsObservationNeedsConfig = false,
-                        )
+        try {
+            pwsRepository.fetchLatestObservation(settings).fold(
+                onSuccess = { observation ->
+                    if (isLatestRequest(requestId)) {
+                        updateState {
+                            it.copy(
+                                pwsObservation = observation,
+                                isPwsObservationLoading = false,
+                                pwsObservationUnavailable = false,
+                                pwsObservationNeedsConfig = false,
+                            )
+                        }
                     }
-                }
-            },
-            onFailure = { failure ->
-                if (failure is CancellationException) throw failure
-                Log.d(TAG, "Tempest PWS observation unavailable: ${failure::class.java.simpleName}")
-                if (isLatestRequest(requestId)) {
-                    updateState {
-                        it.copy(
-                            pwsObservation = null,
-                            isPwsObservationLoading = false,
-                            pwsObservationUnavailable = failure !is TempestPwsConfigurationException,
-                            pwsObservationNeedsConfig = failure is TempestPwsConfigurationException,
-                        )
+                },
+                onFailure = { failure ->
+                    if (failure is CancellationException) throw failure
+                    Log.d(TAG, "Tempest PWS observation unavailable: ${failure::class.java.simpleName}")
+                    if (isLatestRequest(requestId)) {
+                        updateState {
+                            it.copy(
+                                pwsObservation = null,
+                                isPwsObservationLoading = false,
+                                pwsObservationUnavailable = failure !is TempestPwsConfigurationException,
+                                pwsObservationNeedsConfig = failure is TempestPwsConfigurationException,
+                            )
+                        }
                     }
+                },
+            )
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "fetchPwsObservation failed", e)
+            if (isLatestRequest(requestId)) {
+                updateState {
+                    it.copy(
+                        pwsObservation = null,
+                        isPwsObservationLoading = false,
+                        pwsObservationUnavailable = true,
+                        pwsObservationNeedsConfig = false,
+                    )
                 }
-            },
-        )
+            }
+        }
     }
 
     private suspend fun fetchAlerts(

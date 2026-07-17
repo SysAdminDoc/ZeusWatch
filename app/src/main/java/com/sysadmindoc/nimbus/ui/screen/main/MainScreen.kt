@@ -264,21 +264,30 @@ fun MainScreen(
     LaunchedEffect(weatherThemeState) {
         com.sysadmindoc.nimbus.ui.theme.WeatherThemeBus.state.value = weatherThemeState
     }
-    val contentActions = MainContentActions(
-        onRefresh = { viewModel.refresh() },
-        onNavigateToSettings = onNavigateToSettings,
-        onNavigateToRadar = onNavigateToRadar,
-        onNavigateToLocations = onNavigateToLocations,
-        onNavigateToCompare = onNavigateToCompare,
-        onLocationSelected = { index -> viewModel.onPageChanged(index) },
-        onHistoricalDateSelected = { date -> viewModel.selectHistoricalDate(date) },
-    )
-    val screenActions = MainScreenActions(
-        content = contentActions,
-        onLoadWeather = { viewModel.loadWeather() },
-        onUseLastLocation = { viewModel.useLastLocation() },
-        onRequestLocationPermissions = requestLocationPermissions,
-    )
+    // Remembered so the holders keep a stable identity across recompositions —
+    // fresh instances every pass would flow into @Immutable CardRenderContext
+    // and defeat card skip optimizations. The lambdas only capture stable
+    // references (viewModel, nav callbacks) and read state at invocation time,
+    // so nothing here can go stale.
+    val contentActions = remember(viewModel, onNavigateToSettings, onNavigateToRadar, onNavigateToLocations, onNavigateToCompare) {
+        MainContentActions(
+            onRefresh = { viewModel.refresh() },
+            onNavigateToSettings = onNavigateToSettings,
+            onNavigateToRadar = onNavigateToRadar,
+            onNavigateToLocations = onNavigateToLocations,
+            onNavigateToCompare = onNavigateToCompare,
+            onLocationSelected = { index -> viewModel.onPageChanged(index) },
+            onHistoricalDateSelected = { date -> viewModel.selectHistoricalDate(date) },
+        )
+    }
+    val screenActions = remember(contentActions, viewModel, requestLocationPermissions) {
+        MainScreenActions(
+            content = contentActions,
+            onLoadWeather = { viewModel.loadWeather() },
+            onUseLastLocation = { viewModel.useLastLocation() },
+            onRequestLocationPermissions = requestLocationPermissions,
+        )
+    }
     CompositionLocalProvider(
         LocalUnitSettings provides state.settings,
         com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState provides weatherThemeState,

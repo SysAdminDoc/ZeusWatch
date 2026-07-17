@@ -110,6 +110,11 @@ class MainViewModel @Inject constructor(
     private var useGpsLocation: Boolean = true
     private val weatherRequestCounter = AtomicLong(0L)
 
+    // Time-travel scrubs share the ambient weather request id (they must not
+    // invalidate an in-flight weather load), so rapid date picks need their
+    // own token — otherwise whichever archive fetch resolves last wins.
+    private val scrubRequestCounter = AtomicLong(0L)
+
     init {
         Log.d(TAG, "init: overrideLocationId=$overrideLocationId")
         observeSettings()
@@ -579,9 +584,13 @@ class MainViewModel @Inject constructor(
     }
 
     fun selectHistoricalDate(date: java.time.LocalDate) {
-        // Capture the id synchronously so a location swap that starts while the
-        // archive fetch is in flight invalidates this scrub's response.
+        // Capture both ids synchronously: the weather id invalidates this
+        // scrub when a location swap starts while the archive fetch is in
+        // flight, and the scrub id invalidates it when a newer date pick
+        // supersedes it — otherwise two rapid picks race and whichever
+        // resolves last wins.
         val requestId = weatherRequestCounter.get()
+        val scrubId = scrubRequestCounter.incrementAndGet()
         viewModelScope.launch {
             val weather = _uiState.value.weatherData ?: return@launch
             weatherLoadCoordinator.selectHistoricalDate(
@@ -589,7 +598,9 @@ class MainViewModel @Inject constructor(
                 weather = weather,
                 requestId = requestId,
                 updateState = ::updateUiState,
-                isLatestRequest = ::isLatestWeatherRequest,
+                isLatestRequest = { id ->
+                    isLatestWeatherRequest(id) && scrubId == scrubRequestCounter.get()
+                },
             )
         }
     }

@@ -492,6 +492,7 @@ private fun TodayContent(
         onNavigateToCompare = actions.content.onNavigateToCompare,
         onLocationSelected = actions.content.onLocationSelected,
         onUseLastLocation = actions.onUseLastLocation,
+        onHistoricalDateSelected = actions.content.onHistoricalDateSelected,
     )
 }
 
@@ -506,6 +507,7 @@ internal fun TodayContent(
     onNavigateToCompare: () -> Unit = {},
     onLocationSelected: (Int) -> Unit = {},
     onUseLastLocation: () -> Unit = {},
+    onHistoricalDateSelected: ((java.time.LocalDate) -> Unit)? = null,
 ) {
     val chooseLocationLabel = stringResource(R.string.common_choose_location)
     val retryGpsLabel = stringResource(R.string.common_retry_gps)
@@ -520,6 +522,9 @@ internal fun TodayContent(
         onNavigateToLocations = onNavigateToLocations,
         onNavigateToCompare = onNavigateToCompare,
         onLocationSelected = onLocationSelected,
+        // Without this the On This Day card never receives the time-travel
+        // scrub callback — every Today-tab path builds its actions here.
+        onHistoricalDateSelected = onHistoricalDateSelected,
     )
 
     when {
@@ -605,12 +610,18 @@ private fun WeatherContent(
     val todayPrecipChance = data.daily.firstOrNull()?.precipitationProbability ?: 0
     var updatedAgo by remember { mutableStateOf("") }
     var updatedAgeMinutes by remember { mutableStateOf(0L) }
+    // Ticking clock shared with the card staleness badges — evaluating
+    // LocalDateTime.now() only at recomposition would freeze "Stale" badges
+    // while the screen sits composed.
+    var nowTick by remember { mutableStateOf(LocalDateTime.now()) }
     LaunchedEffect(data.lastUpdated, justNowLabel, minuteAgoFormat, hourAgoFormat, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) {
+                val now = LocalDateTime.now()
+                nowTick = now
                 val updatedAge = formatUpdatedAge(
                     lastUpdated = data.lastUpdated,
-                    now = LocalDateTime.now(),
+                    now = now,
                     justNowLabel = justNowLabel,
                     minuteAgoFormat = minuteAgoFormat,
                     hourAgoFormat = hourAgoFormat,
@@ -685,6 +696,7 @@ private fun WeatherContent(
                     airQuality = airQuality,
                     astronomy = astronomy,
                     settings = settings,
+                    now = nowTick,
                     radarPreviewTileUrl = state.radarPreviewTileUrl,
                     radarBaseMapUrl = state.radarBaseMapUrl,
                     onNavigateToRadar = actions.onNavigateToRadar,
@@ -1000,10 +1012,11 @@ internal fun subFetchStatus(
 
 @Composable
 private fun subFetchStatusBadge(
+    now: LocalDateTime,
     updatedAt: LocalDateTime?,
     fetchFailed: Boolean,
 ): CardStatusBadge? {
-    return when (val status = subFetchStatus(LocalDateTime.now(), updatedAt, fetchFailed)) {
+    return when (val status = subFetchStatus(now, updatedAt, fetchFailed)) {
         null -> null
         else -> when (status.kind) {
             SubFetchStatusKind.FAILED -> CardStatusBadge(
@@ -1085,6 +1098,8 @@ private data class CardRenderContext(
     val airQuality: AirQualityData?,
     val astronomy: AstronomyData?,
     val settings: NimbusSettings,
+    /** Ticking wall clock (60s cadence) so staleness badges re-age while composed. */
+    val now: LocalDateTime,
     val radarPreviewTileUrl: String?,
     val radarBaseMapUrl: String?,
     val onNavigateToRadar: (Double, Double) -> Unit,
@@ -1155,6 +1170,7 @@ private fun RenderForecastCard(
         }
         CardType.RADAR_PREVIEW -> {
             val radarBadge = subFetchStatusBadge(
+                now = context.now,
                 updatedAt = context.state.radarPreviewUpdatedAt,
                 fetchFailed = context.state.radarPreviewFetchFailed,
             )
@@ -1297,6 +1313,7 @@ private fun RenderAtmosphereCard(
     val data = context.data
     val referenceTime = data.current.observationTime
     val airQualityBadge = subFetchStatusBadge(
+        now = context.now,
         updatedAt = context.state.airQualityUpdatedAt,
         fetchFailed = context.state.airQualityFetchFailed,
     )

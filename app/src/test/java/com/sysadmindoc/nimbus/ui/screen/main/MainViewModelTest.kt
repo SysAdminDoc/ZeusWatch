@@ -744,6 +744,37 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `superseded scrub resolution is discarded when a newer date pick lands first`() = runTest {
+        stubLocationSuccess()
+        val firstStarted = CompletableDeferred<Unit>()
+        val releaseFirst = CompletableDeferred<Unit>()
+        val firstDay = sampleTimeTravelDay.copy(date = LocalDate.of(1990, 6, 1), highC = 10.0)
+        val secondDay = sampleTimeTravelDay.copy(date = LocalDate.of(2020, 6, 1))
+        coEvery { timeTravelRepository.getDay(any(), any(), LocalDate.of(1990, 6, 1), any(), any()) } coAnswers {
+            firstStarted.complete(Unit)
+            releaseFirst.await()
+            firstDay
+        }
+        coEvery { timeTravelRepository.getDay(any(), any(), LocalDate.of(2020, 6, 1), any(), any()) } returns secondDay
+        viewModel = createAndAdvance()
+
+        viewModel.selectHistoricalDate(LocalDate.of(1990, 6, 1))
+        firstStarted.await()
+        viewModel.selectHistoricalDate(LocalDate.of(2020, 6, 1))
+        advanceUntilIdle()
+        assertEquals(secondDay, viewModel.uiState.value.timeTravelDay)
+
+        // The superseded 1990 fetch resolves last — it must neither replace
+        // the newer pick's day nor strand the status away from IDLE.
+        releaseFirst.complete(Unit)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(secondDay, state.timeTravelDay)
+        assertEquals(TimeTravelStatus.IDLE, state.timeTravelStatus)
+    }
+
+    @Test
     fun `stale scrub response after location swap does not repopulate state`() = runTest {
         every { locationProvider.hasLocationPermission } returns false
         savedLocationsFlow.value = listOf(seattle, chicago)
@@ -771,5 +802,63 @@ class MainViewModelTest {
         // The stale Seattle archive response must not land under Chicago.
         assertNull(state.timeTravelDay)
         assertEquals(TimeTravelStatus.IDLE, state.timeTravelStatus)
+    }
+
+    // --- Wear sync alert semantics ---
+
+    @Test
+    fun `failed alert fetch syncs null alerts so the watch keeps its stored set`() = runTest {
+        stubLocationSuccess()
+        coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any(), any()) } returns
+            Result.failure(Exception("alerts endpoint down"))
+        val syncedAlerts = mutableListOf<List<WeatherAlert>?>()
+        coEvery { wearSyncManager.syncWeather(any(), captureNullable(syncedAlerts), any()) } returns Unit
+
+        viewModel = createAndAdvance()
+
+        assertTrue(viewModel.uiState.value.alertsFetchFailed)
+        assertTrue(syncedAlerts.isNotEmpty())
+        // null omits the alerts key so the watch preserves a live warning
+        // instead of interpreting a transient failure as "none active".
+        assertNull(syncedAlerts.last())
+    }
+
+    @Test
+    fun `successful empty alert fetch syncs an empty list so the watch clears alerts`() = runTest {
+        stubLocationSuccess()
+        val syncedAlerts = mutableListOf<List<WeatherAlert>?>()
+        coEvery { wearSyncManager.syncWeather(any(), captureNullable(syncedAlerts), any()) } returns Unit
+
+        viewModel = createAndAdvance()
+
+        assertFalse(viewModel.uiState.value.alertsFetchFailed)
+        assertTrue(syncedAlerts.isNotEmpty())
+        assertEquals(emptyList<WeatherAlert>(), syncedAlerts.last())
+    }
+
+    // --- Supplemental fetch isolation ---
+
+    @Test
+    fun `provider agreement throw does not cancel sibling alert and aqi fetches`() = runTest {
+        stubLocationSuccess()
+        every { prefs.settings } returns flowOf(
+            NimbusSettings(disabledCards = DEFAULT_DISABLED_CARDS - CardType.PROVIDER_AGREEMENT.name),
+        )
+        coEvery {
+            weatherSourceManager.getWeatherFromProvider(any(), any(), any(), any(), any())
+        } throws RuntimeException("provider comparison blew up")
+
+        viewModel = createAndAdvance()
+
+        coVerify(atLeast = 1) { weatherSourceManager.getWeatherFromProvider(any(), any(), any(), any(), any()) }
+        val state = viewModel.uiState.value
+        // Siblings in the supplemental coroutineScope must have completed.
+        assertNotNull(state.airQuality)
+        assertNotNull(state.astronomy)
+        assertFalse(state.alertsFetchFailed)
+        // The failed comparison degrades to "unavailable" instead of throwing.
+        assertFalse(state.isProviderAgreementLoading)
+        assertTrue(state.providerAgreementUnavailable)
+        assertNull(state.providerAgreement)
     }
 }
