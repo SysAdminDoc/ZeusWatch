@@ -54,12 +54,22 @@ class CustomAlertWorker @AssistedInject constructor(
         val weather = weatherResult.getOrNull()
             ?: return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
 
-        val airQuality = if (rules.any { it.enabled && it.metric == CustomAlertMetric.AQI_NOW }) {
-            airQualityRepository.getAirQuality(loc.latitude, loc.longitude).getOrNull()
+        // AQI is only fetched when an enabled rule needs it. A fetch FAILURE is
+        // not the same as "no AQI rules": swallowing it silently no-oped users
+        // whose only enabled rules are AQI thresholds, asymmetric with the
+        // weather-failure retry above. Weather rules still evaluate this run;
+        // the per-(rule,threshold,date) dedupe store makes the retry safe.
+        val airQualityResult = if (rules.any { it.enabled && it.metric == CustomAlertMetric.AQI_NOW }) {
+            airQualityRepository.getAirQuality(loc.latitude, loc.longitude)
         } else null
+        val aqiFetchFailed = airQualityResult?.isFailure == true
+        if (aqiFetchFailed) {
+            Log.w(TAG, "AQI fetch failed", airQualityResult?.exceptionOrNull())
+        }
+        val airQuality = airQualityResult?.getOrNull()
 
         val triggered = evaluateCustomAlertRules(rules, weather, airQuality)
-        if (triggered.isEmpty()) return Result.success()
+        if (triggered.isEmpty()) return completionResult(aqiFetchFailed)
 
         val store = CustomAlertDedupeStore(applicationContext)
         val today = weatherReferenceDate(weather).toString()
@@ -81,8 +91,12 @@ class CustomAlertWorker @AssistedInject constructor(
                 store.remove(dedupeKey)
             }
         }
-        return Result.success()
+        return completionResult(aqiFetchFailed)
     }
+
+    /** Bounded retry when required AQI data couldn't be fetched; success otherwise. */
+    private fun completionResult(aqiFetchFailed: Boolean): Result =
+        if (aqiFetchFailed && runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
 
     companion object {
         private const val WORK_NAME = "nimbus_custom_alert"

@@ -107,44 +107,9 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val settings by viewModel.settings.collectAsStateWithLifecycle(initialValue = NimbusSettings())
-    // Track permission reactively — if the user grants POST_NOTIFICATIONS from
-    // system Settings and returns to the app, the banner should disappear
-    // without requiring some other recomposition to fire first.
-    var notificationsPermissionGranted by remember {
-        mutableStateOf(hasNotificationPermission(context))
-    }
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, context) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                notificationsPermissionGranted = hasNotificationPermission(context)
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-    var pendingNotificationEnableAction by remember { mutableStateOf<(() -> Unit)?>(null) }
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        val pendingAction = pendingNotificationEnableAction
-        pendingNotificationEnableAction = null
-        notificationsPermissionGranted = granted
-        if (granted) {
-            pendingAction?.invoke()
-        }
-    }
-
-    val enableNotificationsIfPermitted: (() -> Unit) -> Unit = { onGranted ->
-        if (hasNotificationPermission(context)) {
-            onGranted()
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            pendingNotificationEnableAction = onGranted
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            onGranted()
-        }
-    }
+    val notificationPermission = rememberNotificationPermissionState(context)
+    val notificationsPermissionGranted = notificationPermission.granted
+    val enableNotificationsIfPermitted = notificationPermission.enableIfPermitted
 
     val availableIconPacks by viewModel.availableIconPacks.collectAsStateWithLifecycle()
     val providerHealth by viewModel.providerHealth.collectAsStateWithLifecycle(initialValue = ProviderHealthSnapshot())
@@ -229,7 +194,16 @@ fun SettingsScreen(
             },
             onDailyBriefingMinutes = viewModel::setDailyBriefingMinutes,
             onDrivingAlerts = viewModel::setDrivingAlerts,
-            onHealthAlertsEnabled = viewModel::setHealthAlertsEnabled,
+            onHealthAlertsEnabled = { enabled ->
+                // Same permission gate as alert/nowcast/briefing toggles —
+                // enabling health alerts without POST_NOTIFICATIONS scheduled a
+                // worker whose notifications could never be shown.
+                if (enabled) {
+                    enableNotificationsIfPermitted { viewModel.setHealthAlertsEnabled(true) }
+                } else {
+                    viewModel.setHealthAlertsEnabled(false)
+                }
+            },
             onShowSnowfall = viewModel::setShowSnowfall,
             onShowCape = viewModel::setShowCape,
             onShowSunshineDuration = viewModel::setShowSunshineDuration,
@@ -265,5 +239,59 @@ fun SettingsScreen(
             onCancelSettingsImport = viewModel::cancelPendingImport,
             onClearTransferStatus = viewModel::clearTransferStatus,
         ),
+    )
+}
+
+internal class NotificationPermissionState(
+    val granted: Boolean,
+    /**
+     * Runs the action immediately when POST_NOTIFICATIONS is already granted
+     * (or not required pre-T); otherwise requests the permission and runs the
+     * action only on grant.
+     */
+    val enableIfPermitted: (() -> Unit) -> Unit,
+)
+
+/**
+ * Tracks POST_NOTIFICATIONS reactively — if the user grants it from system
+ * Settings and returns to the app, the banner disappears on ON_RESUME without
+ * waiting for another recomposition trigger.
+ */
+@Composable
+internal fun rememberNotificationPermissionState(context: Context): NotificationPermissionState {
+    var granted by remember { mutableStateOf(hasNotificationPermission(context)) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, context) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                granted = hasNotificationPermission(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    var pendingEnableAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { wasGranted ->
+        val pendingAction = pendingEnableAction
+        pendingEnableAction = null
+        granted = wasGranted
+        if (wasGranted) {
+            pendingAction?.invoke()
+        }
+    }
+    return NotificationPermissionState(
+        granted = granted,
+        enableIfPermitted = { onGranted ->
+            if (hasNotificationPermission(context)) {
+                onGranted()
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pendingEnableAction = onGranted
+                launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                onGranted()
+            }
+        },
     )
 }

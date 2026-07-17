@@ -13,23 +13,17 @@ import coil3.memory.MemoryCache
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import com.sysadmindoc.nimbus.security.CommunityReportSecurityInitializer
-import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
+import com.sysadmindoc.nimbus.util.BackgroundWorkSync
 import com.sysadmindoc.nimbus.util.CrashReporting
-import com.sysadmindoc.nimbus.util.CustomAlertWorker
-import com.sysadmindoc.nimbus.util.DailyBriefingWorker
 import com.sysadmindoc.nimbus.util.DatabaseMaintenanceWorker
-import com.sysadmindoc.nimbus.util.HealthAlertWorker
-import com.sysadmindoc.nimbus.util.NowcastAlertWorker
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
-import com.sysadmindoc.nimbus.widget.WidgetRefreshWorker
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -88,47 +82,9 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
             communityReportSecurityInitializer.install(this@NimbusApplication)
             DatabaseMaintenanceWorker.schedule(this@NimbusApplication)
             prefs.migrateEncryptedApiKeys()
-            val settings = prefs.settings.first()
-            if (settings.alertNotificationsEnabled) {
-                AlertCheckWorker.schedule(this@NimbusApplication)
-            } else {
-                AlertCheckWorker.cancel(this@NimbusApplication)
-                AlertNotificationHelper.dismissAll(this@NimbusApplication)
-            }
-
-            if (settings.nowcastingAlerts) {
-                NowcastAlertWorker.schedule(this@NimbusApplication)
-            } else {
-                NowcastAlertWorker.cancel(this@NimbusApplication)
-            }
-
-            if (settings.healthAlertsEnabled) {
-                HealthAlertWorker.schedule(this@NimbusApplication)
-            } else {
-                HealthAlertWorker.cancel(this@NimbusApplication)
-            }
-
-            // Custom-rule worker only runs if the user has actually authored
-            // enabled rules. Avoids burning battery on a no-op hourly check.
-            val hasEnabledCustomRules = prefs.customAlertRules.first().any { it.enabled }
-            if (hasEnabledCustomRules) {
-                CustomAlertWorker.schedule(this@NimbusApplication)
-            } else {
-                CustomAlertWorker.cancel(this@NimbusApplication)
-            }
-
-            if (!settings.persistentWeatherNotif) {
-                WeatherNotificationHelper.dismiss(this@NimbusApplication)
-            }
-
-            if (settings.dailyBriefingEnabled) {
-                DailyBriefingWorker.schedule(this@NimbusApplication, settings.dailyBriefingMinutes)
-            } else {
-                DailyBriefingWorker.cancel(this@NimbusApplication)
-                WeatherNotificationHelper.dismissDailyBriefing(this@NimbusApplication)
-            }
-
-            WidgetRefreshWorker.sync(this@NimbusApplication, settings.persistentWeatherNotif)
+            // Shared with the settings-import path so cold start and import
+            // schedule/cancel workers identically.
+            BackgroundWorkSync.syncAll(this@NimbusApplication, prefs)
         }
     }
 

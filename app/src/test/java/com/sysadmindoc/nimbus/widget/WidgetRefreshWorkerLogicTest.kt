@@ -317,7 +317,8 @@ class WidgetRefreshWorkerLogicTest {
 
             assertEquals("11 AM", items[0].hour)
             assertEquals("Live", items[1].hour)
-            assertEquals(69, items[1].temp)
+            // 20.9 °C = 69.62 °F — rounds to nearest (70), not truncated to 69.
+            assertEquals(70, items[1].temp)
             assertEquals(WeatherCode.RAIN_MODERATE.code, items[1].code)
             assertFalse(items[1].isDay)
             assertEquals(80, items[1].precipChance)
@@ -441,6 +442,90 @@ class WidgetRefreshWorkerLogicTest {
         assertEquals(7, items.size)
         assertEquals("Today", items.first().day)
         assertEquals(26, items.last().high)
+    }
+
+    @Test
+    fun `widget temperature projections round to nearest instead of truncating`() {
+        val location = savedLocation(id = 50L, name = "Reykjavik", sortOrder = 0)
+        val baseWeather = weatherDataFor(location)
+        val weather = baseWeather.copy(
+            current = baseWeather.current.copy(
+                temperature = -0.6,
+                dailyHigh = 20.9,
+                dailyLow = -1.5,
+            ),
+        )
+
+        val city = buildWidgetSavedCity(location, weather) { it }
+
+        // toInt() truncated toward zero: -0.6 -> "0", 20.9 -> "20".
+        assertEquals(-1, city.temperature)
+        assertEquals(21, city.high)
+        assertEquals(-1, city.low)
+    }
+
+    @Test
+    fun `daily widget rows round temperatures to nearest`() {
+        val today = LocalDate.of(2026, 4, 15)
+        val items = buildWidgetDailyItems(
+            daily = listOf(
+                DailyConditions(
+                    date = today,
+                    weatherCode = WeatherCode.CLEAR_SKY,
+                    temperatureHigh = 20.9,
+                    temperatureLow = -0.6,
+                    precipitationProbability = 10,
+                    precipitationSum = null,
+                    sunrise = null,
+                    sunset = null,
+                    uvIndexMax = null,
+                    windSpeedMax = null,
+                    windDirectionDominant = null,
+                ),
+            ),
+            today = today,
+        ) { it }
+
+        assertEquals(21, items.single().high)
+        assertEquals(-1, items.single().low)
+    }
+
+    @Test
+    fun `refresh worker keeps running for gadgetbridge-only setups`() {
+        // The regression: gadgetbridge on, no widgets, persistent notif off
+        // used to cancel the periodic worker on every cold start.
+        assertTrue(
+            shouldRunWidgetRefreshWorker(
+                persistentWeatherNotif = false,
+                gadgetbridgeBroadcastEnabled = true,
+                hasAnyWidgets = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `refresh worker runs for notification or widgets and stops when nothing needs it`() {
+        assertTrue(
+            shouldRunWidgetRefreshWorker(
+                persistentWeatherNotif = true,
+                gadgetbridgeBroadcastEnabled = false,
+                hasAnyWidgets = false,
+            ),
+        )
+        assertTrue(
+            shouldRunWidgetRefreshWorker(
+                persistentWeatherNotif = false,
+                gadgetbridgeBroadcastEnabled = false,
+                hasAnyWidgets = true,
+            ),
+        )
+        assertFalse(
+            shouldRunWidgetRefreshWorker(
+                persistentWeatherNotif = false,
+                gadgetbridgeBroadcastEnabled = false,
+                hasAnyWidgets = false,
+            ),
+        )
     }
 
     private fun savedLocation(

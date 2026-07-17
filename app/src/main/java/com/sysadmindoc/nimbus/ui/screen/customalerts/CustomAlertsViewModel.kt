@@ -8,6 +8,7 @@ import com.sysadmindoc.nimbus.data.model.CustomAlertOperator
 import com.sysadmindoc.nimbus.data.model.CustomAlertRule
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
+import com.sysadmindoc.nimbus.util.AlertNotificationHelper
 import com.sysadmindoc.nimbus.util.CustomAlertWorker
 import com.sysadmindoc.nimbus.util.convertToCanonical
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -101,6 +102,9 @@ class CustomAlertsViewModel @Inject constructor(
         val updated = prefs.updateCustomAlertRules { current ->
             current.map { if (it.id == rule.id) it.copy(enabled = !it.enabled) else it }
         }
+        if (updated.firstOrNull { it.id == rule.id }?.enabled == false) {
+            AlertNotificationHelper.dismissCustomRule(appContext, rule.id)
+        }
         reschedule(updated)
     }
 
@@ -108,6 +112,7 @@ class CustomAlertsViewModel @Inject constructor(
         val updated = prefs.updateCustomAlertRules { current ->
             current.filter { it.id != rule.id }
         }
+        AlertNotificationHelper.dismissCustomRule(appContext, rule.id)
         reschedule(updated)
     }
 
