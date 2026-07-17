@@ -102,7 +102,16 @@ class NowcastAlertWorker @AssistedInject constructor(
         }
 
         val (title, body) = formatNowcastNotification(applicationContext, transition, loc.name)
-        val delivered = AlertNotificationHelper.showNowcastNotification(applicationContext, title, body, series)
+        // Countdown refreshes of the SAME transition must update silently —
+        // they re-post the same notification id every ~5 minutes and replaying
+        // sound/vibration each time turns one rain event into a spam storm.
+        val delivered = AlertNotificationHelper.showNowcastNotification(
+            applicationContext,
+            title,
+            body,
+            series,
+            silentUpdate = isCountdownUpdate,
+        )
         if (delivered) {
             val nowEpoch = System.currentTimeMillis() / 1000
             store.record(signature, if (isCountdownUpdate) store.lastNotifiedAtEpoch() else nowEpoch)

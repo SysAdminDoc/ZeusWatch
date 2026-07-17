@@ -29,9 +29,9 @@ import com.sysadmindoc.nimbus.data.repository.SourceOverrides
 import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
-import com.sysadmindoc.nimbus.data.repository.readPersistentWeatherNotificationEnabled
 import com.sysadmindoc.nimbus.data.repository.sourceOverrides
 import com.sysadmindoc.nimbus.sync.WearSyncManager
+import com.sysadmindoc.nimbus.util.BackgroundWorkSync
 import com.sysadmindoc.nimbus.util.GadgetbridgeWeatherBroadcaster
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -42,6 +42,7 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.math.roundToInt
 
 private const val TAG = "WidgetRefreshWorker"
 
@@ -97,7 +98,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
             cacheRemainingSavedLocations(savedLocations, state)
             saveSavedCitySummaries(savedLocations, convertTemp, state)
             broadcastToGadgetbridge(settings, state)
-            updateWidgetsIfNeeded(state.refreshedAnyLocation, lastLoc)
+            renderAllWidgets()
 
             state.toWorkResult()
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
@@ -334,12 +335,13 @@ class WidgetRefreshWorker @AssistedInject constructor(
         )
     }
 
-    private suspend fun updateWidgetsIfNeeded(
-        refreshedAnyLocation: Boolean,
-        lastLoc: SavedLocation?,
-    ) {
-        if (!refreshedAnyLocation && lastLoc != null) return
-
+    /**
+     * Always re-render, even when every fetch failed: the freshness badges are
+     * computed at render time, so skipping the render on a failed run froze
+     * the "Updated Xm ago" labels at the last-rendered age instead of letting
+     * them age honestly through an outage.
+     */
+    private suspend fun renderAllWidgets() {
         NimbusSmallWidget().updateAll(applicationContext)
         NimbusMediumWidget().updateAll(applicationContext)
         NimbusLargeWidget().updateAll(applicationContext)
@@ -378,6 +380,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
             for (loc in savedLocations) {
                 val key = locationKey(loc.latitude, loc.longitude)
                 if (!state.refreshedLocationKeys.add(key)) continue
+                state.attemptedNetworkRefresh = true
                 try {
                     weatherRepository.getWeather(loc).getOrNull()?.let { weather ->
                         state.weatherByLocationKey[key] = weather
@@ -410,8 +413,11 @@ class WidgetRefreshWorker @AssistedInject constructor(
         if (cities.isEmpty()) {
             WidgetDataProvider.clearSavedCities(applicationContext)
         } else {
+            // Deliberately does NOT mark refreshedAnyLocation: the summaries are
+            // written from whatever we have (live or stale cache), so a run where
+            // every network fetch failed must still surface as retry-worthy in
+            // toWorkResult() instead of reporting success on all-stale data.
             WidgetDataProvider.saveSavedCities(applicationContext, cities)
-            state.refreshedAnyLocation = true
         }
     }
 
@@ -449,11 +455,25 @@ class WidgetRefreshWorker @AssistedInject constructor(
         internal const val KEY_FORCE_REFRESH = "force"
 
         suspend fun syncFromPreferences(context: Context) {
-            sync(context, context.readPersistentWeatherNotificationEnabled())
+            val settings = BackgroundWorkSync.preferencesFrom(context).settings.first()
+            sync(
+                context,
+                persistentWeatherNotif = settings.persistentWeatherNotif,
+                gadgetbridgeBroadcastEnabled = settings.gadgetbridgeBroadcastEnabled,
+            )
         }
 
-        fun sync(context: Context, persistentWeatherNotif: Boolean) {
-            if (persistentWeatherNotif || hasAnyWidgets(context)) {
+        fun sync(
+            context: Context,
+            persistentWeatherNotif: Boolean,
+            gadgetbridgeBroadcastEnabled: Boolean,
+        ) {
+            val shouldRun = shouldRunWidgetRefreshWorker(
+                persistentWeatherNotif = persistentWeatherNotif,
+                gadgetbridgeBroadcastEnabled = gadgetbridgeBroadcastEnabled,
+                hasAnyWidgets = hasAnyWidgets(context),
+            )
+            if (shouldRun) {
                 schedule(context)
             } else {
                 cancel(context)
@@ -598,6 +618,19 @@ internal fun widgetLocationKey(latitude: Double, longitude: Double): String {
     return "${latitude.formatWidgetLocationKey()}:${longitude.formatWidgetLocationKey()}"
 }
 
+/**
+ * The periodic refresh worker must keep running for ANY background consumer:
+ * the persistent notification, at least one pinned widget, or the
+ * Gadgetbridge weather broadcast. The broadcast was previously ignored here,
+ * so a Gadgetbridge-only setup (no widgets, notification off) had its worker
+ * cancelled on every cold start / widget removal / notification toggle-off.
+ */
+internal fun shouldRunWidgetRefreshWorker(
+    persistentWeatherNotif: Boolean,
+    gadgetbridgeBroadcastEnabled: Boolean,
+    hasAnyWidgets: Boolean,
+): Boolean = persistentWeatherNotif || gadgetbridgeBroadcastEnabled || hasAnyWidgets
+
 internal fun savedCityLocationsForWidget(
     savedLocations: List<SavedLocationEntity>,
     limit: Int = 5,
@@ -621,9 +654,9 @@ internal fun buildWidgetSavedCity(
     return WidgetSavedCity(
         locationId = location.id,
         locationName = location.name,
-        temperature = weatherData?.current?.temperature?.let(convertTemp)?.toInt(),
-        high = weatherData?.current?.dailyHigh?.let(convertTemp)?.toInt(),
-        low = weatherData?.current?.dailyLow?.let(convertTemp)?.toInt(),
+        temperature = weatherData?.current?.temperature?.let(convertTemp)?.roundToInt(),
+        high = weatherData?.current?.dailyHigh?.let(convertTemp)?.roundToInt(),
+        low = weatherData?.current?.dailyLow?.let(convertTemp)?.roundToInt(),
         weatherCode = weatherData?.current?.weatherCode?.code,
         isDay = weatherData?.current?.isDay ?: true,
         updatedAt = weatherData?.lastUpdated
@@ -703,7 +736,9 @@ internal fun buildWidgetHourlyItems(
             } else {
                 WeatherFormatter.formatHourLabel(hour.time)
             },
-            temp = convertTemp(hour.temperature).toInt(),
+            // roundToInt (not toInt): truncation-toward-zero rendered 20.9° as
+            // "20" and −0.6° as "0" while the app rounds to nearest.
+            temp = convertTemp(hour.temperature).roundToInt(),
             code = hour.weatherCode.code,
             isDay = hour.isDay,
             precipChance = hour.precipitationProbability,
@@ -727,8 +762,8 @@ internal fun buildWidgetDailyItems(
         }
         WidgetDaily(
             day = label,
-            high = convertTemp(day.temperatureHigh).toInt(),
-            low = convertTemp(day.temperatureLow).toInt(),
+            high = convertTemp(day.temperatureHigh).roundToInt(),
+            low = convertTemp(day.temperatureLow).roundToInt(),
             code = day.weatherCode.code,
             precipChance = day.precipitationProbability,
             conditionText = day.sourceConditionText,

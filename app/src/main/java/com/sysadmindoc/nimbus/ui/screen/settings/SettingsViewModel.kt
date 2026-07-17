@@ -12,6 +12,7 @@ import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.repository.*
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
+import com.sysadmindoc.nimbus.util.BackgroundWorkSync
 import com.sysadmindoc.nimbus.util.DailyBriefingWorker
 import com.sysadmindoc.nimbus.util.HealthAlertWorker
 import com.sysadmindoc.nimbus.util.NowcastAlertWorker
@@ -101,7 +102,9 @@ class SettingsViewModel @Inject constructor(
             AlertCheckWorker.schedule(appContext)
         } else {
             AlertCheckWorker.cancel(appContext)
-            AlertNotificationHelper.dismissAll(appContext)
+            // Severe-scope only: nowcast/health/custom notifications live in the
+            // ambient group and are governed by their own toggles.
+            AlertNotificationHelper.dismissSevere(appContext)
         }
     }
     fun setAlertMinSeverity(severity: AlertMinSeverity) = viewModelScope.launch { prefs.setAlertMinSeverity(severity) }
@@ -125,13 +128,18 @@ class SettingsViewModel @Inject constructor(
     // Notifications
     fun setPersistentWeatherNotif(enabled: Boolean) = viewModelScope.launch {
         prefs.setPersistentWeatherNotif(enabled)
-        WidgetRefreshWorker.sync(appContext, enabled)
+        syncWidgetRefreshWorker()
         if (!enabled) {
             WeatherNotificationHelper.dismiss(appContext)
         }
     }
     fun setStatusBarTemperature(enabled: Boolean) = viewModelScope.launch {
         prefs.setStatusBarTemperature(enabled)
+        // Re-render the persistent notification now — otherwise the status-bar
+        // temperature change waits up to 15 min for the next periodic refresh.
+        if (prefs.settings.first().persistentWeatherNotif) {
+            WidgetRefreshWorker.enqueueImmediate(appContext)
+        }
     }
     fun setNowcastingAlerts(enabled: Boolean) = viewModelScope.launch {
         prefs.setNowcastingAlerts(enabled)
@@ -139,6 +147,7 @@ class SettingsViewModel @Inject constructor(
             NowcastAlertWorker.schedule(appContext)
         } else {
             NowcastAlertWorker.cancel(appContext)
+            AlertNotificationHelper.dismissNowcast(appContext)
         }
     }
     fun setDailyBriefingEnabled(enabled: Boolean) = viewModelScope.launch {
@@ -165,6 +174,7 @@ class SettingsViewModel @Inject constructor(
             HealthAlertWorker.schedule(appContext)
         } else {
             HealthAlertWorker.cancel(appContext)
+            AlertNotificationHelper.dismissHealth(appContext)
         }
     }
     fun setMigraineAlerts(enabled: Boolean) = viewModelScope.launch { prefs.setMigraineAlerts(enabled) }
@@ -205,7 +215,9 @@ class SettingsViewModel @Inject constructor(
     }
     fun setGadgetbridgeBroadcastEnabled(enabled: Boolean) = viewModelScope.launch {
         prefs.setGadgetbridgeBroadcastEnabled(enabled)
-        if (enabled) WidgetRefreshWorker.sync(appContext, true)
+        // Sync on BOTH transitions: enabling must start the periodic worker,
+        // and disabling must stop it when nothing else needs the refresh.
+        syncWidgetRefreshWorker()
     }
     fun setWeatherContentProviderEnabled(enabled: Boolean) = viewModelScope.launch {
         prefs.setWeatherContentProviderEnabled(enabled)
@@ -302,6 +314,11 @@ class SettingsViewModel @Inject constructor(
                 onSuccess = { result ->
                     pendingImportRaw = null
                     _pendingImportPreview.value = null
+                    // Imported alert/nowcast/health/briefing/custom-rule toggles
+                    // must (re)schedule their workers now, not on the next cold
+                    // start. Same sync block NimbusApplication.onCreate runs.
+                    runCatching { BackgroundWorkSync.syncAll(appContext, prefs) }
+                        .onFailure { Log.w(TAG, "Worker re-sync after import failed", it) }
                     _transferStatus.value = SettingsTransferStatus.ImportSuccess(
                         savedLocationCount = result.savedLocationCount,
                         customAlertCount = result.customAlertCount,
@@ -335,6 +352,21 @@ class SettingsViewModel @Inject constructor(
     private fun clearPendingImport() {
         pendingImportRaw = null
         _pendingImportPreview.value = null
+    }
+
+    /**
+     * Re-evaluates whether the periodic widget-refresh worker should run from
+     * the full persisted settings (persistent notification, widgets, AND the
+     * Gadgetbridge broadcast — deciding from a single toggle cancelled the
+     * worker for Gadgetbridge-only users).
+     */
+    private suspend fun syncWidgetRefreshWorker() {
+        val settings = prefs.settings.first()
+        WidgetRefreshWorker.sync(
+            appContext,
+            persistentWeatherNotif = settings.persistentWeatherNotif,
+            gadgetbridgeBroadcastEnabled = settings.gadgetbridgeBroadcastEnabled,
+        )
     }
 }
 
@@ -381,7 +413,9 @@ sealed interface SettingsTransferStatus {
         val savedLocationCount: Int,
         val customAlertCount: Int,
     ) : SettingsTransferStatus {
-        override val messageRes: Int = R.string.settings_transfer_import_success
+        // Rendered specially in SettingsScreenContent (plural-composed);
+        // this template is only the interface's fallback shape.
+        override val messageRes: Int = R.string.settings_transfer_import_success_composed
         override val tone: SettingsTransferStatusTone = SettingsTransferStatusTone.SUCCESS
     }
 

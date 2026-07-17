@@ -66,6 +66,9 @@ object AlertNotificationHelper {
     /** Base id for per-rule notifications; we offset by rule hash so multiple rules don't collide. */
     private const val NOTIFICATION_ID_CUSTOM_BASE = 0x1400
 
+    /** Width of each ambient per-category id band (hashes are masked to 0xFF). */
+    private const val AMBIENT_ID_BAND_SIZE = 0x100
+
     /**
      * Base id for per-alert severe-weather notifications. A raw
      * `alert.id.hashCode()` spans the full Int range and can collide with the
@@ -187,12 +190,20 @@ object AlertNotificationHelper {
      * Show a precipitation nowcast notification. [title] / [body] are composed
      * by the caller ([NowcastAlertWorker]) so this helper stays presentation-only.
      * Uses a stable notification id so repeated notifications replace (not stack).
+     *
+     * [silentUpdate] marks a countdown refresh of an already-delivered
+     * transition (same signature, updated minutes). Countdown re-posts land on
+     * the same notification id every ~5 minutes, so they must set
+     * `setOnlyAlertOnce(true)` — otherwise every refresh replays the channel
+     * sound/vibration and a single rain event can alert up to ~11 times.
+     * A genuinely new transition still alerts audibly.
      */
     fun showNowcastNotification(
         context: Context,
         title: String,
         body: String,
         series: List<MinutelyPrecipitation> = emptyList(),
+        silentUpdate: Boolean = false,
     ): Boolean {
         if (!hasNotificationPermission(context)) return false
 
@@ -202,9 +213,9 @@ object AlertNotificationHelper {
 
         val timeline = buildNowcastProgressTimeline(series)
         val notification = if (Build.VERSION.SDK_INT >= 36 && timeline != null) {
-            progressStyleNowcastNotification(context, title, body, pendingIntent, timeline)
+            progressStyleNowcastNotification(context, title, body, pendingIntent, timeline, silentUpdate)
         } else {
-            bigTextNowcastNotification(context, title, body, pendingIntent)
+            bigTextNowcastNotification(context, title, body, pendingIntent, silentUpdate)
         }
 
         try {
@@ -218,11 +229,12 @@ object AlertNotificationHelper {
         }
     }
 
-    private fun bigTextNowcastNotification(
+    internal fun bigTextNowcastNotification(
         context: Context,
         title: String,
         body: String,
         pendingIntent: PendingIntent,
+        silentUpdate: Boolean = false,
     ): Notification {
         return NotificationCompat.Builder(context, CHANNEL_NOWCAST)
             .setSmallIcon(R.drawable.ic_alert)
@@ -232,6 +244,7 @@ object AlertNotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
+            .setOnlyAlertOnce(silentUpdate)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setGroup(AMBIENT_GROUP_ID)
             .build()
@@ -244,6 +257,7 @@ object AlertNotificationHelper {
         body: String,
         pendingIntent: PendingIntent,
         timeline: NowcastProgressTimeline,
+        silentUpdate: Boolean,
     ): Notification {
         val style = Notification.ProgressStyle()
             .setStyledByProgress(false)
@@ -268,6 +282,7 @@ object AlertNotificationHelper {
             .setStyle(style)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
+            .setOnlyAlertOnce(silentUpdate)
             .setCategory(Notification.CATEGORY_STATUS)
             .setGroup(AMBIENT_GROUP_ID)
             .build()
@@ -383,7 +398,11 @@ object AlertNotificationHelper {
     // Building it always on CHANNEL_NOWCAST meant a health/custom notification's
     // summary landed on an unrelated channel — if the user muted nowcast, the
     // summary was suppressed and the whole ambient stack broke.
-    private fun ambientSummary(context: Context, channelId: String): android.app.Notification =
+    //
+    // Always alert-once: the summary is re-posted on every child delivery
+    // (including silent nowcast countdown refreshes) — the child is the surface
+    // that decides whether to make noise.
+    internal fun ambientSummary(context: Context, channelId: String): android.app.Notification =
         NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_alert)
             .setContentTitle(context.getString(R.string.alert_ambient_summary_title))
@@ -398,6 +417,7 @@ object AlertNotificationHelper {
             .setGroup(AMBIENT_GROUP_ID)
             .setGroupSummary(true)
             .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
             .build()
 
     fun channelForSeverity(severity: AlertSeverity): String = when (severity) {
@@ -554,16 +574,66 @@ object AlertNotificationHelper {
         }
     }
 
-    fun dismissAll(context: Context) {
+    /**
+     * Dismiss severe-weather alert notifications (the severe group + its
+     * summary) WITHOUT touching the ambient group. This runs whenever
+     * `alertNotificationsEnabled` flips off — including on every cold start —
+     * and nowcast/health/custom notifications are governed by their own
+     * toggles; wiping them here silently killed live ambient notifications
+     * (whose dedupe stores then prevented a re-fire).
+     */
+    fun dismissSevere(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.activeNotifications
-            .filter {
-                it.id == SUMMARY_NOTIFICATION_ID ||
-                    it.id == AMBIENT_SUMMARY_NOTIFICATION_ID ||
-                    it.notification.group == GROUP_ID ||
-                    it.notification.group == AMBIENT_GROUP_ID
-            }
+            .filter { it.id == SUMMARY_NOTIFICATION_ID || it.notification.group == GROUP_ID }
             .forEach { nm.cancel(it.id) }
+    }
+
+    /** Dismiss the active nowcast notification when nowcasting alerts are disabled. */
+    fun dismissNowcast(context: Context) =
+        dismissAmbient(context) { id -> id == NOTIFICATION_ID_NOWCAST }
+
+    /** Dismiss active health notifications when health alerts are disabled. */
+    fun dismissHealth(context: Context) =
+        dismissAmbient(context) { id -> id in healthNotificationIdRange }
+
+    /** Dismiss active custom-rule notifications when no enabled rules remain. */
+    fun dismissCustom(context: Context) =
+        dismissAmbient(context) { id -> id in customNotificationIdRange }
+
+    /**
+     * Dismiss one rule's active notification when that rule is disabled or
+     * deleted. Uses the same id derivation as [showCustomAlertNotification];
+     * a masked-hash collision can cancel a sibling rule's notification, but
+     * the same collision already merges them on the show side.
+     */
+    fun dismissCustomRule(context: Context, ruleKey: String) =
+        dismissAmbient(context) { id ->
+            id == NOTIFICATION_ID_CUSTOM_BASE + (ruleKey.hashCode() and 0xFF)
+        }
+
+    private val healthNotificationIdRange =
+        NOTIFICATION_ID_HEALTH_BASE until NOTIFICATION_ID_HEALTH_BASE + AMBIENT_ID_BAND_SIZE
+    private val customNotificationIdRange =
+        NOTIFICATION_ID_CUSTOM_BASE until NOTIFICATION_ID_CUSTOM_BASE + AMBIENT_ID_BAND_SIZE
+
+    /**
+     * Cancels the matching ambient-group children, and drops the ambient group
+     * summary too once no other ambient children remain (an orphaned summary
+     * would linger as an empty "Weather updates" row).
+     */
+    private fun dismissAmbient(context: Context, matches: (Int) -> Boolean) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val ambient = nm.activeNotifications
+            .filter { it.notification.group == AMBIENT_GROUP_ID }
+        ambient
+            .filter { it.id != AMBIENT_SUMMARY_NOTIFICATION_ID && matches(it.id) }
+            .forEach { nm.cancel(it.id) }
+        val remainingChildren = ambient
+            .count { it.id != AMBIENT_SUMMARY_NOTIFICATION_ID && !matches(it.id) }
+        if (remainingChildren == 0) {
+            nm.cancel(AMBIENT_SUMMARY_NOTIFICATION_ID)
+        }
     }
 }
 
