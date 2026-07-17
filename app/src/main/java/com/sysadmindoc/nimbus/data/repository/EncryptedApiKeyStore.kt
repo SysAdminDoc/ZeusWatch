@@ -15,11 +15,15 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 
 private const val API_KEY_FILE = "encrypted_api_keys.json"
 private const val TINK_KEYSET_NAME = "nimbus_api_key_keyset"
+private const val TINK_KEYSET_PROBE_NAME = "nimbus_api_key_keyset_probe"
 private const val TINK_KEYSET_PREFS = "nimbus_api_key_keyset_prefs"
 private const val MASTER_KEY_URI = "android-keystore://nimbus_api_key_master"
+private const val AEAD_RETRY_BACKOFF_MS = 250L
 
 private const val OLD_ENCRYPTED_FILE = "datastore/nimbus_api_keys.preferences_pb"
 private val OLD_ASSOCIATED_DATA = "nimbus_api_keys.preferences_pb".toByteArray()
@@ -35,11 +39,14 @@ data class ApiKeys(
 class EncryptedApiKeyStore(context: Context) {
 
     private val appContext = context.applicationContext
-    private val aead: Aead = createAead(appContext)
+    private val aeadLock = Any()
+
+    @Volatile
+    private var cachedAead: Aead? = createAeadOrNull(appContext)
     private val file = File(appContext.filesDir, API_KEY_FILE)
     private val mutex = Mutex()
     private val json = Json { ignoreUnknownKeys = true }
-    private val _keys = MutableStateFlow(readFromFile())
+    private val _keys = MutableStateFlow(readFromFile(cachedAead))
 
     val apiKeys: StateFlow<ApiKeys> = _keys.asStateFlow()
 
@@ -49,14 +56,35 @@ class EncryptedApiKeyStore(context: Context) {
 
     suspend fun setTempestAccessToken(token: String) = update { it.copy(tempestAccessToken = token) }
 
+    /**
+     * Lazily (re-)create the AEAD when the Android Keystore was unavailable at
+     * construction (post-OTA races, keystore daemon contention). Returns `null`
+     * while the keystore is still unreachable — the keyset is NOT destroyed, so
+     * stored keys become readable again once it recovers. On recovery the
+     * in-memory keys are refreshed from disk before any caller-observable use.
+     */
+    private fun aeadOrNull(): Aead? {
+        cachedAead?.let { return it }
+        synchronized(aeadLock) {
+            cachedAead?.let { return it }
+            val created = createAeadOrNull(appContext) ?: return null
+            cachedAead = created
+            _keys.value = readFromFile(created)
+            return created
+        }
+    }
+
     private suspend fun update(transform: (ApiKeys) -> ApiKeys) = mutex.withLock {
+        // Resolve the AEAD first: if it just recovered, _keys is refreshed from
+        // disk so the transform can't overwrite stored keys with blanks.
+        aeadOrNull()
         val updated = transform(_keys.value)
         writeToFile(updated)
         _keys.value = updated
     }
 
-    private fun readFromFile(): ApiKeys {
-        if (!file.exists()) return ApiKeys()
+    private fun readFromFile(aead: Aead?): ApiKeys {
+        if (aead == null || !file.exists()) return ApiKeys()
         return try {
             val encrypted = file.readBytes()
             if (encrypted.isEmpty()) return ApiKeys()
@@ -68,13 +96,19 @@ class EncryptedApiKeyStore(context: Context) {
     }
 
     private fun writeToFile(keys: ApiKeys) {
+        val aead = aeadOrNull() ?: throw IllegalStateException(
+            "API key encryption unavailable: Android Keystore could not be reached",
+        )
         val plaintext = json.encodeToString(ApiKeys.serializer(), keys)
         val encrypted = aead.encrypt(plaintext.toByteArray(Charsets.UTF_8), ASSOCIATED_DATA)
         file.parentFile?.mkdirs()
-        file.writeBytes(encrypted)
+        writeBytesAtomically(file, encrypted)
     }
 
     suspend fun migrateFromLegacyEncryptedDataStore() = mutex.withLock {
+        // Keystore unavailable this process start: keep the old file so
+        // migration can retry on a later launch instead of losing it.
+        val aead = aeadOrNull() ?: return@withLock
         if (
             _keys.value.owmApiKey.isNotBlank() ||
             _keys.value.pirateWeatherApiKey.isNotBlank() ||
@@ -107,25 +141,78 @@ class EncryptedApiKeyStore(context: Context) {
     }
 }
 
-private fun createAead(context: Context): Aead {
+private fun createAeadOrNull(context: Context): Aead? {
     AeadConfig.register()
     return try {
         buildAead(context)
     } catch (_: Exception) {
-        context.getSharedPreferences(TINK_KEYSET_PREFS, Context.MODE_PRIVATE)
-            .edit().clear().commit()
-        buildAead(context)
+        // Transient Android Keystore failures (post-OTA races, keystore daemon
+        // contention) throw the same way as true keyset corruption. Retry once
+        // after a brief backoff before considering any recovery.
+        try {
+            Thread.sleep(AEAD_RETRY_BACKOFF_MS)
+            buildAead(context)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            null
+        } catch (_: Exception) {
+            recoverAeadOrNull(context)
+        }
     }
 }
 
-private fun buildAead(context: Context): Aead {
+/**
+ * Distinguish keyset corruption from keystore unavailability before touching
+ * the stored keyset: build a throwaway probe keyset against the same master
+ * key. If the probe succeeds the keystore is healthy, so the real keyset must
+ * be unreadable — its data is unrecoverable regardless, and resetting just
+ * that entry is the only way forward. If the probe also fails the keystore
+ * itself is down: keep the keyset intact and let the AEAD retry lazily, so a
+ * transient failure never destroys the user's stored keys.
+ */
+private fun recoverAeadOrNull(context: Context): Aead? {
+    val keystoreHealthy = runCatching { buildProbeAead(context) }.isSuccess
+    val prefs = context.getSharedPreferences(TINK_KEYSET_PREFS, Context.MODE_PRIVATE)
+    prefs.edit().remove(TINK_KEYSET_PROBE_NAME).apply()
+    if (!keystoreHealthy) return null
+    prefs.edit().remove(TINK_KEYSET_NAME).commit()
+    return runCatching { buildAead(context) }.getOrNull()
+}
+
+private fun buildAead(context: Context): Aead = buildAead(context, TINK_KEYSET_NAME)
+
+private fun buildProbeAead(context: Context): Aead = buildAead(context, TINK_KEYSET_PROBE_NAME)
+
+private fun buildAead(context: Context, keysetName: String): Aead {
     val keysetHandle = AndroidKeysetManager.Builder()
-        .withSharedPref(context, TINK_KEYSET_NAME, TINK_KEYSET_PREFS)
+        .withSharedPref(context, keysetName, TINK_KEYSET_PREFS)
         .withKeyTemplate(KeyTemplate.createFrom(PredefinedAeadParameters.AES256_GCM))
         .withMasterKeyUri(MASTER_KEY_URI)
         .build()
         .keysetHandle
     return keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java)
+}
+
+/**
+ * Crash-safe replacement of [target]: write to a sibling temp file, fsync it,
+ * then rename over the target (atomic on POSIX filesystems) — the same pattern
+ * DataStore uses. A crash mid-write leaves the previous file intact instead of
+ * a truncated ciphertext that decrypts to nothing.
+ */
+internal fun writeBytesAtomically(target: File, bytes: ByteArray) {
+    val tmp = File(target.parentFile, "${target.name}.tmp")
+    FileOutputStream(tmp).use { stream ->
+        stream.write(bytes)
+        stream.fd.sync()
+    }
+    if (!tmp.renameTo(target)) {
+        // Some filesystems refuse rename-over-existing; fall back once.
+        target.delete()
+        if (!tmp.renameTo(target)) {
+            tmp.delete()
+            throw IOException("Failed to atomically replace ${target.name}")
+        }
+    }
 }
 
 /**

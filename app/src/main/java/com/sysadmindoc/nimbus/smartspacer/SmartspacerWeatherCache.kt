@@ -10,6 +10,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherDataCachePayload
 import com.sysadmindoc.nimbus.data.model.toWeatherData
 import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
+import com.sysadmindoc.nimbus.data.repository.withUniqueHourlyTimes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -49,7 +50,10 @@ internal class SmartspacerWeatherCache(
             val observedAt = Instant.ofEpochMilli(cached.cachedAt)
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime()
+            // Normalize pre-fix cached rows that may carry duplicate DST
+            // fall-back hourly timestamps (live writes are deduped upstream).
             val weather = payload.toWeatherData(lastUpdatedOverride = observedAt)
+                .withUniqueHourlyTimes()
             buildSmartspacerWeatherSnapshot(
                 weather = weather,
                 tempUnit = readTempUnitFromPreferencesFile(context),

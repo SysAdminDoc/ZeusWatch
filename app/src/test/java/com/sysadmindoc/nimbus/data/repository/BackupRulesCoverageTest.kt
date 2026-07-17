@@ -45,12 +45,26 @@ class BackupRulesCoverageTest {
     }
 
     @Test
+    fun `backup rules exclude on-this-day location history cache`() {
+        assertExcluded("nimbus_on_this_day.xml")
+    }
+
+    @Test
     fun `both cloud-backup and device-transfer sections exclude keyset prefs`() {
         val cloudSection = rulesXml.substringAfter("<cloud-backup>").substringBefore("</cloud-backup>")
         val transferSection = rulesXml.substringAfter("<device-transfer>").substringBefore("</device-transfer>")
         val keysetPath = "nimbus_api_key_keyset_prefs.xml"
         assertTrue("cloud-backup must exclude $keysetPath", cloudSection.contains(keysetPath))
         assertTrue("device-transfer must exclude $keysetPath", transferSection.contains(keysetPath))
+    }
+
+    @Test
+    fun `both cloud-backup and device-transfer sections exclude on-this-day cache`() {
+        val cloudSection = rulesXml.substringAfter("<cloud-backup>").substringBefore("</cloud-backup>")
+        val transferSection = rulesXml.substringAfter("<device-transfer>").substringBefore("</device-transfer>")
+        val onThisDayPath = "nimbus_on_this_day.xml"
+        assertTrue("cloud-backup must exclude $onThisDayPath", cloudSection.contains(onThisDayPath))
+        assertTrue("device-transfer must exclude $onThisDayPath", transferSection.contains(onThisDayPath))
     }
 
     private fun assertExcluded(path: String) {

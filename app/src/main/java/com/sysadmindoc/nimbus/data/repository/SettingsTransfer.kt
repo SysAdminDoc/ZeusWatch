@@ -174,6 +174,8 @@ data class SettingsBackupPreferences(
     val showBeaufortColors: Boolean = true,
     val showOutdoorScore: Boolean = true,
     val showYesterdayComparison: Boolean = true,
+    val showForecastAccuracy: Boolean = false,
+    val showConfidenceBands: Boolean = false,
     val showCompareChartOverlay: Boolean = true,
     val hourlyForecastHours: Int = 72,
     val migrainePressureThreshold: Double = 5.0,
@@ -186,6 +188,7 @@ data class SettingsBackupPreferences(
     val sourceAlertsFallback: String? = null,
     val sourceAirQuality: String = WeatherSourceProvider.defaultFor(WeatherDataType.AIR_QUALITY).name,
     val sourceMinutely: String = WeatherSourceProvider.defaultFor(WeatherDataType.MINUTELY).name,
+    val openMeteoFlatBuffersEnabled: Boolean = false,
     val gadgetbridgeBroadcastEnabled: Boolean = false,
     val weatherContentProviderEnabled: Boolean = false,
     val tempestDeviceId: String = "",
@@ -379,6 +382,8 @@ fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPrefere
     showBeaufortColors = showBeaufortColors,
     showOutdoorScore = showOutdoorScore,
     showYesterdayComparison = showYesterdayComparison,
+    showForecastAccuracy = showForecastAccuracy,
+    showConfidenceBands = showConfidenceBands,
     showCompareChartOverlay = showCompareChartOverlay,
     hourlyForecastHours = hourlyForecastHours,
     migrainePressureThreshold = migrainePressureThreshold,
@@ -391,6 +396,7 @@ fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPrefere
     sourceAlertsFallback = sourceConfig.alertsFallback?.name,
     sourceAirQuality = sourceConfig.airQuality.name,
     sourceMinutely = sourceConfig.minutely.name,
+    openMeteoFlatBuffersEnabled = openMeteoFlatBuffersEnabled,
     gadgetbridgeBroadcastEnabled = gadgetbridgeBroadcastEnabled,
     weatherContentProviderEnabled = weatherContentProviderEnabled,
     tempestDeviceId = tempestDeviceId,
@@ -432,6 +438,8 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
     showBeaufortColors = showBeaufortColors,
     showOutdoorScore = showOutdoorScore,
     showYesterdayComparison = showYesterdayComparison,
+    showForecastAccuracy = showForecastAccuracy,
+    showConfidenceBands = showConfidenceBands,
     showCompareChartOverlay = showCompareChartOverlay,
     hourlyForecastHours = hourlyForecastHours.coerceIn(24, 72),
     migrainePressureThreshold = migrainePressureThreshold.coerceIn(1.0, 20.0),
@@ -450,6 +458,7 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
         minutely = WeatherSourceProvider.fromStoredName(sourceMinutely, WeatherDataType.MINUTELY)
             ?: WeatherSourceProvider.defaultFor(WeatherDataType.MINUTELY),
     ).normalized(),
+    openMeteoFlatBuffersEnabled = openMeteoFlatBuffersEnabled,
     gadgetbridgeBroadcastEnabled = gadgetbridgeBroadcastEnabled,
     weatherContentProviderEnabled = weatherContentProviderEnabled,
     tempestDeviceId = tempestDeviceId.filter(Char::isDigit).take(24),
@@ -557,6 +566,8 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setShowBeaufortColors(settings.showBeaufortColors)
     setShowOutdoorScore(settings.showOutdoorScore)
     setShowYesterdayComparison(settings.showYesterdayComparison)
+    setShowForecastAccuracy(settings.showForecastAccuracy)
+    setShowConfidenceBands(settings.showConfidenceBands)
     setShowCompareChartOverlay(settings.showCompareChartOverlay)
     setHourlyForecastHours(settings.hourlyForecastHours)
     setMigrainePressureThreshold(settings.migrainePressureThreshold)
@@ -569,6 +580,7 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setSourceAlertsFallback(settings.sourceConfig.alertsFallback)
     setSourceAirQuality(settings.sourceConfig.airQuality)
     setSourceMinutely(settings.sourceConfig.minutely)
+    setOpenMeteoFlatBuffersEnabled(settings.openMeteoFlatBuffersEnabled)
     setGadgetbridgeBroadcastEnabled(settings.gadgetbridgeBroadcastEnabled)
     setWeatherContentProviderEnabled(settings.weatherContentProviderEnabled)
     setTempestDeviceId(settings.tempestDeviceId)

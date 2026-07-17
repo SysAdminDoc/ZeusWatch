@@ -4,7 +4,9 @@
          widget location/weather; both are Preferences DataStore files, which live
          under files/datastore/ (domain="file"), NOT shared_prefs. nimbus.db holds
          the user's saved/home coordinates — exclude its WAL/SHM sidecars too or
-         recent writes ride along. Exclude everything from cloud backup AND
+         recent writes ride along. nimbus_on_this_day is a coordinate-keyed
+         per-date location-history cache (up to 500 entries) — the same data
+         class nimbus.db is excluded for. Exclude everything from cloud backup AND
          device-to-device transfer (the latter is independent of allowBackup,
          so each file must be listed here explicitly or it rides along on a clone). -->
     <cloud-backup>
@@ -12,6 +14,7 @@
         <exclude domain="file" path="datastore/nimbus_widget_data.preferences_pb" />
         <exclude domain="file" path="encrypted_api_keys.json" />
         <exclude domain="sharedpref" path="nimbus_api_key_keyset_prefs.xml" />
+        <exclude domain="sharedpref" path="nimbus_on_this_day.xml" />
         <exclude domain="database" path="nimbus.db" />
         <exclude domain="database" path="nimbus.db-wal" />
         <exclude domain="database" path="nimbus.db-shm" />
@@ -21,6 +24,7 @@
         <exclude domain="file" path="datastore/nimbus_widget_data.preferences_pb" />
         <exclude domain="file" path="encrypted_api_keys.json" />
         <exclude domain="sharedpref" path="nimbus_api_key_keyset_prefs.xml" />
+        <exclude domain="sharedpref" path="nimbus_on_this_day.xml" />
         <exclude domain="database" path="nimbus.db" />
         <exclude domain="database" path="nimbus.db-wal" />
         <exclude domain="database" path="nimbus.db-shm" />
