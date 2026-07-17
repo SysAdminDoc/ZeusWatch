@@ -263,6 +263,12 @@ private fun parseForecastDate(value: String?): LocalDate? = try {
 private fun stationValue(block: HkoObservationBlock?, place: String): Double? =
     block?.data?.firstOrNull { it.place.equals(place, ignoreCase = true) }?.value
 
+/**
+ * Maps HKO forecast icon codes to WMO weather codes. Covers the full
+ * documented icon set — icons must resolve here rather than through
+ * [textToWmo], whose English keywords never match on Chinese-locale
+ * responses and previously left unmapped icons rendering as clear sky.
+ */
 private fun hkoIconToWmo(icon: Int?): Int? = when (icon) {
     50, 70 -> 0
     51, 71 -> 1
@@ -273,6 +279,18 @@ private fun hkoIconToWmo(icon: Int?): Int? = when (icon) {
     63 -> 63
     64 -> 65
     65 -> 95
+    // Night variants: 73-75 fine (moon phases), 76 mainly cloudy, 77 mainly fine.
+    73, 74, 75 -> 0
+    76 -> 3
+    77 -> 1
+    // 80-85: wind / humidity / visibility descriptors.
+    80 -> 2 // windy
+    81 -> 0 // dry
+    82 -> 2 // humid
+    83, 84, 85 -> 45 // fog / mist / haze
+    // 90-93: temperature descriptors (hot/warm/cool/cold) carry no cloud
+    // information — map conservatively to mainly clear.
+    90, 91, 92, 93 -> 1
     else -> null
 }
 

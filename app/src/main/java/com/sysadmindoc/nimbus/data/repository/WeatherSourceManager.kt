@@ -8,6 +8,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.util.withRetry
 import kotlinx.coroutines.flow.first
 import java.time.Duration
+import java.time.LocalDateTime
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -124,7 +125,7 @@ class WeatherSourceManager @Inject constructor(
                 locationName = locationName,
                 forecastZone = forecastZone,
             ),
-        )
+        ).map { it.withUniqueHourlyTimes() }
     }
 
     private suspend fun resolveForecastZone(
@@ -345,6 +346,7 @@ class WeatherSourceManager @Inject constructor(
             ?: return unsupportedProvider(provider, WeatherDataType.MINUTELY)
 
         return adapter.getMinutely(CoordinateSourceRequest(latitude, longitude))
+            .map { it.withUniqueAscendingTimes { entry -> entry.time } }
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────
@@ -400,6 +402,38 @@ private fun WeatherData.cacheAgeMinutes(): Long =
     Duration.between(lastUpdated, java.time.LocalDateTime.now())
         .toMinutes()
         .coerceAtLeast(0L)
+
+/**
+ * Normalize the hourly series to unique, ascending timestamps.
+ *
+ * Adapters that project UTC instants into a location-local [LocalDateTime]
+ * (MET Norway, Bright Sky, Pirate Weather, …) emit the repeated hour twice
+ * with an identical wall-clock time on the 25-hour DST fall-back day. The
+ * hourly UI keys lazy items by `item.time`, so a duplicate crashes Compose
+ * with "Key was already used". Keep the FIRST occurrence of a duplicated
+ * timestamp. Applied on every live fetch (here) and on cache reads
+ * (WeatherRepository) so pre-fix cached payloads are normalized too.
+ */
+internal fun WeatherData.withUniqueHourlyTimes(): WeatherData {
+    val normalized = hourly.withUniqueAscendingTimes { it.time }
+    return if (normalized === hourly) this else copy(hourly = normalized)
+}
+
+/**
+ * Returns this list unchanged when its [time] keys are already strictly
+ * ascending; otherwise returns a stably sorted copy with the first
+ * occurrence of each duplicated timestamp retained.
+ */
+internal inline fun <T> List<T>.withUniqueAscendingTimes(
+    crossinline time: (T) -> LocalDateTime,
+): List<T> {
+    val alreadyNormalized = (1 until size).all { time(this[it]) > time(this[it - 1]) }
+    if (alreadyNormalized) return this
+    val seen = HashSet<LocalDateTime>(size * 2)
+    // sortedBy is stable, so equal timestamps keep their original order and
+    // the first occurrence survives the dedup below.
+    return sortedBy { time(it) }.filter { seen.add(time(it)) }
+}
 
 // ── Source Adapters ─────────────────────────────────────────────────────
 

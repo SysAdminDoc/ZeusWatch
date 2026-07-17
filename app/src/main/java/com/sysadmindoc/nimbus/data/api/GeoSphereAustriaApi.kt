@@ -15,6 +15,7 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
@@ -203,8 +204,19 @@ class GeoSphereAustriaAlertAdapter @Inject constructor(
     }
 }
 
+/**
+ * Both GeoSphere endpoints only cover Austria (plus a CET/CEST fringe of its
+ * neighbours), so every coordinate inside the coverage boxes below shares the
+ * Europe/Vienna offset. The minutely adapter contract (Open-Meteo minutely
+ * with timezone=auto) is location-local wall-clock time, so project the
+ * offset timestamps into that zone instead of stripping the offset — a bare
+ * `toLocalDateTime()` would emit UTC wall clock and shift the nowcast by
+ * 1-2 hours.
+ */
+private val AUSTRIA_ZONE: ZoneId = ZoneId.of("Europe/Vienna")
+
 private fun parseGeoSphereTimestamp(value: String): LocalDateTime? =
-    runCatching { OffsetDateTime.parse(value).toLocalDateTime() }
+    runCatching { OffsetDateTime.parse(value).atZoneSameInstant(AUSTRIA_ZONE).toLocalDateTime() }
         .recoverCatching { LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME) }
         .getOrNull()
 
@@ -237,7 +249,10 @@ private fun Int?.toGeoSphereSeverity(): AlertSeverity = when (this) {
 
 private fun String?.toGeoSphereUrgency(): AlertUrgency {
     val begin = this?.let(::parseGeoSphereTimestamp) ?: return AlertUrgency.UNKNOWN
-    val now = LocalDateTime.now()
+    // parseGeoSphereTimestamp projects into Europe/Vienna, so "now" must be
+    // taken in the same zone — device-local now would skew the comparison by
+    // the device's offset from Austria.
+    val now = LocalDateTime.now(AUSTRIA_ZONE)
     return if (!begin.isAfter(now.plusMinutes(30))) {
         AlertUrgency.IMMEDIATE
     } else {

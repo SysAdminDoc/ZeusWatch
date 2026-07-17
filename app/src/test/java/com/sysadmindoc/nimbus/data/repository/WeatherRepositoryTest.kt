@@ -631,6 +631,79 @@ class WeatherRepositoryTest {
     }
 
     @Test
+    fun getCachedWeatherDeduplicatesDstFallBackHourlyTimestampsInNormalizedPayloads() = runTest {
+        // Payloads cached BEFORE the DST dedup fix still carry the repeated
+        // fall-back hour twice — the read path must normalize them so the
+        // hourly UI's time-based lazy keys stay unique.
+        val duplicated = LocalDateTime.of(2026, 10, 25, 2, 0)
+        val provider = WeatherSourceProvider.MET_NORWAY
+        val data = makeWeatherData(sourceProvider = provider.displayName).copy(
+            hourly = listOf(
+                cachedHourly(duplicated, temperature = 11.0),
+                cachedHourly(duplicated, temperature = 12.0),
+                cachedHourly(duplicated.plusHours(1), temperature = 13.0),
+            ),
+        )
+        coEvery { weatherDao.getCachedWeatherData(any(), any(), any(), any()) } returns
+            makeWeatherDataCacheEntity(data = data, provider = provider)
+
+        val cached = repository.getCachedWeather(
+            latitude = testLat,
+            longitude = testLon,
+            sourceOverrides = SourceOverrides(forecast = provider),
+        )
+
+        assertNotNull(cached)
+        assertEquals(listOf(duplicated, duplicated.plusHours(1)), cached!!.hourly.map { it.time })
+        // First occurrence of the duplicated hour wins.
+        assertEquals(11.0, cached.hourly.first().temperature, 0.0)
+    }
+
+    @Test
+    fun getCachedWeatherDeduplicatesDuplicateHourlyTimesInLegacyOpenMeteoCache() = runTest {
+        val response = makeResponse(
+            hourlyTimes = listOf(
+                "2025-06-15T12:00",
+                "2025-06-15T13:00",
+                "2025-06-15T13:00",
+                "2025-06-15T14:00",
+            ),
+        )
+        val cached = makeCacheEntity(
+            responseJson = json.encodeToString(OpenMeteoResponse.serializer(), response),
+        )
+        coEvery { weatherDao.getCached(any()) } returns cached
+
+        val data = repository.getCachedWeather(testLat, testLon)
+
+        assertNotNull(data)
+        assertEquals(
+            listOf(
+                LocalDateTime.of(2025, 6, 15, 12, 0),
+                LocalDateTime.of(2025, 6, 15, 13, 0),
+                LocalDateTime.of(2025, 6, 15, 14, 0),
+            ),
+            data!!.hourly.map { it.time },
+        )
+    }
+
+    private fun cachedHourly(time: LocalDateTime, temperature: Double) = HourlyConditions(
+        time = time,
+        temperature = temperature,
+        feelsLike = null,
+        weatherCode = WeatherCode.CLEAR_SKY,
+        isDay = true,
+        precipitationProbability = 0,
+        precipitation = null,
+        windSpeed = null,
+        windDirection = null,
+        humidity = null,
+        uvIndex = null,
+        cloudCover = null,
+        visibility = null,
+    )
+
+    @Test
     fun getCachedWeatherDoesNotUseLegacyOpenMeteoCacheForDifferentProvider() = runTest {
         val provider = WeatherSourceProvider.MET_NORWAY
         coEvery { weatherDao.getCached(any()) } returns makeCacheEntity()
