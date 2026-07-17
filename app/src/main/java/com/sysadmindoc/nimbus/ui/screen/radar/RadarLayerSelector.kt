@@ -14,8 +14,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
+import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.component.NimbusSelectableSegment
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
@@ -26,13 +29,13 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
  * Each layer corresponds to a different tile source.
  */
 enum class RadarLayer(
-    val label: String,
+    @StringRes val labelRes: Int,
     val tileUrlTemplate: String?,
 ) {
-    RADAR("Radar", null), // Handled separately by RainViewer
-    LIGHTNING("Lightning", null), // Real-time Blitzortung WebSocket overlay
+    RADAR(R.string.radar_layer_radar, null), // Handled separately by RainViewer
+    LIGHTNING(R.string.radar_layer_lightning, null), // Real-time Blitzortung WebSocket overlay
     SATELLITE(
-        "Satellite",
+        R.string.radar_layer_satellite,
         "https://tilecache.rainviewer.com/v2/satellite/256/{z}/{x}/{y}/2/0_0.png",
     ),
 }
@@ -67,7 +70,7 @@ fun RadarLayerSelector(
         RadarLayer.entries.forEach { layer ->
             val isSelected = layer == selectedLayer
             NimbusSelectableSegment(
-                label = layer.label,
+                label = stringResource(layer.labelRes),
                 selected = isSelected,
                 onClick = { onLayerSelected(layer) },
                 role = Role.Tab,

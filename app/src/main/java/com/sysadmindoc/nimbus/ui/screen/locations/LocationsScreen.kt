@@ -73,9 +73,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -168,7 +171,7 @@ internal fun LocationsContent(
 ) {
     PredictiveBackScaffold(onBack = onBack) {
         val emptySubtitle = stringResource(R.string.locations_empty_subtitle)
-        val savedCountSubtitle = stringResource(R.string.locations_saved_count_subtitle, saved.size)
+        val savedCountSubtitle = pluralStringResource(R.plurals.locations_saved_count, saved.size, saved.size)
         val savedPlacesSubtitle = if (saved.isEmpty()) {
             emptySubtitle
         } else {
@@ -329,6 +332,19 @@ private fun LocationsList(
                         onAlertSourceSelected(loc.id, provider)
                     },
                     showDragHandle = !loc.isCurrentLocation,
+                    // TalkBack path for reordering: long-press-drag is not
+                    // reachable with switch/screen-reader input, so expose
+                    // Move up/Move down custom accessibility actions.
+                    onMoveUp = if (!loc.isCurrentLocation && index > minimumMovableIndex) {
+                        { onMoveLocation(index, index - 1) }
+                    } else {
+                        null
+                    },
+                    onMoveDown = if (!loc.isCurrentLocation && index < displayList.lastIndex) {
+                        { onMoveLocation(index, index + 1) }
+                    } else {
+                        null
+                    },
                     modifier = if (isDragged) {
                         Modifier
                             .zIndex(1f)
@@ -760,6 +776,8 @@ private fun SavedLocationItem(
     onForecastSourceSelected: (WeatherSourceProvider?) -> Unit = {},
     onAlertSourceSelected: (WeatherSourceProvider?) -> Unit = {},
     showDragHandle: Boolean = false,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
     onDragStart: () -> Unit = {},
     onDrag: (Float) -> Unit = {},
     onDragEnd: () -> Unit = {},
@@ -775,6 +793,8 @@ private fun SavedLocationItem(
     val dragReorderDescription = stringResource(R.string.locations_drag_reorder_cd)
     val removeDescription = stringResource(R.string.locations_remove_cd, location.name)
     val sourceSettingsDescription = stringResource(R.string.locations_source_settings_cd, location.name)
+    val moveUpDescription = stringResource(R.string.settings_move_card_up, displayName)
+    val moveDownDescription = stringResource(R.string.settings_move_card_down, displayName)
 
     Column(
         modifier = modifier
@@ -795,6 +815,8 @@ private fun SavedLocationItem(
                 dragReorderDescription = dragReorderDescription,
                 removeDescription = removeDescription,
                 sourceSettingsDescription = sourceSettingsDescription,
+                moveUpDescription = moveUpDescription,
+                moveDownDescription = moveDownDescription,
             ),
             showDragHandle = showDragHandle,
             actions = SavedLocationRowActions(
@@ -804,6 +826,8 @@ private fun SavedLocationItem(
                 onDragStart = onDragStart,
                 onDrag = onDrag,
                 onDragEnd = onDragEnd,
+                onMoveUp = onMoveUp,
+                onMoveDown = onMoveDown,
             ),
         )
 
@@ -842,6 +866,8 @@ private data class SavedLocationRowLabels(
     val dragReorderDescription: String,
     val removeDescription: String,
     val sourceSettingsDescription: String,
+    val moveUpDescription: String,
+    val moveDownDescription: String,
 )
 
 private data class SavedLocationRowActions(
@@ -851,6 +877,8 @@ private data class SavedLocationRowActions(
     val onDragStart: () -> Unit,
     val onDrag: (Float) -> Unit,
     val onDragEnd: () -> Unit,
+    val onMoveUp: (() -> Unit)? = null,
+    val onMoveDown: (() -> Unit)? = null,
 )
 
 @Composable
@@ -877,7 +905,31 @@ private fun SavedLocationRow(
                 onClick = actions.onClick,
                 role = Role.Button,
             )
-            .semantics { contentDescription = labels.openWeatherDescription }
+            .semantics {
+                contentDescription = labels.openWeatherDescription
+                // Screen-reader alternative to long-press-drag reordering.
+                val moveActions = buildList {
+                    actions.onMoveUp?.let { moveUp ->
+                        add(
+                            CustomAccessibilityAction(labels.moveUpDescription) {
+                                moveUp()
+                                true
+                            },
+                        )
+                    }
+                    actions.onMoveDown?.let { moveDown ->
+                        add(
+                            CustomAccessibilityAction(labels.moveDownDescription) {
+                                moveDown()
+                                true
+                            },
+                        )
+                    }
+                }
+                if (moveActions.isNotEmpty()) {
+                    customActions = moveActions
+                }
+            }
             .padding(horizontal = 16.dp, vertical = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

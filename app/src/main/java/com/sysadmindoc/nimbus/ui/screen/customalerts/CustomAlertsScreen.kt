@@ -55,6 +55,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +65,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -102,6 +105,7 @@ import com.sysadmindoc.nimbus.util.displayUnitLabel
 import com.sysadmindoc.nimbus.util.labelRes
 import com.sysadmindoc.nimbus.util.summaryRes
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -111,13 +115,32 @@ fun CustomAlertsScreen(
     viewModel: CustomAlertsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var editing by remember { mutableStateOf<EditorState?>(null) }
-    val addCustomAlertDescription = stringResource(R.string.custom_alerts_add_cd)
-    val startNewAlert = {
-        editing = EditorState(existing = null, draft = viewModel.defaultRule())
+    // Saveable so a rotation (or process death) mid-edit keeps the open rule.
+    var editing by rememberSaveable(stateSaver = EditorStateSaver) {
+        mutableStateOf<EditorState?>(null)
     }
+    val addCustomAlertDescription = stringResource(R.string.custom_alerts_add_cd)
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val capReachedMessage = stringResource(R.string.custom_alerts_cap_reached, MAX_CUSTOM_ALERT_RULES)
+    val showCapReached: () -> Unit = {
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(
+                message = capReachedMessage,
+                duration = SnackbarDuration.Short,
+            )
+        }
+    }
+    // The 50-rule cap must never fail silently: at cap the add path surfaces
+    // the limit instead of opening an editor whose save would be discarded.
+    val startNewAlert = {
+        if (state.isAtRuleCap) {
+            showCapReached()
+        } else {
+            editing = EditorState(existing = null, draft = viewModel.defaultRule())
+        }
+    }
     val deletedMessage = stringResource(R.string.custom_alerts_deleted)
     val undoLabel = stringResource(R.string.common_undo)
     // Delete is immediate (no confirmation dialog) — the snackbar provides
@@ -199,14 +222,20 @@ fun CustomAlertsScreen(
                 isNew = ed.existing == null,
                 settings = state.settings,
                 onSave = { metric, op, threshold, enabled ->
-                    viewModel.upsertRule(
-                        existing = ed.existing,
-                        metric = metric,
-                        operator = op,
-                        thresholdInDisplayUnits = threshold,
-                        enabled = enabled,
-                    )
-                    editing = null
+                    if (ed.existing == null && state.isAtRuleCap) {
+                        // Cap reached while the sheet was open — keep the
+                        // draft on screen instead of closing as if saved.
+                        showCapReached()
+                    } else {
+                        viewModel.upsertRule(
+                            existing = ed.existing,
+                            metric = metric,
+                            operator = op,
+                            thresholdInDisplayUnits = threshold,
+                            enabled = enabled,
+                        )
+                        editing = null
+                    }
                 },
                 onCancel = { editing = null },
             )
@@ -217,6 +246,45 @@ fun CustomAlertsScreen(
 private data class EditorState(
     val existing: CustomAlertRule?,
     val draft: CustomAlertRule,
+)
+
+private val editorStateJson = Json { ignoreUnknownKeys = true }
+
+/**
+ * Saver for the open-editor state: [CustomAlertRule] is already
+ * kotlinx-serializable (it persists to preferences), so both halves round-trip
+ * through JSON strings. `emptyList` encodes the "no editor open" state.
+ */
+private val EditorStateSaver = listSaver<EditorState?, String>(
+    save = { state ->
+        if (state == null) {
+            emptyList()
+        } else {
+            listOf(
+                state.existing?.let {
+                    editorStateJson.encodeToString(CustomAlertRule.serializer(), it)
+                } ?: "",
+                editorStateJson.encodeToString(CustomAlertRule.serializer(), state.draft),
+            )
+        }
+    },
+    restore = { saved ->
+        val draft = saved.getOrNull(1)?.let { raw ->
+            runCatching {
+                editorStateJson.decodeFromString(CustomAlertRule.serializer(), raw)
+            }.getOrNull()
+        }
+        if (draft == null) {
+            null
+        } else {
+            val existing = saved.getOrNull(0)?.takeIf { it.isNotEmpty() }?.let { raw ->
+                runCatching {
+                    editorStateJson.decodeFromString(CustomAlertRule.serializer(), raw)
+                }.getOrNull()
+            }
+            EditorState(existing = existing, draft = draft)
+        }
+    },
 )
 
 @Composable
@@ -388,7 +456,10 @@ private fun formatThreshold(rule: CustomAlertRule, settings: NimbusSettings): St
         com.sysadmindoc.nimbus.data.model.CustomAlertUnit.MM,
         com.sysadmindoc.nimbus.data.model.CustomAlertUnit.UV,
         com.sysadmindoc.nimbus.data.model.CustomAlertUnit.HPA ->
-            String.format(java.util.Locale.US, "%.1f", display)
+            // Display in the default locale so it matches the input
+            // convention (the editor accepts comma decimals). Stored values
+            // stay canonical doubles — locale-invariant.
+            String.format(Locale.getDefault(), "%.1f", display)
         com.sysadmindoc.nimbus.data.model.CustomAlertUnit.AQI ->
             kotlin.math.round(display).toInt().toString()
     }
@@ -403,16 +474,16 @@ private fun RuleEditor(
     onSave: (CustomAlertMetric, CustomAlertOperator, Double, Boolean) -> Unit,
     onCancel: () -> Unit,
 ) {
-    var metric by remember { mutableStateOf(initial.metric) }
-    var operator by remember { mutableStateOf(initial.operator) }
-    var thresholdText by remember {
+    var metric by rememberSaveable { mutableStateOf(initial.metric) }
+    var operator by rememberSaveable { mutableStateOf(initial.operator) }
+    var thresholdText by rememberSaveable {
         mutableStateOf(
             formatThresholdInput(initial.thresholdCanonical, initial.metric, settings),
         )
     }
-    var enabled by remember { mutableStateOf(initial.enabled) }
-    var previousMetric by remember { mutableStateOf(initial.metric) }
-    val parsedThreshold = thresholdText.toDoubleOrNull()
+    var enabled by rememberSaveable { mutableStateOf(initial.enabled) }
+    var previousMetric by rememberSaveable { mutableStateOf(initial.metric) }
+    val parsedThreshold = parseThresholdInput(thresholdText)
 
     androidx.compose.runtime.LaunchedEffect(metric) {
         if (metric != previousMetric) {
@@ -872,11 +943,7 @@ private fun CustomAlertsIntroCard(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = if (ruleCount == 1) {
-                    stringResource(R.string.custom_alerts_rule_count_singular)
-                } else {
-                    stringResource(R.string.custom_alerts_rule_count_plural, ruleCount)
-                },
+                text = pluralStringResource(R.plurals.custom_alerts_rule_count, ruleCount, ruleCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
             )
@@ -914,8 +981,18 @@ private fun formatThresholdInput(
         com.sysadmindoc.nimbus.data.model.CustomAlertUnit.MM,
         com.sysadmindoc.nimbus.data.model.CustomAlertUnit.UV,
         com.sysadmindoc.nimbus.data.model.CustomAlertUnit.HPA ->
-            String.format(java.util.Locale.US, "%.1f", displayValue)
+            // Default locale so the pre-filled value matches what comma-decimal
+            // locales type; parseThresholdInput normalizes either separator.
+            String.format(Locale.getDefault(), "%.1f", displayValue)
         com.sysadmindoc.nimbus.data.model.CustomAlertUnit.AQI ->
             kotlin.math.round(displayValue).toInt().toString()
     }
 }
+
+/**
+ * Parse editor text accepting either decimal separator: user edits are
+ * normalized to '.' as they type, but the pre-filled value is formatted in
+ * the default locale and may carry ','.
+ */
+internal fun parseThresholdInput(thresholdText: String): Double? =
+    thresholdText.replace(',', '.').toDoubleOrNull()

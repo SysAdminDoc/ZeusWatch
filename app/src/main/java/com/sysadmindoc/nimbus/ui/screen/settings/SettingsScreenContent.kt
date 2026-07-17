@@ -88,6 +88,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -116,6 +117,8 @@ import com.sysadmindoc.nimbus.ui.theme.*
 import com.sysadmindoc.nimbus.util.displayNameRes
 import com.sysadmindoc.nimbus.util.labelRes
 import com.sysadmindoc.nimbus.util.summaryRes
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private enum class SettingsCategory(
@@ -804,7 +807,7 @@ private fun SettingsDataDisplaySection(
         Text(stringResource(R.string.settings_hourly_range), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp))
         listOf(48, 72).forEach { hours ->
             SettingRadio(
-                label = "${hours}h",
+                label = stringResource(R.string.settings_hourly_range_option, hours),
                 sublabel = if (hours == 72) stringResource(R.string.settings_more_data_response) else null,
                 selected = settings.hourlyForecastHours == hours,
                 onClick = { actions.onHourlyForecastHours(hours) },
@@ -827,7 +830,10 @@ private fun SettingsHealthSection(
         Text(stringResource(R.string.settings_pressure_threshold), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
         listOf(3.0, 5.0, 7.0, 10.0).forEach { threshold ->
             SettingRadio(
-                label = "$threshold hPa/3h",
+                label = stringResource(
+                    R.string.settings_pressure_threshold_option,
+                    String.format(Locale.getDefault(), "%.1f", threshold),
+                ),
                 sublabel = pressureThresholdSublabel(threshold),
                 selected = settings.migrainePressureThreshold == threshold,
                 onClick = { actions.onMigrainePressureThreshold(threshold) },
@@ -890,7 +896,7 @@ private fun SettingsDataSourcesSection(
         Spacer(modifier = Modifier.height(4.dp))
         SourceDropdownNullable(stringResource(R.string.settings_forecast_fallback), sourceConfig.forecastFallback, WeatherSourceProvider.forType(WeatherDataType.FORECAST).filter { it != sourceConfig.forecast }, actions.onSourceForecastFallback)
         Spacer(modifier = Modifier.height(8.dp))
-        SourceDropdown(stringResource(R.string.settings_alert_source), sourceConfig.alerts, WeatherSourceProvider.forType(WeatherDataType.ALERTS), actions.onSourceAlerts)
+        SourceDropdown(stringResource(R.string.settings_alert_provider), sourceConfig.alerts, WeatherSourceProvider.forType(WeatherDataType.ALERTS), actions.onSourceAlerts)
         Spacer(modifier = Modifier.height(4.dp))
         SourceDropdownNullable(stringResource(R.string.settings_alert_fallback), sourceConfig.alertsFallback, WeatherSourceProvider.forType(WeatherDataType.ALERTS).filter { it != sourceConfig.alerts }, actions.onSourceAlertsFallback)
         Spacer(modifier = Modifier.height(8.dp))
@@ -1260,9 +1266,17 @@ private fun settingsTransferStatusMessage(status: SettingsTransferStatus): Strin
     SettingsTransferStatus.DiagnosticsExportError,
     SettingsTransferStatus.ImportError -> stringResource(status.messageRes)
     is SettingsTransferStatus.ImportSuccess -> stringResource(
-        status.messageRes,
-        status.savedLocationCount,
-        status.customAlertCount,
+        R.string.settings_transfer_import_success_composed,
+        pluralStringResource(
+            R.plurals.settings_transfer_import_locations,
+            status.savedLocationCount,
+            status.savedLocationCount,
+        ),
+        pluralStringResource(
+            R.plurals.settings_transfer_import_alerts,
+            status.customAlertCount,
+            status.customAlertCount,
+        ),
     )
 }
 
@@ -2289,18 +2303,11 @@ private fun IconPackSelector(
 
 private fun formatBriefingTime(minutesAfterMidnight: Int, timeFormat: TimeFormat): String {
     val safeMinutes = minutesAfterMidnight.coerceIn(0, 24 * 60 - 1)
-    val hour = safeMinutes / 60
-    val minute = safeMinutes % 60
-    return if (timeFormat == TimeFormat.TWENTY_FOUR_HOUR) {
-        String.format(Locale.US, "%02d:%02d", hour, minute)
-    } else {
-        val displayHour = when (val twelveHour = hour % 12) {
-            0 -> 12
-            else -> twelveHour
-        }
-        val suffix = if (hour < 12) "AM" else "PM"
-        String.format(Locale.US, "%d:%02d %s", displayHour, minute, suffix)
-    }
+    val time = LocalTime.of(safeMinutes / 60, safeMinutes % 60)
+    // Locale-aware day-period text ("AM/PM" is English-only); 24-hour stays
+    // digit-based but still formats through the default locale.
+    val pattern = if (timeFormat == TimeFormat.TWENTY_FOUR_HOUR) "HH:mm" else "h:mm a"
+    return time.format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
 }
 
 internal fun hasNotificationPermission(context: Context): Boolean {

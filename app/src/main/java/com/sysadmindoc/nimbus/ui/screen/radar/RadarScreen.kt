@@ -80,6 +80,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
+import com.sysadmindoc.nimbus.util.labelRes
 
 @Composable
 fun RadarScreen(
@@ -516,7 +517,7 @@ private fun BoxScope.RadarNativeContent(
         modifier = Modifier.fillMaxSize(),
     )
     RadarTopControls(
-        providerLabel = state.settings.radarProvider.label,
+        providerLabel = stringResource(state.settings.radarProvider.labelRes),
         selectedLayer = state.selectedLayer,
         activeAlertCount = state.radarState.alertOverlays.size,
         alertOverlayUnavailable = state.radarState.alertOverlayError != null,
@@ -581,7 +582,7 @@ private fun BoxScope.RadarWebContent(
         modifier = Modifier.fillMaxSize(),
     )
     RadarTopControls(
-        providerLabel = provider.label,
+        providerLabel = stringResource(provider.labelRes),
         selectedLayer = null,
         activeAlertCount = 0,
         alertOverlayUnavailable = false,
@@ -772,7 +773,7 @@ private fun RadarTopControls(
     val radarTitle = stringResource(R.string.nav_radar)
     val interactiveMapLabel = stringResource(R.string.radar_interactive_map)
     val layerProviderLabel = selectedLayer?.let {
-        stringResource(R.string.radar_layer_with_provider, it.label, providerLabel)
+        stringResource(R.string.radar_layer_with_provider, stringResource(it.labelRes), providerLabel)
     } ?: providerLabel
 
     Column(
@@ -804,7 +805,7 @@ private fun RadarTopControls(
                 )
             }
             RadarInfoBadge(
-                text = if (selectedLayer == null) interactiveMapLabel else selectedLayer.label,
+                text = if (selectedLayer == null) interactiveMapLabel else stringResource(selectedLayer.labelRes),
                 modifier = Modifier.widthIn(max = 220.dp),
             )
         }

@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="app_name">ZeusWatch</string>
-    <string name="app_version">1.3.0</string>
     <string name="permission_read_provider_label">Read ZeusWatch weather provider</string>
     <string name="permission_read_provider_description">Allows another app to read opted-in saved locations and cached forecasts from ZeusWatch.</string>
     <string name="widget_small_label">ZeusWatch Current</string>
@@ -143,13 +142,11 @@
     <string name="whats_new_version">Version %1$s</string>
     <string name="whats_new_done">Got it</string>
     <string-array name="whats_new_items">
-        <item>Forecast detail sheets now open from hourly and daily rows.</item>
-        <item>Locations remembers recent searches and keeps My Location one tap away.</item>
-        <item>EXTREME weather alerts now use a stronger safety takeover.</item>
+        <item>Environment Canada forecasts are back, now with hourly detail.</item>
+        <item>Autumn clock changes no longer interrupt the hourly forecast.</item>
+        <item>Your watch keeps active alerts even if a forecast refresh hiccups.</item>
     </string-array>
     <string name="custom_alerts_rule_center">Rule center</string>
-    <string name="custom_alerts_rule_count_singular">1 custom alert ready to watch the forecast.</string>
-    <string name="custom_alerts_rule_count_plural">%1$d custom alerts ready to watch the forecast.</string>
     <string name="custom_alert_metric_temp_high_today">Today\'s high</string>
     <string name="custom_alert_metric_temp_high_today_summary">Today\'s forecast high temperature</string>
     <string name="custom_alert_metric_temp_low_tonight">Tonight\'s low</string>
@@ -680,7 +677,7 @@
     <string name="pressure_trend_falling_semantic">Falling</string>
     <string name="pressure_trend_slowly_falling_semantic">Slowly falling</string>
     <string name="pressure_trend_steady_semantic">Steady</string>
-    <string name="pressure_trend_semantics">Pressure trend. Current %1$s. %2$s. 24-hour change %3$s hectopascals.</string>
+    <string name="pressure_trend_semantics">Pressure trend. Current %1$s. %2$s. 24-hour change %3$s.</string>
     <string name="temperature_graph_summary">Next %1$d hours: low %2$d°, high %3$d°, %4$s.</string>
     <string name="temperature_graph_semantics">Temperature trend graph. %1$s</string>
     <string name="temperature_graph_semantics_with_uncertainty">Temperature trend graph. %1$s %2$s</string>
@@ -877,7 +874,6 @@
     <string name="locations_title">מיקומים</string>
     <string name="locations_eyebrow">מקומות שמורים</string>
     <string name="locations_empty_subtitle">Search for a city, ZIP code, or region to build a shortlist for widgets, alerts, and quick switching.</string>
-    <string name="locations_saved_count_subtitle">%1$d saved places ready for quick switching, widgets, and alerts.</string>
     <string name="locations_search_results">Search Results</string>
     <string name="locations_search_unavailable">Search unavailable</string>
     <string name="locations_already_saved_title">Already saved</string>
@@ -936,7 +932,6 @@
     <string name="compare_rain_chance_label">Rain Chance</string>
     <string name="compare_selector_cd">%1$s, %2$s</string>
     <string name="compare_ready_title">Comparison deck ready</string>
-    <string name="compare_ready_message">%1$d saved places available for side-by-side weather decisions.</string>
     <string name="compare_snapshot">Snapshot</string>
     <string name="compare_currently_identical">%1$s and %2$s currently feel nearly identical.</string>
     <string name="compare_temperature_delta">%1$s %2$s than %3$s by about %4$d\u00B0.</string>
@@ -1164,7 +1159,6 @@
     <string name="settings_transfer_status_message">%1$s Tap to dismiss.</string>
     <string name="settings_transfer_export_success">Settings exported.</string>
     <string name="settings_transfer_export_error">Export failed. Check storage access and try again.</string>
-    <string name="settings_transfer_import_success">Settings restored with %1$d saved locations and %2$d custom alerts.</string>
     <string name="settings_transfer_import_error">Import failed. Choose a valid ZeusWatch backup under 1 MB and try again.</string>
     <string name="settings_minutes">%1$d minutes</string>
     <string name="settings_hours">%1$d hours</string>
@@ -1494,4 +1488,50 @@
     <string name="on_this_day_date_unavailable">No archive data for this date yet. Recent days can take a couple of days to appear.</string>
     <string name="compare_overlay_error">Couldn\'t load source forecasts. Check your connection and try again.</string>
     <string name="compare_overlay_retry">Retry</string>
+    <string name="radar_layer_radar">Radar</string>
+    <string name="radar_layer_lightning">Lightning</string>
+    <string name="radar_layer_satellite">Satellite</string>
+    <string name="settings_alert_provider">Alert provider</string>
+    <string name="settings_hourly_range_option">%1$d h</string>
+    <string name="settings_pressure_threshold_option">%1$s hPa/3h</string>
+    <string name="custom_alerts_cap_reached">Rule limit reached (%1$d). Delete a rule to add another.</string>
+    <string name="direction_n">N</string>
+    <string name="direction_ne">NE</string>
+    <string name="direction_e">E</string>
+    <string name="direction_se">SE</string>
+    <string name="direction_s">S</string>
+    <string name="direction_sw">SW</string>
+    <string name="direction_w">W</string>
+    <string name="direction_nw">NW</string>
+    <plurals name="locations_saved_count">
+        <item quantity="one">%1$d saved place ready for quick switching, widgets, and alerts.</item>
+        <item quantity="two">%1$d saved places ready for quick switching, widgets, and alerts.</item>
+        <item quantity="many">%1$d saved places ready for quick switching, widgets, and alerts.</item>
+        <item quantity="other">%1$d saved places ready for quick switching, widgets, and alerts.</item>
+    </plurals>
+    <plurals name="compare_ready_count">
+        <item quantity="one">%1$d saved place available for side-by-side weather decisions.</item>
+        <item quantity="two">%1$d saved places available for side-by-side weather decisions.</item>
+        <item quantity="many">%1$d saved places available for side-by-side weather decisions.</item>
+        <item quantity="other">%1$d saved places available for side-by-side weather decisions.</item>
+    </plurals>
+    <plurals name="settings_transfer_import_locations">
+        <item quantity="one">%1$d saved location</item>
+        <item quantity="two">%1$d saved locations</item>
+        <item quantity="many">%1$d saved locations</item>
+        <item quantity="other">%1$d saved locations</item>
+    </plurals>
+    <plurals name="settings_transfer_import_alerts">
+        <item quantity="one">%1$d custom alert</item>
+        <item quantity="two">%1$d custom alerts</item>
+        <item quantity="many">%1$d custom alerts</item>
+        <item quantity="other">%1$d custom alerts</item>
+    </plurals>
+    <string name="settings_transfer_import_success_composed">Settings restored with %1$s and %2$s.</string>
+    <plurals name="custom_alerts_rule_count">
+        <item quantity="one">%1$d custom alert ready to watch the forecast.</item>
+        <item quantity="two">%1$d custom alerts ready to watch the forecast.</item>
+        <item quantity="many">%1$d custom alerts ready to watch the forecast.</item>
+        <item quantity="other">%1$d custom alerts ready to watch the forecast.</item>
+    </plurals>
 </resources>
