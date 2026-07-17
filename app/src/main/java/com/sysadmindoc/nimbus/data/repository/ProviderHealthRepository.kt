@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -24,8 +25,11 @@ import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// Corruption handler: without it a corrupted file makes every edit{} throw
+// CorruptionException forever (reads mask it via the IOException catch).
 private val Context.providerHealthStore: DataStore<Preferences> by preferencesDataStore(
     name = "nimbus_provider_health",
+    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
 )
 
 @Serializable

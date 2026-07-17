@@ -65,6 +65,39 @@ class SettingsTransferTest {
     }
 
     @Test
+    fun `settings backup round-trips forecast accuracy, confidence bands, and flatbuffers toggles`() {
+        val backup = NimbusSettings(
+            showForecastAccuracy = true,
+            showConfidenceBands = true,
+            openMeteoFlatBuffersEnabled = true,
+        ).toBackup()
+        val encoded = json.encodeToString(SettingsBackup(settings = backup))
+
+        assertTrue(encoded.contains("\"showForecastAccuracy\":true"))
+        assertTrue(encoded.contains("\"showConfidenceBands\":true"))
+        assertTrue(encoded.contains("\"openMeteoFlatBuffersEnabled\":true"))
+
+        val restored = backup.toSettings()
+        assertTrue(restored.showForecastAccuracy)
+        assertTrue(restored.showConfidenceBands)
+        assertTrue(restored.openMeteoFlatBuffersEnabled)
+    }
+
+    @Test
+    fun `old backups without the new toggle fields import with current defaults`() {
+        // Simulates a schema-1 backup exported before the fields existed.
+        val legacyJson = """{"settings":{"tempUnit":"CELSIUS"}}"""
+
+        val backup = json.decodeFromString(SettingsBackup.serializer(), legacyJson)
+        val restored = backup.settings.toSettings()
+
+        assertEquals(TempUnit.CELSIUS, restored.tempUnit)
+        assertFalse(restored.showForecastAccuracy)
+        assertFalse(restored.showConfidenceBands)
+        assertFalse(restored.openMeteoFlatBuffersEnabled)
+    }
+
+    @Test
     fun `settings backup preserves custom summary template`() {
         val template = "Start with {condition}, then mention {high} and {low}."
         val backup = SettingsBackup(
@@ -295,6 +328,22 @@ class SettingsTransferTest {
         assertTrue(SettingsImportWarning.BLANK_LOCATION_NAMES in preview.warnings)
         assertTrue(SettingsImportWarning.INVALID_COORDINATES in preview.warnings)
         assertTrue(SettingsImportWarning.DUPLICATE_LOCATIONS in preview.warnings)
+    }
+
+    @Test
+    fun `applyImportedSettings persists forecast accuracy, confidence bands, and flatbuffers`() = runTest {
+        val prefs = mockk<UserPreferences>(relaxed = true)
+        val settings = NimbusSettings(
+            showForecastAccuracy = true,
+            showConfidenceBands = true,
+            openMeteoFlatBuffersEnabled = true,
+        )
+
+        prefs.applyImportedSettings(settings)
+
+        coVerify { prefs.setShowForecastAccuracy(true) }
+        coVerify { prefs.setShowConfidenceBands(true) }
+        coVerify { prefs.setOpenMeteoFlatBuffersEnabled(true) }
     }
 
     @Test

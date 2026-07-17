@@ -171,7 +171,7 @@ class OnThisDayRepository @Inject constructor(
     private fun readCache(key: String): OnThisDayData? {
         val raw = prefs.getString(key, null) ?: return null
         return runCatching {
-            val cached = json.decodeFromString(CachedData.serializer(), raw)
+            val cached = json.decodeFromString(CachedData.serializer(), onThisDayPayloadBody(raw))
             OnThisDayData(
                 priorYears = cached.priorYears.map {
                     PriorYearEntry(it.year, it.highC, it.lowC, it.precipMm)
@@ -194,15 +194,16 @@ class OnThisDayRepository @Inject constructor(
             recordHighC = data.recordHighC,
             recordLowC = data.recordLowC,
         )
-        val editor = prefs.edit()
-            .putString(key, json.encodeToString(CachedData.serializer(), payload))
-        val allKeys = prefs.all.keys
-        if (allKeys.size > MAX_CACHE_ENTRIES) {
-            // Never evict the key being written in this very edit — picking
-            // the lexicographically-smallest keys blindly could select it
-            // and silently undo the write we are committing.
-            val excess = (allKeys - key).sorted().take(allKeys.size - MAX_CACHE_ENTRIES)
-            for (k in excess) editor.remove(k)
+        val stamped = stampOnThisDayPayload(
+            json.encodeToString(CachedData.serializer(), payload),
+            System.currentTimeMillis(),
+        )
+        val editor = prefs.edit().putString(key, stamped)
+        // Evict oldest-first by insertion timestamp — lexicographic key order
+        // would evict southern-hemisphere (negative-latitude) keys regardless
+        // of age. Never evict the key being written in this very edit.
+        for (k in selectOnThisDayEvictions(prefs.all, key, MAX_CACHE_ENTRIES)) {
+            editor.remove(k)
         }
         editor.apply()
     }
@@ -240,6 +241,57 @@ class OnThisDayRepository @Inject constructor(
     companion object {
         private const val PREFS_NAME = "nimbus_on_this_day"
         private const val HISTORY_SPAN_YEARS = 10
-        private const val MAX_CACHE_ENTRIES = 500
+        internal const val MAX_CACHE_ENTRIES = 500
     }
+}
+
+/** Prefix a cached payload with its insertion timestamp: `"<epochMillis>|<json>"`. */
+internal fun stampOnThisDayPayload(payload: String, timestampMillis: Long): String =
+    "$timestampMillis|$payload"
+
+/**
+ * Strip the timestamp prefix from a cached payload. Entries written before
+ * stamping existed are plain JSON (starting with `{`) and pass through as-is.
+ */
+internal fun onThisDayPayloadBody(raw: String): String {
+    val separator = raw.indexOf('|')
+    if (separator <= 0) return raw
+    val prefix = raw.substring(0, separator)
+    return if (prefix.all(Char::isDigit)) raw.substring(separator + 1) else raw
+}
+
+/**
+ * Insertion timestamp of a cached payload; un-stamped legacy entries report 0
+ * so they are treated as oldest and evicted first.
+ */
+internal fun onThisDayPayloadTimestamp(raw: String): Long {
+    val separator = raw.indexOf('|')
+    if (separator <= 0) return 0L
+    val prefix = raw.substring(0, separator)
+    if (!prefix.all(Char::isDigit)) return 0L
+    return prefix.toLongOrNull() ?: 0L
+}
+
+/**
+ * Keys to evict so the cache stays within [maxEntries] after [currentKey] is
+ * written: oldest insertion timestamp first (key order as a deterministic
+ * tiebreak), never selecting [currentKey] itself.
+ */
+internal fun selectOnThisDayEvictions(
+    existing: Map<String, *>,
+    currentKey: String,
+    maxEntries: Int,
+): List<String> {
+    val sizeAfterWrite = existing.size + if (currentKey in existing) 0 else 1
+    val excess = sizeAfterWrite - maxEntries
+    if (excess <= 0) return emptyList()
+    return existing.keys
+        .filter { it != currentKey }
+        .sortedWith(
+            compareBy(
+                { key -> onThisDayPayloadTimestamp(existing[key] as? String ?: "") },
+                { it },
+            ),
+        )
+        .take(excess)
 }

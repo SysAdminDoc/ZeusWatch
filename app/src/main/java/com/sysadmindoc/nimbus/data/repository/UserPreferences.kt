@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.compose.runtime.Stable
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
@@ -23,20 +24,18 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "nimbus_prefs")
+// Corruption handler: without it a corrupted file makes every edit{} throw
+// CorruptionException forever (reads mask it via the IOException catch), so
+// each settings interaction would crash until the user clears app data.
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "nimbus_prefs",
+    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+)
 
 private val customAlertRulesKey = stringPreferencesKey("custom_alert_rules")
-private val persistentWeatherNotifKey = booleanPreferencesKey("persistent_weather_notif")
 private val owmApiKeyPreferenceKey = stringPreferencesKey("owm_api_key")
 private val pirateWeatherApiKeyPreferenceKey = stringPreferencesKey("pirate_weather_api_key")
 private val tempestAccessTokenPreferenceKey = stringPreferencesKey("tempest_access_token")
-
-internal suspend fun Context.readPersistentWeatherNotificationEnabled(): Boolean {
-    return dataStore.data
-        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-        .map { prefs -> prefs[persistentWeatherNotifKey] ?: true }
-        .first()
-}
 
 @Singleton
 class UserPreferences @Inject constructor(

@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.catch
@@ -16,7 +17,12 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.IOException
 
-private val Context.widgetDataStore: DataStore<Preferences> by preferencesDataStore(name = "nimbus_widget_data")
+// Corruption handler: without it a corrupted file makes every edit{} throw
+// CorruptionException forever (reads mask it via the IOException catch).
+private val Context.widgetDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "nimbus_widget_data",
+    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+)
 
 /**
  * Lightweight widget data cache using DataStore.

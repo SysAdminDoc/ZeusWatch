@@ -13,6 +13,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherDataCachePayload
 import com.sysadmindoc.nimbus.data.model.toWeatherData
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.sourceOverrides
+import com.sysadmindoc.nimbus.data.repository.withUniqueHourlyTimes
 import com.sysadmindoc.nimbus.ecosystem.ZeusWatchWeatherProviderContract.COLUMN_ADMIN1
 import com.sysadmindoc.nimbus.ecosystem.ZeusWatchWeatherProviderContract.COLUMN_ADMIN1_CODE
 import com.sysadmindoc.nimbus.ecosystem.ZeusWatchWeatherProviderContract.COLUMN_ADMIN2
@@ -40,6 +41,10 @@ import com.sysadmindoc.nimbus.ecosystem.ZeusWatchWeatherProviderContract.VERSION
 import com.sysadmindoc.nimbus.ecosystem.ZeusWatchWeatherProviderContract.VERSION_PATH
 import com.sysadmindoc.nimbus.ecosystem.ZeusWatchWeatherProviderContract.WEATHER_CODE
 import com.sysadmindoc.nimbus.ecosystem.ZeusWatchWeatherProviderContract.WEATHER_PATH
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import java.time.Instant
 import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
@@ -47,15 +52,32 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 
+/**
+ * Exposes the app's Hilt singletons to the ContentProvider, which Hilt cannot
+ * field-inject directly. Reusing the @Singleton [UserPreferences] and
+ * [NimbusDatabase] avoids constructing a duplicate Tink AEAD (Android
+ * Keystore round-trip) and a second Room instance on binder threads.
+ */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+internal interface ZeusWatchWeatherProviderEntryPoint {
+    fun userPreferences(): UserPreferences
+    fun database(): NimbusDatabase
+}
+
 class ZeusWatchWeatherProvider : ContentProvider() {
     private lateinit var appContext: android.content.Context
 
+    private val entryPoint: ZeusWatchWeatherProviderEntryPoint by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        EntryPointAccessors.fromApplication(appContext, ZeusWatchWeatherProviderEntryPoint::class.java)
+    }
+
     private val database: NimbusDatabase by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        NimbusDatabase.buildOn(appContext)
+        entryPoint.database()
     }
 
     private val userPreferences: UserPreferences by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        UserPreferences(appContext)
+        entryPoint.userPreferences()
     }
 
     private val json = Json {
@@ -90,11 +112,16 @@ class ZeusWatchWeatherProvider : ContentProvider() {
         else -> null
     }
 
-    override fun getType(uri: Uri): String? = when (uriMatcher.match(uri)) {
-        VERSION_CODE -> "vnd.android.cursor.item/vnd.com.sysadmindoc.nimbus.weather.version"
-        LOCATIONS_CODE -> "vnd.android.cursor.dir/vnd.com.sysadmindoc.nimbus.weather.location"
-        WEATHER_CODE -> "vnd.android.cursor.item/vnd.com.sysadmindoc.nimbus.weather.location"
-        else -> null
+    override fun getType(uri: Uri): String? {
+        // Same opt-in gate as the data paths: while the provider is disabled,
+        // permission-holding callers see it as unavailable entirely.
+        if (!providerEnabled()) return null
+        return when (uriMatcher.match(uri)) {
+            VERSION_CODE -> "vnd.android.cursor.item/vnd.com.sysadmindoc.nimbus.weather.version"
+            LOCATIONS_CODE -> "vnd.android.cursor.dir/vnd.com.sysadmindoc.nimbus.weather.location"
+            WEATHER_CODE -> "vnd.android.cursor.item/vnd.com.sysadmindoc.nimbus.weather.location"
+            else -> null
+        }
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? = null
@@ -108,9 +135,15 @@ class ZeusWatchWeatherProvider : ContentProvider() {
         selectionArgs: Array<out String>?,
     ): Int = 0
 
+    private fun providerEnabled(): Boolean = runBlocking(Dispatchers.IO) {
+        userPreferences.weatherContentProviderEnabled()
+    }
+
     private fun versionCursor(): Cursor =
         MatrixCursor(ZeusWatchWeatherProviderContract.VERSION_COLUMNS).apply {
-            addRow(arrayOf(SCHEMA_MAJOR, SCHEMA_MINOR))
+            if (providerEnabled()) {
+                addRow(arrayOf(SCHEMA_MAJOR, SCHEMA_MINOR))
+            }
         }
 
     private fun locationsCursor(uri: Uri): Cursor = runBlocking(Dispatchers.IO) {
@@ -143,11 +176,13 @@ class ZeusWatchWeatherProvider : ContentProvider() {
         val payload = runCatching {
             json.decodeFromString(WeatherDataCachePayload.serializer(), entity.payloadJson)
         }.getOrNull() ?: return@runBlocking cursor
+        // Normalize pre-fix cached rows that may carry duplicate DST
+        // fall-back hourly timestamps (live writes are deduped upstream).
         val weather = payload.toWeatherData(
             lastUpdatedOverride = Instant.ofEpochMilli(entity.cachedAt)
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime(),
-        )
+        ).withUniqueHourlyTimes()
         val units = BreezyUnitPreferences.from(settings, uri)
         val row = location.toBreezyLocationRow(
             weather = weather.toBreezyWeatherBlob(

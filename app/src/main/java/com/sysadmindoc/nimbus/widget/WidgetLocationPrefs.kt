@@ -6,13 +6,17 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import java.io.IOException
 
+// Corruption handler: without it a corrupted file makes every edit{} throw
+// CorruptionException forever (reads mask it via the IOException catch).
 private val Context.widgetLocationStore: DataStore<Preferences> by preferencesDataStore(
-    name = "nimbus_widget_locations"
+    name = "nimbus_widget_locations",
+    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
 )
 
 /**
