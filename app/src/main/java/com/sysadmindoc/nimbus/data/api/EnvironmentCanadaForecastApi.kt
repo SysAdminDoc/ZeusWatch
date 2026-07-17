@@ -3,6 +3,11 @@ package com.sysadmindoc.nimbus.data.api
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -16,11 +21,13 @@ import retrofit2.http.Query
  * Schema documentation:
  *   https://eccc-msc.github.io/open-data/msc-data/citypageweather/readme_citypageweather_en/
  *
- * The endpoint accepts a `bbox` filter (min_lon,min_lat,max_lon,max_lat)
- * and returns a FeatureCollection of nearby city weather products. The
- * adapter picks the geographically closest feature. ECCC's free tier
- * does not publish hourly data in this collection — we populate
- * CurrentConditions + DailyConditions from the XML-derived forecastGroup.
+ * SCHEMA NOTE (2026-07): GeoMet rotated this collection from the flat
+ * XML-derived shape (`forecastGroup.forecast[]`, `temperature_value`,
+ * `period` as a plain string) to the bilingual dashboard shape: every
+ * scalar arrives as an `{"en": …, "fr": …}` object, the forecast list
+ * is `forecastGroup.forecasts[]`, and an `hourlyForecastGroup` with
+ * real hourly data plus `riseSet` sunrise/sunset now exist. The models
+ * below match the live payload (fixture: eccc_citypage_live.json).
  */
 interface EnvironmentCanadaForecastApi {
 
@@ -64,58 +71,180 @@ data class EcccGeometry(
     val coordinates: List<Double> = emptyList(),
 )
 
+/**
+ * Bilingual scalar wrapper — the dashboard schema serves every value as
+ * `{"en": X, "fr": Y}` where X/Y may be a string or a number. Numeric
+ * values are language-independent (en preferred, fr fallback); text is
+ * resolved by requested language with cross-language fallback.
+ */
 @Serializable
-data class EcccProperties(
-    @SerialName("city_en") val cityEn: String? = null,
-    @SerialName("city_fr") val cityFr: String? = null,
-    @SerialName("name_en") val nameEn: String? = null,
-    @SerialName("name_fr") val nameFr: String? = null,
-    @SerialName("timestamp_utc") val timestampUtc: String? = null,
-    val currentConditions: EcccCurrentConditions? = null,
-    val forecastGroup: EcccForecastGroup? = null,
+data class EcccLocalized(
+    val en: JsonElement? = null,
+    val fr: JsonElement? = null,
+) {
+    fun text(language: String): String? {
+        val preferred = if (language == "fr") fr else en
+        val fallback = if (language == "fr") en else fr
+        return preferred.primitiveContent() ?: fallback.primitiveContent()
+    }
+
+    fun double(): Double? = en.primitiveDouble() ?: fr.primitiveDouble()
+
+    fun int(): Int? = en.primitiveInt() ?: fr.primitiveInt() ?: double()?.toInt()
+
+    private fun JsonElement?.primitiveContent(): String? =
+        (this as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotBlank() }
+
+    private fun JsonElement?.primitiveDouble(): Double? {
+        val primitive = this as? JsonPrimitive ?: return null
+        return primitive.doubleOrNull ?: primitive.contentOrNull?.trim()?.toDoubleOrNull()
+    }
+
+    private fun JsonElement?.primitiveInt(): Int? {
+        val primitive = this as? JsonPrimitive ?: return null
+        return primitive.intOrNull ?: primitive.contentOrNull?.trim()?.toIntOrNull()
+    }
+}
+
+/** `{units, unitType, qaValue, value: {en, fr}}` measurement wrapper. */
+@Serializable
+data class EcccQuantity(
+    val value: EcccLocalized? = null,
+    val units: EcccLocalized? = null,
+)
+
+/** `{format, value, url}` — `value` is the numeric icon code (rarely a string). */
+@Serializable
+data class EcccIcon(
+    val value: JsonElement? = null,
+    val format: String? = null,
+    val url: String? = null,
+)
+
+@Serializable
+data class EcccWind(
+    val speed: EcccQuantity? = null,
+    val gust: EcccQuantity? = null,
+    val bearing: EcccQuantity? = null,
+    val direction: EcccQuantity? = null,
 )
 
 @Serializable
 data class EcccCurrentConditions(
-    val condition: String? = null,
-    @SerialName("iconCode") val iconCode: JsonElement? = null,
-    @SerialName("temperature_value") val temperatureValue: Double? = null,
-    @SerialName("relativeHumidity_value") val relativeHumidityValue: Double? = null,
-    @SerialName("pressure_value") val pressureValue: Double? = null, // kPa
-    @SerialName("pressure_tendency") val pressureTendency: String? = null,
-    @SerialName("dewpoint_value") val dewpointValue: Double? = null,
-    @SerialName("visibility_value") val visibilityValue: Double? = null, // km
-    @SerialName("wind_speed_value") val windSpeedValue: Double? = null, // km/h
-    @SerialName("wind_bearing_value") val windBearingValue: Double? = null,
-    @SerialName("wind_direction_value") val windDirectionValue: String? = null,
-    @SerialName("wind_gust_value") val windGustValue: Double? = null,
-    @SerialName("windChill_value") val windChillValue: Double? = null,
-    @SerialName("humidex_value") val humidexValue: Double? = null,
-    @SerialName("observationDateTimeUTC") val observationDateTimeUtc: String? = null,
+    val condition: EcccLocalized? = null,
+    @SerialName("iconCode") val iconCode: EcccIcon? = null,
+    val timestamp: EcccLocalized? = null,
+    val temperature: EcccQuantity? = null,
+    val dewpoint: EcccQuantity? = null,
+    val pressure: EcccQuantity? = null, // kPa
+    val relativeHumidity: EcccQuantity? = null,
+    val wind: EcccWind? = null,
+    val visibility: EcccQuantity? = null, // km, not always published
+    val windChill: EcccQuantity? = null,
+    val humidex: EcccQuantity? = null,
 )
 
 @Serializable
-data class EcccForecastGroup(
-    val forecast: List<EcccForecastEntry> = emptyList(),
+data class EcccPeriod(
+    @SerialName("textForecastName") val textForecastName: EcccLocalized? = null,
+    /** English weekday-style period name ("Friday", "Friday night") in `en`. */
+    val value: EcccLocalized? = null,
 )
 
 @Serializable
-data class EcccForecastEntry(
-    val period: String? = null,
-    val textSummary: String? = null,
-    val temperatures: List<EcccTemperature> = emptyList(),
-    @SerialName("abbreviatedForecast") val abbreviatedForecast: EcccAbbreviatedForecast? = null,
+data class EcccTemperatureEntry(
+    @SerialName("class") val tempClass: EcccLocalized? = null,
+    val value: EcccLocalized? = null,
 )
 
 @Serializable
-data class EcccTemperature(
-    @SerialName("class") val tempClass: String? = null,
-    val value: Double? = null,
+data class EcccTemperatures(
+    val temperature: List<EcccTemperatureEntry> = emptyList(),
+    val textSummary: EcccLocalized? = null,
 )
 
 @Serializable
 data class EcccAbbreviatedForecast(
-    @SerialName("iconCode") val iconCode: JsonElement? = null,
-    val textSummary: String? = null,
-    @SerialName("pop_value") val pop: Double? = null, // probability of precipitation
+    val icon: EcccIcon? = null,
+    val textSummary: EcccLocalized? = null,
+    /** Probability of precipitation — omitted upstream when nil. */
+    val pop: EcccQuantity? = null,
 )
+
+/**
+ * `uv.index` is `{en, fr}` directly on daily entries but `{value: {en, fr}}`
+ * on hourly entries — keep it flexible.
+ */
+@Serializable
+data class EcccUv(
+    val index: JsonElement? = null,
+) {
+    fun indexValue(): Double? = flexibleDouble(index)
+}
+
+@Serializable
+data class EcccForecastEntry(
+    val period: EcccPeriod? = null,
+    val textSummary: EcccLocalized? = null,
+    val temperatures: EcccTemperatures? = null,
+    @SerialName("abbreviatedForecast") val abbreviatedForecast: EcccAbbreviatedForecast? = null,
+    val uv: EcccUv? = null,
+    val relativeHumidity: EcccQuantity? = null,
+)
+
+@Serializable
+data class EcccForecastGroup(
+    val forecasts: List<EcccForecastEntry> = emptyList(),
+)
+
+@Serializable
+data class EcccHourlyEntry(
+    /** UTC instant, e.g. "2026-07-17T10:00:00Z". */
+    val timestamp: String? = null,
+    val condition: EcccLocalized? = null,
+    @SerialName("iconCode") val iconCode: EcccIcon? = null,
+    val temperature: EcccQuantity? = null,
+    /** Likelihood of precipitation, percent. */
+    val lop: EcccQuantity? = null,
+    val wind: EcccWind? = null,
+    val uv: EcccUv? = null,
+)
+
+@Serializable
+data class EcccHourlyForecastGroup(
+    @SerialName("hourlyForecasts") val hourlyForecasts: List<EcccHourlyEntry> = emptyList(),
+)
+
+@Serializable
+data class EcccRiseSet(
+    /** UTC instants. */
+    val sunrise: EcccLocalized? = null,
+    val sunset: EcccLocalized? = null,
+)
+
+@Serializable
+data class EcccProperties(
+    val name: EcccLocalized? = null,
+    @SerialName("lastUpdated") val lastUpdated: String? = null,
+    val currentConditions: EcccCurrentConditions? = null,
+    val forecastGroup: EcccForecastGroup? = null,
+    @SerialName("hourlyForecastGroup") val hourlyForecastGroup: EcccHourlyForecastGroup? = null,
+    @SerialName("riseSet") val riseSet: EcccRiseSet? = null,
+)
+
+/**
+ * Resolves a numeric value from the schema's flexible shapes: a raw
+ * primitive, an `{en, fr}` localized object, or a `{value: {en, fr}}`
+ * quantity object.
+ */
+internal fun flexibleDouble(element: JsonElement?): Double? {
+    when (element) {
+        null -> return null
+        is JsonPrimitive -> return element.doubleOrNull ?: element.contentOrNull?.trim()?.toDoubleOrNull()
+        is JsonObject -> {
+            val nested = element["value"] ?: element["en"] ?: element["fr"] ?: return null
+            return flexibleDouble(nested)
+        }
+        else -> return null
+    }
+}
