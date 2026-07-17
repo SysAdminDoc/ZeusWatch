@@ -7,11 +7,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -62,6 +65,7 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
 
 private const val DARK_BASEMAP_URL =
     "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
@@ -85,6 +89,9 @@ fun MapLocationPickerScreen(
     var selectedLon by remember { mutableStateOf<Double?>(null) }
     var selectedName by remember { mutableStateOf<String?>(null) }
     var isGeocoding by remember { mutableStateOf(false) }
+    // Request token: a slow earlier reverse-geocode must not overwrite the
+    // name for a later tap (same guard pattern as LocationsViewModel search).
+    val geocodeRequestId = remember { AtomicInteger(0) }
 
     val mapView = remember {
         MapView(context).apply {
@@ -136,10 +143,13 @@ fun MapLocationPickerScreen(
                                 FeatureCollection.fromFeature(Feature.fromGeometry(pinPoint)),
                             )
 
+                            val requestId = geocodeRequestId.incrementAndGet()
                             scope.launch {
                                 val name = reverseGeocode(context, latLng.latitude, latLng.longitude)
-                                selectedName = name
-                                isGeocoding = false
+                                if (geocodeRequestId.get() == requestId) {
+                                    selectedName = name
+                                    isGeocoding = false
+                                }
                             }
                             true
                         }
@@ -153,6 +163,7 @@ fun MapLocationPickerScreen(
             onClick = onBack,
             modifier = Modifier
                 .align(Alignment.TopStart)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(16.dp),
         ) {
             Icon(

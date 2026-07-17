@@ -179,7 +179,17 @@ fun RouteWeatherPlannerSheet(
 
             OutlinedButton(
                 onClick = {
-                    gpxLauncher.launch(arrayOf("application/gpx+xml", "application/xml", "text/xml"))
+                    // Many providers report .gpx as application/octet-stream,
+                    // which would grey out valid files; the parser validates
+                    // content defensively regardless of the reported type.
+                    gpxLauncher.launch(
+                        arrayOf(
+                            "application/gpx+xml",
+                            "application/xml",
+                            "text/xml",
+                            "application/octet-stream",
+                        ),
+                    )
                 },
                 enabled = !state.isPlanning,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),

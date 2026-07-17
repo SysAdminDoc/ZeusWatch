@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -860,7 +861,7 @@ private fun CompareIntroCard(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = stringResource(R.string.compare_ready_message, readyCount),
+                text = pluralStringResource(R.plurals.compare_ready_count, readyCount, readyCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
             )

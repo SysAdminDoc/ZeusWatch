@@ -146,13 +146,11 @@
     <string name="whats_new_version">Versión %1$s</string>
     <string name="whats_new_done">Entendido</string>
     <string-array name="whats_new_items">
-        <item>Las filas horarias y diarias ahora abren hojas con más detalle.</item>
-        <item>Ubicaciones recuerda búsquedas recientes y mantiene Mi ubicación a un toque.</item>
-        <item>Las alertas meteorológicas EXTREMAS ahora usan una vista de seguridad más fuerte.</item>
+        <item>Los pronósticos de Environment Canada vuelven, ahora con detalle por hora.</item>
+        <item>Los cambios de hora de otoño ya no interrumpen el pronóstico por hora.</item>
+        <item>Tu reloj conserva las alertas activas aunque falle una actualización.</item>
     </string-array>
     <string name="custom_alerts_rule_center">Centro de reglas</string>
-    <string name="custom_alerts_rule_count_singular">1 alerta personalizada lista para vigilar el pronóstico.</string>
-    <string name="custom_alerts_rule_count_plural">%1$d alertas personalizadas listas para vigilar el pronóstico.</string>
     <string name="custom_alert_metric_temp_high_today">Máxima de hoy</string>
     <string name="custom_alert_metric_temp_high_today_summary">Temperatura máxima pronosticada para hoy</string>
     <string name="custom_alert_metric_temp_low_tonight">Mínima de esta noche</string>
@@ -687,7 +685,7 @@
     <string name="pressure_trend_falling_semantic">Bajando</string>
     <string name="pressure_trend_slowly_falling_semantic">Bajando despacio</string>
     <string name="pressure_trend_steady_semantic">Estable</string>
-    <string name="pressure_trend_semantics">Tendencia de presión. Actual %1$s. %2$s. Cambio de 24 horas %3$s hectopascales.</string>
+    <string name="pressure_trend_semantics">Tendencia de presión. Actual %1$s. %2$s. Cambio de 24 horas %3$s.</string>
     <string name="temperature_graph_summary">Próximas %1$d horas: mínima %2$d°, máxima %3$d°, %4$s.</string>
     <string name="temperature_graph_semantics">Gráfico de tendencia de temperatura. %1$s</string>
     <string name="temperature_graph_semantics_with_uncertainty">Gráfico de tendencia de temperatura. %1$s %2$s</string>
@@ -866,7 +864,6 @@
     <string name="locations_title">Ubicaciones</string>
     <string name="locations_eyebrow">Lugares guardados</string>
     <string name="locations_empty_subtitle">Busca una ciudad, código postal o región para crear una lista para widgets, alertas y cambio rápido.</string>
-    <string name="locations_saved_count_subtitle">%1$d lugares guardados listos para cambio rápido, widgets y alertas.</string>
     <string name="locations_search_results">Resultados de búsqueda</string>
     <string name="locations_search_unavailable">Búsqueda no disponible</string>
     <string name="locations_already_saved_title">Ya guardado</string>
@@ -927,7 +924,6 @@
     <string name="compare_rain_chance_label">Prob. lluvia</string>
     <string name="compare_selector_cd">%1$s, %2$s</string>
     <string name="compare_ready_title">Comparación lista</string>
-    <string name="compare_ready_message">%1$d lugares guardados disponibles para comparar clima lado a lado.</string>
     <string name="compare_snapshot">Resumen</string>
     <string name="compare_currently_identical">%1$s y %2$s se sienten casi iguales ahora.</string>
     <string name="compare_temperature_delta">%1$s %2$s que %3$s por unos %4$d\u00B0.</string>
@@ -1166,7 +1162,6 @@
     <string name="settings_transfer_status_message">%1$s Toca para descartar.</string>
     <string name="settings_transfer_export_success">Ajustes exportados.</string>
     <string name="settings_transfer_export_error">Error al exportar. Revisa el acceso al almacenamiento e inténtalo de nuevo.</string>
-    <string name="settings_transfer_import_success">Ajustes restaurados con %1$d ubicaciones guardadas y %2$d alertas personalizadas.</string>
     <string name="settings_transfer_import_error">Error al importar. Elige una copia de ZeusWatch válida menor de 1 MB e inténtalo de nuevo.</string>
     <string name="settings_minutes">%1$d minutos</string>
     <string name="settings_hours">%1$d horas</string>
@@ -1334,7 +1329,6 @@
     <string name="share_weather_chooser">Compartir clima</string>
     <string name="share_weather_image_text">Clima para %1$s - %2$s</string>
     <string name="share_weather_image_chooser">Compartir imagen del clima</string>
-    <string name="app_version">1.3.0</string>
     <string name="feels_like">Sensación %1$s</string>
     <string name="day_night_temp">Día %1$s \u2022 Noche %2$s</string>
     <string name="uv_index">Índice UV</string>
@@ -1530,4 +1524,45 @@
     <string name="on_this_day_date_unavailable">Aún no hay datos de archivo para esta fecha. Los días recientes pueden tardar un par de días en aparecer.</string>
     <string name="compare_overlay_error">No se pudieron cargar los pronósticos de las fuentes. Comprueba tu conexión e inténtalo de nuevo.</string>
     <string name="compare_overlay_retry">Reintentar</string>
+    <string name="radar_layer_radar">Radar</string>
+    <string name="radar_layer_lightning">Rayos</string>
+    <string name="radar_layer_satellite">Satélite</string>
+    <string name="settings_alert_provider">Proveedor de alertas</string>
+    <string name="settings_hourly_range_option">%1$d h</string>
+    <string name="settings_pressure_threshold_option">%1$s hPa/3h</string>
+    <string name="custom_alerts_cap_reached">Límite de reglas alcanzado (%1$d). Elimina una regla para añadir otra.</string>
+    <string name="direction_n">N</string>
+    <string name="direction_ne">NE</string>
+    <string name="direction_e">E</string>
+    <string name="direction_se">SE</string>
+    <string name="direction_s">S</string>
+    <string name="direction_sw">SO</string>
+    <string name="direction_w">O</string>
+    <string name="direction_nw">NO</string>
+    <plurals name="locations_saved_count">
+        <item quantity="one">%1$d lugar guardado listo para cambio rápido, widgets y alertas.</item>
+        <item quantity="many">%1$d lugares guardados listos para cambio rápido, widgets y alertas.</item>
+        <item quantity="other">%1$d lugares guardados listos para cambio rápido, widgets y alertas.</item>
+    </plurals>
+    <plurals name="compare_ready_count">
+        <item quantity="one">%1$d lugar guardado disponible para comparar clima lado a lado.</item>
+        <item quantity="many">%1$d lugares guardados disponibles para comparar clima lado a lado.</item>
+        <item quantity="other">%1$d lugares guardados disponibles para comparar clima lado a lado.</item>
+    </plurals>
+    <plurals name="settings_transfer_import_locations">
+        <item quantity="one">%1$d ubicación guardada</item>
+        <item quantity="many">%1$d ubicaciones guardadas</item>
+        <item quantity="other">%1$d ubicaciones guardadas</item>
+    </plurals>
+    <plurals name="settings_transfer_import_alerts">
+        <item quantity="one">%1$d alerta personalizada</item>
+        <item quantity="many">%1$d alertas personalizadas</item>
+        <item quantity="other">%1$d alertas personalizadas</item>
+    </plurals>
+    <string name="settings_transfer_import_success_composed">Ajustes restaurados con %1$s y %2$s.</string>
+    <plurals name="custom_alerts_rule_count">
+        <item quantity="one">%1$d alerta personalizada lista para vigilar el pronóstico.</item>
+        <item quantity="many">%1$d alertas personalizadas listas para vigilar el pronóstico.</item>
+        <item quantity="other">%1$d alertas personalizadas listas para vigilar el pronóstico.</item>
+    </plurals>
 </resources>
