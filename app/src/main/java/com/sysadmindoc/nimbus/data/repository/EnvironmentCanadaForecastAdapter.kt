@@ -5,8 +5,9 @@ import com.sysadmindoc.nimbus.data.api.EcccAbbreviatedForecast
 import com.sysadmindoc.nimbus.data.api.EcccCurrentConditions
 import com.sysadmindoc.nimbus.data.api.EcccFeature
 import com.sysadmindoc.nimbus.data.api.EcccForecastEntry
-import com.sysadmindoc.nimbus.data.api.EcccProperties
+import com.sysadmindoc.nimbus.data.api.EcccHourlyEntry
 import com.sysadmindoc.nimbus.data.api.EnvironmentCanadaForecastApi
+import com.sysadmindoc.nimbus.data.api.flexibleDouble
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
@@ -14,16 +15,11 @@ import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.util.SourceLocaleText
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.intOrNull
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.format.DateTimeParseException
 import java.time.format.TextStyle
 import java.time.temporal.TemporalAdjusters
@@ -38,8 +34,8 @@ private const val TAG = "EcccForecastAdapter"
  * Forecast adapter for Environment and Climate Change Canada.
  *
  * Data source: MSC GeoMet OGC API Features `citypageweather-realtime`
- * collection — `https://api.weather.gc.ca/collections/...`. Data is
- * derived from the published citypageweather XML product.
+ * collection — `https://api.weather.gc.ca/collections/...` (bilingual
+ * dashboard schema; see the schema note in [EnvironmentCanadaForecastApi]).
  *
  * Approach:
  *   1. Compute a small bounding box around (lat, lon) — 0.5° radius is
@@ -48,11 +44,17 @@ private const val TAG = "EcccForecastAdapter"
  *   2. Pick the feature whose geometry is closest to (lat, lon).
  *   3. Map currentConditions → CurrentConditions. Pressure arrives in
  *      kPa (convert to hPa for consistency); wind speed is already km/h.
- *   4. Map forecastGroup.forecast[] (usually Today + Tonight + next
- *      5-6 day/night pairs) into DailyConditions by pairing each day's
- *      high with its night's low.
- *   5. No hourly — the free ECCC OGC collection doesn't publish hourly.
- *      Return an empty list; UI cards that need hourly degrade gracefully.
+ *   4. Map forecastGroup.forecasts[] (Today/Tonight + day/night pairs)
+ *      into DailyConditions by pairing each day's high with its night's
+ *      low. Pairing keys on the invariant English `period.value` text so
+ *      it is stable regardless of the requested display language.
+ *   5. Map hourlyForecastGroup.hourlyForecasts[] (UTC instants) into
+ *      location-local HourlyConditions.
+ *
+ * Display strings (condition, forecast summaries) resolve through the
+ * bilingual `{en, fr}` payload by the user's preferred language, while
+ * all parsing logic (period pairing, weekday resolution, text→WMO
+ * fallback) always reads the English side.
  */
 @Singleton
 class EnvironmentCanadaForecastAdapter @Inject constructor(
@@ -68,7 +70,14 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         val language = SourceLocaleText.preferredLanguage(SUPPORTED_LANGUAGES)
         val feature = findNearestFeature(latitude, longitude, language)
             ?: error("No ECCC city within 1.5° of ($latitude, $longitude)")
-        mapToWeatherData(feature, latitude, longitude, locationName, locationZone ?: ZoneId.systemDefault())
+        mapToWeatherData(
+            feature = feature,
+            requestedLat = latitude,
+            requestedLon = longitude,
+            locationName = locationName,
+            zone = locationZone ?: ZoneId.systemDefault(),
+            language = language,
+        )
     }.onFailure {
         if (it is kotlinx.coroutines.CancellationException) throw it
         Log.w(TAG, "ECCC forecast failed", it)
@@ -101,12 +110,11 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
     }
 
     /**
-     * ECCC stamps its observation/forecast metadata with `…Utc` ISO-8601
-     * timestamps, but the rest of the app — and the user — wants the
-     * forecast in their local frame of reference. Project the UTC instant
-     * into [zone] before dropping the offset, otherwise the daily-period
-     * indexing in [buildDailyFromForecastGroup] anchors to the UTC date
-     * (off by up to one day for western Canadian timezones late at night).
+     * ECCC stamps its metadata with UTC ISO-8601 timestamps, but the rest
+     * of the app — and the user — wants the forecast in the location's
+     * frame of reference. Project every UTC instant into [zone] before
+     * dropping the offset, otherwise daily-period indexing anchors to the
+     * UTC date (off by up to one day for western Canada late at night).
      */
     internal fun mapToWeatherData(
         feature: EcccFeature,
@@ -114,27 +122,34 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         requestedLon: Double,
         locationName: String?,
         zone: ZoneId = ZoneId.systemDefault(),
+        language: String = SourceLocaleText.preferredLanguage(SUPPORTED_LANGUAGES),
     ): WeatherData {
         val props = feature.properties
             ?: error("ECCC feature missing properties")
         val cc = props.currentConditions
-        val forecastEntries = props.forecastGroup?.forecast.orEmpty()
+        val forecastEntries = props.forecastGroup?.forecasts.orEmpty()
+        val hourlyEntries = props.hourlyForecastGroup?.hourlyForecasts.orEmpty()
 
-        val observationTime = parseObservation(cc?.observationDateTimeUtc, zone)
-            ?: parseObservation(props.timestampUtc, zone)
+        val observationTime = parseInstant(cc?.timestamp?.text("en"), zone)
+            ?: parseInstant(props.lastUpdated, zone)
             ?: LocalDateTime.now(zone)
         val today = observationTime.toLocalDate()
 
-        val pressureHpa = cc?.pressureValue?.let { it * 10.0 } ?: 0.0 // kPa → hPa
-        val visibilityMeters = cc?.visibilityValue?.let { it * 1000.0 } // km → m
-        val currentCode = mapCurrentToWmo(cc)
-
-        val dailyList = buildDailyFromForecastGroup(forecastEntries, today)
+        val hourlyList = buildHourly(hourlyEntries, zone, language)
+        val dailyList = buildDailyFromForecastGroup(forecastEntries, hourlyList, today, language)
         val todayDaily = dailyList.firstOrNull { it.date == today }
+
+        val sunrise = parseInstant(props.riseSet?.sunrise?.text("en"), zone)
+        val sunset = parseInstant(props.riseSet?.sunset?.text("en"), zone)
+
+        val pressureHpa = cc?.pressure?.value?.double()?.let { it * 10.0 } ?: 0.0 // kPa → hPa
+        val visibilityMeters = cc?.visibility?.value?.double()?.let { it * 1000.0 } // km → m
+        val temperature = cc?.temperature?.value?.double()
+        val currentCode = mapCurrentToWmo(cc)
 
         return WeatherData(
             location = LocationInfo(
-                name = locationName ?: props.localizedCityName() ?: "Unknown",
+                name = locationName ?: props.name?.text(language) ?: "Unknown",
                 region = "Canada",
                 country = "CA",
                 latitude = requestedLat,
@@ -142,46 +157,80 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
                 timeZone = zone.id,
             ),
             current = CurrentConditions(
-                temperature = cc?.temperatureValue ?: 0.0,
-                feelsLike = cc?.humidexValue
-                    ?: cc?.windChillValue
-                    ?: cc?.temperatureValue
+                temperature = temperature ?: 0.0,
+                feelsLike = cc?.humidex?.value?.double()
+                    ?: cc?.windChill?.value?.double()
+                    ?: temperature
                     ?: 0.0,
-                humidity = cc?.relativeHumidityValue?.toInt() ?: 0,
+                humidity = cc?.relativeHumidity?.value?.int() ?: 0,
                 weatherCode = WeatherCode.fromCode(currentCode),
                 observationTime = observationTime,
-                isDay = isDayByIcon(cc?.iconCode),
-                windSpeed = cc?.windSpeedValue ?: 0.0,
-                windDirection = cc?.windBearingValue?.toInt() ?: 0,
-                windGusts = cc?.windGustValue,
+                isDay = isDayByIcon(extractIconCode(cc?.iconCode?.value)),
+                windSpeed = cc?.wind?.speed?.value?.double() ?: 0.0,
+                windDirection = cc?.wind?.bearing?.value?.int() ?: 0,
+                windGusts = cc?.wind?.gust?.value?.double(),
                 pressure = pressureHpa,
-                uvIndex = 0.0, // not published via citypageweather-realtime
+                uvIndex = 0.0, // current UV not published; hourly carries it
                 visibility = visibilityMeters,
-                dewPoint = cc?.dewpointValue,
+                dewPoint = cc?.dewpoint?.value?.double(),
                 cloudCover = 0, // text-only in ECCC; leave zeroed
                 precipitation = 0.0,
-                dailyHigh = todayDaily?.temperatureHigh ?: cc?.temperatureValue ?: 0.0,
-                dailyLow = todayDaily?.temperatureLow ?: cc?.temperatureValue ?: 0.0,
-                sunrise = null,
-                sunset = null,
-                sourceConditionText = cc?.condition.takeUnlessBlank(),
+                dailyHigh = todayDaily?.temperatureHigh ?: temperature ?: 0.0,
+                dailyLow = todayDaily?.temperatureLow ?: temperature ?: 0.0,
+                sunrise = sunrise?.toString(),
+                sunset = sunset?.toString(),
+                sourceConditionText = cc?.condition?.text(language),
             ),
-            hourly = emptyList<HourlyConditions>(),
+            hourly = hourlyList,
             daily = dailyList,
+        )
+    }
+
+    private fun buildHourly(
+        entries: List<EcccHourlyEntry>,
+        zone: ZoneId,
+        language: String,
+    ): List<HourlyConditions> = entries.mapNotNull { entry ->
+        val time = parseInstant(entry.timestamp, zone) ?: return@mapNotNull null
+        val temperature = entry.temperature?.value?.double() ?: return@mapNotNull null
+        val icon = extractIconCode(entry.iconCode?.value)
+        HourlyConditions(
+            time = time,
+            temperature = temperature,
+            feelsLike = null,
+            weatherCode = WeatherCode.fromCode(
+                iconToWmo(icon) ?: conditionTextToWmo(entry.condition?.text("en")),
+            ),
+            isDay = isDayByIcon(icon),
+            precipitationProbability = entry.lop?.value?.int() ?: 0,
+            precipitation = null,
+            windSpeed = entry.wind?.speed?.value?.double(),
+            windDirection = compassToDegrees(entry.wind?.direction?.value?.text("en")),
+            humidity = null,
+            uvIndex = entry.uv?.indexValue(),
+            cloudCover = null,
+            visibility = null,
+            windGusts = entry.wind?.gust?.value?.double(),
+            sourceConditionText = entry.condition?.text(language),
         )
     }
 
     private fun buildDailyFromForecastGroup(
         forecasts: List<EcccForecastEntry>,
+        hourly: List<HourlyConditions>,
         today: LocalDate,
+        language: String,
     ): List<DailyConditions> {
         if (forecasts.isEmpty()) return emptyList()
-        // ECCC periods alternate day ("Thursday") and night ("Thursday
-        // night"). Pair them so each DailyConditions gets both a high
-        // (from the day period) and a low (from the night period).
+        // ECCC periods alternate day ("Friday") and night ("Friday night").
+        // Pair them so each DailyConditions gets both a high (day period)
+        // and a low (night period). `period.value` is the invariant
+        // English weekday name in both display languages.
         val byDayName = linkedMapOf<String, DayNightPair>()
         forecasts.forEach { entry ->
-            val period = entry.period?.trim() ?: return@forEach
+            val period = entry.period?.value?.text("en")?.trim()
+                ?: entry.period?.textForecastName?.text("en")?.trim()
+                ?: return@forEach
             val isNight = period.contains("night", ignoreCase = true) ||
                 period.equals("Tonight", ignoreCase = true) ||
                 period.contains("overnight", ignoreCase = true)
@@ -196,17 +245,14 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
             if (isNight) slot.night = entry else slot.day = entry
         }
         return byDayName.values.take(7).map { pair ->
-            val highValue = pair.day?.temperatures
-                ?.firstOrNull { it.tempClass.equals("high", ignoreCase = true) }
-                ?.value
-            val lowValue = pair.night?.temperatures
-                ?.firstOrNull { it.tempClass.equals("low", ignoreCase = true) }
-                ?.value
-            val code = mapAbbreviatedToWmo(pair.day?.abbreviatedForecast)
+            val highValue = pair.day?.temperatureFor("high")
+            val lowValue = pair.night?.temperatureFor("low")
+            val leadEntry = pair.day ?: pair.night
+            val code = mapAbbreviatedToWmo(leadEntry?.abbreviatedForecast)
             val popHigh = listOfNotNull(
-                pair.day?.abbreviatedForecast?.pop,
-                pair.night?.abbreviatedForecast?.pop,
-            ).maxOrNull()
+                pair.day?.abbreviatedForecast?.pop?.value?.double(),
+                pair.night?.abbreviatedForecast?.pop?.value?.double(),
+            ).maxOrNull() ?: hourlyPopFor(hourly, pair.date)
 
             DailyConditions(
                 date = pair.date,
@@ -217,17 +263,29 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
                 precipitationSum = null,
                 sunrise = null,
                 sunset = null,
-                uvIndexMax = null,
+                uvIndexMax = pair.day?.uv?.indexValue(),
                 windSpeedMax = null,
                 windDirectionDominant = null,
                 snowfallSum = null,
                 sunshineDuration = null,
                 windGustsMax = null,
-                sourceConditionText = pair.day?.abbreviatedForecast?.textSummary.takeUnlessBlank()
-                    ?: pair.day?.textSummary.takeUnlessBlank(),
+                sourceConditionText = leadEntry?.abbreviatedForecast?.textSummary?.text(language)
+                    ?: leadEntry?.textSummary?.text(language),
             )
         }
     }
+
+    /** Max hourly likelihood-of-precipitation for [date], as a POP fallback. */
+    private fun hourlyPopFor(hourly: List<HourlyConditions>, date: LocalDate): Double? =
+        hourly.filter { it.time.toLocalDate() == date }
+            .maxOfOrNull { it.precipitationProbability }
+            ?.takeIf { it > 0 }
+            ?.toDouble()
+
+    private fun EcccForecastEntry.temperatureFor(tempClass: String): Double? =
+        temperatures?.temperature
+            ?.firstOrNull { it.tempClass?.text("en").equals(tempClass, ignoreCase = true) }
+            ?.value?.double()
 
     private fun resolveForecastDate(periodDay: String, today: LocalDate, fallbackOffset: Int): LocalDate {
         return when (periodDay.lowercase(java.util.Locale.CANADA)) {
@@ -255,26 +313,12 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         var night: EcccForecastEntry? = null,
     )
 
-    private fun parseObservation(timestamp: String?, zone: ZoneId): LocalDateTime? {
+    private fun parseInstant(timestamp: String?, zone: ZoneId): LocalDateTime? {
         if (timestamp.isNullOrBlank()) return null
         return try {
             OffsetDateTime.parse(timestamp).atZoneSameInstant(zone).toLocalDateTime()
         } catch (_: DateTimeParseException) {
-            try {
-                // Some ECCC fields use compact YYYYMMDDhhmmss (always UTC).
-                if (timestamp.length >= 14) {
-                    LocalDateTime.of(
-                        timestamp.substring(0, 4).toInt(),
-                        timestamp.substring(4, 6).toInt(),
-                        timestamp.substring(6, 8).toInt(),
-                        timestamp.substring(8, 10).toInt(),
-                        timestamp.substring(10, 12).toInt(),
-                        timestamp.substring(12, 14).toInt(),
-                    ).atOffset(ZoneOffset.UTC).atZoneSameInstant(zone).toLocalDateTime()
-                } else null
-            } catch (_: Exception) {
-                null
-            }
+            null
         }
     }
 
@@ -289,44 +333,49 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         )
     }
 
-    private fun isDayByIcon(iconCode: JsonElement?): Boolean {
-        val numeric = extractIconCode(iconCode) ?: return true
-        // ECCC iconCode 0-15 is day; 30-45 is night. Default to day
-        // when the code falls outside the documented range so UI icons
-        // stay sensible during ambiguous data.
-        return numeric < 30
-    }
-
     companion object {
         private val SUPPORTED_LANGUAGES = setOf("en", "fr")
 
+        /** 16-wind compass text (English) → bearing degrees. */
+        private val COMPASS_DEGREES = mapOf(
+            "N" to 0, "NNE" to 22, "NE" to 45, "ENE" to 67,
+            "E" to 90, "ESE" to 112, "SE" to 135, "SSE" to 157,
+            "S" to 180, "SSW" to 202, "SW" to 225, "WSW" to 247,
+            "W" to 270, "WNW" to 292, "NW" to 315, "NNW" to 337,
+        )
+
+        internal fun compassToDegrees(text: String?): Int? =
+            text?.trim()?.uppercase(java.util.Locale.US)?.let { COMPASS_DEGREES[it] }
+
+        internal fun isDayByIcon(iconCode: Int?): Boolean {
+            // ECCC iconCode 0-29 is day; 30+ is night. Default to day when
+            // the code is absent so UI icons stay sensible.
+            return iconCode == null || iconCode < 30
+        }
+
         /**
          * Map ECCC currentConditions to a WMO weather code.
-         * iconCode takes precedence when present; falls back to a
-         * pattern match over the free-text `condition` string.
+         * iconCode takes precedence when present; falls back to a pattern
+         * match over the ENGLISH `condition` string (locale-invariant).
          */
         internal fun mapCurrentToWmo(cc: EcccCurrentConditions?): Int {
             if (cc == null) return 0
-            val byIcon = iconToWmo(extractIconCode(cc.iconCode))
+            val byIcon = iconToWmo(extractIconCode(cc.iconCode?.value))
             if (byIcon != null && byIcon >= 0) return byIcon
-            return conditionTextToWmo(cc.condition)
+            return conditionTextToWmo(cc.condition?.text("en"))
         }
 
         internal fun mapAbbreviatedToWmo(af: EcccAbbreviatedForecast?): Int {
             if (af == null) return 0
-            val byIcon = iconToWmo(extractIconCode(af.iconCode))
+            val byIcon = iconToWmo(extractIconCode(af.icon?.value))
             if (byIcon != null && byIcon >= 0) return byIcon
-            return conditionTextToWmo(af.textSummary)
+            return conditionTextToWmo(af.textSummary?.text("en"))
         }
 
-        internal fun extractIconCode(element: JsonElement?): Int? {
-            if (element == null) return null
-            val primitive = element as? JsonPrimitive ?: return null
-            primitive.intOrNull?.let { return it }
-            return primitive.contentOrNull?.trim()?.trimStart('0')?.ifEmpty { "0" }?.toIntOrNull()
-        }
+        internal fun extractIconCode(element: kotlinx.serialization.json.JsonElement?): Int? =
+            flexibleDouble(element)?.toInt()
 
-        private fun iconToWmo(iconCode: Int?): Int? {
+        internal fun iconToWmo(iconCode: Int?): Int? {
             if (iconCode == null) return null
             val modulo = iconCode % 30 // ECCC day/night pairs offset by 30
             return when (modulo) {
@@ -355,7 +404,7 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
             }
         }
 
-        private fun conditionTextToWmo(text: String?): Int {
+        internal fun conditionTextToWmo(text: String?): Int {
             if (text.isNullOrBlank()) return 0
             val lower = text.lowercase()
             return CONDITION_TEXT_RULES.firstOrNull { it.matches(lower) }?.code ?: 0
@@ -394,15 +443,3 @@ class EnvironmentCanadaForecastAdapter @Inject constructor(
         }
     }
 }
-
-private fun EcccProperties.localizedCityName(): String? {
-    val language = SourceLocaleText.preferredLanguage(setOf("en", "fr"))
-    return if (language == "fr") {
-        cityFr.takeUnlessBlank() ?: nameFr.takeUnlessBlank() ?: cityEn.takeUnlessBlank() ?: nameEn.takeUnlessBlank()
-    } else {
-        cityEn.takeUnlessBlank() ?: nameEn.takeUnlessBlank() ?: cityFr.takeUnlessBlank() ?: nameFr.takeUnlessBlank()
-    }
-}
-
-private fun String?.takeUnlessBlank(): String? =
-    this?.trim()?.takeIf { it.isNotBlank() }
