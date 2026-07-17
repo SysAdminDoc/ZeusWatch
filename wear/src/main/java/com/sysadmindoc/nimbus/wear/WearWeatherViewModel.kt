@@ -68,6 +68,7 @@ class WearWeatherViewModel @Inject constructor(
                             aqiLabel = data.aqiLabel,
                             dataSource = data.dataSource,
                             syncedAtMs = data.syncedAtMs,
+                            updatedAtMs = data.updatedAtMs,
                             tempUnit = data.tempUnit,
                             windUnit = data.windUnit,
                         )
@@ -113,8 +114,10 @@ data class WearUiState(
     val aqiLabel: String = "",
     /** Whether the last successful payload came from the phone or a watch API call. */
     val dataSource: DataSource = DataSource.UNKNOWN,
-    /** Epoch ms the current payload was produced (phone-sync time or fetch time). */
+    /** Epoch ms the current payload was received (phone-sync time or fetch time). */
     val syncedAtMs: Long = 0L,
+    /** Epoch ms the weather data itself was produced; 0 = unknown (use [syncedAtMs]). */
+    val updatedAtMs: Long = 0L,
     /** Display units (phone enum names); raw state values are always metric. */
     val tempUnit: String = WearUnitFormatter.TEMP_CELSIUS,
     val windUnit: String = WearUnitFormatter.WIND_KMH,

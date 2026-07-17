@@ -75,6 +75,7 @@ class WeatherDataListenerService : WearableListenerService() {
 internal fun DataMap.toSyncedWeatherPayload(
     receivedAtMs: Long = System.currentTimeMillis(),
 ): SyncedWeatherPayload {
+    val syncTimestampMs = sanitizedTimestamp(receivedAtMs)
     val hourly = (getDataMapArrayList("hourly") ?: arrayListOf())
         .take(MAX_HOURLY_ENTRIES)
         .map { h ->
@@ -129,7 +130,8 @@ internal fun DataMap.toSyncedWeatherPayload(
         precipChance = boundedInt("precipChance", 0, 0, 100),
         isDay = getBoolean("isDay", true),
         weatherCode = boundedInt("weatherCode", 0, 0, 99),
-        timestampMs = sanitizedTimestamp(receivedAtMs),
+        timestampMs = syncTimestampMs,
+        dataUpdatedAtMs = sanitizedDataUpdatedAt(receivedAtMs, fallback = syncTimestampMs),
         hourly = hourly,
         daily = daily,
         alerts = alerts,
@@ -161,5 +163,24 @@ private fun DataMap.sanitizedTimestamp(receivedAtMs: Long): Long {
         // make fresh syncs look instantly stale — clamp up to receive time.
         syncedAt < receivedAtMs - MAX_PAST_CLOCK_SKEW_MS -> receivedAtMs
         else -> syncedAt
+    }
+}
+
+/**
+ * When the weather data itself was produced on the phone. Unlike
+ * [sanitizedTimestamp], honest *past* values are preserved — the phone
+ * deliberately pushes up-to-6h-old cached data during outages and that age
+ * must survive so freshness labels and the direct-API fallback see it.
+ * Only absurd values (non-positive, far future) are rejected. An absent key
+ * (older phone app) falls back to the sanitized sync timestamp, matching the
+ * pre-field behavior.
+ */
+private fun DataMap.sanitizedDataUpdatedAt(receivedAtMs: Long, fallback: Long): Long {
+    if (!containsKey("dataUpdatedAtMs")) return fallback
+    val updatedAt = getLong("dataUpdatedAtMs", 0L)
+    return when {
+        updatedAt <= 0L -> fallback
+        updatedAt > receivedAtMs + MAX_FUTURE_CLOCK_SKEW_MS -> fallback
+        else -> updatedAt
     }
 }

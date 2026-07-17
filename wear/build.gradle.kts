@@ -17,8 +17,8 @@ android {
         applicationId = "com.sysadmindoc.nimbus.wear"
         minSdk = 30
         targetSdk = 35
-        versionCode = 78
-        versionName = "1.26.0"
+        versionCode = 79
+        versionName = "1.27.0"
     }
 
     // Same conditional-signing pattern as :app — absent keystore produces
@@ -73,6 +73,9 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // Required for Robolectric to load wear string resources so
+        // WearWeatherRepository's localized wmoDescription resolves in JVM tests.
+        unitTests.isIncludeAndroidResources = true
     }
 }
 

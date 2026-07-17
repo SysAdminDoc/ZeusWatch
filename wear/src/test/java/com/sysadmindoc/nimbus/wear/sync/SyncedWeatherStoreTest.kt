@@ -127,6 +127,36 @@ class SyncedWeatherStoreTest {
     }
 
     @Test
+    fun `getFreshData drops payloads whose data age exceeds the window`() {
+        // Outage push: the sync just happened but the weather itself is 6h
+        // old — must not block the watch's own direct-API fallback.
+        savePayload(
+            timestamp = System.currentTimeMillis(),
+            dataUpdatedAt = System.currentTimeMillis() - 6 * 60 * 60 * 1000L,
+        )
+        assertNull(store.getFreshData())
+    }
+
+    @Test
+    fun `getFreshData keeps payloads whose data age is inside the window`() {
+        val now = System.currentTimeMillis()
+        savePayload(timestamp = now, dataUpdatedAt = now - 10 * 60 * 1000L)
+
+        val data = store.getFreshData()
+        assertNotNull(data)
+        assertEquals(now - 10 * 60 * 1000L, data!!.updatedAtMs)
+        assertEquals(now - 10 * 60 * 1000L, store.lastDataUpdatedAt())
+    }
+
+    @Test
+    fun `lastDataUpdatedAt falls back to the sync timestamp for old payloads`() {
+        // Payloads persisted before the dataUpdatedAtMs field default it to
+        // the sync timestamp — freshness behavior is unchanged for them.
+        savePayload(timestamp = 42_000L)
+        assertEquals(42_000L, store.lastDataUpdatedAt())
+    }
+
+    @Test
     fun `getFreshData returns null when weatherCode is missing sentinel`() {
         // weatherCode -1 acts as a sentinel for "not present in payload".
         savePayload(timestamp = System.currentTimeMillis(), weatherCode = -1)
@@ -346,6 +376,7 @@ class SyncedWeatherStoreTest {
         aqiLabel: String? = null,
         tempUnit: String = "CELSIUS",
         windUnit: String = "KMH",
+        dataUpdatedAt: Long = timestamp,
     ) {
         store.save(
             SyncedWeatherPayload(
@@ -361,6 +392,7 @@ class SyncedWeatherStoreTest {
                 isDay = true,
                 weatherCode = weatherCode,
                 timestampMs = timestamp,
+                dataUpdatedAtMs = dataUpdatedAt,
                 hourly = emptyList(),
                 alerts = alerts,
                 aqi = aqi,

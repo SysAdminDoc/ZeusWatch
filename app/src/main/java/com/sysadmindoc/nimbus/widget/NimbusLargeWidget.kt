@@ -32,6 +32,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.sysadmindoc.nimbus.MainActivity
+import kotlin.math.roundToInt
 
 /**
  * Large home screen widget: current conditions + hourly strip + 5-day forecast.
@@ -114,7 +115,7 @@ private fun LargeWidgetContent(
             Spacer(modifier = GlanceModifier.width(10.dp))
             Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(
-                    text = "${data.temperature.toInt()}\u00B0",
+                    text = "${data.temperature.roundToInt()}\u00B0",
                     style = TextStyle(
                         color = WidgetTheme.textPrimary,
                         fontSize = 28.sp,
@@ -122,15 +123,15 @@ private fun LargeWidgetContent(
                     ),
                 )
                 Text(
-                    text = strings.feelsHumidity(data.feelsLike.toInt(), data.humidity),
+                    text = strings.feelsHumidity(data.feelsLike.roundToInt(), data.humidity),
                     style = WidgetTheme.labelStyle,
                     maxLines = 1,
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(strings.highTemp(data.high.toInt()), style = WidgetTheme.labelStyle)
+                Text(strings.highTemp(data.high.roundToInt()), style = WidgetTheme.labelStyle)
                 Spacer(modifier = GlanceModifier.height(2.dp))
-                Text(strings.lowTemp(data.low.toInt()), style = WidgetTheme.captionStyle)
+                Text(strings.lowTemp(data.low.roundToInt()), style = WidgetTheme.captionStyle)
             }
         }
 

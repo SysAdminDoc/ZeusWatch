@@ -119,6 +119,14 @@ class WidgetConfigActivity : ComponentActivity() {
 
     private fun confirmWidget(locationId: Long?) {
         lifecycleScope.launch {
+            if (locationId == null) {
+                // Reconfiguring back to "Follow app location": purge the
+                // per-widget keyed data left over from a previous pinned
+                // city, otherwise WidgetDataProvider.load(appWidgetId) keeps
+                // serving the stale city forever (refreshes only write the
+                // global default for follow-app widgets).
+                WidgetDataProvider.remove(this@WidgetConfigActivity, appWidgetId)
+            }
             WidgetLocationPrefs.setLocationId(this@WidgetConfigActivity, appWidgetId, locationId)
             WidgetRefreshWorker.schedule(this@WidgetConfigActivity)
             WidgetRefreshWorker.enqueueImmediate(this@WidgetConfigActivity)

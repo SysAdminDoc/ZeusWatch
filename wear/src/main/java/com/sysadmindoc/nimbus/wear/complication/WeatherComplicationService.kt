@@ -125,9 +125,12 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
     }
 
     private fun WearWeatherData.updatedLabel(): String {
+        // Data age, not sync age — cached data pushed during a phone outage
+        // must not read as fresh. Payloads from older phone apps carry no
+        // updatedAtMs; fall back to the sync timestamp.
         val sourceTime = when (dataSource) {
             DataSource.PHONE_SYNC,
-            DataSource.DIRECT_API -> syncedAtMs
+            DataSource.DIRECT_API -> if (updatedAtMs > 0L) updatedAtMs else syncedAtMs
             DataSource.UNKNOWN -> 0L
         }
         val ageMin = WeatherComplicationFreshness.ageMinutes(System.currentTimeMillis(), sourceTime)

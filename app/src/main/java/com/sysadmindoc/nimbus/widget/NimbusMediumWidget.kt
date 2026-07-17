@@ -32,6 +32,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.sysadmindoc.nimbus.MainActivity
+import kotlin.math.roundToInt
 
 /**
  * Medium home screen widget: current temp + 3-day forecast row.
@@ -114,7 +115,7 @@ private fun MediumWidgetContent(
             Spacer(modifier = GlanceModifier.width(10.dp))
             Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(
-                    text = "${data.temperature.toInt()}\u00B0",
+                    text = "${data.temperature.roundToInt()}\u00B0",
                     style = TextStyle(
                         color = WidgetTheme.textPrimary,
                         fontSize = 26.sp,
@@ -122,19 +123,19 @@ private fun MediumWidgetContent(
                     ),
                 )
                 Text(
-                    text = strings.feelsHumidity(data.feelsLike.toInt(), data.humidity),
+                    text = strings.feelsHumidity(data.feelsLike.roundToInt(), data.humidity),
                     style = WidgetTheme.labelStyle,
                     maxLines = 1,
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = strings.highTemp(data.high.toInt()),
+                    text = strings.highTemp(data.high.roundToInt()),
                     style = WidgetTheme.labelStyle,
                 )
                 Spacer(modifier = GlanceModifier.height(2.dp))
                 Text(
-                    text = strings.lowTemp(data.low.toInt()),
+                    text = strings.lowTemp(data.low.roundToInt()),
                     style = WidgetTheme.captionStyle,
                 )
             }

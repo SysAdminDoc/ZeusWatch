@@ -11,13 +11,16 @@ import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
+import com.sysadmindoc.nimbus.util.conditionDescription
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToInt
 
 private const val TAG = "WearSyncManager"
 private const val PATH_WEATHER = "/weather/current"
@@ -49,27 +52,41 @@ class WearSyncManager @Inject constructor(
      * @param airQuality same convention: null omits the AQI keys (watch keeps
      *   its previous value) rather than overwriting with "no data".
      */
+    // Block body (not expression) so the return type is Unit, matching the
+    // freenet no-op — an expression body would infer Int from the trailing
+    // Log.d call and break flavor parity / suspend-Unit mocking.
     suspend fun syncWeather(
         data: WeatherData,
         alerts: List<WeatherAlert>? = null,
         airQuality: AirQualityData? = null,
-    ) = withContext(Dispatchers.IO) {
+    ): Unit = withContext(Dispatchers.IO) {
         try {
             val settings = prefs.settings.first()
             val request = PutDataMapRequest.create(PATH_WEATHER).apply {
                 dataMap.apply {
-                    putInt("temperature", data.current.temperature.toInt())
-                    putString("condition", data.current.weatherCode.description)
-                    putInt("high", data.current.dailyHigh.toInt())
-                    putInt("low", data.current.dailyLow.toInt())
+                    putInt("temperature", data.current.temperature.roundToInt())
+                    // Localized at source (respects the phone locale and any
+                    // provider-supplied condition text) so the watch never
+                    // renders a raw English enum name.
+                    putString("condition", data.current.conditionDescription(context))
+                    putInt("high", data.current.dailyHigh.roundToInt())
+                    putInt("low", data.current.dailyLow.roundToInt())
                     putString("locationName", data.location.name)
                     putInt("humidity", data.current.humidity)
-                    putInt("windSpeed", data.current.windSpeed.toInt())
-                    putInt("uvIndex", data.current.uvIndex.toInt())
+                    putInt("windSpeed", data.current.windSpeed.roundToInt())
+                    putInt("uvIndex", data.current.uvIndex.roundToInt())
                     putInt("precipChance", data.daily.firstOrNull()?.precipitationProbability ?: 0)
                     putBoolean("isDay", data.current.isDay)
                     putInt("weatherCode", data.current.weatherCode.code)
                     putLong("syncTimestampMs", System.currentTimeMillis())
+                    // When the weather itself was produced — distinct from
+                    // syncTimestampMs so a deliberate cached-data push during
+                    // an outage doesn't get stamped "just now" on the watch.
+                    // Additive field: old watches simply ignore it.
+                    putLong(
+                        "dataUpdatedAtMs",
+                        data.lastUpdated.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                    )
 
                     // Display units — raw values above stay metric; the watch
                     // converts at render time.
@@ -81,10 +98,10 @@ class WearSyncManager @Inject constructor(
                     data.hourly.take(12).forEach { h ->
                         hourlyMaps.add(DataMap().apply {
                             putString("time", h.time.toString())
-                            putInt("temperature", h.temperature.toInt())
+                            putInt("temperature", h.temperature.roundToInt())
                             putInt("weatherCode", h.weatherCode.code)
                             putInt("precipChance", h.precipitationProbability)
-                            putInt("windSpeed", h.windSpeed?.toInt() ?: 0)
+                            putInt("windSpeed", h.windSpeed?.roundToInt() ?: 0)
                             putBoolean("isDay", h.isDay)
                         })
                     }
@@ -96,8 +113,8 @@ class WearSyncManager @Inject constructor(
                         dailyMaps.add(DataMap().apply {
                             putString("date", d.date.toString())
                             putInt("weatherCode", d.weatherCode.code)
-                            putInt("high", d.temperatureHigh.toInt())
-                            putInt("low", d.temperatureLow.toInt())
+                            putInt("high", d.temperatureHigh.roundToInt())
+                            putInt("low", d.temperatureLow.roundToInt())
                             putInt("precipChance", d.precipitationProbability)
                         })
                     }

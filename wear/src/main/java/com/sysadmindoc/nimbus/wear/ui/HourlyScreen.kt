@@ -10,8 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -51,6 +54,17 @@ fun HourlyScreen(
         return
     }
 
+    // Locale-aware hour labels that honor the system 12/24-hour preference.
+    // LocalConfiguration keys the remember so a locale change recomposes.
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val is24Hour = remember(configuration) {
+        android.text.format.DateFormat.is24HourFormat(context)
+    }
+    val hourFormatter = remember(configuration, is24Hour) {
+        hourLabelFormatter(is24Hour, java.util.Locale.getDefault())
+    }
+
     ScalingLazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -64,13 +78,17 @@ fun HourlyScreen(
             )
         }
         items(hourly) { entry ->
-            HourlyRow(entry, tempUnit)
+            HourlyRow(entry, tempUnit, hourFormatter)
         }
     }
 }
 
 @Composable
-private fun HourlyRow(entry: HourlyEntry, tempUnit: String) {
+private fun HourlyRow(
+    entry: HourlyEntry,
+    tempUnit: String,
+    hourFormatter: java.time.format.DateTimeFormatter,
+) {
     WearPanel(
         modifier = Modifier
             .fillMaxWidth()
@@ -82,7 +100,7 @@ private fun HourlyRow(entry: HourlyEntry, tempUnit: String) {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = formatHour(entry.time),
+                text = formatHour(entry.time, hourFormatter),
                 fontSize = 12.sp,
                 color = WearTextSecondary,
                 modifier = Modifier.width(50.dp),
@@ -105,13 +123,22 @@ private fun HourlyRow(entry: HourlyEntry, tempUnit: String) {
     }
 }
 
-private fun formatHour(isoTime: String): String {
-    val hourStr = isoTime.substringAfter("T").substringBefore(":")
-    val hour = hourStr.toIntOrNull() ?: return hourStr
-    return when {
-        hour == 0 -> "12AM"
-        hour < 12 -> "${hour}AM"
-        hour == 12 -> "12PM"
-        else -> "${hour - 12}PM"
+/** "HH:mm" for 24-hour devices, localized "ha" (e.g. "3PM") otherwise. */
+internal fun hourLabelFormatter(
+    is24Hour: Boolean,
+    locale: java.util.Locale,
+): java.time.format.DateTimeFormatter =
+    java.time.format.DateTimeFormatter.ofPattern(if (is24Hour) "HH:mm" else "ha", locale)
+
+internal fun formatHour(
+    isoTime: String,
+    formatter: java.time.format.DateTimeFormatter,
+): String {
+    // Input: ISO local date-time from the phone sync or the direct API,
+    // e.g. "2026-05-17T15:00". Malformed input degrades to the raw hour text.
+    return try {
+        formatter.format(java.time.LocalDateTime.parse(isoTime))
+    } catch (_: Exception) {
+        isoTime.substringAfter("T").substringBefore(":")
     }
 }

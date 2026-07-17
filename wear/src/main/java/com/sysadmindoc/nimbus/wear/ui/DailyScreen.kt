@@ -51,6 +51,11 @@ fun DailyScreen(
         return
     }
 
+    // Anchor "Today" on the first synced entry's date (the forecast location's
+    // calendar), not the watch clock — across a date boundary the watch's
+    // LocalDate.now() would label tomorrow's row "Today".
+    val anchorDate = dailyAnchorDate(daily)
+
     ScalingLazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -64,13 +69,17 @@ fun DailyScreen(
             )
         }
         items(daily) { entry ->
-            DailyRow(entry, tempUnit)
+            DailyRow(entry, tempUnit, anchorDate)
         }
     }
 }
 
 @Composable
-private fun DailyRow(entry: WearDailyEntry, tempUnit: String) {
+private fun DailyRow(
+    entry: WearDailyEntry,
+    tempUnit: String,
+    anchorDate: java.time.LocalDate?,
+) {
     WearPanel(
         modifier = Modifier
             .fillMaxWidth()
@@ -86,6 +95,7 @@ private fun DailyRow(entry: WearDailyEntry, tempUnit: String) {
                     isoDate = entry.date,
                     todayLabel = stringResource(R.string.wear_today),
                     tomorrowLabel = stringResource(R.string.wear_tomorrow_short),
+                    today = anchorDate,
                 ),
                 fontSize = 12.sp,
                 color = WearTextSecondary,
@@ -116,23 +126,39 @@ private fun DailyRow(entry: WearDailyEntry, tempUnit: String) {
     }
 }
 
-private fun formatDay(
+/**
+ * "Today" for daily forecasts means the *forecast location's* first entry —
+ * the phone always syncs the daily list starting at the location's current
+ * day, so the first parseable date is the anchor. Falls back to the watch
+ * clock only when nothing parses (defensive; matches WidgetRefreshWorker's
+ * location-anchored pattern on the phone).
+ */
+internal fun dailyAnchorDate(daily: List<WearDailyEntry>): java.time.LocalDate? =
+    daily.firstNotNullOfOrNull { parseIsoDate(it.date) }
+
+private fun parseIsoDate(isoDate: String): java.time.LocalDate? {
+    val parts = isoDate.split("-")
+    if (parts.size != 3) return null
+    return try {
+        java.time.LocalDate.of(parts[0].toInt(), parts[1].toInt(), parts[2].toInt())
+    } catch (_: Exception) {
+        null
+    }
+}
+
+internal fun formatDay(
     isoDate: String,
     todayLabel: String,
     tomorrowLabel: String,
+    today: java.time.LocalDate?,
 ): String {
     // Input: "2026-04-14" → "Mon", "Tue", etc.
     return try {
-        val parts = isoDate.split("-")
-        if (parts.size != 3) return isoDate.takeLast(5)
-        val year = parts[0].toInt()
-        val month = parts[1].toInt()
-        val day = parts[2].toInt()
-        val date = java.time.LocalDate.of(year, month, day)
-        val today = java.time.LocalDate.now()
+        val date = parseIsoDate(isoDate) ?: return isoDate.takeLast(5)
+        val anchor = today ?: java.time.LocalDate.now()
         when (date) {
-            today -> todayLabel
-            today.plusDays(1) -> tomorrowLabel
+            anchor -> todayLabel
+            anchor.plusDays(1) -> tomorrowLabel
             else -> date.dayOfWeek.getDisplayName(
                 java.time.format.TextStyle.SHORT,
                 java.util.Locale.getDefault(),

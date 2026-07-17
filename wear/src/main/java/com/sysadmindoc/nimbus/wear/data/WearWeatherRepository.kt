@@ -1,8 +1,12 @@
 package com.sysadmindoc.nimbus.wear.data
 
+import android.content.Context
 import android.util.Log
+import androidx.annotation.StringRes
 import com.sysadmindoc.nimbus.wear.BuildConfig
+import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -12,11 +16,13 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToInt
 
 private const val TAG = "WearWeatherRepo"
 
 @Singleton
 class WearWeatherRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val client: OkHttpClient,
     private val syncedStore: SyncedWeatherStore,
 ) {
@@ -77,22 +83,23 @@ class WearWeatherRepository @Inject constructor(
 
                 Result.success(
                     WearWeatherData(
-                        temperature = current.temperature?.toInt() ?: 0,
-                        condition = wmoDescription(current.weatherCode ?: 0),
-                        high = daily?.temperatureMax?.firstOrNull()?.toInt()
-                            ?: current.temperature?.toInt() ?: 0,
-                        low = daily?.temperatureMin?.firstOrNull()?.toInt()
-                            ?: current.temperature?.toInt() ?: 0,
+                        temperature = current.temperature?.roundToInt() ?: 0,
+                        condition = wmoDescription(context, current.weatherCode ?: 0),
+                        high = daily?.temperatureMax?.firstOrNull()?.roundToInt()
+                            ?: current.temperature?.roundToInt() ?: 0,
+                        low = daily?.temperatureMin?.firstOrNull()?.roundToInt()
+                            ?: current.temperature?.roundToInt() ?: 0,
                         locationName = locationName,
                         humidity = current.humidity ?: 0,
-                        windSpeed = current.windSpeed?.toInt() ?: 0,
-                        uvIndex = current.uvIndex?.toInt() ?: 0,
+                        windSpeed = current.windSpeed?.roundToInt() ?: 0,
+                        uvIndex = current.uvIndex?.roundToInt() ?: 0,
                         precipChance = daily?.precipProbMax?.firstOrNull() ?: 0,
                         isDay = (current.isDay ?: 1) == 1,
                         weatherCode = current.weatherCode ?: 0,
                         hourly = buildHourlyList(data.hourly),
                         dataSource = DataSource.DIRECT_API,
                         syncedAtMs = System.currentTimeMillis(),
+                        updatedAtMs = System.currentTimeMillis(),
                         // Last units synced from the phone (metric defaults) —
                         // the direct API path still fetches metric and converts
                         // at render like the phone-sync path.
@@ -117,33 +124,37 @@ class WearWeatherRepository @Inject constructor(
             if (time == null) return@mapIndexedNotNull null
             HourlyEntry(
                 time = time,
-                temperature = hourly.temperature?.getOrNull(i)?.toInt() ?: 0,
+                temperature = hourly.temperature?.getOrNull(i)?.roundToInt() ?: 0,
                 weatherCode = hourly.weatherCode?.getOrNull(i) ?: 0,
                 precipChance = hourly.precipProb?.getOrNull(i) ?: 0,
-                windSpeed = hourly.windSpeed?.getOrNull(i)?.toInt() ?: 0,
+                windSpeed = hourly.windSpeed?.getOrNull(i)?.roundToInt() ?: 0,
                 isDay = (hourly.isDay?.getOrNull(i) ?: 1) == 1,
             )
         }
     }
 
     companion object {
-        fun wmoDescription(code: Int): String = when (code) {
-            0 -> "Clear Sky"
-            1 -> "Mostly Clear"
-            2 -> "Partly Cloudy"
-            3 -> "Overcast"
-            in 45..48 -> "Fog"
-            in 51..55 -> "Drizzle"
-            in 56..57 -> "Freezing Drizzle"
-            in 61..65 -> "Rain"
-            in 66..67 -> "Freezing Rain"
-            in 71..75 -> "Snow"
-            77 -> "Snow Grains"
-            in 80..82 -> "Showers"
-            in 85..86 -> "Snow Showers"
-            95 -> "Thunderstorm"
-            in 96..99 -> "Thunderstorm + Hail"
-            else -> "Unknown"
+        fun wmoDescription(context: Context, code: Int): String =
+            context.getString(wmoDescriptionRes(code))
+
+        @StringRes
+        fun wmoDescriptionRes(code: Int): Int = when (code) {
+            0 -> R.string.wear_wmo_clear_sky
+            1 -> R.string.wear_wmo_mostly_clear
+            2 -> R.string.wear_wmo_partly_cloudy
+            3 -> R.string.wear_wmo_overcast
+            in 45..48 -> R.string.wear_wmo_fog
+            in 51..55 -> R.string.wear_wmo_drizzle
+            in 56..57 -> R.string.wear_wmo_freezing_drizzle
+            in 61..65 -> R.string.wear_wmo_rain
+            in 66..67 -> R.string.wear_wmo_freezing_rain
+            in 71..75 -> R.string.wear_wmo_snow
+            77 -> R.string.wear_wmo_snow_grains
+            in 80..82 -> R.string.wear_wmo_showers
+            in 85..86 -> R.string.wear_wmo_snow_showers
+            95 -> R.string.wear_wmo_thunderstorm
+            in 96..99 -> R.string.wear_wmo_thunderstorm_hail
+            else -> R.string.wear_wmo_unknown
         }
 
         fun wmoEmoji(code: Int, isDay: Boolean = true): String = when (code) {
@@ -190,6 +201,13 @@ data class WearWeatherData(
     val aqiLabel: String = "",
     val dataSource: DataSource = DataSource.UNKNOWN,
     val syncedAtMs: Long = 0L,
+    /**
+     * When the weather data itself was produced (phone observation time or
+     * watch fetch time). Can trail [syncedAtMs] when the phone pushed cached
+     * data during an outage — freshness labels must use this, not sync age.
+     * 0 when unknown (fall back to [syncedAtMs]).
+     */
+    val updatedAtMs: Long = 0L,
     /** Display units (phone enum names); raw values above are always metric. */
     val tempUnit: String = WearUnitFormatter.TEMP_CELSIUS,
     val windUnit: String = WearUnitFormatter.WIND_KMH,
