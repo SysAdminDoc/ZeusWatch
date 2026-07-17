@@ -178,6 +178,12 @@ fun NimbusNavHost(
     val onboardingComplete by onboardingViewModel.onboardingComplete.collectAsStateWithLifecycle(initialValue = null)
 
     LaunchedEffect(onboardingComplete) {
+        // Only route away while actually sitting on the gate. On activity
+        // recreation (rotation/fold/process restore) the flow re-emits
+        // null -> true after the gate was already popped; popUpTo the gate is
+        // then a no-op and re-navigating would push a duplicate MAIN on top
+        // of whatever screen the user was on.
+        if (navController.currentDestination?.route != Routes.ONBOARDING_GATE) return@LaunchedEffect
         when (onboardingComplete) {
             true -> navController.navigate(Routes.MAIN) {
                 popUpTo(Routes.ONBOARDING_GATE) { inclusive = true }
