@@ -33,6 +33,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.sysadmindoc.nimbus.MainActivity
+import kotlin.math.roundToInt
 
 /**
  * Small home screen widget: current temp, weather icon, location name.
@@ -123,7 +124,7 @@ private fun SmallWidgetContent(
 
                 Column(modifier = GlanceModifier.defaultWeight()) {
                     Text(
-                        text = "${data.temperature.toInt()}\u00B0",
+                        text = "${data.temperature.roundToInt()}\u00B0",
                         style = TextStyle(
                             color = WidgetTheme.textPrimary,
                             fontSize = 27.sp,
@@ -131,7 +132,7 @@ private fun SmallWidgetContent(
                         ),
                     )
                     Text(
-                        text = strings.feelsHumidity(data.feelsLike.toInt(), data.humidity),
+                        text = strings.feelsHumidity(data.feelsLike.roundToInt(), data.humidity),
                         style = WidgetTheme.captionStyle,
                         maxLines = 1,
                     )
@@ -139,12 +140,12 @@ private fun SmallWidgetContent(
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = strings.highTemp(data.high.toInt()),
+                        text = strings.highTemp(data.high.roundToInt()),
                         style = WidgetTheme.labelStyle,
                     )
                     Spacer(modifier = GlanceModifier.height(2.dp))
                     Text(
-                        text = strings.lowTemp(data.low.toInt()),
+                        text = strings.lowTemp(data.low.roundToInt()),
                         style = WidgetTheme.captionStyle,
                     )
                 }

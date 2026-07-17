@@ -25,6 +25,7 @@ private const val KEY_PRECIP_CHANCE = "precipChance"
 private const val KEY_IS_DAY = "isDay"
 private const val KEY_WEATHER_CODE = "weatherCode"
 private const val KEY_SYNC_TIMESTAMP = "syncTimestampMs"
+private const val KEY_DATA_UPDATED_AT = "dataUpdatedAtMs"
 private const val KEY_HOURLY_COUNT = "hourlyCount"
 private const val KEY_DAILY_COUNT = "dailyCount"
 private const val KEY_ALERT_COUNT = "alertCount"
@@ -42,7 +43,7 @@ private const val MAX_STALENESS_MS = 30 * 60 * 1000L // 30 minutes
  */
 @Singleton
 class SyncedWeatherStore @Inject constructor(
-    @ApplicationContext context: Context,
+    @ApplicationContext private val context: Context,
 ) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -74,6 +75,7 @@ class SyncedWeatherStore @Inject constructor(
         editor.putBoolean(KEY_IS_DAY, payload.isDay)
         editor.putInt(KEY_WEATHER_CODE, payload.weatherCode)
         editor.putLong(KEY_SYNC_TIMESTAMP, payload.timestampMs)
+        editor.putLong(KEY_DATA_UPDATED_AT, payload.dataUpdatedAtMs)
         editor.putString(KEY_TEMP_UNIT, payload.tempUnit)
         editor.putString(KEY_WIND_UNIT, payload.windUnit)
         // null AQI means "not fetched in this sync" — keep the stored value.
@@ -145,7 +147,13 @@ class SyncedWeatherStore @Inject constructor(
     fun getFreshData(): WearWeatherData? {
         val timestamp = prefs.getLong(KEY_SYNC_TIMESTAMP, 0L)
         if (timestamp == 0L) return null
-        if (System.currentTimeMillis() - timestamp > MAX_STALENESS_MS) return null
+        val now = System.currentTimeMillis()
+        if (now - timestamp > MAX_STALENESS_MS) return null
+        // The phone can deliberately push hours-old cached data during an
+        // outage — that sync is recent but the *weather* isn't. Treat aged
+        // data as stale too so the watch's own direct-API fallback can run.
+        val updatedAt = lastDataUpdatedAt()
+        if (updatedAt > 0L && now - updatedAt > MAX_STALENESS_MS) return null
 
         val locationName = prefs.getString(KEY_LOCATION_NAME, null) ?: return null
         val weatherCode = prefs.getInt(KEY_WEATHER_CODE, -1)
@@ -190,7 +198,7 @@ class SyncedWeatherStore @Inject constructor(
         return WearWeatherData(
             temperature = prefs.getInt(KEY_TEMPERATURE, 0),
             condition = prefs.getString(KEY_CONDITION, null)
-                ?: WearWeatherRepository.wmoDescription(weatherCode),
+                ?: WearWeatherRepository.wmoDescription(context, weatherCode),
             high = prefs.getInt(KEY_HIGH, 0),
             low = prefs.getInt(KEY_LOW, 0),
             locationName = locationName,
@@ -207,11 +215,22 @@ class SyncedWeatherStore @Inject constructor(
             aqiLabel = prefs.getString(KEY_AQI_LABEL, "") ?: "",
             tempUnit = lastTempUnit(),
             windUnit = lastWindUnit(),
+            updatedAtMs = updatedAt,
         )
     }
 
     /** Timestamp of the last successful sync, or 0 if never synced. */
     fun lastSyncTimestamp(): Long = prefs.getLong(KEY_SYNC_TIMESTAMP, 0L)
+
+    /**
+     * When the synced weather data itself was produced on the phone.
+     * Falls back to the sync timestamp for payloads from older phone apps
+     * that don't send the field.
+     */
+    fun lastDataUpdatedAt(): Long {
+        val updatedAt = prefs.getLong(KEY_DATA_UPDATED_AT, 0L)
+        return if (updatedAt > 0L) updatedAt else lastSyncTimestamp()
+    }
 
     /**
      * Last display units synced from the phone (metric defaults when never
@@ -250,6 +269,12 @@ data class SyncedWeatherPayload(
     val isDay: Boolean,
     val weatherCode: Int,
     val timestampMs: Long,
+    /**
+     * When the weather data itself was produced on the phone. Defaults to
+     * [timestampMs] (sync time) for payloads from phone apps that predate
+     * the "dataUpdatedAtMs" field.
+     */
+    val dataUpdatedAtMs: Long = timestampMs,
     val hourly: List<HourlyEntry>,
     val daily: List<WearDailyEntry> = emptyList(),
     /** null = alerts not fetched in this sync (preserve stored); empty = none active (clear). */

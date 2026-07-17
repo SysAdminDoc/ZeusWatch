@@ -60,4 +60,20 @@
     <string name="wear_alerts_title">\u26A0\uFE0F Alertas (%1$d)</string>
     <string name="wear_alerts_subtitle">Avisos meteorológicos activos</string>
     <string name="wear_expires">Expira: %1$s</string>
+    <string name="wear_wmo_clear_sky">Cielo despejado</string>
+    <string name="wear_wmo_mostly_clear">Mayormente despejado</string>
+    <string name="wear_wmo_partly_cloudy">Parcialmente nublado</string>
+    <string name="wear_wmo_overcast">Nublado</string>
+    <string name="wear_wmo_fog">Niebla</string>
+    <string name="wear_wmo_drizzle">Llovizna</string>
+    <string name="wear_wmo_freezing_drizzle">Llovizna helada</string>
+    <string name="wear_wmo_rain">Lluvia</string>
+    <string name="wear_wmo_freezing_rain">Lluvia helada</string>
+    <string name="wear_wmo_snow">Nieve</string>
+    <string name="wear_wmo_snow_grains">Granos de nieve</string>
+    <string name="wear_wmo_showers">Chubascos</string>
+    <string name="wear_wmo_snow_showers">Chubascos de nieve</string>
+    <string name="wear_wmo_thunderstorm">Tormenta</string>
+    <string name="wear_wmo_thunderstorm_hail">Tormenta con granizo</string>
+    <string name="wear_wmo_unknown">Desconocido</string>
 </resources>

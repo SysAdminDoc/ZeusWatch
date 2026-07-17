@@ -32,6 +32,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.sysadmindoc.nimbus.MainActivity
+import kotlin.math.roundToInt
 
 /**
  * Compact 4x1 home screen widget showing current temp + next 5 hourly temps.
@@ -91,7 +92,7 @@ private fun ForecastStripContent(
                     modifier = GlanceModifier.size(18.dp),
                 )
                 Text(
-                    "${data.temperature.toInt()}\u00B0",
+                    "${data.temperature.roundToInt()}\u00B0",
                     style = WidgetTheme.tempSmall,
                 )
                 strings.updatedLabel(data.updatedAt)?.let { label ->

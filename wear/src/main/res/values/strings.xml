@@ -60,4 +60,20 @@
     <string name="wear_alerts_title">\u26A0\uFE0F Alerts (%1$d)</string>
     <string name="wear_alerts_subtitle">Active weather advisories</string>
     <string name="wear_expires">Expires: %1$s</string>
+    <string name="wear_wmo_clear_sky">Clear Sky</string>
+    <string name="wear_wmo_mostly_clear">Mostly Clear</string>
+    <string name="wear_wmo_partly_cloudy">Partly Cloudy</string>
+    <string name="wear_wmo_overcast">Overcast</string>
+    <string name="wear_wmo_fog">Fog</string>
+    <string name="wear_wmo_drizzle">Drizzle</string>
+    <string name="wear_wmo_freezing_drizzle">Freezing Drizzle</string>
+    <string name="wear_wmo_rain">Rain</string>
+    <string name="wear_wmo_freezing_rain">Freezing Rain</string>
+    <string name="wear_wmo_snow">Snow</string>
+    <string name="wear_wmo_snow_grains">Snow Grains</string>
+    <string name="wear_wmo_showers">Showers</string>
+    <string name="wear_wmo_snow_showers">Snow Showers</string>
+    <string name="wear_wmo_thunderstorm">Thunderstorm</string>
+    <string name="wear_wmo_thunderstorm_hail">Thunderstorm + Hail</string>
+    <string name="wear_wmo_unknown">Unknown</string>
 </resources>

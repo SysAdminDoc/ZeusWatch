@@ -18,6 +18,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 
 /**
  * Unit tests for [WearWeatherRepository].
@@ -25,14 +29,20 @@ import org.junit.Test
  * The direct API path is locked down with an OkHttp interceptor so the watch
  * fallback can be tested without network access. The companion helpers are
  * used by the tile, complication, hourly screen, and synced-store fallback;
- * drift there silently mislabels weather on the watch.
+ * drift there silently mislabels weather on the watch. Robolectric provides
+ * a real Context so the resource-backed condition strings resolve.
  */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 class WearWeatherRepositoryTest {
+
+    private val appContext: Context = RuntimeEnvironment.getApplication()
 
     @Test
     fun `getCurrentWeather maps direct Open-Meteo response`() = runTest {
         val requests = mutableListOf<Request>()
         val repository = WearWeatherRepository(
+            context = appContext,
             client = okHttpClient(
                 code = 200,
                 body = """
@@ -68,25 +78,28 @@ class WearWeatherRepositoryTest {
 
         assertTrue(result.isSuccess)
         val data = result.getOrThrow()
+        // Half-even values round like the phone (roundToInt), not truncate:
+        // 68.4→68, 52.9→53, 9.8→10, 5.7→6, 10.5→11.
         assertEquals(68, data.temperature)
         assertEquals("Rain", data.condition)
         assertEquals(75, data.high)
-        assertEquals(52, data.low)
+        assertEquals(53, data.low)
         assertEquals("Seattle", data.locationName)
         assertEquals(83, data.humidity)
-        assertEquals(9, data.windSpeed)
-        assertEquals(5, data.uvIndex)
+        assertEquals(10, data.windSpeed)
+        assertEquals(6, data.uvIndex)
         assertEquals(60, data.precipChance)
         assertFalse(data.isDay)
         assertEquals(61, data.weatherCode)
         assertEquals(DataSource.DIRECT_API, data.dataSource)
         assertTrue(data.syncedAtMs > 0L)
+        assertTrue(data.updatedAtMs > 0L)
         assertEquals(2, data.hourly.size)
         assertEquals("2026-05-17T11:00", data.hourly[1].time)
         assertEquals(69, data.hourly[1].temperature)
         assertEquals(63, data.hourly[1].weatherCode)
         assertEquals(70, data.hourly[1].precipChance)
-        assertEquals(10, data.hourly[1].windSpeed)
+        assertEquals(11, data.hourly[1].windSpeed)
 
         val request = requests.single()
         assertEquals("api.open-meteo.com", request.url.host)
@@ -118,6 +131,7 @@ class WearWeatherRepositoryTest {
             ),
         )
         val repository = WearWeatherRepository(
+            context = appContext,
             client = okHttpClient(onRequest = { error("network should not be used for fresh sync") }),
             syncedStore = store,
         )
@@ -128,6 +142,8 @@ class WearWeatherRepositoryTest {
         assertEquals("Phone", data.locationName)
         assertEquals(DataSource.PHONE_SYNC, data.dataSource)
         assertEquals(timestamp, data.syncedAtMs)
+        // Payloads without an explicit data age default it to sync time.
+        assertEquals(timestamp, data.updatedAtMs)
         assertEquals(1, data.hourly.size)
     }
 
@@ -156,6 +172,7 @@ class WearWeatherRepositoryTest {
             ),
         )
         val repository = WearWeatherRepository(
+            context = appContext,
             client = okHttpClient(
                 code = 200,
                 body = """{"current": {"temperature_2m": 20.0, "weather_code": 0, "is_day": 1}}""",
@@ -171,8 +188,47 @@ class WearWeatherRepositoryTest {
     }
 
     @Test
+    fun `getCurrentWeather falls back to the API when the synced data itself is old`() = runTest {
+        val store = emptySyncedStore()
+        // A phone outage push: the sync is seconds old but the weather data
+        // is 6 hours old. The direct-API fallback must not be blocked.
+        store.save(
+            SyncedWeatherPayload(
+                temperature = 72,
+                condition = "Clear Sky",
+                high = 80,
+                low = 62,
+                locationName = "Phone",
+                humidity = 45,
+                windSpeed = 4,
+                uvIndex = 6,
+                precipChance = 5,
+                isDay = true,
+                weatherCode = 0,
+                timestampMs = System.currentTimeMillis(),
+                dataUpdatedAtMs = System.currentTimeMillis() - 6 * 60 * 60 * 1000L,
+                hourly = emptyList(),
+            ),
+        )
+        val repository = WearWeatherRepository(
+            context = appContext,
+            client = okHttpClient(
+                code = 200,
+                body = """{"current": {"temperature_2m": 20.0, "weather_code": 0, "is_day": 1}}""",
+            ),
+            syncedStore = store,
+        )
+
+        val data = repository.getCurrentWeather(47.61, -122.33, "Seattle").getOrThrow()
+
+        assertEquals(DataSource.DIRECT_API, data.dataSource)
+        assertEquals(20, data.temperature)
+    }
+
+    @Test
     fun `getCurrentWeather reports non-successful API responses`() = runTest {
         val repository = WearWeatherRepository(
+            context = appContext,
             client = okHttpClient(code = 503, body = """{"error": true}"""),
             syncedStore = emptySyncedStore(),
         )
@@ -185,47 +241,47 @@ class WearWeatherRepositoryTest {
 
     @Test
     fun `wmoDescription maps clear sky and overcast bands`() {
-        assertEquals("Clear Sky", WearWeatherRepository.wmoDescription(0))
-        assertEquals("Mostly Clear", WearWeatherRepository.wmoDescription(1))
-        assertEquals("Partly Cloudy", WearWeatherRepository.wmoDescription(2))
-        assertEquals("Overcast", WearWeatherRepository.wmoDescription(3))
+        assertEquals("Clear Sky", WearWeatherRepository.wmoDescription(appContext, 0))
+        assertEquals("Mostly Clear", WearWeatherRepository.wmoDescription(appContext, 1))
+        assertEquals("Partly Cloudy", WearWeatherRepository.wmoDescription(appContext, 2))
+        assertEquals("Overcast", WearWeatherRepository.wmoDescription(appContext, 3))
     }
 
     @Test
     fun `wmoDescription maps fog and freezing precipitation`() {
-        assertEquals("Fog", WearWeatherRepository.wmoDescription(45))
-        assertEquals("Fog", WearWeatherRepository.wmoDescription(48))
-        assertEquals("Drizzle", WearWeatherRepository.wmoDescription(53))
-        assertEquals("Freezing Drizzle", WearWeatherRepository.wmoDescription(56))
-        assertEquals("Freezing Rain", WearWeatherRepository.wmoDescription(67))
+        assertEquals("Fog", WearWeatherRepository.wmoDescription(appContext, 45))
+        assertEquals("Fog", WearWeatherRepository.wmoDescription(appContext, 48))
+        assertEquals("Drizzle", WearWeatherRepository.wmoDescription(appContext, 53))
+        assertEquals("Freezing Drizzle", WearWeatherRepository.wmoDescription(appContext, 56))
+        assertEquals("Freezing Rain", WearWeatherRepository.wmoDescription(appContext, 67))
     }
 
     @Test
     fun `wmoDescription maps rain, showers, and snow ranges`() {
-        assertEquals("Rain", WearWeatherRepository.wmoDescription(61))
-        assertEquals("Rain", WearWeatherRepository.wmoDescription(65))
-        assertEquals("Snow", WearWeatherRepository.wmoDescription(71))
-        assertEquals("Snow", WearWeatherRepository.wmoDescription(75))
-        assertEquals("Snow Grains", WearWeatherRepository.wmoDescription(77))
-        assertEquals("Showers", WearWeatherRepository.wmoDescription(80))
-        assertEquals("Showers", WearWeatherRepository.wmoDescription(82))
-        assertEquals("Snow Showers", WearWeatherRepository.wmoDescription(85))
+        assertEquals("Rain", WearWeatherRepository.wmoDescription(appContext, 61))
+        assertEquals("Rain", WearWeatherRepository.wmoDescription(appContext, 65))
+        assertEquals("Snow", WearWeatherRepository.wmoDescription(appContext, 71))
+        assertEquals("Snow", WearWeatherRepository.wmoDescription(appContext, 75))
+        assertEquals("Snow Grains", WearWeatherRepository.wmoDescription(appContext, 77))
+        assertEquals("Showers", WearWeatherRepository.wmoDescription(appContext, 80))
+        assertEquals("Showers", WearWeatherRepository.wmoDescription(appContext, 82))
+        assertEquals("Snow Showers", WearWeatherRepository.wmoDescription(appContext, 85))
     }
 
     @Test
     fun `wmoDescription maps thunderstorm and hail variants`() {
-        assertEquals("Thunderstorm", WearWeatherRepository.wmoDescription(95))
-        assertEquals("Thunderstorm + Hail", WearWeatherRepository.wmoDescription(96))
-        assertEquals("Thunderstorm + Hail", WearWeatherRepository.wmoDescription(99))
+        assertEquals("Thunderstorm", WearWeatherRepository.wmoDescription(appContext, 95))
+        assertEquals("Thunderstorm + Hail", WearWeatherRepository.wmoDescription(appContext, 96))
+        assertEquals("Thunderstorm + Hail", WearWeatherRepository.wmoDescription(appContext, 99))
     }
 
     @Test
     fun `wmoDescription falls back to Unknown for unsupported codes`() {
-        assertEquals("Unknown", WearWeatherRepository.wmoDescription(-1))
-        assertEquals("Unknown", WearWeatherRepository.wmoDescription(4))
-        assertEquals("Unknown", WearWeatherRepository.wmoDescription(50))
-        assertEquals("Unknown", WearWeatherRepository.wmoDescription(100))
-        assertEquals("Unknown", WearWeatherRepository.wmoDescription(Int.MAX_VALUE))
+        assertEquals("Unknown", WearWeatherRepository.wmoDescription(appContext, -1))
+        assertEquals("Unknown", WearWeatherRepository.wmoDescription(appContext, 4))
+        assertEquals("Unknown", WearWeatherRepository.wmoDescription(appContext, 50))
+        assertEquals("Unknown", WearWeatherRepository.wmoDescription(appContext, 100))
+        assertEquals("Unknown", WearWeatherRepository.wmoDescription(appContext, Int.MAX_VALUE))
     }
 
     @Test

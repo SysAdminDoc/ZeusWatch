@@ -168,7 +168,10 @@ private fun WeatherContent(
 
         SyncFooter(
             dataSource = state.dataSource,
-            syncedAtMs = state.syncedAtMs,
+            // Freshness reflects data age, not sync age — the phone can push
+            // hours-old cached data during an outage and it must not read
+            // "just now". Older phone apps don't send data age; fall back.
+            updatedAtMs = if (state.updatedAtMs > 0L) state.updatedAtMs else state.syncedAtMs,
             onRefresh = onRefresh,
         )
     }
@@ -210,10 +213,10 @@ private fun TempUnitChip(
 @Composable
 private fun SyncFooter(
     dataSource: DataSource,
-    syncedAtMs: Long,
+    updatedAtMs: Long,
     onRefresh: () -> Unit,
 ) {
-    val ageLabel = freshnessLabel(syncedAtMs)
+    val ageLabel = freshnessLabel(updatedAtMs)
     val sourceLabel = when (dataSource) {
         DataSource.PHONE_SYNC -> stringResource(R.string.wear_data_source_phone)
         DataSource.DIRECT_API -> stringResource(R.string.wear_data_source_watch)
@@ -243,9 +246,9 @@ private fun SyncFooter(
 }
 
 @Composable
-private fun freshnessLabel(syncedAtMs: Long): String {
-    if (syncedAtMs <= 0L) return stringResource(R.string.wear_sync_never)
-    val ageMs = max(0L, System.currentTimeMillis() - syncedAtMs)
+private fun freshnessLabel(updatedAtMs: Long): String {
+    if (updatedAtMs <= 0L) return stringResource(R.string.wear_sync_never)
+    val ageMs = max(0L, System.currentTimeMillis() - updatedAtMs)
     val minutes = (ageMs / 60_000L).toInt()
     return when {
         minutes < 1 -> stringResource(R.string.wear_sync_just_now)

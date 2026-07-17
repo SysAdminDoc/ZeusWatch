@@ -203,8 +203,12 @@ class WeatherTileService : Material3TileService(
                     .setMaxLines(1)
                     .build(),
             )
-            if (data.syncedAtMs > 0L) {
-                val ageMin = ((System.currentTimeMillis() - data.syncedAtMs) / 60_000L).coerceAtLeast(0)
+            // Freshness reflects data age (updatedAtMs) so cached data the
+            // phone pushed during an outage doesn't read "just now"; older
+            // payloads without the field fall back to sync age.
+            val freshnessAnchorMs = if (data.updatedAtMs > 0L) data.updatedAtMs else data.syncedAtMs
+            if (freshnessAnchorMs > 0L) {
+                val ageMin = ((System.currentTimeMillis() - freshnessAnchorMs) / 60_000L).coerceAtLeast(0)
                 val ageLabel = when {
                     ageMin < 1 -> getString(R.string.wear_tile_just_now)
                     ageMin < 60 -> getString(R.string.wear_tile_updated_min, ageMin)

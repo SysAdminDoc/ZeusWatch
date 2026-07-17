@@ -171,6 +171,53 @@ class WeatherDataListenerServiceTest {
         assertEquals(receivedAt - 60 * 1000L, smallPastSkew.timestampMs)
     }
 
+    @Test
+    fun `toSyncedWeatherPayload preserves an honest past data age`() {
+        val receivedAt = 24 * 60 * 60 * 1000L
+        // The phone deliberately pushes hours-old cached data during outages.
+        // Unlike syncTimestampMs, that age must survive — no past clamp.
+        val sixHoursOld = receivedAt - 6 * 60 * 60 * 1000L
+
+        val payload = DataMap().apply {
+            putLong("syncTimestampMs", receivedAt)
+            putLong("dataUpdatedAtMs", sixHoursOld)
+        }.toSyncedWeatherPayload(receivedAtMs = receivedAt)
+
+        assertEquals(receivedAt, payload.timestampMs)
+        assertEquals(sixHoursOld, payload.dataUpdatedAtMs)
+    }
+
+    @Test
+    fun `toSyncedWeatherPayload rejects absurd data age values`() {
+        val receivedAt = 10_000L
+
+        // Far-future value → fall back to the sanitized sync timestamp.
+        val farFuture = DataMap().apply {
+            putLong("syncTimestampMs", receivedAt)
+            putLong("dataUpdatedAtMs", receivedAt + 10 * 60 * 1000L)
+        }.toSyncedWeatherPayload(receivedAtMs = receivedAt)
+        assertEquals(receivedAt, farFuture.dataUpdatedAtMs)
+
+        // Non-positive value → same fallback.
+        val nonPositive = DataMap().apply {
+            putLong("syncTimestampMs", receivedAt)
+            putLong("dataUpdatedAtMs", 0L)
+        }.toSyncedWeatherPayload(receivedAtMs = receivedAt)
+        assertEquals(receivedAt, nonPositive.dataUpdatedAtMs)
+    }
+
+    @Test
+    fun `toSyncedWeatherPayload defaults data age to sync time when the field is absent`() {
+        // Older phone apps don't send dataUpdatedAtMs — behavior must match
+        // the pre-field protocol (freshness keyed off the sync timestamp).
+        val receivedAt = 10_000L
+        val payload = DataMap().apply {
+            putLong("syncTimestampMs", receivedAt - 60 * 1000L)
+        }.toSyncedWeatherPayload(receivedAtMs = receivedAt)
+
+        assertEquals(payload.timestampMs, payload.dataUpdatedAtMs)
+    }
+
     private fun dataMaps(
         count: Int,
         block: DataMap.(Int) -> Unit,

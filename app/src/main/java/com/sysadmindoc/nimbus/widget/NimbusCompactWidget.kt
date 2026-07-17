@@ -30,6 +30,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.sysadmindoc.nimbus.MainActivity
+import kotlin.math.roundToInt
 
 class NimbusCompactWidget : GlanceAppWidget() {
 
@@ -82,7 +83,7 @@ private fun CompactWidgetContent(
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "${data.temperature.toInt()}°",
+                    text = "${data.temperature.roundToInt()}°",
                     style = TextStyle(
                         color = WidgetTheme.textPrimary,
                         fontSize = 22.sp,
@@ -102,11 +103,11 @@ private fun CompactWidgetContent(
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = strings.highTemp(data.high.toInt()),
+                    text = strings.highTemp(data.high.roundToInt()),
                     style = WidgetTheme.labelStyle,
                 )
                 Text(
-                    text = strings.lowTemp(data.low.toInt()),
+                    text = strings.lowTemp(data.low.roundToInt()),
                     style = WidgetTheme.captionStyle,
                 )
             }
