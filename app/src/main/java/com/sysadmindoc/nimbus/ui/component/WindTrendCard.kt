@@ -105,8 +105,7 @@ fun WindTrendCard(
             }
         }
         val labels = remember(data, referenceTime, s) {
-            data.indices
-                .filter { it % 6 == 0 }
+            trendLabelIndices(data.size)
                 .map { WeatherFormatter.formatRelativeHourLabel(context, data[it].time, referenceTime, s) }
         }
         VicoComboTrendChart(

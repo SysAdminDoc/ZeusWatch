@@ -179,6 +179,7 @@ private fun VisibilityScaleBar(
         val maxKm = 50f
 
         // Draw segmented bar
+        val labelCenters = mutableListOf<Float>()
         for (i in 0 until 6) {
             val startFrac = (thresholds[i] / maxKm).toFloat()
             val endFrac = (thresholds[i + 1] / maxKm).toFloat()
@@ -191,17 +192,23 @@ private fun VisibilityScaleBar(
                 size = Size(segW, barH),
                 cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx()),
             )
+            labelCenters += startX + segW / 2f
+        }
 
-            // Label below
-            val label = labels[i]
-            val measured = textMeasurer.measure(label, labelStyle)
-            drawText(
-                measured,
-                topLeft = Offset(
-                    centeredCanvasLabelLeft(startX + segW / 2f, measured.size.width.toFloat(), w),
-                    barY + barH + 4.dp.toPx(),
-                ),
-            )
+        // Labels below. The 0-1 km and 1-4 km segments are only 2% / 6% of
+        // the bar, so their centered labels clamp to the same edge and
+        // overlap — skip any label that would collide with one already
+        // placed (later tiers win).
+        val measuredLabels = labels.map { textMeasurer.measure(it, labelStyle) }
+        val labelLefts = nonOverlappingScaleLabelLefts(
+            centers = labelCenters,
+            labelWidths = measuredLabels.map { it.size.width.toFloat() },
+            canvasWidth = w,
+            minGapPx = 4.dp.toPx(),
+        )
+        measuredLabels.forEachIndexed { i, measured ->
+            val labelLeft = labelLefts[i] ?: return@forEachIndexed
+            drawText(measured, topLeft = Offset(labelLeft, barY + barH + 4.dp.toPx()))
         }
 
         // Current position indicator
@@ -218,6 +225,33 @@ private fun VisibilityScaleBar(
             center = Offset(posX, barY + barH / 2),
         )
     }
+}
+
+/**
+ * Computes clamped, centered label lefts for a scale bar and drops labels
+ * that would overlap an already-placed one (closer than [minGapPx]).
+ * Later indices win: the more significant / higher tier keeps its label when
+ * two tiny segments would otherwise draw on top of each other. Returns one
+ * entry per input center; null means "skip this label".
+ */
+internal fun nonOverlappingScaleLabelLefts(
+    centers: List<Float>,
+    labelWidths: List<Float>,
+    canvasWidth: Float,
+    minGapPx: Float,
+): List<Float?> {
+    val result = arrayOfNulls<Float>(centers.size)
+    val kept = mutableListOf<ClosedFloatingPointRange<Float>>()
+    for (i in centers.indices.reversed()) {
+        val left = centeredCanvasLabelLeft(centers[i], labelWidths[i], canvasWidth)
+        val interval = (left - minGapPx)..(left + labelWidths[i] + minGapPx)
+        val collides = kept.any { it.start < interval.endInclusive && interval.start < it.endInclusive }
+        if (!collides) {
+            kept += interval
+            result[i] = left
+        }
+    }
+    return result.toList()
 }
 
 @Composable

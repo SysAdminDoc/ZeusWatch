@@ -53,11 +53,12 @@ fun PressureTrendCard(
     val firstPressure = data.first().second
     val lastPressure = data.last().second
     val delta24h = lastPressure - firstPressure
+    // Announce the same formatted, unit-aware delta the visible badge shows.
     val semanticSummary = stringResource(
         R.string.pressure_trend_semantics,
         WeatherFormatter.formatPressure(currentPressure, s),
         trendSemanticLabel,
-        "%+.1f".format(delta24h),
+        WeatherFormatter.formatPressureDelta(delta24h, s),
     )
 
     WeatherCard(
@@ -103,8 +104,7 @@ fun PressureTrendCard(
 
         val pressures = remember(data) { data.map { it.second } }
         val labels = remember(data, referenceTime, s) {
-            data.indices
-                .filter { it % 6 == 0 }
+            trendLabelIndices(data.size)
                 .map { WeatherFormatter.formatRelativeHourLabel(context, data[it].first, referenceTime, s) }
         }
         VicoLineTrendChart(

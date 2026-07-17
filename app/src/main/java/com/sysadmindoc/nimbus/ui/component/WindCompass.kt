@@ -55,6 +55,18 @@ fun WindCompass(
 ) {
     val textMeasurer = rememberTextMeasurer()
     val s = LocalUnitSettings.current
+    // Localized compass cardinals, resolved outside the draw lambda
+    // (stringResource cannot be called inside Canvas DrawScope).
+    val directions = listOf(
+        stringResource(R.string.direction_n),
+        stringResource(R.string.direction_ne),
+        stringResource(R.string.direction_e),
+        stringResource(R.string.direction_se),
+        stringResource(R.string.direction_s),
+        stringResource(R.string.direction_sw),
+        stringResource(R.string.direction_w),
+        stringResource(R.string.direction_nw),
+    )
     val windDirectionLabel = WeatherFormatter.formatWindDirection(windDirection)
     val compassDescription = if (windGusts != null && windGusts > windSpeed) {
         stringResource(
@@ -101,7 +113,6 @@ fun WindCompass(
                         val radius = size.width / 2f - 16f
                         val ringStroke = Stroke(width = ringWidth)
 
-                        val directions = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
                         val cardinalStyle = TextStyle(
                             color = NimbusTextTertiary,
                             fontSize = 9.sp,

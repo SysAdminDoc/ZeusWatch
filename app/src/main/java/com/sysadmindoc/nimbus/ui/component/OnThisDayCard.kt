@@ -41,6 +41,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -485,6 +487,9 @@ private fun PriorYearsSparkline(
     val lineColor = NimbusBlueAccent
     val avgLineColor = NimbusTextTertiary.copy(alpha = 0.6f)
     val pointColor = NimbusBlueAccent
+    // The year-label Row below reverses under RTL, so the canvas must mirror
+    // too or the sparkline would contradict its own labels.
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     Canvas(modifier = modifier) {
         val w = size.width
@@ -503,7 +508,7 @@ private fun PriorYearsSparkline(
         // Polyline
         var prev: Offset? = null
         highsCelsius.forEachIndexed { i, v ->
-            val x = if (highsCelsius.size == 1) w / 2f else i * stepX
+            val x = rtlCanvasX(if (highsCelsius.size == 1) w / 2f else i * stepX, w, isRtl)
             val y = h - ((v - minY) / range * h).toFloat()
             val pt = Offset(x, y.coerceIn(0f, h))
             prev?.let { p ->
@@ -520,7 +525,7 @@ private fun PriorYearsSparkline(
 
         // Points (after polyline so they sit on top)
         highsCelsius.forEachIndexed { i, v ->
-            val x = if (highsCelsius.size == 1) w / 2f else i * stepX
+            val x = rtlCanvasX(if (highsCelsius.size == 1) w / 2f else i * stepX, w, isRtl)
             val y = h - ((v - minY) / range * h).toFloat()
             drawCircle(
                 color = pointColor,

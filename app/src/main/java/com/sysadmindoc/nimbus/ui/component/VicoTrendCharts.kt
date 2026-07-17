@@ -27,6 +27,7 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import kotlin.math.roundToInt
 
 @Composable
 internal fun VicoLineTrendChart(
@@ -128,6 +129,22 @@ internal fun VicoComboTrendChart(
             .height(86.dp),
     )
     TrendTimeLabels(labels = labels)
+}
+
+/**
+ * Picks [labelCount] evenly spaced indices into a series of [size] points so
+ * that each label sits at the same fractional position as the data point it
+ * describes. [TrendTimeLabels] lays labels out with SpaceBetween (0%, 33%,
+ * 67%, 100% of the width for four labels), so the indices must be
+ * round(i * (size - 1) / (labelCount - 1)) — e.g. 0, 8, 15, 23 for a
+ * 24-point series — not 0, 6, 12, 18.
+ */
+internal fun trendLabelIndices(size: Int, labelCount: Int = 4): List<Int> {
+    if (size <= 0 || labelCount <= 0) return emptyList()
+    if (labelCount == 1 || size == 1) return listOf(0)
+    return (0 until labelCount)
+        .map { i -> (i * (size - 1).toFloat() / (labelCount - 1)).roundToInt() }
+        .distinct()
 }
 
 @Composable

@@ -21,9 +21,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
@@ -122,7 +124,8 @@ fun UvIndexBar(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Gradient bar with marker
+                // Gradient bar with marker (mirrored under RTL like VisibilityScaleBar)
+                val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
                 Canvas(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -133,24 +136,25 @@ fun UvIndexBar(
                     val h = size.height
 
                     // Background gradient bar (0-12+ scale)
+                    val gradientColors = listOf(
+                        NimbusUvLow,
+                        NimbusUvModerate,
+                        NimbusUvHigh,
+                        NimbusUvVeryHigh,
+                        NimbusUvExtreme,
+                    )
                     drawRoundRect(
                         brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                NimbusUvLow,
-                                NimbusUvModerate,
-                                NimbusUvHigh,
-                                NimbusUvVeryHigh,
-                                NimbusUvExtreme,
-                            ),
+                            colors = if (isRtl) gradientColors.asReversed() else gradientColors,
                         ),
                         cornerRadius = CornerRadius(5.dp.toPx(), 5.dp.toPx()),
                         size = Size(w, h),
                     )
 
                     // Position marker
-                    val markerX = (uvIndex.toFloat() / 12f).coerceIn(0f, 1f) * w
+                    val markerX = rtlCanvasX((uvIndex.toFloat() / 12f).coerceIn(0f, 1f) * w, w, isRtl)
                     ColorSafeRiskCues.uvBoundaryFractions.forEach { fraction ->
-                        val x = fraction.coerceIn(0f, 1f) * w
+                        val x = rtlCanvasX(fraction.coerceIn(0f, 1f) * w, w, isRtl)
                         drawLine(
                             color = Color.White.copy(alpha = 0.68f),
                             start = Offset(x, 0f),

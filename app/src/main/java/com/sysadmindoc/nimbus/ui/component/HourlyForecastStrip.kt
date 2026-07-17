@@ -65,6 +65,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
+import kotlin.math.roundToInt
 
 /**
  * Tabbed hourly trend system inspired by breezy-weather.
@@ -384,13 +385,8 @@ private fun HourlyItemFeelsLike(
         )
         Spacer(modifier = Modifier.height(4.dp))
         // Always render the delta line (blank when negligible) for equal height.
-        val diffInt = diff.toInt()
         Text(
-            text = when {
-                kotlin.math.abs(diff) < 1 -> " "
-                diffInt > 0 -> "+$diffInt"
-                else -> "$diffInt"
-            },
+            text = feelsLikeDeltaText(diff),
             style = MaterialTheme.typography.labelSmall,
             color = diffColor,
         )
@@ -533,7 +529,18 @@ private fun HourlyItemHumidity(
     referenceTime: java.time.LocalDateTime?,
     onClick: () -> Unit,
 ) {
-    val humidity = hour.humidity ?: 0
+    val humidity = hour.humidity
+    if (humidity == null) {
+        // Providers without hourly humidity must not render as "0% Dry".
+        HourlyItemShell(hour, highlighted, referenceTime, onClick) {
+            Text(
+                text = "—",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                color = NimbusTextTertiary,
+            )
+        }
+        return
+    }
     val humidColor = when {
         humidity < 30 -> Color(0xFFFFB74D) // dry
         humidity > 70 -> NimbusRainBlue     // humid
@@ -668,9 +675,38 @@ private fun hourlyHeaderSummary(
             }
         }
         HourlyTrendTab.HUMIDITY -> {
-            val minHumidity = hours.minOfOrNull { it.humidity ?: 0 } ?: 0
-            val maxHumidity = hours.maxOfOrNull { it.humidity ?: 0 } ?: 0
-            context.getString(R.string.forecast_hourly_humidity_range, minHumidity, maxHumidity, hours.size)
+            // Ignore hours without a humidity reading — treating them as 0%
+            // produced bogus "0% to 78%" ranges.
+            val range = humidityRange(hours)
+            if (range == null) {
+                context.getString(R.string.forecast_hourly_empty)
+            } else {
+                context.getString(R.string.forecast_hourly_humidity_range, range.first, range.second, hours.size)
+            }
         }
+    }
+}
+
+/**
+ * Min/max humidity over the hours that actually carry a reading, or null when
+ * no hour has one (missing humidity must not be counted as 0%).
+ */
+internal fun humidityRange(hours: List<HourlyConditions>): Pair<Int, Int>? {
+    val humidities = hours.mapNotNull { it.humidity }
+    if (humidities.isEmpty()) return null
+    return humidities.min() to humidities.max()
+}
+
+/**
+ * Feels-like delta label rendered under each hourly card. Rounds to nearest
+ * (−0.6 → −1, +3.9 → +4) so the delta matches the rendered temperature
+ * labels, which also round; blank when it rounds to zero (equal-height rows).
+ */
+internal fun feelsLikeDeltaText(diff: Double): String {
+    val diffInt = diff.roundToInt()
+    return when {
+        diffInt == 0 -> " "
+        diffInt > 0 -> "+$diffInt"
+        else -> "$diffInt"
     }
 }

@@ -91,13 +91,15 @@ fun DailyForecastList(
     val safeTab = selectedTab.coerceIn(0, tabs.lastIndex)
     if (safeTab != selectedTab) selectedTab = safeTab
 
+    // Badge + header summary must cover the same full list the rows render
+    // (some providers return 8-9 days, not 7).
     val warmestIndex = remember(daily) {
-        daily.take(7).indices.maxByOrNull { daily[it].temperatureHigh } ?: -1
+        daily.indices.maxByOrNull { daily[it].temperatureHigh } ?: -1
     }
     val weeklyMin = remember(daily) { daily.minOfOrNull { it.temperatureLow } ?: 0.0 }
     val weeklyMax = remember(daily) { daily.maxOfOrNull { it.temperatureHigh } ?: 0.0 }
     val weeklySummary = remember(daily, referenceDate, s, context) {
-        dailyHeaderSummary(context, daily.take(7), referenceDate, s)
+        dailyHeaderSummary(context, daily, referenceDate, s)
     }
     var selectedDay by remember { mutableStateOf<DailyConditions?>(null) }
 
