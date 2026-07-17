@@ -100,6 +100,13 @@ data class PwDaily(
     @SerialName("precipIntensityMax") val precipIntensityMax: Double? = null,
     @SerialName("precipProbability") val precipProbability: Double? = null,
     @SerialName("precipType") val precipType: String? = null,
+    // Accumulation totals for the day, in centimeters (SI units).
+    // precipAccumulation is the Dark Sky field (snowfall accumulation only);
+    // liquidAccumulation / snowAccumulation are Pirate Weather additions that
+    // split the total by phase.
+    @SerialName("precipAccumulation") val precipAccumulation: Double? = null,
+    @SerialName("liquidAccumulation") val liquidAccumulation: Double? = null,
+    @SerialName("snowAccumulation") val snowAccumulation: Double? = null,
 )
 
 @Serializable

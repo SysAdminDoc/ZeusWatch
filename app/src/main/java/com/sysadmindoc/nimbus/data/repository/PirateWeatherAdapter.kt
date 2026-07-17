@@ -160,17 +160,44 @@ class PirateWeatherForecastAdapter @Inject constructor(
                 temperatureHigh = d.temperatureHigh,
                 temperatureLow = d.temperatureLow,
                 precipitationProbability = pctToInt(d.precipProbability ?: 0.0),
-                precipitationSum = d.precipIntensity?.let { (it * 24).coerceAtLeast(0.0) }, // mm/h → approximate mm/day
+                precipitationSum = dailyPrecipitationSum(d),
                 sunrise = d.sunriseTime?.let { epochToTimeStr(it, zone) },
                 sunset = d.sunsetTime?.let { epochToTimeStr(it, zone) },
                 uvIndexMax = d.uvIndex?.coerceAtLeast(0.0),
                 windSpeedMax = d.windSpeed?.let { (it * 3.6).coerceAtLeast(0.0) },
                 windDirectionDominant = d.windBearing,
-                // mm/h liquid-equivalent × 24 → mm/day, then ÷10 → cm (formatter contract)
-                snowfallSum = if (d.precipType == "snow") d.precipIntensity?.let { (it * 24 / 10.0).coerceAtLeast(0.0) } else null,
+                snowfallSum = dailySnowfallSum(d),
                 windGustsMax = d.windGust?.let { (it * 3.6).coerceAtLeast(0.0) },
             )
         }
+    }
+
+    /**
+     * Daily liquid-equivalent precipitation in mm (domain contract).
+     * Pirate Weather daily blocks carry `liquidAccumulation` in centimeters
+     * (SI units), which is the API's real daily total — the legacy
+     * avg-intensity × 24 estimate overstates totals whenever precipitation
+     * doesn't fall all 24 hours. Keep the estimate only as a fallback for
+     * payloads without accumulation fields.
+     */
+    private fun dailyPrecipitationSum(d: PwDaily): Double? =
+        d.liquidAccumulation?.let { (it * 10.0).coerceAtLeast(0.0) } // cm → mm
+            ?: d.precipIntensity?.let { (it * 24).coerceAtLeast(0.0) } // mm/h → approximate mm/day
+
+    /**
+     * Daily snowfall in cm (formatter contract). `snowAccumulation`
+     * (Pirate Weather) and `precipAccumulation` (Dark Sky, snowfall only)
+     * are already snow-depth centimeters — never re-apply the 10:1
+     * liquid-to-snow ratio to them. When an accumulation field is present it
+     * is authoritative (0 → no snow); the mm/h intensity estimate remains
+     * only as a fallback for accumulation-less payloads.
+     */
+    private fun dailySnowfallSum(d: PwDaily): Double? {
+        d.snowAccumulation?.let { return it.coerceAtLeast(0.0).takeIf { cm -> cm > 0.0 } }
+        if (d.precipType != "snow") return null
+        d.precipAccumulation?.let { return it.coerceAtLeast(0.0) }
+        // mm/h liquid-equivalent × 24 → mm/day, then ÷10 → cm (formatter contract)
+        return d.precipIntensity?.let { (it * 24 / 10.0).coerceAtLeast(0.0) }
     }
 
     private fun epochToLocalDateTime(epoch: Long, zone: ZoneId): LocalDateTime =

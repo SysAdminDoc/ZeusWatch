@@ -61,6 +61,22 @@ class WeatherSourceManagerTest {
         daily = emptyList(),
     )
 
+    private fun testHourly(time: LocalDateTime, temperature: Double) = HourlyConditions(
+        time = time,
+        temperature = temperature,
+        feelsLike = null,
+        weatherCode = WeatherCode.CLEAR_SKY,
+        isDay = true,
+        precipitationProbability = 0,
+        precipitation = null,
+        windSpeed = null,
+        windDirection = null,
+        humidity = null,
+        uvIndex = null,
+        cloudCover = null,
+        visibility = null,
+    )
+
     private val defaultSettings = NimbusSettings(
         sourceConfig = SourceConfig(
             forecast = WeatherSourceProvider.OPEN_METEO,
@@ -189,6 +205,32 @@ class WeatherSourceManagerTest {
                 nowEpochMs = any(),
             )
         }
+    }
+
+    @Test
+    fun getWeatherDeduplicatesDstFallBackHourlyTimestamps() = runTest {
+        // On the 25-hour DST fall-back day, UTC→local projection emits the
+        // repeated hour twice with an identical LocalDateTime. The hourly UI
+        // keys lazy items by time, so duplicates crash Compose — the manager
+        // must dedupe every adapter's forecast, keeping the first occurrence.
+        val duplicated = LocalDateTime.of(2026, 10, 25, 2, 0)
+        val hourly = listOf(
+            testHourly(duplicated.minusHours(1), temperature = 10.0),
+            testHourly(duplicated, temperature = 11.0),
+            testHourly(duplicated, temperature = 12.0),
+            testHourly(duplicated.plusHours(1), temperature = 13.0),
+        )
+        coEvery { openMeteoAdapter.getWeather(any(), any(), any()) } returns
+            Result.success(testWeatherData.copy(hourly = hourly))
+
+        val data = manager.getWeather(40.0, -74.0).getOrThrow()
+
+        assertEquals(
+            listOf(duplicated.minusHours(1), duplicated, duplicated.plusHours(1)),
+            data.hourly.map { it.time },
+        )
+        // First occurrence of the duplicated hour wins.
+        assertEquals(11.0, data.hourly[1].temperature, 0.0)
     }
 
     @Test
@@ -713,6 +755,24 @@ class WeatherSourceManagerTest {
         val result = manager.getMinutelyPrecipitation(40.0, -74.0)
         assertTrue(result.isSuccess)
         assertEquals(1, result.getOrNull()?.size)
+    }
+
+    @Test
+    fun getMinutelyPrecipitationDeduplicatesRepeatedTimestamps() = runTest {
+        // Same DST fall-back duplication risk as hourly — keep the first
+        // occurrence of a repeated local timestamp.
+        val time = LocalDateTime.of(2026, 10, 25, 2, 0)
+        val minutely = listOf(
+            MinutelyPrecipitation(time = time, precipitation = 0.5),
+            MinutelyPrecipitation(time = time, precipitation = 0.9),
+            MinutelyPrecipitation(time = time.plusMinutes(15), precipitation = 0.1),
+        )
+        coEvery { openMeteoMinutelyAdapter.getMinutelyPrecipitation(any(), any()) } returns Result.success(minutely)
+
+        val result = manager.getMinutelyPrecipitation(40.0, -74.0).getOrThrow()
+
+        assertEquals(listOf(time, time.plusMinutes(15)), result.map { it.time })
+        assertEquals(0.5, result.first().precipitation, 0.0)
     }
 
     @Test

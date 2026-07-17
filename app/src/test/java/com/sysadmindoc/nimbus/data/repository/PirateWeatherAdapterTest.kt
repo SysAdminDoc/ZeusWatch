@@ -305,6 +305,65 @@ class PirateWeatherForecastAdapterTest {
     }
 
     @Test
+    fun `daily liquidAccumulation is preferred over the intensity estimate for precipitationSum`() = runTest {
+        val day = PwDaily(
+            time = nowEpoch,
+            precipIntensity = 2.5,    // the old estimate would claim 60 mm/day
+            liquidAccumulation = 0.5, // 0.5 cm (SI) = 5 mm actual daily total
+            precipType = "rain",
+            temperatureHigh = 20.0,
+            temperatureLow = 10.0,
+        )
+        setupMocks(minimalResponse(daily = listOf(day)))
+        val d = adapter.getWeather(0.0, 0.0).getOrThrow().daily.first()
+        assertEquals(5.0, d.precipitationSum ?: -1.0, 0.001)
+    }
+
+    @Test
+    fun `daily snowAccumulation cm is used directly without re-applying the 10 to 1 ratio`() = runTest {
+        val day = PwDaily(
+            time = nowEpoch,
+            precipIntensity = 3.0,  // fallback estimate would claim 7.2 cm
+            snowAccumulation = 3.2, // already snow-depth centimeters
+            precipType = "snow",
+            temperatureHigh = -5.0,
+            temperatureLow = -12.0,
+        )
+        setupMocks(minimalResponse(daily = listOf(day)))
+        val d = adapter.getWeather(0.0, 0.0).getOrThrow().daily.first()
+        assertEquals(3.2, d.snowfallSum ?: -1.0, 0.001)
+    }
+
+    @Test
+    fun `daily precipAccumulation covers snow days without snowAccumulation`() = runTest {
+        val day = PwDaily(
+            time = nowEpoch,
+            precipIntensity = 3.0,
+            precipAccumulation = 4.0, // Dark Sky snowfall accumulation, cm
+            precipType = "snow",
+            temperatureHigh = -2.0,
+            temperatureLow = -8.0,
+        )
+        setupMocks(minimalResponse(daily = listOf(day)))
+        val d = adapter.getWeather(0.0, 0.0).getOrThrow().daily.first()
+        assertEquals(4.0, d.snowfallSum ?: -1.0, 0.001)
+    }
+
+    @Test
+    fun `daily zero snowAccumulation is authoritative and leaves snowfallSum null`() = runTest {
+        val day = PwDaily(
+            time = nowEpoch,
+            precipIntensity = 3.0,  // fallback must NOT resurrect an estimate
+            snowAccumulation = 0.0,
+            precipType = "snow",
+            temperatureHigh = 1.0,
+            temperatureLow = -3.0,
+        )
+        setupMocks(minimalResponse(daily = listOf(day)))
+        assertNull(adapter.getWeather(0.0, 0.0).getOrThrow().daily.first().snowfallSum)
+    }
+
+    @Test
     fun `sunrise and sunset are formatted as ISO local date time strings`() = runTest {
         // 2025-06-01 11:00:00 UTC, 2025-06-01 23:30:00 UTC
         val day = PwDaily(

@@ -214,6 +214,17 @@ class MetNorwayForecastAdapter @Inject constructor(
             )
             .map { (date, dayEntries) ->
                 val temps = dayEntries.mapNotNull { it.data?.instant?.details?.airTemperature }
+                // Beyond ~48h MET degrades to 6-hourly instant samples, which
+                // miss the true daily extrema between samples (highs bias low,
+                // lows bias high by 1-3 °C). The modeled next_6_hours
+                // air_temperature_max/min cover those gaps, so fold them into
+                // the extrema alongside the instant samples.
+                val sixHourHighs = dayEntries.mapNotNull {
+                    it.data?.next6Hours?.details?.airTemperatureMax
+                }
+                val sixHourLows = dayEntries.mapNotNull {
+                    it.data?.next6Hours?.details?.airTemperatureMin
+                }
                 val winds = dayEntries.mapNotNull {
                     it.data?.instant?.details?.windSpeed?.let { v -> v * MS_TO_KMH }
                 }
@@ -268,8 +279,8 @@ class MetNorwayForecastAdapter @Inject constructor(
                 DailyConditions(
                     date = date,
                     weatherCode = WeatherCode.fromCode(dominantWmo),
-                    temperatureHigh = temps.maxOrNull() ?: 0.0,
-                    temperatureLow = temps.minOrNull() ?: 0.0,
+                    temperatureHigh = (temps + sixHourHighs).maxOrNull() ?: 0.0,
+                    temperatureLow = (temps + sixHourLows).minOrNull() ?: 0.0,
                     precipitationProbability = precipProb.maxOrNull()?.toInt() ?: 0,
                     precipitationSum = precipSum.takeIf { it > 0.0 },
                     sunrise = null,

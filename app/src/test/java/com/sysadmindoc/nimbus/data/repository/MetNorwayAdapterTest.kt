@@ -219,6 +219,67 @@ class MetNorwayAdapterTest {
     }
 
     @Test
+    fun `daily extrema fold in modeled six-hour min and max temps`() {
+        // Day 3+ degradation: entries every 6 hours carry only an instant
+        // sample plus next_6_hours blocks. The instant samples miss the true
+        // extrema between samples — the modeled air_temperature_max/min must
+        // widen the daily high/low.
+        val adapter = MetNorwayForecastAdapter(mockk(), MetNorwayHttpCache())
+        val entries = listOf(0L, 6L, 12L, 18L).map { hour ->
+            MetTimeseriesEntry(
+                time = "2026-06-17T%02d:00:00Z".format(hour),
+                data = MetEntryData(
+                    instant = MetInstant(details = MetInstantDetails(airTemperature = 10.0)),
+                    next6Hours = MetPeriod(
+                        summary = MetSummary(symbolCode = "cloudy"),
+                        details = MetPeriodDetails(
+                            airTemperatureMax = if (hour == 12L) 14.0 else 11.0,
+                            airTemperatureMin = if (hour == 0L) 6.0 else 9.0,
+                        ),
+                    ),
+                ),
+            )
+        }
+        val data = adapter.mapToWeatherData(
+            MetNorwayResponse(type = "Feature", properties = MetProperties(timeseries = entries)),
+            60.39, 5.32, null, ZoneId.of("UTC"),
+        )
+        val day = data.daily.first { it.date == LocalDate.of(2026, 6, 17) }
+        assertEquals(14.0, day.temperatureHigh, 0.001)
+        assertEquals(6.0, day.temperatureLow, 0.001)
+    }
+
+    @Test
+    fun `instant samples still win the extrema when they exceed the six-hour bounds`() {
+        val adapter = MetNorwayForecastAdapter(mockk(), MetNorwayHttpCache())
+        val entries = listOf(
+            MetTimeseriesEntry(
+                time = "2026-06-17T00:00:00Z",
+                data = MetEntryData(
+                    instant = MetInstant(details = MetInstantDetails(airTemperature = 4.0)),
+                    next6Hours = MetPeriod(
+                        summary = MetSummary(symbolCode = "cloudy"),
+                        details = MetPeriodDetails(airTemperatureMax = 12.0, airTemperatureMin = 5.0),
+                    ),
+                ),
+            ),
+            MetTimeseriesEntry(
+                time = "2026-06-17T12:00:00Z",
+                data = MetEntryData(
+                    instant = MetInstant(details = MetInstantDetails(airTemperature = 16.0)),
+                ),
+            ),
+        )
+        val data = adapter.mapToWeatherData(
+            MetNorwayResponse(type = "Feature", properties = MetProperties(timeseries = entries)),
+            60.39, 5.32, null, ZoneId.of("UTC"),
+        )
+        val day = data.daily.first { it.date == LocalDate.of(2026, 6, 17) }
+        assertEquals(16.0, day.temperatureHigh, 0.001)
+        assertEquals(4.0, day.temperatureLow, 0.001)
+    }
+
+    @Test
     fun `symbol mapper translates common MET codes to WMO`() {
         assertEquals(0, MetSymbolMapper.toWmoCode("clearsky_day"))
         assertEquals(1, MetSymbolMapper.toWmoCode("fair_night"))

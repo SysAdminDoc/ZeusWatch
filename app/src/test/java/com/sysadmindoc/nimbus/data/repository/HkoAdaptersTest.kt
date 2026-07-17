@@ -175,6 +175,72 @@ class HkoForecastAdapterTest {
     }
 }
 
+class HkoIconMappingTest {
+
+    /** Resolve the daily weather code for [icon] + [forecastWeather] through the adapter. */
+    private fun dailyCodeFor(icon: Int?, forecastWeather: String? = null): WeatherCode {
+        val data = HkoForecastAdapter(mockk()).mapToWeatherData(
+            forecast = HkoForecastResponse(
+                weatherForecast = listOf(
+                    HkoForecastDay(
+                        forecastDate = "20260702",
+                        forecastWeather = forecastWeather,
+                        forecastMaxtemp = HkoValueUnit(value = 30.0, unit = "C"),
+                        forecastMintemp = HkoValueUnit(value = 26.0, unit = "C"),
+                        forecastIcon = icon,
+                    ),
+                ),
+                updateTime = "2026-07-02T01:50:00+08:00",
+            ),
+            current = HkoCurrentReportResponse(icon = listOfNotNull(icon)),
+            localForecast = HkoLocalForecastResponse(forecastDesc = forecastWeather),
+            latitude = 22.3027,
+            longitude = 114.1772,
+            locationName = null,
+        )
+        return data.daily.first().weatherCode
+    }
+
+    @Test
+    fun mapsNightVariantIcons() {
+        // 73-75: fine night (moon phases); 76: mainly cloudy; 77: mainly fine.
+        assertEquals(WeatherCode.CLEAR_SKY, dailyCodeFor(73))
+        assertEquals(WeatherCode.CLEAR_SKY, dailyCodeFor(74))
+        assertEquals(WeatherCode.CLEAR_SKY, dailyCodeFor(75))
+        assertEquals(WeatherCode.OVERCAST, dailyCodeFor(76))
+        assertEquals(WeatherCode.MAINLY_CLEAR, dailyCodeFor(77))
+    }
+
+    @Test
+    fun mapsWindHumidityAndVisibilityIcons() {
+        assertEquals(WeatherCode.PARTLY_CLOUDY, dailyCodeFor(80)) // windy
+        assertEquals(WeatherCode.CLEAR_SKY, dailyCodeFor(81))     // dry
+        assertEquals(WeatherCode.PARTLY_CLOUDY, dailyCodeFor(82)) // humid
+        assertEquals(WeatherCode.FOG, dailyCodeFor(83))           // fog
+        assertEquals(WeatherCode.FOG, dailyCodeFor(84))           // mist
+        assertEquals(WeatherCode.FOG, dailyCodeFor(85))           // haze
+    }
+
+    @Test
+    fun mapsTemperatureDescriptorIcons() {
+        // hot/warm/cool/cold carry no cloud info — conservative mainly clear.
+        assertEquals(WeatherCode.MAINLY_CLEAR, dailyCodeFor(90))
+        assertEquals(WeatherCode.MAINLY_CLEAR, dailyCodeFor(91))
+        assertEquals(WeatherCode.MAINLY_CLEAR, dailyCodeFor(92))
+        assertEquals(WeatherCode.MAINLY_CLEAR, dailyCodeFor(93))
+    }
+
+    @Test
+    fun iconResolvesConditionEvenWithChineseForecastText() {
+        // On Chinese-locale devices the English keyword fallback never
+        // matches — the icon must decide the condition, not the text, so
+        // fog icon 83 with Chinese text is FOG rather than clear sky.
+        assertEquals(WeatherCode.FOG, dailyCodeFor(83, forecastWeather = "多雲，有霧。"))
+        // And the icon wins over conflicting English text as well.
+        assertEquals(WeatherCode.FOG, dailyCodeFor(83, forecastWeather = "Sunny periods."))
+    }
+}
+
 class HkoAlertAdapterTest {
 
     @Test

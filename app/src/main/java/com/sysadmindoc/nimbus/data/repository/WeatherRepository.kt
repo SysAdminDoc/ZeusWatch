@@ -524,11 +524,13 @@ class WeatherRepository @Inject constructor(
             )
             if (normalized != null && !normalized.isExpired(maxAgeMs)) {
                 val payload = json.decodeFromString(WeatherDataCachePayload.serializer(), normalized.payloadJson)
+                // Payloads cached before the DST dedup fix can still carry the
+                // duplicated fall-back hour — normalize on the way out.
                 return@withContext payload.toWeatherData(
                     lastUpdatedOverride = Instant.ofEpochMilli(normalized.cachedAt)
                         .atZone(ZoneId.systemDefault())
                         .toLocalDateTime(),
-                )
+                ).withUniqueHourlyTimes()
             }
             if (WeatherSourceProvider.OPEN_METEO.name !in providerNames) return@withContext null
             val cached = weatherDao.getCached(key) ?: return@withContext null
@@ -549,6 +551,7 @@ class WeatherRepository @Inject constructor(
                     .atZone(ZoneId.systemDefault())
                     .toLocalDateTime(),
             ).copy(sourceProvider = WeatherSourceProvider.OPEN_METEO.displayName)
+                .withUniqueHourlyTimes()
         } catch (_: Exception) {
             null
         }
