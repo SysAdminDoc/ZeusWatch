@@ -68,6 +68,7 @@ import com.sysadmindoc.nimbus.util.ForecastUncertaintyLevel
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.LocalDateTime
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * 24-hour temperature trend line graph with:
@@ -671,14 +672,14 @@ private fun inspectionTooltipText(
     return "$tempText \u2022 $timeText$precipText"
 }
 
-private data class TemperatureTrendSummary(
+internal data class TemperatureTrendSummary(
     val hours: Int,
     val low: Int,
     val high: Int,
     val directionRes: Int,
 )
 
-private fun buildTemperatureTrendSummary(
+internal fun buildTemperatureTrendSummary(
     data: List<HourlyConditions>,
     settings: NimbusSettings,
 ): TemperatureTrendSummary {
@@ -693,9 +694,11 @@ private fun buildTemperatureTrendSummary(
         else -> R.string.temperature_trend_steady
     }
     return TemperatureTrendSummary(
+        // Round to nearest like the chart markers (formatTemperature uses
+        // roundToInt) so a −5.7° low is announced "−6", not "−5".
         hours = data.size,
-        low = low.toInt(),
-        high = high.toInt(),
+        low = low.roundToInt(),
+        high = high.roundToInt(),
         directionRes = directionRes,
     )
 }

@@ -17,10 +17,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
@@ -124,6 +126,8 @@ private fun SolarChart(
     dniValues: List<Double>,
     modifier: Modifier = Modifier,
 ) {
+    // 24h curves run chronologically start-edge → end-edge; mirror under RTL.
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Canvas(modifier = modifier) {
         if (ghiValues.isEmpty()) return@Canvas
         val w = size.width
@@ -135,7 +139,7 @@ private fun SolarChart(
             if (values.size < 2) return
             val path = Path()
             values.forEachIndexed { i, v ->
-                val x = i * w / (values.size - 1).coerceAtLeast(1)
+                val x = rtlCanvasX(i * w / (values.size - 1).coerceAtLeast(1), w, isRtl)
                 val y = h - (v / maxVal * h).toFloat()
                 if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }

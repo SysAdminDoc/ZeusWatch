@@ -50,6 +50,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
 import com.sysadmindoc.nimbus.util.labelRes
 import com.sysadmindoc.nimbus.util.parseAlertInstant
 import java.time.Duration
@@ -120,21 +121,25 @@ private fun AlertBannerItem(
     val urgencyLabel = stringResource(alert.urgency.labelRes)
     val coverageText = alert.coverageLabel(resources)
 
-    // Pulse border for extreme alerts
-    val borderAlpha = if (alert.severity == AlertSeverity.EXTREME) {
-        val transition = rememberInfiniteTransition(label = "pulse")
-        val pulse by transition.animateFloat(
-            initialValue = 0.4f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(800),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "pulseAlpha",
-        )
-        pulse
-    } else {
-        0.6f
+    // Pulse border for extreme alerts; honor reduced motion with a static
+    // emphasized border instead.
+    val reducedMotion = isReducedMotionEnabled()
+    val borderAlpha = when {
+        alert.severity == AlertSeverity.EXTREME && reducedMotion -> 1f
+        alert.severity == AlertSeverity.EXTREME -> {
+            val transition = rememberInfiniteTransition(label = "pulse")
+            val pulse by transition.animateFloat(
+                initialValue = 0.4f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(800),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+                label = "pulseAlpha",
+            )
+            pulse
+        }
+        else -> 0.6f
     }
 
     Row(

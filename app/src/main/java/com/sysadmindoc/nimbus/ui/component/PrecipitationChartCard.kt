@@ -111,8 +111,7 @@ fun PrecipitationChartCard(
         if (maxProb > 0) {
             val probabilities = remember(data) { data.map { it.precipitationProbability.toDouble() } }
             val labels = remember(data, referenceTime, s) {
-                data.indices
-                    .filter { it % 6 == 0 }
+                trendLabelIndices(data.size)
                     .map { WeatherFormatter.formatRelativeHourLabel(context, data[it].time, referenceTime, s) }
             }
             VicoColumnTrendChart(

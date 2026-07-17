@@ -19,12 +19,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
@@ -94,6 +96,9 @@ fun NowcastCard(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Timeline runs chronologically start-edge → end-edge, so mirror
+        // segments and time labels under RTL.
+        val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -118,7 +123,7 @@ fun NowcastCard(
                 if (intensity != PrecipIntensity.NONE) {
                     drawRect(
                         color = intensity.color,
-                        topLeft = Offset(i * segWidth, 0f),
+                        topLeft = Offset(rtlCanvasRectLeft(i * segWidth, segWidth + 1f, w, isRtl), 0f),
                         size = Size(segWidth + 1f, barHeight),
                     )
                 }
@@ -128,7 +133,8 @@ fun NowcastCard(
                 if (i % 2 == 0) {
                     val label = WeatherFormatter.formatClockTime(entry.time, settings)
                     val m = textMeasurer.measure(label, labelStyle)
-                    drawText(m, topLeft = Offset(i * segWidth, barHeight + 2f))
+                    val labelLeft = rtlCanvasRectLeft(i * segWidth, m.size.width.toFloat(), w, isRtl)
+                    drawText(m, topLeft = Offset(labelLeft, barHeight + 2f))
                 }
             }
         }
