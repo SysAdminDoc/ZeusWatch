@@ -1,6 +1,6 @@
 # ZeusWatch Roadmap
 
-**Current Version**: v1.26.0 (phone versionCode 106, wear versionCode 78)
+**Current Version**: v1.27.0 (phone versionCode 107, wear versionCode 79)
 **Architecture**: Kotlin 2.3.21 / Jetpack Compose / Hilt / MVVM / multi-module (phone + wear)
 **Flavors**: `standard` (Google Play services, Gemini Nano, Firestore, Wear DataLayer) / `freenet` (F-Droid clean)
 **License**: LGPL-3.0
@@ -50,9 +50,30 @@ Remaining: enrich the registry with coverage, attribution, license, quota,
 `freenetAllowed`, fallback role, and cache namespace (needs verified per-provider
 license/quota data), then add a regional resolver for default source bundles. Effort: medium.
 
+### NX-21. Throttle background cache-warming for non-widget locations · **T-PERF**
+`WidgetRefreshWorker.cacheRemainingSavedLocations` live-fetches every saved
+location every 15 min (~1,400 fetches/day for 15 saved cities). This is
+deliberate write-through cache warming consumed by Locations previews, the
+offline-first location switch, the QS tile, the ecosystem provider, saved-city
+widgets, and Gadgetbridge — so it can't simply be gated. Reduce the cadence for
+locations that back no active surface (e.g. warm non-widget/non-current
+locations only every Nth run) and `log()` what was skipped. Effort: low.
+
+### NX-22. Add `hilt-android-testing` to unlock skipped runtime tests · **T-RELIABILITY**
+Two v1.27.0 fixes shipped without automated coverage because the app module has
+no `hilt-android-testing` dependency: the ecosystem ContentProvider opt-in
+gating (`EntryPointAccessors.fromApplication` can't bootstrap under Robolectric)
+and the `WidgetConfigActivity` follow-app-location unpin purge (activity/WorkManager
+glue). Add the dependency and backfill both. Effort: low.
+
+### NX-23. MET Norway HTTP caching compliance · **T-SOURCES**
+MET Norway's terms require honoring `Expires` + `If-Modified-Since`; the adapter
+sends neither. Acceptable at current low volume but a standing compliance gap.
+Scope an OkHttp `Cache` with `Cache-Control: public` on the metnorway endpoint. Effort: low.
+
 ---
 
-## LATER — Beyond v1.26
+## LATER — Beyond v1.27
 
 ### L-1. `freenet` flavor Wear OS sync via non-GMS path · **T-WEAR**
 Default: document that `freenet` Wear users rely on direct API calls (already works). CompanionDeviceManager + sockets only if implementable in <2 weeks.
