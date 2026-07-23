@@ -13,19 +13,21 @@ class HealthAlertEvaluatorTest {
         humidity: Int = 50,
         hoursFromNow: Long = 0,
         surfacePressure: Double? = null,
+        cloudCover: Int = 50,
+        precipitationProbability: Int = 0,
     ) = HourlyConditions(
         time = LocalDateTime.now().plusHours(hoursFromNow),
         temperature = temperature,
         feelsLike = temperature.toDouble(),
         weatherCode = WeatherCode.CLEAR_SKY,
         isDay = true,
-        precipitationProbability = 0,
+        precipitationProbability = precipitationProbability,
         precipitation = 0.0,
         windSpeed = 5.0,
         windDirection = 180,
         humidity = humidity,
         uvIndex = 3.0,
-        cloudCover = 50,
+        cloudCover = cloudCover,
         visibility = 10000.0,
         surfacePressure = surfacePressure,
     )
@@ -36,16 +38,16 @@ class HealthAlertEvaluatorTest {
     // ── Migraine Trigger Tests ──
 
     @Test
-    fun `rapid temperature and humidity change triggers migraine warning`() {
+    fun `rapid temperature and humidity change under an advancing front triggers migraine warning`() {
         val data = buildList {
-            // Start: 15°C, 40% humidity
-            add(hourly(temperature = 15.0, humidity = 40, hoursFromNow = 0))
-            add(hourly(temperature = 17.0, humidity = 45, hoursFromNow = 1))
-            add(hourly(temperature = 20.0, humidity = 55, hoursFromNow = 2))
-            add(hourly(temperature = 22.0, humidity = 65, hoursFromNow = 3))
-            add(hourly(temperature = 24.0, humidity = 72, hoursFromNow = 4))
-            add(hourly(temperature = 25.0, humidity = 75, hoursFromNow = 5))
-            // 10°C temp change, 35% humidity change over 6 hours
+            // Start: 15°C, 40% humidity, clear; cloud advances as the front nears.
+            add(hourly(temperature = 15.0, humidity = 40, hoursFromNow = 0, cloudCover = 40))
+            add(hourly(temperature = 17.0, humidity = 45, hoursFromNow = 1, cloudCover = 60))
+            add(hourly(temperature = 20.0, humidity = 55, hoursFromNow = 2, cloudCover = 80, precipitationProbability = 50))
+            add(hourly(temperature = 22.0, humidity = 65, hoursFromNow = 3, cloudCover = 90, precipitationProbability = 60))
+            add(hourly(temperature = 24.0, humidity = 72, hoursFromNow = 4, cloudCover = 85))
+            add(hourly(temperature = 25.0, humidity = 75, hoursFromNow = 5, cloudCover = 80))
+            // 10°C temp change, 35% humidity change over 6 hours, with frontal cloud/precip.
         }
         val result = HealthAlertEvaluator.evaluate(data)
         val migraine = result.filter { it.type == HealthAlertType.MIGRAINE_TRIGGER }
@@ -54,19 +56,37 @@ class HealthAlertEvaluatorTest {
     }
 
     @Test
-    fun `moderate temperature and humidity change triggers migraine advisory`() {
+    fun `moderate temperature and humidity change under a front triggers migraine advisory`() {
         val data = buildList {
-            add(hourly(temperature = 18.0, humidity = 45, hoursFromNow = 0))
-            add(hourly(temperature = 19.5, humidity = 48, hoursFromNow = 1))
-            add(hourly(temperature = 21.0, humidity = 52, hoursFromNow = 2))
-            add(hourly(temperature = 22.0, humidity = 58, hoursFromNow = 3))
-            add(hourly(temperature = 23.0, humidity = 63, hoursFromNow = 4))
-            add(hourly(temperature = 23.5, humidity = 66, hoursFromNow = 5))
-            // ~5.5°C temp change, ~21% humidity change
+            add(hourly(temperature = 18.0, humidity = 45, hoursFromNow = 0, cloudCover = 60))
+            add(hourly(temperature = 19.5, humidity = 48, hoursFromNow = 1, cloudCover = 75))
+            add(hourly(temperature = 21.0, humidity = 52, hoursFromNow = 2, cloudCover = 85, precipitationProbability = 45))
+            add(hourly(temperature = 22.0, humidity = 58, hoursFromNow = 3, cloudCover = 80))
+            add(hourly(temperature = 23.0, humidity = 63, hoursFromNow = 4, cloudCover = 70))
+            add(hourly(temperature = 23.5, humidity = 66, hoursFromNow = 5, cloudCover = 65))
+            // ~5.5°C temp change, ~21% humidity change, with advancing cloud/precip.
         }
         val result = HealthAlertEvaluator.evaluate(data)
         val migraine = result.filter { it.type == HealthAlertType.MIGRAINE_TRIGGER }
         assertTrue("Expected migraine advisory", migraine.isNotEmpty())
+    }
+
+    @Test
+    fun `clear-day diurnal temperature and humidity swing does not trigger a frontal migraine warning`() {
+        // A sunny day: big morning-to-midday temp rise and humidity fall, but
+        // clear skies, no precipitation, and calm wind — diurnal, not a front.
+        val data = buildList {
+            add(hourly(temperature = 14.0, humidity = 80, hoursFromNow = 0, cloudCover = 10))
+            add(hourly(temperature = 18.0, humidity = 68, hoursFromNow = 1, cloudCover = 5))
+            add(hourly(temperature = 22.0, humidity = 55, hoursFromNow = 2, cloudCover = 0))
+            add(hourly(temperature = 25.0, humidity = 45, hoursFromNow = 3, cloudCover = 5))
+            add(hourly(temperature = 26.0, humidity = 42, hoursFromNow = 4, cloudCover = 10))
+            add(hourly(temperature = 26.0, humidity = 40, hoursFromNow = 5, cloudCover = 15))
+            // 12°C temp change, 40% humidity change — but a clear, dry day.
+        }
+        val result = HealthAlertEvaluator.evaluate(data)
+        val migraine = result.filter { it.type == HealthAlertType.MIGRAINE_TRIGGER }
+        assertTrue("Clear-day diurnal swing must not raise a frontal migraine alert", migraine.isEmpty())
     }
 
     @Test

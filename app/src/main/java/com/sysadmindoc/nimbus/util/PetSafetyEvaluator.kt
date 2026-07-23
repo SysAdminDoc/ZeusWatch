@@ -22,9 +22,6 @@ object PetSafetyEvaluator {
     /** Estimated pavement temperature (°C) at which a WARNING fires. */
     private const val PAVEMENT_WARNING_FLOOR = 55.0
 
-    /** Air temperature (°C) that warrants a WARNING under strong sun even below the pavement floor. */
-    private const val AIR_TEMP_WARNING_FLOOR = 25.0
-
     fun evaluate(current: CurrentConditions): List<PetSafetyAlert> {
         val alerts = mutableListOf<PetSafetyAlert>()
 
@@ -32,8 +29,10 @@ object PetSafetyEvaluator {
         // 20-30C hotter than air. The full solar adder only applies when the
         // sun is plausibly strong (UV >= STRONG_SUN_UV) — a clear 20C morning
         // under weak sun was previously claiming ~50C pavement. Weak sun gets
-        // a reduced residual-heat adder instead, and a WARNING needs either an
-        // estimated pavement >= 55C or air >= 25C with strong sun.
+        // a reduced residual-heat adder instead. The WARNING is gated purely on
+        // the estimated pavement temperature: warm air alone (e.g. a sunny 25C
+        // morning whose pavement estimate is still below the burn floor) no
+        // longer raises a pavement WARNING.
         if (current.isDay && current.cloudCover < 50) {
             val strongSun = current.uvIndex >= STRONG_SUN_UV
             val solarAdder = if (strongSun) {
@@ -52,8 +51,7 @@ object PetSafetyEvaluator {
                         messageArg = pavementEstimate.toInt(),
                     )
                 )
-                pavementEstimate >= PAVEMENT_WARNING_FLOOR ||
-                    (strongSun && current.temperature >= AIR_TEMP_WARNING_FLOOR) -> alerts.add(
+                pavementEstimate >= PAVEMENT_WARNING_FLOOR -> alerts.add(
                     PetSafetyAlert(
                         type = PetAlertType.HOT_PAVEMENT,
                         severity = PetSeverity.WARNING,
