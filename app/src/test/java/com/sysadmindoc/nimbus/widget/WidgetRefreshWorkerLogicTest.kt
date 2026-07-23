@@ -24,6 +24,24 @@ class WidgetRefreshWorkerLogicTest {
     }
 
     @Test
+    fun `non-active cache-warming runs once every N cycles`() {
+        val cycle = 900L
+        val n = 4
+        // Cycle index 0,4,8,... warm; the three cycles in between are deferred.
+        assertTrue(shouldWarmNonActiveLocations(epochSeconds = 0L, cycleSeconds = cycle, everyNCycles = n))
+        assertFalse(shouldWarmNonActiveLocations(epochSeconds = cycle, cycleSeconds = cycle, everyNCycles = n))
+        assertFalse(shouldWarmNonActiveLocations(epochSeconds = 2 * cycle, cycleSeconds = cycle, everyNCycles = n))
+        assertFalse(shouldWarmNonActiveLocations(epochSeconds = 3 * cycle, cycleSeconds = cycle, everyNCycles = n))
+        assertTrue(shouldWarmNonActiveLocations(epochSeconds = 4 * cycle, cycleSeconds = cycle, everyNCycles = n))
+    }
+
+    @Test
+    fun `non-active cache-warming throttle disabled warms every cycle`() {
+        assertTrue(shouldWarmNonActiveLocations(epochSeconds = 900L, cycleSeconds = 900L, everyNCycles = 1))
+        assertTrue(shouldWarmNonActiveLocations(epochSeconds = 900L, cycleSeconds = 0L, everyNCycles = 4))
+    }
+
+    @Test
     fun `battery skip triggers only when critically low and not charging`() {
         assertTrue(shouldSkipWidgetRefreshForBattery(batteryLevel = 10, isCharging = false))
         assertTrue(shouldSkipWidgetRefreshForBattery(batteryLevel = 15, isCharging = false))
