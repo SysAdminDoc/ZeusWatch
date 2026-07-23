@@ -976,6 +976,10 @@
 
     <!-- Today screen -->
     <string name="main_grant_location">Grant location</string>
+    <string name="main_use_my_location">Use my location</string>
+    <string name="main_open_app_settings">Open settings</string>
+    <string name="main_turn_on_location_services">Turn on location</string>
+    <string name="main_error_location_permanently_denied">Location access is turned off for ZeusWatch. Enable it in App settings, or search for a place to add it manually.</string>
     <string name="main_finding_forecast_title">Finding your forecast</string>
     <string name="main_finding_forecast_with_last">Current location can take a few seconds. You can jump into %1$s or choose another place manually.</string>
     <string name="main_finding_forecast_without_last">Current location can take a few seconds. Choose a city manually if you want to skip GPS.</string>

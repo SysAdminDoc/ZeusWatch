@@ -948,6 +948,10 @@
     <string name="compare_chart_overlay_temp_spread">Max temp spread %1$s</string>
     <string name="compare_chart_overlay_rain_spread">Rain spread %1$d pts</string>
     <string name="main_grant_location">منح الموقع</string>
+    <string name="main_use_my_location">استخدام موقعي</string>
+    <string name="main_open_app_settings">فتح الإعدادات</string>
+    <string name="main_turn_on_location_services">تشغيل الموقع</string>
+    <string name="main_error_location_permanently_denied">الوصول إلى الموقع معطّل لتطبيق ZeusWatch. فعّله من إعدادات التطبيق، أو ابحث عن مكان لإضافته يدويًا.</string>
     <string name="main_finding_forecast_title">جار العثور على توقعاتك</string>
     <string name="main_finding_forecast_with_last">Current location can take a few seconds. You can jump into %1$s or choose another place manually.</string>
     <string name="main_finding_forecast_without_last">Current location can take a few seconds. Choose a city manually if you want to skip GPS.</string>

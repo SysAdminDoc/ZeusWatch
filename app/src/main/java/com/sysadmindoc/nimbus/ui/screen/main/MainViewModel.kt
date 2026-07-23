@@ -785,6 +785,16 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Records that the runtime location request has been launched at least once
+     * so a later permanent denial can be distinguished from a never-asked state
+     * (NX-26). Called from the explicit "Use my location" affordance, never on
+     * app launch.
+     */
+    fun onLocationPermissionRequested() {
+        viewModelScope.launch { prefs.setLocationPermissionRequested() }
+    }
+
     fun onPermissionGranted() {
         _uiState.update { it.copy(needsLocationPermission = false) }
         viewModelScope.launch { delay(300); loadWeather() }

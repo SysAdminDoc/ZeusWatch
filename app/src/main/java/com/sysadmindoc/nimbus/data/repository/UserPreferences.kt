@@ -135,6 +135,10 @@ class UserPreferences @Inject constructor(
         val BACKGROUND_ALERT_LOCATION_NAME = stringPreferencesKey("background_alert_location_name")
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
         val LAST_SEEN_VERSION_CODE = stringPreferencesKey("last_seen_version_code")
+        // Whether the app has ever launched the runtime location-permission
+        // request. Persisted so a permanent denial can be told apart from a
+        // never-asked state after process death (NX-26).
+        val LOCATION_PERMISSION_REQUESTED = booleanPreferencesKey("location_permission_requested")
     }
 
     private fun hasExistingUserFootprint(prefs: Preferences): Boolean {
@@ -241,6 +245,7 @@ class UserPreferences @Inject constructor(
             tempestAccessToken = apiKeys.tempestAccessToken.ifBlank { prefs[Keys.TEMPEST_ACCESS_TOKEN] ?: "" },
             tempestDeviceId = prefs[Keys.TEMPEST_DEVICE_ID] ?: "",
             onboardingComplete = prefs[Keys.ONBOARDING_COMPLETE] ?: hasExistingUserFootprint(prefs),
+            locationPermissionRequested = prefs[Keys.LOCATION_PERMISSION_REQUESTED] ?: false,
         )
     }
 
@@ -338,6 +343,11 @@ class UserPreferences @Inject constructor(
 
     suspend fun setOnboardingComplete(complete: Boolean) = store.edit {
         it[Keys.ONBOARDING_COMPLETE] = complete
+    }
+
+    /** Records that the runtime location-permission request has been launched at least once. */
+    suspend fun setLocationPermissionRequested() = store.edit {
+        it[Keys.LOCATION_PERMISSION_REQUESTED] = true
     }
 
     suspend fun completeOnboarding(tempUnit: TempUnit, starterCardSet: StarterCardSet) = store.edit { prefs ->
@@ -614,6 +624,7 @@ data class NimbusSettings(
     val tempestAccessToken: String = "",
     val tempestDeviceId: String = "",
     val onboardingComplete: Boolean = false,
+    val locationPermissionRequested: Boolean = false,
 ) {
     /** Cache TTL in milliseconds. */
     val cacheTtlMs: Long get() = cacheTtlMinutes * 60 * 1000L
