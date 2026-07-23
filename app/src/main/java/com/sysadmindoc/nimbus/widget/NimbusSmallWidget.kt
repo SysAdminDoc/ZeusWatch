@@ -54,7 +54,7 @@ class NimbusSmallWidget : GlanceAppWidget() {
 }
 
 @Composable
-private fun SmallWidgetContent(
+internal fun SmallWidgetContent(
     data: WidgetWeatherData?,
     strings: WidgetStrings,
 ) {
