@@ -417,23 +417,41 @@ private fun LocationsList(
         item { Spacer(modifier = Modifier.height(32.dp)) }
     }
 
+    LocationsConfirmationDialogs(
+        pendingRemoval = pendingRemoval,
+        showClearRecentDialog = showClearRecentDialog,
+        onPendingRemovalChange = { pendingRemoval = it },
+        onShowClearRecentChange = { showClearRecentDialog = it },
+        onRemoveLocation = onRemoveLocation,
+        onClearRecentSearches = onClearRecentSearches,
+    )
+}
+
+@Composable
+private fun LocationsConfirmationDialogs(
+    pendingRemoval: SavedLocationEntity?,
+    showClearRecentDialog: Boolean,
+    onPendingRemovalChange: (SavedLocationEntity?) -> Unit,
+    onShowClearRecentChange: (Boolean) -> Unit,
+    onRemoveLocation: (Long) -> Unit,
+    onClearRecentSearches: () -> Unit,
+) {
     pendingRemoval?.let { location ->
         ConfirmRemoveLocationDialog(
             location = location,
-            onDismiss = { pendingRemoval = null },
+            onDismiss = { onPendingRemovalChange(null) },
             onConfirm = {
                 onRemoveLocation(location.id)
-                pendingRemoval = null
+                onPendingRemovalChange(null)
             },
         )
     }
-
     if (showClearRecentDialog) {
         ConfirmClearRecentSearchesDialog(
-            onDismiss = { showClearRecentDialog = false },
+            onDismiss = { onShowClearRecentChange(false) },
             onConfirm = {
                 onClearRecentSearches()
-                showClearRecentDialog = false
+                onShowClearRecentChange(false)
             },
         )
     }
