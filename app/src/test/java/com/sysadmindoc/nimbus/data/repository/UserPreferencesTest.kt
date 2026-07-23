@@ -133,6 +133,30 @@ class UserPreferencesTest {
         assertFalse(result.any { it.name == "City 10" })
     }
 
+    @Test
+    fun matchesRecentSearchIdentifiesSameEntryByIdAndCoordinates() {
+        val denver = recentResult(1, "Denver", 39.7, -104.9)
+
+        // Same id.
+        assertTrue(denver.matchesRecentSearch(recentResult(1, "Renamed", 10.0, 20.0)))
+        // Same coordinates, different id.
+        assertTrue(denver.matchesRecentSearch(recentResult(99, "Denver Metro", 39.70004, -104.90003)))
+        // Different place.
+        assertFalse(denver.matchesRecentSearch(recentResult(2, "Chicago", 41.8, -87.6)))
+    }
+
+    @Test
+    fun removingRecentSearchLeavesOtherEntriesIntact() {
+        val denver = recentResult(1, "Denver", 39.7, -104.9)
+        val chicago = recentResult(2, "Chicago", 41.8, -87.6)
+        val current = listOf(denver, chicago)
+
+        // Mirror UserPreferences.removeRecentLocationSearch's filter.
+        val afterRemoval = current.filterNot { it.matchesRecentSearch(denver) }
+
+        assertEquals(listOf("Chicago"), afterRemoval.map { it.name })
+    }
+
     // --- SourceConfig defaults ---
 
     @Test

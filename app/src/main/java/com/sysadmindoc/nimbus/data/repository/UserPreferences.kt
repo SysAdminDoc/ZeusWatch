@@ -288,6 +288,24 @@ class UserPreferences @Inject constructor(
         }
     }
 
+    /** Removes a single stored recent search. Saved locations are unaffected (NX-32). */
+    suspend fun removeRecentLocationSearch(result: GeocodingResult) {
+        store.edit { prefs ->
+            val updated = decodeRecentLocationSearches(prefs[Keys.RECENT_LOCATION_SEARCHES])
+                .filterNot { it.matchesRecentSearch(result) }
+            if (updated.isEmpty()) {
+                prefs.remove(Keys.RECENT_LOCATION_SEARCHES)
+            } else {
+                prefs[Keys.RECENT_LOCATION_SEARCHES] = preferencesJson.encodeToString(recentLocationListSerializer, updated)
+            }
+        }
+    }
+
+    /** Clears the entire recent-search history. Saved locations are unaffected (NX-32). */
+    suspend fun clearRecentLocationSearches() {
+        store.edit { prefs -> prefs.remove(Keys.RECENT_LOCATION_SEARCHES) }
+    }
+
     val lastSeenVersionCode: Flow<Int> = store.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { prefs -> prefs[Keys.LAST_SEEN_VERSION_CODE]?.toIntOrNull() ?: 0 }
@@ -790,6 +808,16 @@ internal fun mergeRecentLocationSearches(
     }
     return (listOf(result) + withoutDuplicate).take(safeLimit)
 }
+
+/**
+ * Whether [other] refers to the same place as this recent search — same id, or
+ * effectively identical coordinates. Mirrors the dedup rule in
+ * [mergeRecentLocationSearches] so removal targets exactly what was stored.
+ */
+internal fun GeocodingResult.matchesRecentSearch(other: GeocodingResult): Boolean =
+    id == other.id ||
+        (kotlin.math.abs(latitude - other.latitude) < 0.0001 &&
+            kotlin.math.abs(longitude - other.longitude) < 0.0001)
 
 internal fun disabledCardsForStarterSet(set: StarterCardSet): Set<String> {
     return when (set) {

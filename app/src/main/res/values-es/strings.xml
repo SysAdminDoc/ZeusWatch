@@ -893,6 +893,11 @@
     <string name="locations_use_current_location">Usar mi ubicación</string>
     <string name="locations_use_current_location_cd">Usar ubicación actual, %1$s</string>
     <string name="locations_recent_searches">Búsquedas recientes</string>
+    <string name="locations_clear_recent_action">Borrar todo</string>
+    <string name="locations_clear_recent_action_cd">Borrar todas las búsquedas recientes</string>
+    <string name="locations_remove_recent_cd">Quitar %1$s de las búsquedas recientes</string>
+    <string name="locations_clear_recent_title">¿Borrar búsquedas recientes?</string>
+    <string name="locations_clear_recent_message">Esto elimina tu historial de búsquedas recientes de este dispositivo. Tus lugares guardados no se ven afectados.</string>
     <string name="locations_remove_title">¿Eliminar %1$s?</string>
     <string name="locations_remove_message">Esto elimina %1$s de los lugares guardados. Los widgets, alertas y accesos directos que lo usaban podrían necesitar una nueva ubicación.</string>
     <string name="locations_remove_action">Eliminar</string>

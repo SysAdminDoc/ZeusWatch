@@ -903,6 +903,11 @@
     <string name="locations_use_current_location">استخدام موقعي</string>
     <string name="locations_use_current_location_cd">Use current location, %1$s</string>
     <string name="locations_recent_searches">Recent Searches</string>
+    <string name="locations_clear_recent_action">مسح الكل</string>
+    <string name="locations_clear_recent_action_cd">مسح كل عمليات البحث الأخيرة</string>
+    <string name="locations_remove_recent_cd">إزالة %1$s من عمليات البحث الأخيرة</string>
+    <string name="locations_clear_recent_title">مسح عمليات البحث الأخيرة؟</string>
+    <string name="locations_clear_recent_message">يؤدي هذا إلى إزالة سجل عمليات البحث الأخيرة من هذا الجهاز. لن تتأثر أماكنك المحفوظة.</string>
     <string name="locations_remove_title">Remove %1$s?</string>
     <string name="locations_remove_message">This removes %1$s from saved places. Widgets, alerts, and shortcuts that used it may need a new location.</string>
     <string name="locations_remove_action">Remove</string>
