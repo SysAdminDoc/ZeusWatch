@@ -116,6 +116,9 @@ class UserPreferences @Inject constructor(
         val OPEN_METEO_FLATBUFFERS_ENABLED = booleanPreferencesKey("open_meteo_flatbuffers_enabled")
         val GADGETBRIDGE_BROADCAST_ENABLED = booleanPreferencesKey("gadgetbridge_broadcast_enabled")
         val WEATHER_CONTENT_PROVIDER_ENABLED = booleanPreferencesKey("weather_content_provider_enabled")
+        // When enabled, the ecosystem ContentProvider rounds served coordinates
+        // to ~1 km so consumers get city-level (not exact) location (NX-32 sibling).
+        val WEATHER_CONTENT_PROVIDER_COARSE = booleanPreferencesKey("weather_content_provider_coarse")
 
         // API keys for third-party providers
         val OWM_API_KEY = owmApiKeyPreferenceKey
@@ -240,6 +243,7 @@ class UserPreferences @Inject constructor(
             openMeteoFlatBuffersEnabled = prefs[Keys.OPEN_METEO_FLATBUFFERS_ENABLED] ?: false,
             gadgetbridgeBroadcastEnabled = prefs[Keys.GADGETBRIDGE_BROADCAST_ENABLED] ?: false,
             weatherContentProviderEnabled = prefs[Keys.WEATHER_CONTENT_PROVIDER_ENABLED] ?: false,
+            weatherContentProviderCoarseLocation = prefs[Keys.WEATHER_CONTENT_PROVIDER_COARSE] ?: false,
             owmApiKey = apiKeys.owmApiKey.ifBlank { prefs[Keys.OWM_API_KEY] ?: "" },
             pirateWeatherApiKey = apiKeys.pirateWeatherApiKey.ifBlank { prefs[Keys.PIRATE_WEATHER_API_KEY] ?: "" },
             tempestAccessToken = apiKeys.tempestAccessToken.ifBlank { prefs[Keys.TEMPEST_ACCESS_TOKEN] ?: "" },
@@ -500,10 +504,20 @@ class UserPreferences @Inject constructor(
         it[Keys.WEATHER_CONTENT_PROVIDER_ENABLED] = enabled
     }
 
+    suspend fun setWeatherContentProviderCoarseLocation(enabled: Boolean) = store.edit {
+        it[Keys.WEATHER_CONTENT_PROVIDER_COARSE] = enabled
+    }
+
     suspend fun weatherContentProviderEnabled(): Boolean =
         store.data
             .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
             .map { prefs -> prefs[Keys.WEATHER_CONTENT_PROVIDER_ENABLED] ?: false }
+            .first()
+
+    suspend fun weatherContentProviderCoarseLocation(): Boolean =
+        store.data
+            .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+            .map { prefs -> prefs[Keys.WEATHER_CONTENT_PROVIDER_COARSE] ?: false }
             .first()
 
     // API keys
@@ -637,6 +651,7 @@ data class NimbusSettings(
     val openMeteoFlatBuffersEnabled: Boolean = false,
     val gadgetbridgeBroadcastEnabled: Boolean = false,
     val weatherContentProviderEnabled: Boolean = false,
+    val weatherContentProviderCoarseLocation: Boolean = false,
     val owmApiKey: String = "",
     val pirateWeatherApiKey: String = "",
     val tempestAccessToken: String = "",

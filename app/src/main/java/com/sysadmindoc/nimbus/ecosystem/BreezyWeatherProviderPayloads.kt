@@ -45,6 +45,19 @@ internal data class BreezyLocationRow(
     val weather: ByteArray?,
 )
 
+/**
+ * Rounds the served coordinates to ~1 km (two decimal places) so a consumer
+ * behind the `dangerous` provider permission sees city-level rather than exact
+ * location. Applied only to the row served over the ContentProvider — cache keys
+ * and internal lookups keep full precision.
+ */
+internal fun BreezyLocationRow.withCoarseCoordinates(): BreezyLocationRow = copy(
+    latitude = coarsenCoordinate(latitude),
+    longitude = coarsenCoordinate(longitude),
+)
+
+private fun coarsenCoordinate(value: Double): Double = kotlin.math.round(value * 100.0) / 100.0
+
 internal fun SavedLocationEntity.toBreezyLocationRow(weather: ByteArray? = null): BreezyLocationRow {
     val displayName = name.ifBlank { "Current location" }
     return BreezyLocationRow(

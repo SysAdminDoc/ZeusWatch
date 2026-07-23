@@ -1110,6 +1110,8 @@
     <string name="settings_gadgetbridge_broadcast_desc">Envía el clima actual a relojes compatibles con Gadgetbridge después de cada actualización.</string>
     <string name="settings_weather_content_provider">Proveedor de clima para apps</string>
     <string name="settings_weather_content_provider_desc">Expone ubicaciones guardadas y pronosticos en cache a apps con el permiso de proveedor de ZeusWatch. Las consultas externas nunca descargan clima en vivo.</string>
+    <string name="settings_weather_content_provider_coarse">Compartir solo ubicación aproximada</string>
+    <string name="settings_weather_content_provider_coarse_desc">Redondea las coordenadas compartidas con otras apps a aproximadamente 1 km (nivel de ciudad) en lugar de tu posición exacta.</string>
     <string name="settings_api_keys">Claves API</string>
     <string name="settings_owm_key">Clave API de OpenWeatherMap</string>
     <string name="settings_pirate_key">Clave API de Pirate Weather</string>

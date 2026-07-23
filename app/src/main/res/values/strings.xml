@@ -1137,6 +1137,8 @@
     <string name="settings_gadgetbridge_broadcast_desc">Send current weather to compatible Gadgetbridge watches after each refresh.</string>
     <string name="settings_weather_content_provider">Ecosystem weather provider</string>
     <string name="settings_weather_content_provider_desc">Expose saved locations and cached forecasts to apps with the ZeusWatch provider permission. External queries never fetch live weather.</string>
+    <string name="settings_weather_content_provider_coarse">Share coarse location only</string>
+    <string name="settings_weather_content_provider_coarse_desc">Round coordinates served to other apps to about 1 km (city level) instead of your exact position.</string>
     <string name="settings_api_keys">API Keys</string>
     <string name="settings_owm_key">OpenWeatherMap API Key</string>
     <string name="settings_pirate_key">Pirate Weather API Key</string>

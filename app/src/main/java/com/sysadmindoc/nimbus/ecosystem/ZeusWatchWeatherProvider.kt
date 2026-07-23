@@ -150,11 +150,12 @@ class ZeusWatchWeatherProvider : ContentProvider() {
         val cursor = MatrixCursor(ZeusWatchWeatherProviderContract.LOCATION_COLUMNS)
         if (!userPreferences.weatherContentProviderEnabled()) return@runBlocking cursor
 
+        val coarse = userPreferences.weatherContentProviderCoarseLocation()
         val limit = uri.getQueryParameter("limit")?.toIntOrNull()?.takeIf { it > 0 }
         val locations = database.savedLocationDao().getAll()
             .let { rows -> if (limit != null) rows.take(limit) else rows }
         locations.forEach { location ->
-            cursor.addLocationRow(location.toBreezyLocationRow())
+            cursor.addLocationRow(location.toBreezyLocationRow().maybeCoarsen(coarse))
         }
         cursor
     }
@@ -190,10 +191,14 @@ class ZeusWatchWeatherProvider : ContentProvider() {
                 refreshEpochMillis = entity.cachedAt,
                 conditionLabel = { code -> code.localizedDescription(appContext) },
             ),
-        )
+        ).maybeCoarsen(settings.weatherContentProviderCoarseLocation)
         cursor.addLocationRow(row)
         cursor
     }
+
+    /** Applies coordinate coarsening only when the opt-in coarse mode is on. */
+    private fun BreezyLocationRow.maybeCoarsen(coarse: Boolean): BreezyLocationRow =
+        if (coarse) withCoarseCoordinates() else this
 
     private suspend fun cachedWeatherEntity(
         location: com.sysadmindoc.nimbus.data.model.SavedLocationEntity,

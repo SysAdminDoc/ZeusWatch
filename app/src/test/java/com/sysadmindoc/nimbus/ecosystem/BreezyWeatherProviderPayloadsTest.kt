@@ -50,6 +50,28 @@ class BreezyWeatherProviderPayloadsTest {
     }
 
     @Test
+    fun coarseCoordinatesRoundToAboutOneKilometer() {
+        val location = SavedLocationEntity(
+            id = 42L,
+            name = "Denver",
+            country = "United States",
+            latitude = 39.7392,
+            longitude = -104.9903,
+            isCurrentLocation = false,
+            timeZone = "America/Denver",
+        )
+
+        val exact = location.toBreezyLocationRow()
+        val coarse = exact.withCoarseCoordinates()
+
+        // Rounded to two decimals (~1.1 km) — exact position is not exposed.
+        assertEquals(39.74, coarse.latitude, 0.0)
+        assertEquals(-104.99, coarse.longitude, 0.0)
+        // The exact row is untouched (opt-in only).
+        assertEquals(39.7392, exact.latitude, 0.0001)
+    }
+
+    @Test
     fun currentPositionDoesNotExposeCustomName() {
         val location = SavedLocationEntity(
             id = 7L,
