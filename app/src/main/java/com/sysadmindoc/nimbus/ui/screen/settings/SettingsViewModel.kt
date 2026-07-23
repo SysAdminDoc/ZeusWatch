@@ -222,6 +222,9 @@ class SettingsViewModel @Inject constructor(
     fun setWeatherContentProviderEnabled(enabled: Boolean) = viewModelScope.launch {
         prefs.setWeatherContentProviderEnabled(enabled)
     }
+    fun setWeatherContentProviderCoarseLocation(enabled: Boolean) = viewModelScope.launch {
+        prefs.setWeatherContentProviderCoarseLocation(enabled)
+    }
 
     // API keys
     fun setOwmApiKey(key: String) = viewModelScope.launch { prefs.setOwmApiKey(key) }
