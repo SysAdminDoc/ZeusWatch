@@ -191,6 +191,7 @@ data class SettingsBackupPreferences(
     val openMeteoFlatBuffersEnabled: Boolean = false,
     val gadgetbridgeBroadcastEnabled: Boolean = false,
     val weatherContentProviderEnabled: Boolean = false,
+    val weatherContentProviderCoarseLocation: Boolean = false,
     val tempestDeviceId: String = "",
     val onboardingComplete: Boolean = true,
 )
@@ -399,6 +400,7 @@ fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPrefere
     openMeteoFlatBuffersEnabled = openMeteoFlatBuffersEnabled,
     gadgetbridgeBroadcastEnabled = gadgetbridgeBroadcastEnabled,
     weatherContentProviderEnabled = weatherContentProviderEnabled,
+    weatherContentProviderCoarseLocation = weatherContentProviderCoarseLocation,
     tempestDeviceId = tempestDeviceId,
     onboardingComplete = onboardingComplete,
 )
@@ -461,6 +463,7 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
     openMeteoFlatBuffersEnabled = openMeteoFlatBuffersEnabled,
     gadgetbridgeBroadcastEnabled = gadgetbridgeBroadcastEnabled,
     weatherContentProviderEnabled = weatherContentProviderEnabled,
+    weatherContentProviderCoarseLocation = weatherContentProviderCoarseLocation,
     tempestDeviceId = tempestDeviceId.filter(Char::isDigit).take(24),
     onboardingComplete = onboardingComplete,
 )
@@ -513,12 +516,6 @@ private fun SettingsBackupLastLocation.toSavedLocationOrNull(): SavedLocation? {
 
 private fun SettingsBackupLastLocation.hasValidCoordinates(): Boolean =
     latitude.isValidLatitude() && longitude.isValidLongitude()
-
-fun SettingsBackupLastLocation.toSavedLocation(): SavedLocation = SavedLocation(
-    latitude = latitude,
-    longitude = longitude,
-    name = name,
-)
 
 private fun Double.isValidLatitude(): Boolean = !isNaN() && !isInfinite() && this in -90.0..90.0
 
@@ -583,6 +580,7 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setOpenMeteoFlatBuffersEnabled(settings.openMeteoFlatBuffersEnabled)
     setGadgetbridgeBroadcastEnabled(settings.gadgetbridgeBroadcastEnabled)
     setWeatherContentProviderEnabled(settings.weatherContentProviderEnabled)
+    setWeatherContentProviderCoarseLocation(settings.weatherContentProviderCoarseLocation)
     setTempestDeviceId(settings.tempestDeviceId)
     setOnboardingComplete(settings.onboardingComplete)
 }

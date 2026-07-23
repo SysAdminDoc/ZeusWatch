@@ -56,6 +56,16 @@ class SettingsTransferTest {
     }
 
     @Test
+    fun `settings backup round-trips the content-provider coarse-location toggle`() {
+        val backup = NimbusSettings(weatherContentProviderCoarseLocation = true).toBackup()
+        val encoded = json.encodeToString(SettingsBackup(settings = backup))
+        assertTrue(encoded.contains("\"weatherContentProviderCoarseLocation\":true"))
+        assertTrue(backup.toSettings().weatherContentProviderCoarseLocation)
+        // Default stays false when the field is absent from an older backup.
+        assertFalse(NimbusSettings().toBackup().toSettings().weatherContentProviderCoarseLocation)
+    }
+
+    @Test
     fun `settings backup round-trips compare chart overlay toggle`() {
         val backup = NimbusSettings(showCompareChartOverlay = false).toBackup()
         val encoded = json.encodeToString(SettingsBackup(settings = backup))
