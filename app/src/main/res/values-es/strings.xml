@@ -942,6 +942,10 @@
 
     <!-- Today screen -->
     <string name="main_grant_location">Permitir ubicación</string>
+    <string name="main_use_my_location">Usar mi ubicación</string>
+    <string name="main_open_app_settings">Abrir ajustes</string>
+    <string name="main_turn_on_location_services">Activar ubicación</string>
+    <string name="main_error_location_permanently_denied">El acceso a la ubicación está desactivado para ZeusWatch. Actívalo en los ajustes de la app o busca un lugar para añadirlo manualmente.</string>
     <string name="main_finding_forecast_title">Buscando tu pronóstico</string>
     <string name="main_finding_forecast_with_last">La ubicación actual puede tardar unos segundos. Puedes abrir %1$s o elegir otro lugar manualmente.</string>
     <string name="main_finding_forecast_without_last">La ubicación actual puede tardar unos segundos. Elige una ciudad manualmente si quieres omitir GPS.</string>

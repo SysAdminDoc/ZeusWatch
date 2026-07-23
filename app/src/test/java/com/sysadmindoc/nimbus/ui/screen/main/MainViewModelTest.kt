@@ -345,6 +345,16 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `onLocationPermissionRequested persists the requested flag`() = runTest {
+        viewModel = createAndAdvance()
+
+        viewModel.onLocationPermissionRequested()
+        advanceUntilIdle()
+
+        coVerify { prefs.setLocationPermissionRequested() }
+    }
+
+    @Test
     fun `refresh clears spinner when permission is missing`() = runTest {
         every { locationProvider.hasLocationPermission } returns false
         viewModel = createAndAdvance()

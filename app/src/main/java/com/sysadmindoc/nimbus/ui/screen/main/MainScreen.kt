@@ -1,9 +1,20 @@
 package com.sysadmindoc.nimbus.ui.screen.main
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.sysadmindoc.nimbus.util.needsAppSettings
+import com.sysadmindoc.nimbus.util.resolveLocationPermissionUiState
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -195,6 +206,9 @@ fun MainScreen(
 
     val requestLocationPermissions = {
         hasPromptedPermissions = true
+        // Persist that we've asked so a later "denied with no rationale" reads as
+        // a permanent denial (App Settings) rather than a never-asked state.
+        viewModel.onLocationPermissionRequested()
         permissionLauncher.launch(
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
@@ -203,12 +217,26 @@ fun MainScreen(
         )
     }
 
-    // Prompt for required location permission automatically once per session.
-    LaunchedEffect(state.needsLocationPermission) {
-        if (state.needsLocationPermission && !hasPromptedPermissions) {
-            requestLocationPermissions()
-        }
-    }
+    // NX-26: app launch never triggers a permission dialog. Location is only
+    // requested from an explicit "Use my location" affordance (the location-error
+    // recovery card / retry), so search and saved places stay usable without any
+    // grant. The old auto-prompt LaunchedEffect was removed deliberately.
+
+    // Resolve the recoverable permission state so the error card can choose
+    // between re-requesting (with rationale) and sending the user to App Settings.
+    val permissionStateContext = LocalContext.current
+    val activity = permissionStateContext.findActivity()
+    val locationGranted = ContextCompat.checkSelfPermission(
+        permissionStateContext, Manifest.permission.ACCESS_COARSE_LOCATION,
+    ) == PackageManager.PERMISSION_GRANTED
+    val shouldShowRationale = activity?.let {
+        ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.ACCESS_FINE_LOCATION)
+    } ?: false
+    val locationPermissionUiState = resolveLocationPermissionUiState(
+        granted = locationGranted,
+        hasRequestedBefore = state.settings.locationPermissionRequested,
+        shouldShowRationale = shouldShowRationale,
+    )
 
     // Optional permissions should not disrupt the first-run flow. Request
     // notifications once per session after weather loads and defer background
@@ -280,12 +308,32 @@ fun MainScreen(
             onHistoricalDateSelected = { date -> viewModel.selectHistoricalDate(date) },
         )
     }
-    val screenActions = remember(contentActions, viewModel, requestLocationPermissions) {
+    val settingsContext = LocalContext.current
+    val openAppSettings = {
+        val intent = Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", settingsContext.packageName, null),
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { settingsContext.startActivity(intent) }
+    }
+    val openLocationServices = {
+        val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { settingsContext.startActivity(intent) }
+    }
+    val permanentlyDenied = locationPermissionUiState.needsAppSettings
+    val screenActions = remember(
+        contentActions, viewModel, requestLocationPermissions,
+        openAppSettings, openLocationServices, permanentlyDenied,
+    ) {
         MainScreenActions(
             content = contentActions,
             onLoadWeather = { viewModel.loadWeather() },
             onUseLastLocation = { viewModel.useLastLocation() },
             onRequestLocationPermissions = requestLocationPermissions,
+            onOpenAppSettings = { openAppSettings() },
+            onOpenLocationServices = { openLocationServices() },
+            locationPermissionPermanentlyDenied = permanentlyDenied,
         )
     }
     CompositionLocalProvider(
@@ -308,6 +356,13 @@ fun MainScreen(
             onTabSelected = { selectedTab = it },
         )
     }
+}
+
+/** Walks the [ContextWrapper] chain to find the hosting [Activity], if any. */
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

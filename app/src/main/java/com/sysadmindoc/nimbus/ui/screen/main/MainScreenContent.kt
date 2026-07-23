@@ -184,6 +184,11 @@ internal data class MainScreenActions(
     val onLoadWeather: () -> Unit,
     val onUseLastLocation: () -> Unit,
     val onRequestLocationPermissions: () -> Unit,
+    val onOpenAppSettings: () -> Unit = {},
+    val onOpenLocationServices: () -> Unit = {},
+    // NX-26: when true, the runtime request was permanently denied, so the
+    // recovery card sends the user to App Settings instead of re-prompting.
+    val locationPermissionPermanentlyDenied: Boolean = false,
 )
 
 @Composable
@@ -271,16 +276,39 @@ private fun MainErrorState(
 ) {
     val error = state.error ?: return
     val hasLocationPermissionError = isLocationPermissionError(error)
+    val permanentlyDenied = hasLocationPermissionError && actions.locationPermissionPermanentlyDenied
+    val servicesOff = error.kind == MainUiErrorKind.LOCATION_SERVICES_OFF
+
+    // NX-26: route the primary recovery action to the state the user can actually
+    // resolve — App Settings for a permanent denial, the system location panel
+    // when location services are off, otherwise an explicit re-request.
+    val primaryAction: () -> Unit = when {
+        permanentlyDenied -> actions.onOpenAppSettings
+        servicesOff -> actions.onOpenLocationServices
+        hasLocationPermissionError -> actions.onRequestLocationPermissions
+        else -> actions.onLoadWeather
+    }
+    val primaryLabel = when {
+        permanentlyDenied -> stringResource(R.string.main_open_app_settings)
+        servicesOff -> stringResource(R.string.main_turn_on_location_services)
+        hasLocationPermissionError -> stringResource(R.string.main_use_my_location)
+        else -> stringResource(R.string.retry)
+    }
+    val message = if (permanentlyDenied) {
+        stringResource(R.string.main_error_location_permanently_denied)
+    } else {
+        mainErrorMessage(error)
+    }
     ErrorState(
-        message = mainErrorMessage(error),
-        onRetry = if (hasLocationPermissionError) actions.onRequestLocationPermissions else actions.onLoadWeather,
+        message = message,
+        onRetry = primaryAction,
         icon = errorIconForError(error),
-        actionLabel = if (hasLocationPermissionError) {
-            stringResource(R.string.main_grant_location)
-        } else {
-            stringResource(R.string.retry)
+        actionLabel = primaryLabel,
+        actionIcon = when {
+            permanentlyDenied -> Icons.Filled.Settings
+            hasLocationPermissionError || servicesOff -> Icons.Filled.LocationOn
+            else -> Icons.Filled.Refresh
         },
-        actionIcon = if (hasLocationPermissionError) Icons.Filled.LocationOn else Icons.Filled.Refresh,
         secondaryActionLabel = stringResource(R.string.common_choose_location),
         onSecondaryAction = actions.content.onNavigateToLocations,
         isLocationPermissionError = hasLocationPermissionError,
