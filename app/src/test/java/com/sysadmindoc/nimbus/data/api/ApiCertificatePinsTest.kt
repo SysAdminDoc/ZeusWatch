@@ -17,9 +17,21 @@ class ApiCertificatePinsTest {
     @Test
     fun `configured hosts cover current keyed API endpoints`() {
         assertEquals(
-            setOf("api.openweathermap.org", "api.pirateweather.net"),
+            setOf(
+                "api.openweathermap.org",
+                "api.pirateweather.net",
+                // Keyless, but the query carries the user's typed place name.
+                "geocoding-api.open-meteo.com",
+            ),
             ApiCertificatePins.hostPins.keys,
         )
+    }
+
+    @Test
+    fun `geocoding host is pinned to fail closed on the privacy-sensitive query path`() {
+        val pins = ApiCertificatePins.hostPins["geocoding-api.open-meteo.com"]
+        assertNotNull("geocoding host must be pinned", pins)
+        assertTrue("geocoding must pin leaf + intermediate(s)", (pins?.size ?: 0) >= 2)
     }
 
     @Test

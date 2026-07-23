@@ -136,8 +136,15 @@ object NetworkModule {
     @Provides
     @Singleton
     @Named("geocoding")
-    fun provideGeocodingRetrofit(client: OkHttpClient): Retrofit =
-        buildRetrofit(GeocodingApi.BASE_URL, client)
+    fun provideGeocodingRetrofit(client: OkHttpClient): Retrofit {
+        // The geocoding query carries the user's typed place name, so pin the
+        // host to fail closed on a MITM (see ApiCertificatePins). Only the
+        // geocoding host is pinned in this client; other hosts are unaffected.
+        val geocodingClient = client.newBuilder()
+            .certificatePinner(ApiCertificatePins.build())
+            .build()
+        return buildRetrofit(GeocodingApi.BASE_URL, geocodingClient)
+    }
 
     @Provides
     @Singleton
