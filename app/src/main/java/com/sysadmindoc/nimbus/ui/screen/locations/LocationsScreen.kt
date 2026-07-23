@@ -138,6 +138,8 @@ fun LocationsScreen(
             }
         },
         onRemoveLocation = { viewModel.removeLocation(it) },
+        onRemoveRecentSearch = { viewModel.removeRecentSearch(it) },
+        onClearRecentSearches = { viewModel.clearRecentSearches() },
         onMoveLocation = { from, to -> viewModel.moveLocation(from, to) },
         onCommitReorder = { viewModel.commitReorder(it) },
         onForecastSourceSelected = { locationId, provider ->
@@ -163,6 +165,8 @@ internal fun LocationsContent(
     onClearSearch: () -> Unit = {},
     onAddLocation: (GeocodingResult) -> Unit = {},
     onRemoveLocation: (Long) -> Unit = {},
+    onRemoveRecentSearch: (GeocodingResult) -> Unit = {},
+    onClearRecentSearches: () -> Unit = {},
     onMoveLocation: (Int, Int) -> Unit = { _, _ -> },
     onCommitReorder: (List<Long>) -> Unit = {},
     onForecastSourceSelected: (Long, WeatherSourceProvider?) -> Unit = { _, _ -> },
@@ -228,6 +232,8 @@ internal fun LocationsContent(
                 onLocationSelected = onLocationSelected,
                 onAddLocation = onAddLocation,
                 onRemoveLocation = onRemoveLocation,
+                onRemoveRecentSearch = onRemoveRecentSearch,
+                onClearRecentSearches = onClearRecentSearches,
                 onMoveLocation = onMoveLocation,
                 onCommitReorder = onCommitReorder,
                 onForecastSourceSelected = onForecastSourceSelected,
@@ -247,12 +253,15 @@ private fun LocationsList(
     onLocationSelected: (Long) -> Unit,
     onAddLocation: (GeocodingResult) -> Unit,
     onRemoveLocation: (Long) -> Unit,
+    onRemoveRecentSearch: (GeocodingResult) -> Unit = {},
+    onClearRecentSearches: () -> Unit = {},
     onMoveLocation: (Int, Int) -> Unit = { _, _ -> },
     onCommitReorder: (List<Long>) -> Unit = {},
     onForecastSourceSelected: (Long, WeatherSourceProvider?) -> Unit = { _, _ -> },
     onAlertSourceSelected: (Long, WeatherSourceProvider?) -> Unit = { _, _ -> },
 ) {
     var draggedIndex by remember { mutableIntStateOf(-1) }
+    var showClearRecentDialog by remember { mutableStateOf(false) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
     var dragList by remember(saved) { mutableStateOf(saved) }
     var itemHeightsPx by remember(saved) { mutableStateOf<Map<Long, Int>>(emptyMap()) }
@@ -283,6 +292,8 @@ private fun LocationsList(
                 recentSearches = visibleRecentSearches,
                 onLocationSelected = onLocationSelected,
                 onAddLocation = onAddLocation,
+                onRemoveRecentSearch = onRemoveRecentSearch,
+                onClearRecentSearches = { showClearRecentDialog = true },
             )
         }
 
@@ -416,6 +427,56 @@ private fun LocationsList(
             },
         )
     }
+
+    if (showClearRecentDialog) {
+        ConfirmClearRecentSearchesDialog(
+            onDismiss = { showClearRecentDialog = false },
+            onConfirm = {
+                onClearRecentSearches()
+                showClearRecentDialog = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun ConfirmClearRecentSearchesDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(12.dp),
+        containerColor = NimbusCardBg,
+        titleContentColor = NimbusTextPrimary,
+        textContentColor = NimbusTextSecondary,
+        title = {
+            Text(
+                text = stringResource(R.string.locations_clear_recent_title),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.locations_clear_recent_message),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = stringResource(R.string.locations_clear_recent_action),
+                    color = NimbusError,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
+    )
 }
 
 @Composable
@@ -470,6 +531,8 @@ private fun LazyListScope.locationDiscoveryItems(
     recentSearches: List<GeocodingResult>,
     onLocationSelected: (Long) -> Unit,
     onAddLocation: (GeocodingResult) -> Unit,
+    onRemoveRecentSearch: (GeocodingResult) -> Unit = {},
+    onClearRecentSearches: () -> Unit = {},
 ) {
     if (currentLocation != null) {
         item(key = "current_location_quick_action") {
@@ -490,17 +553,37 @@ private fun LazyListScope.locationDiscoveryItems(
 
     if (recentSearches.isNotEmpty()) {
         item(key = "recent_searches_header") {
-            Text(
-                stringResource(R.string.locations_recent_searches),
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = NimbusTextTertiary,
-                modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
-            )
+            val clearRecentContentDescription = stringResource(R.string.locations_clear_recent_action_cd)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.locations_recent_searches),
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = NimbusTextTertiary,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = stringResource(R.string.locations_clear_recent_action),
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = NimbusBlueAccent,
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onClearRecentSearches, role = Role.Button)
+                        .semantics { contentDescription = clearRecentContentDescription }
+                        .padding(horizontal = 8.dp, vertical = 14.dp),
+                )
+            }
         }
         items(recentSearches, key = { "recent_${it.id}" }) { result ->
             SearchResultItem(
                 result = result,
                 onAdd = { onAddLocation(result) },
+                onRemove = { onRemoveRecentSearch(result) },
             )
         }
         item(key = "recent_searches_spacer") { Spacer(modifier = Modifier.height(12.dp)) }
@@ -696,7 +779,9 @@ private fun LazyListScope.locationSearchResultItems(
 private fun SearchResultItem(
     result: GeocodingResult,
     onAdd: () -> Unit,
+    onRemove: (() -> Unit)? = null,
 ) {
+    val removeRecentDescription = stringResource(R.string.locations_remove_recent_cd, result.name)
     val addResultDescription = remember(result.name, result.admin1, result.country) {
         listOfNotNull(result.admin1, result.country).joinToString(", ")
     }.let { region ->
@@ -761,6 +846,26 @@ private fun SearchResultItem(
             tint = NimbusBlueAccent,
             modifier = Modifier.size(20.dp),
         )
+        if (onRemove != null) {
+            Spacer(modifier = Modifier.width(4.dp))
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable(onClick = onRemove, role = Role.Button)
+                    // Own merge boundary so the parent row's mergeDescendants
+                    // doesn't absorb this action — TalkBack focuses it separately.
+                    .semantics(mergeDescendants = true) { contentDescription = removeRecentDescription },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = null,
+                    tint = NimbusTextTertiary,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
     }
 }
 

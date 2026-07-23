@@ -179,6 +179,26 @@ class LocationsViewModelTest {
     }
 
     @Test
+    fun `removeRecentSearch delegates to preferences`() = runTest {
+        viewModel = createViewModel()
+
+        viewModel.removeRecentSearch(testResults[0])
+        advanceUntilIdle()
+
+        coVerify { userPreferences.removeRecentLocationSearch(testResults[0]) }
+    }
+
+    @Test
+    fun `clearRecentSearches delegates to preferences`() = runTest {
+        viewModel = createViewModel()
+
+        viewModel.clearRecentSearches()
+        advanceUntilIdle()
+
+        coVerify { userPreferences.clearRecentLocationSearches() }
+    }
+
+    @Test
     fun `recentSearches emits from preferences flow`() = runTest {
         every { userPreferences.recentLocationSearches } returns flowOf(listOf(testResults[1]))
 

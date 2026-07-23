@@ -927,6 +927,11 @@
     <string name="locations_use_current_location">Use My Location</string>
     <string name="locations_use_current_location_cd">Use current location, %1$s</string>
     <string name="locations_recent_searches">Recent Searches</string>
+    <string name="locations_clear_recent_action">Clear all</string>
+    <string name="locations_clear_recent_action_cd">Clear all recent searches</string>
+    <string name="locations_remove_recent_cd">Remove %1$s from recent searches</string>
+    <string name="locations_clear_recent_title">Clear recent searches?</string>
+    <string name="locations_clear_recent_message">This removes your recent search history from this device. Your saved places are not affected.</string>
     <string name="locations_remove_title">Remove %1$s?</string>
     <string name="locations_remove_message">This removes %1$s from saved places. Widgets, alerts, and shortcuts that used it may need a new location.</string>
     <string name="locations_remove_action">Remove</string>

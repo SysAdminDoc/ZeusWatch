@@ -145,6 +145,16 @@ class LocationsViewModel @Inject constructor(
         }
     }
 
+    /** Removes a single recent search from local history (NX-32). Saved places are untouched. */
+    fun removeRecentSearch(result: GeocodingResult) {
+        viewModelScope.launch { userPreferences.removeRecentLocationSearch(result) }
+    }
+
+    /** Clears all recent searches from local history (NX-32). Saved places are untouched. */
+    fun clearRecentSearches() {
+        viewModelScope.launch { userPreferences.clearRecentLocationSearches() }
+    }
+
     fun addMapPickedLocation(
         lat: Double,
         lon: Double,
