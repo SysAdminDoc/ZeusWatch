@@ -29,7 +29,11 @@ enum class GpxRouteParseFailure {
 internal class GpxRouteParser {
     fun parse(input: InputStream): DrivingRouteGeometry {
         val bytes = input.readBoundedBytes()
-        val xmlPrefix = bytes.toString(Charsets.UTF_8).uppercase()
+        // Decode using the BOM-declared charset so a UTF-16 document (which the
+        // XML spec requires to carry a BOM) can't smuggle a DOCTYPE/ENTITY past
+        // this marker scan as UTF-8 mojibake — this scan is the load-bearing XXE
+        // guard on Android, where the Xerces disallow-doctype-decl flag is unsupported.
+        val xmlPrefix = bytes.decodeByBom().uppercase()
         if ("<!DOCTYPE" in xmlPrefix || "<!ENTITY" in xmlPrefix) {
             throw GpxRouteParseException(GpxRouteParseFailure.UNSAFE_XML)
         }
@@ -95,6 +99,21 @@ internal class GpxRouteParser {
             output.write(buffer, 0, count)
         }
         return output.toByteArray()
+    }
+
+    /**
+     * Decodes bytes for the DOCTYPE/ENTITY marker scan using the leading byte-order
+     * mark to pick the charset (the XML spec requires a UTF-16 document to carry a
+     * BOM). Absent a BOM, XML defaults to UTF-8. Prevents a UTF-16 payload from
+     * hiding the markers as UTF-8 mojibake.
+     */
+    private fun ByteArray.decodeByBom(): String {
+        val charset = when {
+            size >= 2 && this[0] == 0xFE.toByte() && this[1] == 0xFF.toByte() -> Charsets.UTF_16BE
+            size >= 2 && this[0] == 0xFF.toByte() && this[1] == 0xFE.toByte() -> Charsets.UTF_16LE
+            else -> Charsets.UTF_8
+        }
+        return toString(charset)
     }
 
     private fun secureDocumentBuilderFactory(): DocumentBuilderFactory =

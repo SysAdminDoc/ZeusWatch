@@ -544,7 +544,7 @@ npm run test:firestore-rules
 | Performance | AndroidX Macrobenchmark 1.5.0-alpha07 + Baseline Profile Gradle plugin | Cold-start release p95 gate and standard release baseline-profile collection |
 | Firestore rules | Firebase Emulator + rules-unit-testing | Community report create/read validation, malformed/stale rejection, append-only delete/update denial |
 
-**180+ tests** across 14 test suites.
+**1,100+ phone unit tests and 74 wear unit tests** across 110+ test suites.
 
 ---
 

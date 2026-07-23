@@ -62,6 +62,24 @@ class GpxRouteParserTest {
     }
 
     @Test
+    fun `rejects a UTF-16 encoded DOCTYPE that would evade a UTF-8 marker scan`() {
+        val xml = """
+            <?xml version="1.0" encoding="UTF-16"?>
+            <!DOCTYPE gpx [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+            <gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+              <rte><rtept lat="0" lon="0"/></rte>
+            </gpx>
+        """.trimIndent()
+        // Prepend a big-endian BOM (FE FF) so the bytes carry the mark the parser keys on.
+        val utf16Bytes = byteArrayOf(0xFE.toByte(), 0xFF.toByte()) + xml.toByteArray(Charsets.UTF_16BE)
+
+        val error = assertThrows(GpxRouteParseException::class.java) {
+            parser.parse(ByteArrayInputStream(utf16Bytes))
+        }
+        assertEquals(GpxRouteParseFailure.UNSAFE_XML, error.reason)
+    }
+
+    @Test
     fun `rejects files larger than five megabytes`() {
         val error = assertThrows(GpxRouteParseException::class.java) {
             parser.parse(ByteArrayInputStream(ByteArray(MAX_GPX_BYTES + 1)))

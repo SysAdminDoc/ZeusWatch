@@ -682,12 +682,12 @@ private fun RuleThresholdFeedback(
         parsedThreshold == null || parsedThreshold.isNaN() -> Text(
             text = stringResource(R.string.custom_alerts_invalid_threshold),
             style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFFFFB4AB),
+            color = NimbusError,
         )
         !metricAllowsNegativeThreshold(metric) && parsedThreshold < 0.0 -> Text(
             text = stringResource(R.string.custom_alerts_negative_threshold),
             style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFFFFB4AB),
+            color = NimbusError,
         )
         else -> {
             val locale = LocalConfiguration.current.locales[0]
