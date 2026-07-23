@@ -1,6 +1,6 @@
 # ZeusWatch Roadmap
 
-**Current Version**: v1.27.0 (phone versionCode 107, wear versionCode 79)
+**Current Version**: v1.28.0 (phone versionCode 108, wear versionCode 80)
 **Architecture**: Kotlin 2.3.21 / Jetpack Compose / Hilt / MVVM / multi-module (phone + wear)
 **Flavors**: `standard` (Google Play services, Gemini Nano, Firestore, Wear DataLayer) / `freenet` (F-Droid clean)
 **License**: LGPL-3.0
@@ -32,7 +32,7 @@
 
 ---
 
-## NEXT — 2-3 release cycles out (target v1.25 - v1.27)
+## NEXT — 2-3 release cycles out (target v1.29 - v1.31)
 
 ### NX-14. Reproducible builds badge for F-Droid · **T-RELIABILITY**
 Audit locale/timezone hashes, Hilt-generated code stability, AGP lockfile. Effort: medium.
@@ -50,15 +50,6 @@ Remaining: enrich the registry with coverage, attribution, license, quota,
 `freenetAllowed`, fallback role, and cache namespace (needs verified per-provider
 license/quota data), then add a regional resolver for default source bundles. Effort: medium.
 
-### NX-21. Throttle background cache-warming for non-widget locations · **T-PERF**
-`WidgetRefreshWorker.cacheRemainingSavedLocations` live-fetches every saved
-location every 15 min (~1,400 fetches/day for 15 saved cities). This is
-deliberate write-through cache warming consumed by Locations previews, the
-offline-first location switch, the QS tile, the ecosystem provider, saved-city
-widgets, and Gadgetbridge — so it can't simply be gated. Reduce the cadence for
-locations that back no active surface (e.g. warm non-widget/non-current
-locations only every Nth run) and `log()` what was skipped. Effort: low.
-
 ### NX-22. Add `hilt-android-testing` to unlock skipped runtime tests · **T-RELIABILITY**
 Two v1.27.0 fixes shipped without automated coverage because the app module has
 no `hilt-android-testing` dependency: the ecosystem ContentProvider opt-in
@@ -66,14 +57,9 @@ gating (`EntryPointAccessors.fromApplication` can't bootstrap under Robolectric)
 and the `WidgetConfigActivity` follow-app-location unpin purge (activity/WorkManager
 glue). Add the dependency and backfill both. Effort: low.
 
-### NX-23. MET Norway HTTP caching compliance · **T-SOURCES**
-MET Norway's terms require honoring `Expires` + `If-Modified-Since`; the adapter
-sends neither. Acceptable at current low volume but a standing compliance gap.
-Scope an OkHttp `Cache` with `Cache-Control: public` on the metnorway endpoint. Effort: low.
-
 ---
 
-## LATER — Beyond v1.27
+## LATER — Beyond v1.28
 
 ### L-1. `freenet` flavor Wear OS sync via non-GMS path · **T-WEAR**
 Default: document that `freenet` Wear users rely on direct API calls (already works). CompanionDeviceManager + sockets only if implementable in <2 weeks.
@@ -378,62 +364,13 @@ duplicating existing items.
 
 ### P3 — Hardening & Polish
 
-- [ ] P3 — Pin the Open-Meteo geocoding endpoint
-  Why: cert pinning covers only OWM/Pirate; the geocoding host carries the typed place-name search text over an unpinned channel — a privacy signal in a zero-telemetry app.
-  Evidence: `data/api/ApiCertificatePins.kt:46-57` (only OWM/Pirate hosts); geocoding client provided in `NetworkModule.kt`.
-  Touches: `ApiCertificatePins.kt` (add SPKI leaf+intermediate pins for the Open-Meteo geocoding host), pin-verification test.
-  Acceptance: geocoding requests fail closed on pin mismatch; `ApiCertificatePinsTest` covers the new host.
-  Complexity: S
-
-- [ ] P3 — Reduce false positives in health frontal-proxy and pet pavement alerts
-  Why: the migraine/frontal heuristic uses independent min/max spans (not co-timed/directional) so ordinary diurnal swings trigger it when pressure is absent; the pet pavement WARNING fires on air temp alone even when the pavement estimate is far below the burn floor.
-  Evidence: `util/HealthAlertEvaluator.kt:154` (`humidities.max()-min()` paired with a temp span); `util/PetSafetyEvaluator.kt:55` (air-temp OR clause bypasses `pavementEstimate`).
-  Touches: `HealthAlertEvaluator.kt` (consecutive signed deltas / correlation), `PetSafetyEvaluator.kt` (gate WARNING on the pavement estimate), evaluator tests.
-  Acceptance: clear-day diurnal swings no longer raise a frontal/migraine warning; a sunny 25°C morning with low pavement estimate no longer shows a pavement WARNING; tests cover both.
-  Complexity: S
-
-- [ ] P3 — ContentProvider location-precision hardening
-  Why: the ecosystem provider serves full-precision saved-location coordinates behind a user-grantable `dangerous` permission; already opt-in default-off + query-time enforced, but a coarsening/allowlist option would bound residual exposure.
-  Evidence: `AndroidManifest.xml:12` (`protectionLevel="dangerous"`); `ecosystem/ZeusWatchWeatherProvider.kt:124,141` (opt-in enforcement); `UserPreferences` `weather_content_provider_enabled` default false.
-  Touches: `ZeusWatchWeatherProvider.kt` (optional coordinate coarsening), Settings copy noting the exposure.
-  Acceptance: an opt-in "share coarse location only" mode rounds provider coordinates; default behavior documented; consumer contract unchanged when disabled.
-  Complexity: S
-
 ## Research-Driven Additions
 
 ### P0 — Now
 
 ### P1 — Next
 
-- [ ] P1 — NX-26. Make runtime permissions contextual and recoverable
-  Why: automatic location/notification prompts lack rationale, permanent-denial, and disabled-location-services recovery even though manual locations work without permissions.
-  Evidence: `ui/screen/main/MainScreen.kt:193-233`, `ui/screen/settings/SettingsScreen.kt`; https://developer.android.com/training/permissions/requesting ; https://github.com/bmaroti9/Overmorrow/issues/231
-  Touches: `MainScreen.kt`, `SettingsScreen.kt`, onboarding copy/state, a shared permission-state mapper, permission-flow JVM/Robolectric tests.
-  Acceptance: app launch never triggers a permission dialog; location is requested from an explicit “Use my location” action and notifications from a notification feature action; rationale is shown when appropriate, permanent denial offers App Settings, disabled location services offers the system location panel, and search/saved places remain usable after denial.
-  Complexity: M
-
-- [ ] P1 — NX-30. Activate Glance 1.1.1 structural tests for all widgets
-  Why: Google's documented 1.1.1 test artifacts invalidate the existing “requires Glance 1.2.x” blocker, while all eight release widgets need action/semantics/size regression coverage.
-  Evidence: `Roadmap_Blocked.md` “Full Glance widget unit tests”; https://developer.android.com/develop/ui/compose/glance/testing ; `widget/WidgetSurfaceContractTest.kt`.
-  Touches: version catalog test dependencies, `app/build.gradle.kts`, widget test fixtures and one `runGlanceAppWidgetUnitTest` suite per widget family.
-  Acceptance: JVM tests compose all eight widgets across canonical size modes and assert refresh/deep-link actions, freshness semantics, location labels, empty/cached/error states, and no missing required nodes; the blocked note is removed when this item is implemented; tests make no unsupported pixel-rendering or click-execution claim.
-  Complexity: M
-
-- [ ] P1 — NX-31. Enable Dagger duplicate map-key detection
-  Why: the provider registry depends on many `@IntoMap` bindings, and a duplicate source key should fail compilation instead of producing ambiguous generated code.
-  Evidence: `di/WeatherSourceAdapterModule.kt`; https://github.com/google/dagger/releases/tag/dagger-2.60
-  Touches: `app/build.gradle.kts` KSP configuration and provider-registry architecture test.
-  Acceptance: `dagger.mapMultibindingDuplicateDetectionFix=ENABLED` applies to both app flavors, current KSP tasks pass, and a registry test proves all forecast/alert binding keys are unique and complete for their declared enums.
-  Complexity: S
-
 ### P2 — Later
-
-- [ ] P2 — NX-32. Add deletion controls for recent location searches
-  Why: full geocoding results, including coordinates, persist locally with no clear-all or per-row removal action.
-  Evidence: `UserPreferences.kt:264-282`, `LocationsViewModel.kt`, `LocationsScreen.kt:476-490`.
-  Touches: `UserPreferences.kt`, `LocationsViewModel.kt`, `LocationsScreen.kt`, privacy copy, persistence/UI tests.
-  Acceptance: users can remove one recent search or clear all with an accessible confirmation; empty state updates immediately, saved locations are untouched, exported settings behavior is explicit, and tests prove removal survives restart.
-  Complexity: S
 
 - [ ] P2 — NX-33. Generate OSS notices and provider attribution
   Why: Settings shows only ZeusWatch's LGPL label despite a large dependency/provider surface; Rain demonstrates a compact in-app licenses pattern.
@@ -481,3 +418,17 @@ duplicating existing items.
 - [ ] P3 — Gadgetbridge broadcast target-package selection
   Why: coordinates are now coarsened to ~1 km, but the weather payload still broadcasts to every app resolving the public Gadgetbridge action; a user-selected target package (Breezy Weather pattern) would close the harvest channel entirely.
   Where: util/GadgetbridgeWeatherBroadcaster.kt, Settings > Notifications
+
+## Audit Follow-ups (2026-07-22)
+
+- [ ] P2 — Complete Arabic and Hebrew translations
+  Why: es is a full locale, but values-ar (~888) and values-he (~909) strings are still English left in place for lint parity (RTL core-copy only). Users of those locales see a mostly-English RTL UI, including empty/error/notification copy and accessibility content descriptions. Needs native-speaker translation, not machine translation — human decision.
+  Where: app/src/main/res/values-ar/strings.xml, app/src/main/res/values-he/strings.xml
+
+- [ ] P3 — Cancel the wallpaper preload thread post on engine destroy
+  Why: WeatherWallpaperService.onCreate spawns a raw thread that posts applyWeatherCode via Handler; if the engine is destroyed before the disk read completes (fast preview open/close) the post still runs against a dead engine. Harmless today (no-ops when !visible) but unmanaged.
+  Where: wallpaper/WeatherWallpaperService.kt (~62-66)
+
+- [ ] P3 — Drop redundant @Volatile on monitor-guarded Blitzortung fields
+  Why: nine @Volatile fields are only ever touched inside @Synchronized methods; the mixed idiom invites a future off-lock edit that assumes @Volatile is sufficient for the non-atomic increments. Maintainability only; behavior is correct.
+  Where: data/api/BlitzortungService.kt (~52-57)
