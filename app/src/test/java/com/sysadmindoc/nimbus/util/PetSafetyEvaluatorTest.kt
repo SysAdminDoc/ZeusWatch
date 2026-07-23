@@ -71,12 +71,21 @@ class PetSafetyEvaluatorTest {
     }
 
     @Test
-    fun `strong sun with warm air triggers warning below the pavement floor`() {
+    fun `warm air with a below-floor pavement estimate does not trigger a pavement warning`() {
         // 26°C air under strong sun (UV 6, 45% cloud): pavement estimate is
-        // ~51.5°C (< 55 floor) but air >= 25 with strong sun still warrants a WARNING.
+        // ~51.5°C, below the 55°C burn floor. Warm air alone must no longer
+        // raise a WARNING — the alert is gated on the pavement estimate.
         val result = PetSafetyEvaluator.evaluate(conditions(temperature = 26.0, cloudCover = 45, uvIndex = 6.0))
         val pavement = result.filter { it.type == PetAlertType.HOT_PAVEMENT }
-        assertTrue("Expected hot pavement warning", pavement.isNotEmpty())
+        assertTrue("Below-floor pavement estimate must not raise a warning", pavement.isEmpty())
+    }
+
+    @Test
+    fun `strong sun that pushes the pavement estimate to the floor triggers a warning`() {
+        // 28°C air, clear (UV 7, 0% cloud): pavement estimate 28 + 30 = 58°C ≥ 55 floor.
+        val result = PetSafetyEvaluator.evaluate(conditions(temperature = 28.0, cloudCover = 0, uvIndex = 7.0))
+        val pavement = result.filter { it.type == PetAlertType.HOT_PAVEMENT }
+        assertTrue("At-floor pavement estimate should raise a warning", pavement.isNotEmpty())
         assertTrue(pavement.all { it.severity == PetSeverity.WARNING })
     }
 

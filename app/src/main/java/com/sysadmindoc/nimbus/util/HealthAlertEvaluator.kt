@@ -145,10 +145,19 @@ object HealthAlertEvaluator {
      * Fallback: detect frontal passage from temperature + humidity shifts
      * when pressure data isn't available. Large simultaneous swings in both
      * indicate a weather front, which correlates with pressure changes.
+     *
+     * A bare temperature/humidity swing is ambiguous — a clear-day diurnal
+     * cycle produces a big morning-to-midday temp rise and humidity fall that
+     * looks identical to a front by magnitude alone. To avoid warning on
+     * ordinary sunny days, the swing must be accompanied by an actual frontal
+     * signature (advancing cloud, precipitation, or a wind increase); a clear,
+     * dry, calm window is treated as diurnal, not a front.
      */
     private fun evaluateFrontalProxy(hourly: List<HourlyConditions>): HealthAlert? {
         val next6 = hourly.take(6)
         if (next6.size < 3) return null
+
+        if (!hasFrontalSignature(next6)) return null
 
         val humidities = next6.mapNotNull { it.humidity }
         val humidityChange = if (humidities.size >= 2) humidities.max() - humidities.min() else 0
@@ -174,6 +183,21 @@ object HealthAlertEvaluator {
         }
 
         return null
+    }
+
+    /**
+     * True when the window carries an actual frontal weather signature —
+     * advancing cloud (>= 70% at any hour), measurable/likely precipitation, or
+     * a marked wind increase. A clear, dry, calm window fails this test, so a
+     * pure diurnal temperature/humidity swing on a sunny day is not mistaken
+     * for a front.
+     */
+    private fun hasFrontalSignature(window: List<HourlyConditions>): Boolean {
+        val cloudy = window.any { (it.cloudCover ?: 0) >= 70 }
+        val wet = window.any { (it.precipitationProbability) >= 40 || (it.precipitation ?: 0.0) > 0.1 }
+        val winds = window.mapNotNull { it.windSpeed }
+        val windSurge = winds.size >= 2 && (winds.max() - winds.min()) >= 15.0
+        return cloudy || wet || windSurge
     }
 
     /**
