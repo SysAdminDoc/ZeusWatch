@@ -53,7 +53,7 @@ class NimbusSavedCitiesWidget : GlanceAppWidget() {
 }
 
 @Composable
-private fun SavedCitiesWidgetContent(
+internal fun SavedCitiesWidgetContent(
     cities: List<WidgetSavedCity>,
     strings: WidgetStrings,
 ) {

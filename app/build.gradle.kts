@@ -286,6 +286,10 @@ dependencies {
     testImplementation(libs.compose.ui.test.junit4.accessibility)
     testImplementation(libs.compose.ui.test.manifest)
 
+    // Glance widget structural unit tests (device-free, JVM/Robolectric).
+    testImplementation(libs.glance.appwidget.testing)
+    testImplementation(libs.glance.testing)
+
     // Instrumented / Compose UI Tests
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)

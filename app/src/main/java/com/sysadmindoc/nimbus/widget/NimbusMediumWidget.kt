@@ -53,7 +53,7 @@ class NimbusMediumWidget : GlanceAppWidget() {
 }
 
 @Composable
-private fun MediumWidgetContent(
+internal fun MediumWidgetContent(
     data: WidgetWeatherData?,
     strings: WidgetStrings,
 ) {

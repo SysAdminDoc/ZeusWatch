@@ -45,7 +45,7 @@ class NimbusDailyWidget : GlanceAppWidget() {
 }
 
 @Composable
-private fun DailyWidgetContent(
+internal fun DailyWidgetContent(
     data: WidgetWeatherData?,
     strings: WidgetStrings,
 ) {

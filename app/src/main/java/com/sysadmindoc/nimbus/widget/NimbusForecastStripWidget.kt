@@ -53,7 +53,7 @@ class NimbusForecastStripWidget : GlanceAppWidget() {
 }
 
 @Composable
-private fun ForecastStripContent(
+internal fun ForecastStripContent(
     data: WidgetWeatherData?,
     strings: WidgetStrings,
 ) {
