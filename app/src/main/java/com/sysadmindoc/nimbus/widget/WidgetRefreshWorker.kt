@@ -38,6 +38,7 @@ import com.sysadmindoc.nimbus.util.WeatherFormatter
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
+import java.time.Instant
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -377,9 +378,27 @@ class WidgetRefreshWorker @AssistedInject constructor(
         state: WidgetRefreshState,
     ) {
         try {
+            // Saved-city widget locations back a live surface and must stay warm
+            // every cycle. Every other still-unrefreshed saved location only
+            // feeds offline-first previews / QS tile / ecosystem provider, which
+            // tolerate a coarser cadence — warm those only every Nth cycle so a
+            // large saved-city list doesn't hammer the network every 15 min.
+            val savedCityKeys = savedCityLocationsForWidget(savedLocations)
+                .map { locationKey(it.latitude, it.longitude) }
+                .toSet()
+            val warmNonActive = shouldWarmNonActiveLocations(
+                epochSeconds = Instant.now().epochSecond,
+                cycleSeconds = WIDGET_REFRESH_CYCLE_SECONDS,
+                everyNCycles = NON_ACTIVE_WARM_EVERY_N_CYCLES,
+            )
+            var skipped = 0
             for (loc in savedLocations) {
                 val key = locationKey(loc.latitude, loc.longitude)
                 if (!state.refreshedLocationKeys.add(key)) continue
+                if (key !in savedCityKeys && !warmNonActive) {
+                    skipped++
+                    continue
+                }
                 state.attemptedNetworkRefresh = true
                 try {
                     weatherRepository.getWeather(loc).getOrNull()?.let { weather ->
@@ -391,6 +410,12 @@ class WidgetRefreshWorker @AssistedInject constructor(
                 } catch (_: Exception) {
                     // Individual location failure is non-fatal.
                 }
+            }
+            if (skipped > 0) {
+                android.util.Log.d(
+                    TAG,
+                    "Deferred cache-warming for $skipped non-widget location(s) this cycle",
+                )
             }
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
@@ -453,6 +478,12 @@ class WidgetRefreshWorker @AssistedInject constructor(
     companion object {
         private const val WORK_NAME = "nimbus_widget_refresh"
         internal const val KEY_FORCE_REFRESH = "force"
+
+        /** Nominal widget-refresh cadence; matches the periodic work interval. */
+        internal const val WIDGET_REFRESH_CYCLE_SECONDS = 900L
+
+        /** Warm non-active saved locations once every N cycles (~hourly at 15 min). */
+        internal const val NON_ACTIVE_WARM_EVERY_N_CYCLES = 4
 
         suspend fun syncFromPreferences(context: Context) {
             val settings = BackgroundWorkSync.preferencesFrom(context).settings.first()
@@ -780,3 +811,19 @@ private data class MutableWidgetRefreshRequest(
 )
 
 private fun Double.formatWidgetLocationKey(): String = "%.4f".format(Locale.US, this)
+
+/**
+ * Deterministic cycle gate for warming non-active saved locations: true on one
+ * of every [everyNCycles] refresh cycles, derived from the wall-clock cycle
+ * bucket so consecutive ~15-minute runs advance the counter without any
+ * persisted state. [everyNCycles] <= 1 always warms (throttling disabled).
+ */
+internal fun shouldWarmNonActiveLocations(
+    epochSeconds: Long,
+    cycleSeconds: Long,
+    everyNCycles: Int,
+): Boolean {
+    if (everyNCycles <= 1 || cycleSeconds <= 0L) return true
+    val cycleIndex = epochSeconds / cycleSeconds
+    return cycleIndex % everyNCycles == 0L
+}
