@@ -146,6 +146,15 @@ kotlin {
     }
 }
 
+ksp {
+    // Fail compilation when two `@IntoMap` bindings share a map key instead of
+    // emitting ambiguous generated code. The `WeatherSourceProvider` adapter
+    // registry (`di/WeatherSourceAdapterModule.kt`) relies on one binding per
+    // provider key; a duplicate should be a build error, not a silent last-wins.
+    // Applies to both `standard` and `freenet` flavors (module-level KSP config).
+    arg("dagger.mapMultibindingDuplicateDetectionFix", "ENABLED")
+}
+
 dependencies {
     // Compose BOM
     val composeBom = platform(libs.compose.bom)
