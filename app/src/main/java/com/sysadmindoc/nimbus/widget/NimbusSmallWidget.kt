@@ -51,6 +51,16 @@ class NimbusSmallWidget : GlanceAppWidget() {
             }
         }
     }
+
+    override suspend fun providePreview(context: Context, widgetCategory: Int) {
+        val strings = widgetStrings(context)
+        val data = previewWeatherData(context)
+        provideContent {
+            GlanceTheme {
+                SmallWidgetContent(data, strings)
+            }
+        }
+    }
 }
 
 @Composable

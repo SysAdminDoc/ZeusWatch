@@ -50,6 +50,16 @@ class NimbusSavedCitiesWidget : GlanceAppWidget() {
             }
         }
     }
+
+    override suspend fun providePreview(context: Context, widgetCategory: Int) {
+        val strings = widgetStrings(context)
+        val cities = previewSavedCities(context)
+        provideContent {
+            GlanceTheme {
+                SavedCitiesWidgetContent(cities, strings)
+            }
+        }
+    }
 }
 
 @Composable

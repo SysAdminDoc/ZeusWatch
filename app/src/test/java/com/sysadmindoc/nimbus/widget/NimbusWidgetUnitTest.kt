@@ -11,6 +11,9 @@ import androidx.glance.testing.unit.hasStartActivityClickAction
 import androidx.glance.testing.unit.hasText
 import androidx.test.core.app.ApplicationProvider
 import com.sysadmindoc.nimbus.MainActivity
+import com.sysadmindoc.nimbus.R
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -66,6 +69,52 @@ class NimbusWidgetUnitTest {
         // A just-now timestamp so `updatedLabel` resolves to the live freshness badge.
         updatedAt = System.currentTimeMillis(),
     )
+
+    @Test
+    fun `every widget composes its picker preview in the populated state`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val strings = strings()
+        val data = previewWeatherData(context)
+        val empty = mutableListOf<String>()
+        for ((name, content) in locationWidgets) {
+            for (size in canonicalSizes) {
+                runGlanceAppWidgetUnitTest {
+                    setAppWidgetSize(size)
+                    provideComposable { content(data, strings) }
+
+                    // Only the populated state opens the app on tap; the empty
+                    // state is a tap-to-refresh surface. A preview that lands
+                    // in the empty state is the generic placeholder the picker
+                    // already showed before providePreview existed.
+                    runCatching { onNode(hasStartActivityClickAction<MainActivity>()).assertExists() }
+                        .onFailure { empty += "$name@$size" }
+                }
+            }
+        }
+        assertTrue("Previews stuck in the empty state: $empty", empty.isEmpty())
+    }
+
+    @Test
+    fun `saved cities preview lists representative cities`() = runGlanceAppWidgetUnitTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        setAppWidgetSize(canonicalSizes.last())
+        provideComposable { SavedCitiesWidgetContent(previewSavedCities(context), strings()) }
+
+        onNode(hasText(context.getString(R.string.widget_preview_location))).assertExists()
+        onNode(hasText(context.getString(R.string.widget_preview_location_third))).assertExists()
+    }
+
+    @Test
+    fun `preview data carries a full hourly and daily forecast`() {
+        val data = previewWeatherData(ApplicationProvider.getApplicationContext())
+
+        // A preview that renders a truncated forecast sells the widget short:
+        // the daily widget shows five days and the strip shows six hours.
+        assertEquals(12, data.hourly.size)
+        assertEquals(7, data.daily.size)
+        assertTrue(data.hourly.none { it.hour.isBlank() })
+        assertTrue(data.daily.none { it.day.isBlank() })
+    }
 
     @Test
     fun `location widgets open the app and expose a live refresh badge when cached`() {

@@ -50,6 +50,16 @@ class NimbusMediumWidget : GlanceAppWidget() {
             }
         }
     }
+
+    override suspend fun providePreview(context: Context, widgetCategory: Int) {
+        val strings = widgetStrings(context)
+        val data = previewWeatherData(context)
+        provideContent {
+            GlanceTheme {
+                MediumWidgetContent(data, strings)
+            }
+        }
+    }
 }
 
 @Composable

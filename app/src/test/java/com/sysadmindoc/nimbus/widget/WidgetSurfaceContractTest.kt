@@ -12,6 +12,8 @@ class WidgetSurfaceContractTest {
         val manifest = readAppSource("src/main/AndroidManifest.xml")
         val worker = readAppSource("src/main/java/com/sysadmindoc/nimbus/widget/WidgetRefreshWorker.kt")
         val dataProvider = readAppSource("src/main/java/com/sysadmindoc/nimbus/widget/WidgetDataProvider.kt")
+        val previewPublisher =
+            readAppSource("src/main/java/com/sysadmindoc/nimbus/widget/WidgetPreviewPublisher.kt")
 
         assertTrue(dataProvider.contains("val updatedAt: Long = 0L"))
         assertTrue(dataProvider.contains("val observedAt: Long = 0L"))
@@ -55,6 +57,14 @@ class WidgetSurfaceContractTest {
             assertTrue(
                 "${surface.widgetClass} must be updated after refresh",
                 worker.contains("${surface.widgetClass}().updateAll(applicationContext)"),
+            )
+            assertTrue(
+                "${surface.widgetClass} must supply a launcher picker preview",
+                source.contains("override suspend fun providePreview(context: Context, widgetCategory: Int)"),
+            )
+            assertTrue(
+                "${surface.receiverClass} must be published by WidgetPreviewPublisher",
+                previewPublisher.contains("${surface.receiverClass}::class"),
             )
         }
     }
