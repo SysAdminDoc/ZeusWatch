@@ -76,7 +76,12 @@ fun PwsObservationCard(
                     formatLightningDistance(distanceKm, settings),
                 )
             } ?: stringResource(R.string.pws_lightning_value, count)
-            add(stringResource(R.string.pws_lightning_label) to value)
+            // Same qualifier as the radar overlay: strike networks are
+            // informational, and a count here must not read as a warning.
+            add(
+                stringResource(R.string.pws_lightning_label) to
+                    value + " " + stringResource(R.string.pws_lightning_informational),
+            )
         }
     }
     val semantics = buildString {
