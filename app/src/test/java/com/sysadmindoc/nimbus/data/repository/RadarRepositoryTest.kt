@@ -2,13 +2,17 @@ package com.sysadmindoc.nimbus.data.repository
 
 import com.sysadmindoc.nimbus.data.api.RadarData
 import com.sysadmindoc.nimbus.data.api.RadarFrame
+import com.sysadmindoc.nimbus.data.api.CapAlertCollection
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import com.sysadmindoc.nimbus.data.api.RainViewerResponse
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
 
 class RadarRepositoryTest {
 
@@ -189,13 +193,71 @@ class RadarRepositoryTest {
         assertFalse(RainViewerApi.SUPPORTS_PUBLIC_SATELLITE_TILES)
     }
 
+    @Test
+    fun `CAP alerts are requested from LibreWXR in lon-lat-lon-lat order`() = runTest {
+        val libreWxr = FakeRainViewerApi(alerts = CapAlertCollection())
+        val repository = RadarRepository(
+            FakeRainViewerApi(RainViewerResponse()),
+            libreWxr,
+        )
+
+        repository.getCapAlertPolygons(
+            MapBoundingBox(
+                minLongitude = 7.5,
+                minLatitude = 47.5,
+                maxLongitude = 12.5,
+                maxLatitude = 52.5,
+            ),
+        )
+
+        // The transposed order returns a near-empty collection instead of an
+        // error, so getting this wrong reads as "no alerts here".
+        assertEquals("7.5,47.5,12.5,52.5", libreWxr.lastAlertBbox)
+    }
+
+    @Test
+    fun `a CAP alert failure yields no polygons rather than taking the radar down`() = runTest {
+        val repository = RadarRepository(
+            FakeRainViewerApi(RainViewerResponse()),
+            FakeRainViewerApi(alertError = IOException("offline")),
+        )
+
+        val polygons = repository.getCapAlertPolygons(MapBoundingBox(0.0, 0.0, 1.0, 1.0))
+
+        assertTrue(polygons.isEmpty())
+    }
+
+    @Test
+    fun `CAP alerts are only requested from the LibreWXR client`() = runTest {
+        val rainViewer = FakeRainViewerApi(RainViewerResponse())
+        val libreWxr = FakeRainViewerApi(alerts = CapAlertCollection())
+        val repository = RadarRepository(rainViewer, libreWxr)
+
+        repository.getCapAlertPolygons(MapBoundingBox(0.0, 0.0, 1.0, 1.0))
+
+        // RainViewer serves no alert geometry; asking it would 404 on every load.
+        assertNull(rainViewer.lastAlertBbox)
+        assertNotNull(libreWxr.lastAlertBbox)
+    }
+
     private class FakeRainViewerApi(
         private val response: RainViewerResponse? = null,
         private val error: Throwable? = null,
+        private val alerts: CapAlertCollection? = null,
+        private val alertError: Throwable? = null,
     ) : RainViewerApi {
+        var lastAlertBbox: String? = null
+            private set
+
         override suspend fun getWeatherMaps(): RainViewerResponse {
             error?.let { throw it }
             return requireNotNull(response)
+        }
+
+        override suspend fun getCapAlerts(bbox: String, simplify: Double): CapAlertCollection {
+            lastAlertBbox = bbox
+            alertError?.let { throw it }
+            return requireNotNull(alerts)
         }
     }
 

@@ -1,10 +1,13 @@
 package com.sysadmindoc.nimbus.data.repository
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.Stable
 import com.sysadmindoc.nimbus.data.api.RadarFrame
 import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -16,9 +19,12 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
+import java.time.Instant
 import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.tan
+
+private const val TAG = "RadarRepository"
 
 @Singleton
 class RadarRepository @Inject constructor(
@@ -41,6 +47,28 @@ class RadarRepository @Inject constructor(
             .replace("{y}", tileY.toString())
         val baseMapUrl = "https://tile.openstreetmap.org/$supportedZoom/$tileX/$tileY.png"
         return RadarPreviewUrls(radarUrl, baseMapUrl)
+    }
+
+    /**
+     * CAP alert polygons covering [bbox], from LibreWXR only.
+     *
+     * RainViewer and Windy serve no alert geometry, so this is deliberately
+     * not a provider-agnostic call. A failure returns an empty list rather
+     * than an error: alert polygons are an overlay on top of the map, and
+     * losing them must never take the radar down with it.
+     */
+    suspend fun getCapAlertPolygons(
+        bbox: MapBoundingBox,
+        now: Instant = Instant.now(),
+    ): List<WeatherAlert> = withContext(Dispatchers.IO) {
+        try {
+            CapAlertPolygonMapper.toAlerts(libreWxrApi.getCapAlerts(bbox.toQuery()), now)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (e: Exception) {
+            Log.d(TAG, "CAP alert polygons unavailable: ${e.message}")
+            emptyList()
+        }
     }
 
     suspend fun getRadarFrames(
@@ -292,3 +320,20 @@ private fun CachedTimedTileUrl.toTimedTileUrl(): TimedTileUrl =
     )
 
 private const val RADAR_FRAME_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000L
+
+/**
+ * A map viewport in the order LibreWXR expects: `minLon,minLat,maxLon,maxLat`.
+ *
+ * Confirmed against the live endpoint on 2026-08-29 — the transposed order
+ * returns a near-empty collection rather than an error, so getting it wrong
+ * looks like "no alerts here" instead of a failure.
+ */
+@Stable
+data class MapBoundingBox(
+    val minLongitude: Double,
+    val minLatitude: Double,
+    val maxLongitude: Double,
+    val maxLatitude: Double,
+) {
+    fun toQuery(): String = "$minLongitude,$minLatitude,$maxLongitude,$maxLatitude"
+}

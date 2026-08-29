@@ -1254,7 +1254,7 @@
     <string name="settings_summary_ai_generated">Generado por IA (Gemini)</string>
     <string name="settings_summary_custom_template">Plantilla personalizada</string>
     <string name="radar_attribution_rainviewer_limited">Radar: RainViewer \u2022 solo pasado \u2022 zoom max. 7 \u2022 Universal Blue</string>
-    <string name="radar_attribution_librewxr">Radar: LibreWXR \u2022 pasado + nowcast \u2022 zoom max. 12 \u2022 Viper HD</string>
+    <string name="radar_attribution_librewxr">Radar: LibreWXR \u2022 pasado + nowcast \u2022 zoom max. 12 \u2022 Viper HD \u2022 alertas: WMO CAP</string>
     <string name="radar_attribution_librewxr_fallback">Radar: LibreWXR no disponible \u2022 usando respaldo RainViewer \u2022 zoom max. 7</string>
     <string name="radar_attribution_rainviewer_limited_cached">Radar: fotogramas RainViewer en cache \u2022 solo pasado \u2022 zoom max. 7</string>
     <string name="radar_attribution_librewxr_cached">Radar: fotogramas LibreWXR en cache \u2022 pasado + nowcast \u2022 zoom max. 12</string>

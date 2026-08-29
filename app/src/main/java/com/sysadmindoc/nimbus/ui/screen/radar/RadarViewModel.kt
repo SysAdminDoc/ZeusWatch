@@ -19,6 +19,8 @@ import com.sysadmindoc.nimbus.data.repository.DrivingRouteWeatherPlan
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.RadarFrameSet
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
+import com.sysadmindoc.nimbus.data.repository.CapAlertPolygonMapper
+import com.sysadmindoc.nimbus.data.repository.MapBoundingBox
 import com.sysadmindoc.nimbus.data.repository.RadarProvider
 import com.sysadmindoc.nimbus.data.repository.TimedTileUrl
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
@@ -48,6 +50,9 @@ private const val RADAR_FRAME_REFRESH_INTERVAL_MS = 5 * 60 * 1000L
 private const val RADAR_LOAD_FAILED = "radar_load_failed"
 private const val REPORT_SUBMIT_FAILED = "report_submit_failed"
 internal const val ALERT_OVERLAY_FAILED = "alert_overlay_failed"
+
+/** About 275 km each way: comfortably wider than the radar map ever shows. */
+private const val ALERT_VIEWPORT_SPAN_DEGREES = 2.5
 
 @HiltViewModel
 class RadarViewModel @Inject constructor(
@@ -289,6 +294,22 @@ class RadarViewModel @Inject constructor(
         }
     }
 
+    private suspend fun currentRadarProvider(): RadarProvider = prefs.settings.first().radarProvider
+
+    /**
+     * A viewport-sized box around the viewed location.
+     *
+     * The alert endpoint takes a bounding box, and the radar map opens centred
+     * on the location, so a fixed span keeps the request stable across pans
+     * instead of refetching on every camera move.
+     */
+    internal fun alertViewportBox(lat: Double, lon: Double): MapBoundingBox = MapBoundingBox(
+        minLongitude = (lon - ALERT_VIEWPORT_SPAN_DEGREES).coerceAtLeast(-180.0),
+        minLatitude = (lat - ALERT_VIEWPORT_SPAN_DEGREES).coerceAtLeast(-90.0),
+        maxLongitude = (lon + ALERT_VIEWPORT_SPAN_DEGREES).coerceAtMost(180.0),
+        maxLatitude = (lat + ALERT_VIEWPORT_SPAN_DEGREES).coerceAtMost(90.0),
+    )
+
     /** Load active alert polygons for the native radar map. */
     fun loadAlertOverlays(lat: Double, lon: Double, force: Boolean = false, countryHint: String? = null) {
         if (lat == 0.0 && lon == 0.0) return
@@ -309,13 +330,29 @@ class RadarViewModel @Inject constructor(
                     includeMeteredSources = false,
                     countryHint = resolvedCountryHint,
                 )
+                val now = Instant.now()
                 val polygonAlerts = result.alerts.filter { alert ->
-                    alert.geometry != null && !alert.isExpiredAt(Instant.now())
+                    alert.geometry != null && !alert.isExpiredAt(now)
+                }
+                // MeteoAlarm, JMA, HKO and WMO publish alert text without
+                // geometry, so their alerts would never reach the map. LibreWXR
+                // carries the WMO CAP polygons; merge them in where it is the
+                // selected provider, deduped against what the app already has.
+                val mergedAlerts = if (currentRadarProvider() == RadarProvider.LIBREWXR_NATIVE) {
+                    CapAlertPolygonMapper.merge(
+                        appAlerts = polygonAlerts,
+                        providerAlerts = radarRepository.getCapAlertPolygons(
+                            bbox = alertViewportBox(lat, lon),
+                            now = now,
+                        ),
+                    )
+                } else {
+                    polygonAlerts
                 }
                 lastAlertOverlayLoadKey = locationKey
                 _uiState.update {
                     it.copy(
-                        alertOverlays = polygonAlerts,
+                        alertOverlays = mergedAlerts,
                         alertOverlayError = if (result.allAdaptersFailed) ALERT_OVERLAY_FAILED else null,
                         alertOverlayFailedSources = result.failedSources,
                     )
