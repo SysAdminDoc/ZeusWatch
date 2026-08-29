@@ -1551,4 +1551,12 @@
     <string name="widget_preview_location">סיאטל</string>
     <string name="widget_preview_location_second">אוסטין</string>
     <string name="widget_preview_location_third">דנבר</string>
+    <string name="settings_ensemble_model">מודל רצועת הביטחון</string>
+    <string name="settings_ensemble_icon">ICON</string>
+    <string name="settings_ensemble_icon_summary">מקבץ פיזיקלי של שירות מזג האוויר הגרמני, גלובלי עד 2 ק"מ. הבחירה היציבה ביותר.</string>
+    <string name="settings_ensemble_weathernext2">WeatherNext 2</string>
+    <string name="settings_ensemble_weathernext2_summary">מקבץ בינה מלאכותית של Google DeepMind. הכי הרבה חברים והטווח הארוך ביותר.</string>
+    <string name="settings_ensemble_aifs">AIFS-ENS</string>
+    <string name="settings_ensemble_aifs_summary">מקבץ בינה מלאכותית של ECMWF ברזולוציית 0.25 מעלות. פירוט חד יותר, אך מקבצי בינה מלאכותית נוטים להמעיט בקיצוניות.</string>
+    <string name="temperature_graph_band_source">פיזור מתוך %1$s</string>
 </resources>

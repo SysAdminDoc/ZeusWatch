@@ -8,6 +8,7 @@ import com.sysadmindoc.nimbus.data.repository.AuroraRepository
 import com.sysadmindoc.nimbus.data.repository.CardType
 import com.sysadmindoc.nimbus.data.repository.ClimateRepository
 import com.sysadmindoc.nimbus.data.repository.ConfidenceBandRepository
+import com.sysadmindoc.nimbus.data.repository.EnsembleModel
 import com.sysadmindoc.nimbus.data.repository.FloodRepository
 import com.sysadmindoc.nimbus.data.repository.ForecastAccuracyRepository
 import com.sysadmindoc.nimbus.data.repository.ForecastEvolutionRepository
@@ -495,7 +496,10 @@ class WeatherLoadCoordinator @Inject constructor(
                 launch { fetchForecastAccuracy(lat, lon, requestId, updateState, isLatestRequest) }
             }
             if (currentState().settings.showConfidenceBands) {
-                launch { fetchConfidenceBands(lat, lon, requestId, updateState, isLatestRequest) }
+                val ensembleModel = currentState().settings.ensembleModel
+                launch {
+                    fetchConfidenceBands(lat, lon, ensembleModel, requestId, updateState, isLatestRequest)
+                }
             }
             if (currentState().settings.isCardEnabled(CardType.CLIMATE_OUTLOOK)) {
                 launch { fetchClimateOutlook(lat, lon, requestId, updateState, isLatestRequest) }
@@ -915,12 +919,13 @@ class WeatherLoadCoordinator @Inject constructor(
     private suspend fun fetchConfidenceBands(
         lat: Double,
         lon: Double,
+        model: EnsembleModel,
         requestId: Long,
         updateState: ((MainUiState) -> MainUiState) -> Unit,
         isLatestRequest: (Long) -> Boolean,
     ) {
         try {
-            confidenceBandRepository.getConfidenceBands(lat, lon).fold(
+            confidenceBandRepository.getConfidenceBands(lat, lon, model).fold(
                 onSuccess = { data ->
                     if (isLatestRequest(requestId)) {
                         updateState { it.copy(confidenceBands = data) }

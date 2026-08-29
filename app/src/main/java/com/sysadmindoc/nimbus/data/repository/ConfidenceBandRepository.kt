@@ -17,14 +17,17 @@ class ConfidenceBandRepository @Inject constructor(
     suspend fun getConfidenceBands(
         latitude: Double,
         longitude: Double,
+        model: EnsembleModel = EnsembleModel.ICON,
     ): Result<ConfidenceBandData> = runCatching {
-        val response = api.getEnsemble(latitude, longitude)
-        val hourly = response.hourly ?: return@runCatching ConfidenceBandData(emptyList())
-        parseEnsembleHourly(hourly)
+        val response = api.getEnsemble(latitude, longitude, models = model.apiId)
+        val hourly = response.hourly ?: return@runCatching ConfidenceBandData(model, emptyList())
+        parseEnsembleHourly(model, hourly)
     }
 }
 
 data class ConfidenceBandData(
+    /** Which ensemble drew this band, so the legend can name it. */
+    val model: EnsembleModel,
     val entries: List<ConfidenceBandEntry>,
 ) {
     private val byTime: Map<LocalDateTime, ConfidenceBandEntry> by lazy {
@@ -43,13 +46,13 @@ data class ConfidenceBandEntry(
 
 private val ISO_LOCAL = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
-internal fun parseEnsembleHourly(hourly: JsonObject): ConfidenceBandData {
-    val timeArray = (hourly["time"] as? JsonArray) ?: return ConfidenceBandData(emptyList())
+internal fun parseEnsembleHourly(model: EnsembleModel, hourly: JsonObject): ConfidenceBandData {
+    val timeArray = (hourly["time"] as? JsonArray) ?: return ConfidenceBandData(model, emptyList())
     val times = timeArray.mapNotNull { elem ->
         val raw = (elem as? JsonPrimitive)?.content ?: return@mapNotNull null
         runCatching { LocalDateTime.parse(raw, ISO_LOCAL) }.getOrNull()
     }
-    if (times.isEmpty()) return ConfidenceBandData(emptyList())
+    if (times.isEmpty()) return ConfidenceBandData(model, emptyList())
 
     val memberArrays = hourly.entries
         .filter { it.key.startsWith("temperature_2m_member") }
@@ -58,7 +61,7 @@ internal fun parseEnsembleHourly(hourly: JsonObject): ConfidenceBandData {
             arr.map { (it as? JsonPrimitive)?.doubleOrNull }
         }
 
-    if (memberArrays.isEmpty()) return ConfidenceBandData(emptyList())
+    if (memberArrays.isEmpty()) return ConfidenceBandData(model, emptyList())
 
     val entries = times.mapIndexedNotNull { index, time ->
         val values = memberArrays.mapNotNull { it.getOrNull(index) }
@@ -74,5 +77,5 @@ internal fun parseEnsembleHourly(hourly: JsonObject): ConfidenceBandData {
         )
     }
 
-    return ConfidenceBandData(entries)
+    return ConfidenceBandData(model, entries)
 }

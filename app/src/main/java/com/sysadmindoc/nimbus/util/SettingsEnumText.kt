@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.repository.AlertMinSeverity
 import com.sysadmindoc.nimbus.data.repository.AlertSourcePreference
+import com.sysadmindoc.nimbus.data.repository.EnsembleModel
 import com.sysadmindoc.nimbus.data.repository.IconStyle
 import com.sysadmindoc.nimbus.data.repository.PrecipUnit
 import com.sysadmindoc.nimbus.data.repository.PressureUnit
@@ -79,6 +80,22 @@ internal val AlertSourcePreference.labelRes: Int
         AlertSourcePreference.JMA_ONLY -> R.string.settings_alert_source_jma
         AlertSourcePreference.ECCC_ONLY -> R.string.settings_alert_source_eccc
         AlertSourcePreference.ALL_SOURCES -> R.string.settings_alert_source_all
+    }
+
+@get:StringRes
+internal val EnsembleModel.labelRes: Int
+    get() = when (this) {
+        EnsembleModel.ICON -> R.string.settings_ensemble_icon
+        EnsembleModel.WEATHERNEXT_2 -> R.string.settings_ensemble_weathernext2
+        EnsembleModel.AIFS_ENS -> R.string.settings_ensemble_aifs
+    }
+
+@get:StringRes
+internal val EnsembleModel.summaryRes: Int
+    get() = when (this) {
+        EnsembleModel.ICON -> R.string.settings_ensemble_icon_summary
+        EnsembleModel.WEATHERNEXT_2 -> R.string.settings_ensemble_weathernext2_summary
+        EnsembleModel.AIFS_ENS -> R.string.settings_ensemble_aifs_summary
     }
 
 @get:StringRes

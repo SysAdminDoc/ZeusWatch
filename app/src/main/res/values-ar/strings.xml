@@ -1561,4 +1561,12 @@
     <string name="widget_preview_location">سياتل</string>
     <string name="widget_preview_location_second">أوستن</string>
     <string name="widget_preview_location_third">دينفر</string>
+    <string name="settings_ensemble_model">نموذج نطاق الثقة</string>
+    <string name="settings_ensemble_icon">ICON</string>
+    <string name="settings_ensemble_icon_summary">مجموعة فيزيائية من هيئة الأرصاد الألمانية، عالمية حتى 2 كم. الخيار الأكثر ثباتًا.</string>
+    <string name="settings_ensemble_weathernext2">WeatherNext 2</string>
+    <string name="settings_ensemble_weathernext2_summary">مجموعة ذكاء اصطناعي من Google DeepMind. أكبر عدد من الأعضاء وأطول مدى.</string>
+    <string name="settings_ensemble_aifs">AIFS-ENS</string>
+    <string name="settings_ensemble_aifs_summary">مجموعة ذكاء اصطناعي من ECMWF بدقة 0.25 درجة. تفاصيل أدق، لكنها تقلل من تقدير القيم المتطرفة.</string>
+    <string name="temperature_graph_band_source">التشتت من %1$s</string>
 </resources>

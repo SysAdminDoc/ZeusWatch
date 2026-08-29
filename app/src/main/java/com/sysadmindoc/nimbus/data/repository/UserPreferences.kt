@@ -131,6 +131,7 @@ class UserPreferences @Inject constructor(
         val SHOW_YESTERDAY_COMPARISON = booleanPreferencesKey("show_yesterday_comparison")
         val SHOW_FORECAST_ACCURACY = booleanPreferencesKey("show_forecast_accuracy")
         val SHOW_CONFIDENCE_BANDS = booleanPreferencesKey("show_confidence_bands")
+        val ENSEMBLE_MODEL = stringPreferencesKey("ensemble_model")
         val SHOW_COMPARE_CHART_OVERLAY = booleanPreferencesKey("show_compare_chart_overlay")
 
         // Health thresholds
@@ -256,6 +257,9 @@ class UserPreferences @Inject constructor(
             showYesterdayComparison = prefs[Keys.SHOW_YESTERDAY_COMPARISON] ?: true,
             showForecastAccuracy = prefs[Keys.SHOW_FORECAST_ACCURACY] ?: false,
             showConfidenceBands = prefs[Keys.SHOW_CONFIDENCE_BANDS] ?: false,
+            ensembleModel = safeValueOf<EnsembleModel>(
+                prefs[Keys.ENSEMBLE_MODEL] ?: EnsembleModel.ICON.name,
+            ) ?: EnsembleModel.ICON,
             showCompareChartOverlay = prefs[Keys.SHOW_COMPARE_CHART_OVERLAY] ?: true,
             // Forecast range
             hourlyForecastHours = prefs[Keys.HOURLY_FORECAST_HOURS]?.toIntOrNull() ?: 72,
@@ -484,6 +488,7 @@ class UserPreferences @Inject constructor(
     suspend fun setShowYesterdayComparison(enabled: Boolean) = store.edit { it[Keys.SHOW_YESTERDAY_COMPARISON] = enabled }
     suspend fun setShowForecastAccuracy(enabled: Boolean) = store.edit { it[Keys.SHOW_FORECAST_ACCURACY] = enabled }
     suspend fun setShowConfidenceBands(enabled: Boolean) = store.edit { it[Keys.SHOW_CONFIDENCE_BANDS] = enabled }
+    suspend fun setEnsembleModel(model: EnsembleModel) = store.edit { it[Keys.ENSEMBLE_MODEL] = model.name }
     suspend fun setShowCompareChartOverlay(enabled: Boolean) = store.edit { it[Keys.SHOW_COMPARE_CHART_OVERLAY] = enabled }
 
     // Health
@@ -664,6 +669,7 @@ data class NimbusSettings(
     val showYesterdayComparison: Boolean = true,
     val showForecastAccuracy: Boolean = false,
     val showConfidenceBands: Boolean = false,
+    val ensembleModel: EnsembleModel = EnsembleModel.ICON,
     val showCompareChartOverlay: Boolean = true,
     // Forecast range
     val hourlyForecastHours: Int = 72,
@@ -756,6 +762,19 @@ enum class AlertSourcePreference(val label: String) {
     JMA_ONLY("JMA only (Japan)"),
     ECCC_ONLY("Environment Canada only"),
     ALL_SOURCES("All available sources"),
+}
+
+/**
+ * Ensemble model behind the forecast confidence bands.
+ *
+ * Different ensembles disagree most where it matters: the AI models run far
+ * more members but are documented to under-cover extremes, so which one drew
+ * the band is worth naming in the legend rather than hiding.
+ */
+enum class EnsembleModel(val apiId: String) {
+    ICON("icon_seamless"),
+    WEATHERNEXT_2("google_weathernext2_ensemble"),
+    AIFS_ENS("ecmwf_aifs025_ensemble"),
 }
 
 enum class RadarProvider(

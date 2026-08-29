@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
+import com.sysadmindoc.nimbus.data.repository.EnsembleModel
 import com.sysadmindoc.nimbus.data.repository.ConfidenceBandEntry
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.TempUnit
@@ -60,6 +61,7 @@ class ForecastDetailSheetRobolectricTest {
             visibility = null,
         )
         val bands = ConfidenceBandData(
+            model = EnsembleModel.ICON,
             entries = listOf(
                 ConfidenceBandEntry(
                     time = time,

@@ -184,6 +184,7 @@ class SettingsViewModel @Inject constructor(
     fun setShowYesterdayComparison(enabled: Boolean) = viewModelScope.launch { prefs.setShowYesterdayComparison(enabled) }
     fun setShowForecastAccuracy(enabled: Boolean) = viewModelScope.launch { prefs.setShowForecastAccuracy(enabled) }
     fun setShowConfidenceBands(enabled: Boolean) = viewModelScope.launch { prefs.setShowConfidenceBands(enabled) }
+    fun setEnsembleModel(model: EnsembleModel) = viewModelScope.launch { prefs.setEnsembleModel(model) }
 
     // Forecast range
     fun setHourlyForecastHours(hours: Int) = viewModelScope.launch { prefs.setHourlyForecastHours(hours) }

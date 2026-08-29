@@ -208,6 +208,7 @@ fun SettingsScreen(
             onShowYesterdayComparison = viewModel::setShowYesterdayComparison,
             onShowForecastAccuracy = viewModel::setShowForecastAccuracy,
             onShowConfidenceBands = viewModel::setShowConfidenceBands,
+            onEnsembleModel = viewModel::setEnsembleModel,
             onHourlyForecastHours = viewModel::setHourlyForecastHours,
             onMigraineAlerts = viewModel::setMigraineAlerts,
             onMigrainePressureThreshold = viewModel::setMigrainePressureThreshold,
