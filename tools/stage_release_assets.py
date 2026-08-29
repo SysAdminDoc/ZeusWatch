@@ -62,13 +62,21 @@ def wear_asset_name(version: str) -> str:
     return f"ZeusWatch-v{version}-wear.apk"
 
 
-def plan(version: str) -> tuple[list[tuple[Path, str]], list[str]]:
-    """Pairs of (source apk, contracted name), plus any problems found."""
+def plan(
+    version: str,
+    phone_dirs: tuple[Path, ...] = PHONE_DIRS,
+    wear_dir: Path = WEAR_DIR,
+) -> tuple[list[tuple[Path, str]], list[str]]:
+    """Pairs of (source apk, contracted name), plus any problems found.
+
+    The directories are arguments so the naming contract can be tested against
+    a fixture tree rather than only against a real release build.
+    """
     staged: list[tuple[Path, str]] = []
     problems: list[str] = []
     seen_builds: set[tuple[str, str]] = set()
 
-    for directory in PHONE_DIRS:
+    for directory in phone_dirs:
         if not directory.is_dir():
             problems.append(f"missing build output directory: {directory}")
             continue
@@ -83,14 +91,14 @@ def plan(version: str) -> tuple[list[tuple[Path, str]], list[str]]:
             seen_builds.add((flavor, abi))
             staged.append((apk, asset_name(version, flavor, abi)))
 
-    if WEAR_DIR.is_dir():
-        wear_apks = [apk for apk in sorted(WEAR_DIR.glob("*.apk")) if WEAR_OUTPUT.match(apk.name)]
+    if wear_dir.is_dir():
+        wear_apks = [apk for apk in sorted(wear_dir.glob("*.apk")) if WEAR_OUTPUT.match(apk.name)]
         if not wear_apks:
-            problems.append(f"no wear release APK in {WEAR_DIR}")
+            problems.append(f"no wear release APK in {wear_dir}")
         else:
             staged.append((wear_apks[0], wear_asset_name(version)))
     else:
-        problems.append(f"missing build output directory: {WEAR_DIR}")
+        problems.append(f"missing build output directory: {wear_dir}")
 
     for missing in sorted(EXPECTED_PHONE_BUILDS - seen_builds):
         problems.append(f"missing phone build: {missing[0]} {missing[1]}")

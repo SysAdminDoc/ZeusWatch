@@ -20,16 +20,19 @@ detekt {
     // without requiring a one-shot cleanup sweep.
     baseline = file("$rootDir/config/detekt/baseline.xml")
     parallel = true
-    // Every module that applies the plugin.
+    // Derived from the tree rather than hand-listed: the hand-listed version
+    // named 7 of the 13 source sets, so everything in standardDebug,
+    // standardRelease, freenetRelease, standardBenchmark,
+    // standardNonMinifiedRelease and testStandard was never linted at all.
     source.setFrom(
         files(
-            "$rootDir/app/src/main/java",
-            "$rootDir/app/src/standard/java",
-            "$rootDir/app/src/freenet/java",
-            "$rootDir/app/src/test/java",
-            "$rootDir/benchmark/src/main/java",
-            "$rootDir/wear/src/main/java",
-            "$rootDir/wear/src/test/java",
+            listOf("app", "wear", "benchmark").flatMap { module ->
+                (file("$rootDir/$module/src").listFiles() ?: emptyArray()).flatMap { sourceSet ->
+                    listOf("java", "kotlin")
+                        .map { sourceSet.resolve(it) }
+                        .filter { it.isDirectory }
+                }
+            },
         ),
     )
     autoCorrect = false
@@ -187,6 +190,27 @@ val ossNoticesGate = tasks.register<Exec>("ossNoticesGate") {
     workingDir = rootDir
 }
 
+/**
+ * The repository's Python tooling had four test files and nothing that ran
+ * them. One of them was red: BMKG is a user-selectable alert source with no
+ * contract coverage, and the test that says so had been failing unnoticed.
+ */
+val toolTests = tasks.register<Exec>("toolTests") {
+    group = "verification"
+    description = "Runs the unit tests for the Python tooling under tools/."
+    inputs.dir("$rootDir/tools")
+    outputs.upToDateWhen { false }
+    val launcher = if (System.getProperty("os.name").startsWith("Windows")) {
+        listOf("py", "-3.13")
+    } else {
+        listOf("python3")
+    }
+    // Discovery needs the tools directory on sys.path: the test modules import
+    // the scripts by name, and the directory is not an importable package.
+    commandLine(launcher + listOf("-m", "unittest", "discover", "-s", ".", "-p", "*_test.py"))
+    workingDir = file("$rootDir/tools")
+}
+
 tasks.register("localQualityGate") {
     group = "verification"
     description = "Runs every JVM-verifiable check: docs, notices, detekt, phone + wear lint, phone + wear unit tests."
@@ -196,6 +220,7 @@ tasks.register("localQualityGate") {
         docsGate,
         ossNoticesGate,
         freenetPurityGate,
+        toolTests,
         ":detekt",
         ":app:lintStandardDebug",
         ":wear:lintDebug",

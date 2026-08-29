@@ -16,6 +16,7 @@ from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
+from xml.etree import ElementTree
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CACHE_DIR = ROOT / "build" / "provider-contract-cache"
@@ -534,6 +535,19 @@ def provider_checks() -> list[ContractCheck]:
             response_format="text",
         ),
         ContractCheck(
+            key="bmkg-nowcast-alerts",
+            name="BMKG nowcast warning feed",
+            url="https://www.bmkg.go.id/alerts/nowcast/en",
+            docs_url="https://data.bmkg.go.id/peringatan-dini-cuaca/",
+            validator=validate_bmkg_nowcast_feed,
+            providers=("BMKG",),
+            data_types=("ALERTS",),
+            coverage="Indonesia nowcast warnings",
+            schema_assertion="RSS channel whose items link to CAP alert XML documents",
+            unavailable_policy="alerts only; a quiet feed is an empty list, not an error",
+            response_format="text",
+        ),
+        ContractCheck(
             key="hko-forecast",
             name="Hong Kong Observatory 9-day forecast",
             url="https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=fnd&lang=en",
@@ -888,6 +902,34 @@ def validate_eccc_cap_index(data: Any) -> ValidationResult:
     if ".cap" not in data and "LAND/" not in data and "WATR/" not in data:
         return ValidationResult(False, "CAP index has no alert files or LAND/WATR directories")
     return ValidationResult(True, "current-day ECCC CAP index reachable")
+
+
+def validate_bmkg_nowcast_feed(data: Any) -> ValidationResult:
+    """The RSS index BmkgAlertAdapter walks to reach each CAP alert.
+
+    The adapter reads <item><link> and resolves it against the site root, so an
+    empty feed is a valid quiet day but a feed whose items carry no link is a
+    contract break: every alert would be dropped with no error.
+    """
+    if not isinstance(data, str):
+        return ValidationResult(False, "expected an RSS document")
+    try:
+        document = ElementTree.fromstring(data.strip())
+    except ElementTree.ParseError as error:
+        return ValidationResult(False, f"feed is not well-formed XML: {error}")
+    channel = document.find("channel")
+    if channel is None:
+        return ValidationResult(False, "RSS channel element missing")
+    items = channel.findall("item")
+    if not items:
+        # Indonesia genuinely has no active nowcast warnings some days.
+        return ValidationResult(True, "no active BMKG nowcast warnings")
+    linked = [item.findtext("link") for item in items]
+    if not any(_non_empty_string(link) for link in linked):
+        return ValidationResult(False, "no item carries a link to a CAP alert")
+    if not any((link or "").endswith(".xml") for link in linked):
+        return ValidationResult(False, "item links do not point at CAP XML documents")
+    return ValidationResult(True, f"{len(items)} BMKG nowcast warning(s) with CAP links")
 
 
 def validate_hko_forecast(data: Any) -> ValidationResult:
