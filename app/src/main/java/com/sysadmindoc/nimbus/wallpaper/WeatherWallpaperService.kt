@@ -37,6 +37,16 @@ class WeatherWallpaperService : WallpaperService() {
         private val weatherRefreshMs = 5 * 60 * 1000L // 5 minutes
 
         private var visible = false
+
+        /**
+         * The queued preload post, so [onDestroy] can cancel it.
+         *
+         * Volatile because it is assigned on the preload thread and read on
+         * the main thread; without it onDestroy can see a stale null and
+         * leave the post queued against a dead engine.
+         */
+        @Volatile
+        private var preloadRunnable: Runnable? = null
         private var width = 0
         private var height = 0
 
@@ -61,7 +71,11 @@ class WeatherWallpaperService : WallpaperService() {
             // cache and are cheap.
             Thread {
                 val code = prefs.getInt(KEY_WEATHER_CODE, 0)
-                handler.post { applyWeatherCode(code) }
+                // Named so onDestroy can cancel it. Opening and closing the
+                // wallpaper preview quickly used to leave this post queued
+                // against an engine that no longer exists.
+                preloadRunnable = Runnable { applyWeatherCode(code) }
+                preloadRunnable?.let(handler::post)
             }.start()
         }
 
@@ -106,6 +120,8 @@ class WeatherWallpaperService : WallpaperService() {
         override fun onDestroy() {
             super.onDestroy()
             stopAnimation()
+            preloadRunnable?.let(handler::removeCallbacks)
+            preloadRunnable = null
         }
 
         // ── Animation loop ──────────────────────────────────────────
