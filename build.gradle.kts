@@ -83,6 +83,40 @@ val docsGate = tasks.register<Exec>("docsGate") {
     workingDir = rootDir
 }
 
+/**
+ * The freenet flavor exists to be free of proprietary dependencies, and a
+ * single unflavored `debugImplementation` was enough to pull Firebase and
+ * Play Services into freenetDebug. Resolving the classpath is the only way to
+ * see that; a source-level check cannot.
+ */
+val freenetPurityGate = tasks.register("freenetPurityGate") {
+    group = "verification"
+    description = "Fails when a proprietary artifact reaches any freenet configuration."
+    val banned = listOf("com.google.firebase", "com.google.android.gms", "com.google.mlkit")
+    val configurationNames = listOf(
+        "freenetDebugRuntimeClasspath",
+        "freenetReleaseRuntimeClasspath",
+    )
+    val appProject = project(":app")
+    dependsOn(appProject.tasks.matching { it.name == "preBuild" })
+    doLast {
+        val offenders = configurationNames.flatMap { name ->
+            val configuration = appProject.configurations.findByName(name)
+                ?: error("Configuration $name not found; the freenet flavor may have been renamed.")
+            configuration.incoming.resolutionResult.allDependencies
+                .map { it.requested.displayName }
+                .filter { requested -> banned.any { requested.startsWith(it) } }
+                .map { "$name -> $it" }
+        }.distinct().sorted()
+        if (offenders.isNotEmpty()) {
+            error(
+                "Proprietary artifacts reached the freenet flavor: " +
+                    offenders.joinToString("; "),
+            )
+        }
+    }
+}
+
 val ossNoticesGate = tasks.register<Exec>("ossNoticesGate") {
     group = "verification"
     description = "Fails when the packaged open-source notices no longer match the version catalog."
@@ -109,6 +143,7 @@ tasks.register("localQualityGate") {
     dependsOn(
         docsGate,
         ossNoticesGate,
+        freenetPurityGate,
         ":detekt",
         ":app:lintStandardDebug",
         ":wear:lintDebug",
