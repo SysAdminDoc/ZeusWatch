@@ -52,6 +52,20 @@ tasks.register("accessibilityGate") {
     dependsOn(":app:testStandardDebugUnitTest", ":app:connectedStandardDebugAndroidTest")
 }
 
+tasks.register("localQualityGate") {
+    group = "verification"
+    description = "Runs every JVM-verifiable check: detekt, phone + wear lint, phone + wear unit tests."
+    // :wear:lintDebug is here because it was silently red for releases — no
+    // aggregate task ran it, so a RestrictedApi error sat unnoticed.
+    dependsOn(
+        ":detekt",
+        ":app:lintStandardDebug",
+        ":wear:lintDebug",
+        ":app:testStandardDebugUnitTest",
+        ":wear:testDebugUnitTest",
+    )
+}
+
 tasks.register("startupGate") {
     group = "verification"
     description = "Runs the standard benchmark startup gate and fails when cold-start p95 exceeds the configured budget."
