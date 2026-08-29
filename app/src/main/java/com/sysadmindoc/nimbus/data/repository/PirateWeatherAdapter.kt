@@ -11,6 +11,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToInt
 
 private const val TAG = "PwAdapter"
 
@@ -209,4 +210,49 @@ class PirateWeatherForecastAdapter @Inject constructor(
     private fun epochToTimeStr(epoch: Long, zone: ZoneId): String =
         Instant.ofEpochSecond(epoch).atZone(zone).toLocalDateTime()
             .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+}
+
+/**
+ * Air quality adapter for Pirate Weather.
+ *
+ * The index Pirate Weather returns depends on the requested unit system, so
+ * this issues its own `units=us` request rather than reusing the forecast's
+ * `si` reply: the app's [AqiLevel] tiers are the US EPA bands, and an EU CAQI
+ * value rendered against them would mislabel the air quality.
+ */
+@Singleton
+class PirateWeatherAqiAdapter @Inject constructor(
+    private val api: PirateWeatherApi,
+    private val prefs: UserPreferences,
+) {
+    suspend fun getAirQuality(
+        latitude: Double,
+        longitude: Double,
+    ): Result<AirQualityData> = runCatching {
+        val apiKey = prefs.settings.first().pirateWeatherApiKey
+        require(apiKey.isNotBlank()) { "Pirate Weather API key not configured" }
+
+        val response = api.getAirQuality(apiKey, latitude, longitude)
+        val current = response.currently ?: error("No current data from Pirate Weather")
+        val usAqi = current.airQualityIndex?.roundToInt()
+            ?: error("Pirate Weather returned no air quality index")
+
+        AirQualityData(
+            usAqi = usAqi,
+            // Pirate Weather returns one index per request. Reporting the EPA
+            // value as a European AQI too would be a fabricated conversion.
+            europeanAqi = 0,
+            aqiLevel = AqiLevel.fromAqi(usAqi),
+            pm25 = current.pm25 ?: 0.0,
+            pm10 = current.pm10 ?: 0.0,
+            ozone = current.ozoneConcentration ?: 0.0,
+            nitrogenDioxide = current.nitrogenDioxide ?: 0.0,
+            sulphurDioxide = current.sulphurDioxide ?: 0.0,
+            carbonMonoxide = current.carbonMonoxide ?: 0.0,
+            pollen = PollenData(), // Pirate Weather carries no pollen data.
+        )
+    }.onFailure {
+        if (it is kotlinx.coroutines.CancellationException) throw it
+        Log.w(TAG, "Pirate Weather AQI failed", it)
+    }
 }

@@ -62,7 +62,7 @@ enum class WeatherSourceProvider(
     ),
     PIRATE_WEATHER(
         displayName = "Pirate Weather",
-        supportedTypes = setOf(WeatherDataType.FORECAST),
+        supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.AIR_QUALITY),
         requiresApiKey = true,
     ),
     BRIGHT_SKY(

@@ -27,6 +27,7 @@ import com.sysadmindoc.nimbus.data.repository.OpenMeteoUkmoForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.OwmAlertAdapter
 import com.sysadmindoc.nimbus.data.repository.OwmAqiAdapter
 import com.sysadmindoc.nimbus.data.repository.OwmForecastAdapter
+import com.sysadmindoc.nimbus.data.repository.PirateWeatherAqiAdapter
 import com.sysadmindoc.nimbus.data.repository.PirateWeatherForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.WeatherDataType
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceAdapter
@@ -196,10 +197,22 @@ object WeatherSourceAdapterModule {
     @Singleton
     @IntoMap
     @WeatherSourceKey(WeatherSourceProvider.PIRATE_WEATHER)
-    fun providePirateWeatherAdapter(adapter: PirateWeatherForecastAdapter): WeatherSourceAdapter =
-        forecastOnlyAdapter(WeatherSourceProvider.PIRATE_WEATHER) { request ->
-            adapter.getWeather(request.latitude, request.longitude, request.locationName)
-        }
+    fun providePirateWeatherAdapter(
+        forecastAdapter: PirateWeatherForecastAdapter,
+        aqiAdapter: PirateWeatherAqiAdapter,
+    ): WeatherSourceAdapter = object : WeatherSourceAdapter {
+        override val provider = WeatherSourceProvider.PIRATE_WEATHER
+        override val supportedTypes = setOf(
+            WeatherDataType.FORECAST,
+            WeatherDataType.AIR_QUALITY,
+        )
+
+        override suspend fun getForecast(request: ForecastSourceRequest) =
+            forecastAdapter.getWeather(request.latitude, request.longitude, request.locationName)
+
+        override suspend fun getAirQuality(request: CoordinateSourceRequest) =
+            aqiAdapter.getAirQuality(request.latitude, request.longitude)
+    }
 
     @Provides
     @Singleton
