@@ -139,19 +139,31 @@ fun ComposeContentTestRule.assertTextContrastMeetsMinimum(
             }
         }
         // A single colour means nothing was drawn in the region: the node is
-        // clipped or the glyphs landed elsewhere. There is no contrast to
-        // measure, and inventing a 1:1 reading would fail correct screens.
+        // clipped, fully transparent, or its glyphs landed elsewhere. There is
+        // no contrast to measure, and inventing a 1:1 reading would fail
+        // correct screens. It also does not count against coverage: text at
+        // alpha 0 mid fade-in is not text anyone can read, and letting it
+        // reduce the fraction made an ordinary animation fail the floor.
         if (counts.size < 2) {
             skippedNothingDrawn += node.describe()
+            considered--
             return@forEachIndexed
         }
 
         val background = Color(counts.maxByOrNull { it.value }!!.key.toULong())
         val backgroundLuminance = background.relativeLuminance()
-        // Two stray pixels can come from a neighbouring glyph bleeding into
-        // the bounds; the real glyph colour covers more than that.
+        // Low, and capped. Too high and the real glyph colour is discarded:
+        // at a flat two pixels a small label reported its antialias fringe as
+        // the text and failed at 1.74:1, and at one in four hundred a counter
+        // inside a large padded box lost its glyphs entirely and measured the
+        // background against itself. The floor only exists to reject a single
+        // stray pixel bleeding in from a neighbour, and an intermediate fringe
+        // never wins anyway, because the furthest colour from the background
+        // is the glyph itself.
+        val sampled = counts.values.sum()
+        val minimumPixels = minOf(3, maxOf(1, sampled / 400))
         val foreground = counts.entries
-            .filter { it.value >= 2 }
+            .filter { it.value >= minimumPixels }
             .map { Color(it.key.toULong()) }
             .maxByOrNull { kotlin.math.abs(it.relativeLuminance() - backgroundLuminance) }
             ?: run {
@@ -225,7 +237,14 @@ data class ContrastCoverage(
  * instead of continuing to pass.
  */
 fun ContrastCoverage.assertMeasuredAtLeast(minimumFraction: Double) {
-    if (total == 0) return
+    if (total == 0) {
+        // An empty tree used to satisfy every floor, so an audit of a card
+        // that had silently stopped rendering passed all of its assertions.
+        if (minimumFraction > 0.0) {
+            fail("Contrast check found no visible text at all; there is nothing to audit.")
+        }
+        return
+    }
     val fraction = measured.toDouble() / total
     if (fraction < minimumFraction) {
         fail(
@@ -246,6 +265,31 @@ fun ContrastCoverage.assertMeasuredAtLeast(minimumFraction: Double) {
  * best effort, since neighbouring controls cannot all claim the same space, so
  * a control that draws at 10dp is still a control nobody can hit reliably.
  */
+/**
+ * Fails when the tree exposes no merged description a screen reader can read
+ * out as a whole.
+ *
+ * A card is not clickable, so the labelling check above says nothing about it:
+ * removing the merged contentDescription from all three of the cards audited
+ * by NX-71 left every test green. A card whose parts are readable one node at
+ * a time but which announces nothing as a unit is the usual failure.
+ */
+fun ComposeContentTestRule.assertHasMergedDescription() {
+    waitForIdle()
+    val described = onAllNodes(
+        SemanticsMatcher.keyIsDefined(SemanticsProperties.ContentDescription),
+        useUnmergedTree = false,
+    ).fetchSemanticsNodes(atLeastOneRootRequired = false)
+        .any { node ->
+            node.config.getOrNull(SemanticsProperties.ContentDescription)
+                ?.any { it.isNotBlank() } == true
+        }
+
+    if (!described) {
+        fail("Nothing in this tree carries a content description for a screen reader.")
+    }
+}
+
 fun ComposeContentTestRule.assertVisibleTouchTargetsMeetMinimum(
     minSize: Dp = 48.dp,
 ) {
