@@ -195,15 +195,43 @@ class ProviderContractTests(unittest.TestCase):
     def test_bmkg_feed_validator_rejects_feeds_the_adapter_cannot_use(self) -> None:
         # BmkgAlertAdapter reaches every alert through <item><link>, so a feed
         # that parses but carries no usable link drops all alerts silently.
+        good_item = "<item><link>https://www.bmkg.go.id/a/C1_alert.xml</link></item>"
         failing = {
             "no link": "<rss><channel><item><title>x</title></item></channel></rss>",
             "not a CAP document": "<rss><channel><item><link>https://x/a.html</link></item></channel></rss>",
             "no channel": "<rss></rss>",
             "malformed": "<rss><channel>",
+            # One good link among many was the gap: the adapter's mapNotNull
+            # drops the rest silently, so nine lost warnings looked healthy.
+            "mostly linkless": (
+                "<rss><channel>"
+                + good_item
+                + "<item><title>x</title></item>" * 9
+                + "</channel></rss>"
+            ),
+            # The adapter sets disallow-doctype-decl, so this makes its parse
+            # throw and every alert vanish, while the validator said fine.
+            "doctype": (
+                "<?xml version=\"1.0\"?><!DOCTYPE rss><rss><channel>"
+                + good_item
+                + "</channel></rss>"
+            ),
         }
         for label, feed in failing.items():
             with self.subTest(label=label):
                 self.assertFalse(contracts.validate_bmkg_nowcast_feed(feed).ok)
+
+    def test_bmkg_feed_validator_accepts_a_namespaced_feed(self) -> None:
+        # The adapter is namespace-aware and matches local names, so a default
+        # namespace is not a contract break. Rejecting it would be a false
+        # alarm about a feed the app reads perfectly well.
+        namespaced = (
+            '<rss xmlns="http://purl.org/rss/1.0/"><channel><item>'
+            "<link>https://www.bmkg.go.id/a/C1_alert.xml</link>"
+            "</item></channel></rss>"
+        )
+
+        self.assertTrue(contracts.validate_bmkg_nowcast_feed(namespaced).ok)
 
     def test_bmkg_feed_validator_accepts_a_quiet_day(self) -> None:
         # Indonesia has no active nowcast warnings on plenty of days, and that

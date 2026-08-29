@@ -15,6 +15,8 @@ import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.testing.assertMeasuredAtLeast
+import com.sysadmindoc.nimbus.testing.assertTextContrastMeetsMinimum
 import com.sysadmindoc.nimbus.testing.assertVisibleTouchTargetsMeetMinimum
 import com.sysadmindoc.nimbus.testing.setContentWithAccessibilityChecks
 import com.sysadmindoc.nimbus.ui.component.LocalUnitSettings
@@ -181,6 +183,13 @@ class AccessibilityAuditRobolectricTest {
 
         composeTestRule.onNodeWithText("Denver").assertIsDisplayed()
         composeTestRule.assertVisibleTouchTargetsMeetMinimum()
+
+        // Says out loud how much of this screen the contrast check could
+        // actually look at. Most of it is below the fold in one frame and
+        // cannot be captured, so the honest floor is low; the point is that it
+        // cannot quietly get lower. Touch targets and semantics above still
+        // cover the whole tree, which is composed in full.
+        composeTestRule.assertTextContrastMeetsMinimum().assertMeasuredAtLeast(0.20)
     }
 }
 

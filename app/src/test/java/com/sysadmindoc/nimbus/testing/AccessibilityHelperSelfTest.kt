@@ -5,6 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -18,6 +21,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -130,6 +134,74 @@ class AccessibilityHelperSelfTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun textBelowTheFoldIsReportedAsUnmeasuredRatherThanPassing() {
+        // A scrolling Column composes all of its children, but only the part
+        // inside the window is rasterised, so capturing the rest throws. The
+        // first version of this check swallowed that and passed: on the main
+        // screen 37 of 100 text nodes went through that path, the whole Daily
+        // Forecast card among them, and nothing said so. (A LazyColumn does
+        // not reproduce it — it never composes the off-screen rows, so they
+        // never reach the check at all.)
+        composeTestRule.setContent {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                repeat(60) { index ->
+                    Text("row $index", color = Color.Black, modifier = Modifier.height(40.dp))
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val coverage = composeTestRule.assertTextContrastMeetsMinimum()
+
+        assertTrue("expected some rows to be unmeasurable, got $coverage", coverage.skipped > 0)
+        assertTrue(coverage.measured > 0)
+        assertEquals(coverage.total, coverage.measured + coverage.skipped)
+    }
+
+    @Test
+    fun aCoverageFloorFailsWhenMostOfTheScreenWasNotLookedAt() {
+        composeTestRule.setContent {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                repeat(60) { index ->
+                    Text("row $index", color = Color.Black, modifier = Modifier.height(40.dp))
+                }
+            }
+        }
+        composeTestRule.waitForIdle()
+        val coverage = composeTestRule.assertTextContrastMeetsMinimum()
+
+        val error = runCatching { coverage.assertMeasuredAtLeast(0.95) }.exceptionOrNull()
+
+        assertTrue("a 95% floor must reject this screen", error is AssertionError)
+        assertTrue(error!!.message.orEmpty().contains("only measured"))
+    }
+
+    @Test
+    fun aFullyVisibleScreenIsFullyMeasured() {
+        // The other side: the floor must not fire on a screen that genuinely
+        // fits, or every caller would just lower it to zero.
+        composeTestRule.setContentWithAccessibilityChecks {
+            Column(Modifier.fillMaxSize().background(Color.White)) {
+                Text("first", color = Color.Black)
+                Text("second", color = Color.Black)
+                Text("third", color = Color.Black)
+            }
+        }
+
+        composeTestRule.assertTextContrastMeetsMinimum().assertMeasuredAtLeast(1.0)
     }
 
     @Composable
