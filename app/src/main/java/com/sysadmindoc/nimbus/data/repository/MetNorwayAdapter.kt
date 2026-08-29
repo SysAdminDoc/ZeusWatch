@@ -310,13 +310,13 @@ class MetNorwayForecastAdapter @Inject constructor(
      */
     private fun parseZonedLocalDateTime(timestamp: String, zone: ZoneId): LocalDateTime? = try {
         OffsetDateTime.parse(timestamp).atZoneSameInstant(zone).toLocalDateTime()
-    } catch (_: Exception) {
+    } catch (ignored: Exception) {
         null
     }
 
     private fun parseInstant(timestamp: String): Instant? = try {
         OffsetDateTime.parse(timestamp).toInstant()
-    } catch (_: Exception) {
+    } catch (ignored: Exception) {
         null
     }
 

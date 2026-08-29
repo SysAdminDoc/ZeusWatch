@@ -146,11 +146,11 @@ class LocationProvider @Inject constructor(
                             continuation.resume(location)
                         }
                     }
-                } catch (_: SecurityException) {
+                } catch (ignored: SecurityException) {
                     if (continuation.isActive) {
                         continuation.resume(null)
                     }
-                } catch (_: Exception) {
+                } catch (ignored: Exception) {
                     if (continuation.isActive) {
                         continuation.resume(null)
                     }

@@ -59,12 +59,18 @@ class WeatherDataListenerService : WearableListenerService() {
                         applicationContext,
                         ComponentName(applicationContext, WeatherComplicationService::class.java),
                     ).requestUpdateAll()
-                } catch (_: Exception) { /* Complication may not be active */ }
+                } catch (e: Exception) {
+                    // Usually just means no complication is placed; log the
+                    // class so a real failure is not indistinguishable from it.
+                    Log.d(TAG, "Complication update skipped: " + e.javaClass.simpleName)
+                }
 
                 try {
                     androidx.wear.tiles.TileService.getUpdater(applicationContext)
                         .requestUpdate(WeatherTileService::class.java)
-                } catch (_: Exception) { /* Tile may not be active */ }
+                } catch (e: Exception) {
+                    Log.d(TAG, "Tile update skipped: " + e.javaClass.simpleName)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to process synced weather data", e)
             }

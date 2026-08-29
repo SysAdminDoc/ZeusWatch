@@ -142,7 +142,7 @@ class GeminiNanoSummaryEngine @Inject constructor() : SummaryEngine {
         closed = true
         try {
             model?.close()
-        } catch (_: Exception) {}
+        } catch (ignored: Exception) {}
     }
 
     private suspend fun ensureModelReady(generativeModel: GenerativeModel): Boolean {

@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.os.BatteryManager
+import android.util.Log
 import androidx.glance.appwidget.updateAll
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
@@ -35,6 +36,7 @@ import com.sysadmindoc.nimbus.util.BackgroundWorkSync
 import com.sysadmindoc.nimbus.util.GadgetbridgeWeatherBroadcaster
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
 import com.sysadmindoc.nimbus.util.WeatherFormatter
+import com.sysadmindoc.nimbus.util.failureClass
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -185,7 +187,8 @@ class WidgetRefreshWorker @AssistedInject constructor(
             weatherRepository.getCachedWeather(lastLoc.latitude, lastLoc.longitude)
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Cached weather read failed: ${e.failureClass()}")
             null
         } ?: return
 
@@ -193,12 +196,14 @@ class WidgetRefreshWorker @AssistedInject constructor(
             wearSyncManager.syncWeather(cached)
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Wear sync failed: ${e.failureClass()}")
         }
         if (settings.persistentWeatherNotif) {
             try {
                 WeatherNotificationHelper.showOrUpdate(applicationContext, cached, settings)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "Persistent notification update failed: ${e.failureClass()}")
             }
         }
         if (settings.gadgetbridgeBroadcastEnabled) {
@@ -249,7 +254,8 @@ class WidgetRefreshWorker @AssistedInject constructor(
             wearSyncManager.syncWeather(primaryWeather)
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Wear sync failed: ${e.failureClass()}")
         }
     }
 
@@ -366,7 +372,8 @@ class WidgetRefreshWorker @AssistedInject constructor(
         if (primaryWeather != null) {
             try {
                 WeatherNotificationHelper.showOrUpdate(applicationContext, primaryWeather, settings)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "Persistent notification update failed: ${e.failureClass()}")
             }
         } else if (lastLoc == null) {
             WeatherNotificationHelper.dismiss(applicationContext)
@@ -407,7 +414,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
                     }
                 } catch (cancelled: kotlinx.coroutines.CancellationException) {
                     throw cancelled
-                } catch (_: Exception) {
+                } catch (ignored: Exception) {
                     // Individual location failure is non-fatal.
                 }
             }
@@ -419,7 +426,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
             }
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
-        } catch (_: Exception) {
+        } catch (ignored: Exception) {
             // Non-fatal; widget update already succeeded.
         }
     }

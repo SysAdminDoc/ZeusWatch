@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.location.Location
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.Priority
@@ -21,6 +22,8 @@ import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
+
+private const val TAG = "WearLocationProvider"
 
 @Singleton
 class WearLocationProvider @Inject constructor(
@@ -56,8 +59,10 @@ class WearLocationProvider @Inject constructor(
                 // Never mask cancellation as "use cached location" — the
                 // caller's structured concurrency must see the cancel.
                 throw cancelled
-            } catch (_: Exception) {
-                // Fall through to cached
+            } catch (e: Exception) {
+                // Fall through to cached. Logged because a permanently failing
+                // location client looks identical to "no fix yet" otherwise.
+                Log.w(TAG, "Location fetch failed: " + e.javaClass.simpleName)
             }
         }
         return cached()
@@ -95,7 +100,8 @@ class WearLocationProvider @Inject constructor(
                 addrs?.firstOrNull()?.let { it.locality ?: it.subAdminArea ?: it.adminArea }
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.d(TAG, "Reverse geocode failed: " + e.javaClass.simpleName)
                 null
             }
         }
@@ -143,7 +149,7 @@ private fun CancellableContinuation<Location?>.resumeLocationIfActive(location: 
     if (!isActive) return
     try {
         resume(location)
-    } catch (_: IllegalStateException) {
+    } catch (ignored: IllegalStateException) {
         // A Play services Task callback can arrive after coroutine
         // cancellation or after another listener already completed it.
         // The caller will fall back to cached coordinates.

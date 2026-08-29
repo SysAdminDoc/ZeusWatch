@@ -141,7 +141,7 @@ private fun parseIsoDate(isoDate: String): java.time.LocalDate? {
     if (parts.size != 3) return null
     return try {
         java.time.LocalDate.of(parts[0].toInt(), parts[1].toInt(), parts[2].toInt())
-    } catch (_: Exception) {
+    } catch (ignored: Exception) {
         null
     }
 }
@@ -164,7 +164,7 @@ internal fun formatDay(
                 java.util.Locale.getDefault(),
             )
         }
-    } catch (_: Exception) {
+    } catch (ignored: Exception) {
         isoDate.takeLast(5)
     }
 }

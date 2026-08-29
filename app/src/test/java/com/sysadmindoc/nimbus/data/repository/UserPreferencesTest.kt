@@ -273,7 +273,7 @@ class UserPreferencesTest {
     fun cardOrderParsingHandlesValidCommaSeparatedString() {
         val orderStr = "HOURLY_FORECAST,DAILY_FORECAST,WEATHER_SUMMARY"
         val parsed = orderStr.split(",").mapNotNull { name ->
-            try { CardType.valueOf(name) } catch (_: Exception) { null }
+            try { CardType.valueOf(name) } catch (ignored: Exception) { null }
         }
 
         assertEquals(3, parsed.size)
@@ -286,7 +286,7 @@ class UserPreferencesTest {
     fun cardOrderParsingSkipsInvalidEntriesGracefully() {
         val orderStr = "HOURLY_FORECAST,BOGUS_CARD,DAILY_FORECAST"
         val parsed = orderStr.split(",").mapNotNull { name ->
-            try { CardType.valueOf(name) } catch (_: Exception) { null }
+            try { CardType.valueOf(name) } catch (ignored: Exception) { null }
         }
 
         assertEquals(2, parsed.size)
@@ -299,7 +299,7 @@ class UserPreferencesTest {
         val orderStr = ""
         val result = if (orderStr.isBlank()) DEFAULT_CARD_ORDER
         else orderStr.split(",").mapNotNull { name ->
-            try { CardType.valueOf(name) } catch (_: Exception) { null }
+            try { CardType.valueOf(name) } catch (ignored: Exception) { null }
         }
 
         assertEquals(DEFAULT_CARD_ORDER, result)
@@ -415,7 +415,7 @@ class UserPreferencesTest {
         // Mirrors the private safeValueOf function logic
         val result: TempUnit? = try {
             enumValueOf<TempUnit>("INVALID_VALUE")
-        } catch (_: IllegalArgumentException) {
+        } catch (ignored: IllegalArgumentException) {
             null
         }
         assertNull(result)
@@ -425,7 +425,7 @@ class UserPreferencesTest {
     fun safeValueOfReturnsCorrectEnumForValidString() {
         val result: TempUnit? = try {
             enumValueOf<TempUnit>("CELSIUS")
-        } catch (_: IllegalArgumentException) {
+        } catch (ignored: IllegalArgumentException) {
             null
         }
         assertEquals(TempUnit.CELSIUS, result)
@@ -435,7 +435,7 @@ class UserPreferencesTest {
     fun weatherSourceProviderSafeValueOfHandlesInvalidInput() {
         val result: WeatherSourceProvider? = try {
             enumValueOf<WeatherSourceProvider>("NONEXISTENT_PROVIDER")
-        } catch (_: IllegalArgumentException) {
+        } catch (ignored: IllegalArgumentException) {
             null
         }
         assertNull(result)
@@ -445,7 +445,7 @@ class UserPreferencesTest {
     fun weatherSourceProviderSafeValueOfParsesValidInput() {
         val result: WeatherSourceProvider? = try {
             enumValueOf<WeatherSourceProvider>("OPEN_METEO")
-        } catch (_: IllegalArgumentException) {
+        } catch (ignored: IllegalArgumentException) {
             null
         }
         assertEquals(WeatherSourceProvider.OPEN_METEO, result)

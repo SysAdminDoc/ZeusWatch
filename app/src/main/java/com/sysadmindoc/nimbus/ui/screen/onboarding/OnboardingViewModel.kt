@@ -43,7 +43,7 @@ class OnboardingViewModel @Inject constructor(
             } catch (error: CancellationException) {
                 _saveState.value = OnboardingSaveState()
                 throw error
-            } catch (_: Exception) {
+            } catch (ignored: Exception) {
                 _saveState.value = OnboardingSaveState(saveFailed = true)
                 return@launch
             }

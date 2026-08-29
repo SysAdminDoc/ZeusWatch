@@ -303,7 +303,7 @@ private fun updateRadarLayers(
         if (layer.id.startsWith(RADAR_LAYER_PREFIX) && layer.id !in layersToKeep) {
             style.removeLayer(layer.id)
             val sourceId = layer.id.replace("layer-", "source-")
-            try { style.removeSource(sourceId) } catch (_: Exception) {}
+            try { style.removeSource(sourceId) } catch (ignored: Exception) {}
         }
     }
 
@@ -385,7 +385,7 @@ private fun updateOverlayLayer(
     // Remove overlay sources (iterate separately to avoid concurrent modification)
     style.sources.forEach { source ->
         if (source.id.startsWith(OVERLAY_LAYER_PREFIX)) {
-            try { style.removeSource(source.id) } catch (_: Exception) {}
+            try { style.removeSource(source.id) } catch (ignored: Exception) {}
         }
     }
 

@@ -131,7 +131,7 @@ class IconPackManager @Inject constructor(
         val assets = context.assets
         val dirs = try {
             assets.list(BUNDLED_ROOT) ?: emptyArray()
-        } catch (_: Exception) {
+        } catch (ignored: Exception) {
             emptyArray()
         }
         return dirs.mapNotNull { dir ->

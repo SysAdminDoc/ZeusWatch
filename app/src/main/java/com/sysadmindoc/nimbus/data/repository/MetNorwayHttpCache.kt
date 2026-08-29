@@ -51,7 +51,7 @@ class MetNorwayHttpCache @Inject constructor() {
             if (value.isNullOrBlank()) return null
             return try {
                 ZonedDateTime.parse(value, HTTP_DATE_FORMAT).toInstant()
-            } catch (_: Exception) {
+            } catch (ignored: Exception) {
                 null
             }
         }

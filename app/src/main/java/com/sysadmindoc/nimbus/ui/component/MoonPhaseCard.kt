@@ -282,5 +282,5 @@ private fun sunCountdown(
                 }
             }
         }
-    } catch (_: Exception) { null }
+    } catch (ignored: Exception) { null }
 }

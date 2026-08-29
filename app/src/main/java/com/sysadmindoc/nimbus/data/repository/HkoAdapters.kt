@@ -250,13 +250,13 @@ internal fun isHongKongCoordinate(latitude: Double, longitude: Double): Boolean 
 private fun parseHkoTime(value: String?): LocalDateTime? = try {
     value?.takeIf { it.isNotBlank() }
         ?.let { OffsetDateTime.parse(it).atZoneSameInstant(HONG_KONG_ZONE).toLocalDateTime() }
-} catch (_: Exception) {
+} catch (ignored: Exception) {
     null
 }
 
 private fun parseForecastDate(value: String?): LocalDate? = try {
     value?.let { LocalDate.parse(it, DateTimeFormatter.BASIC_ISO_DATE) }
-} catch (_: Exception) {
+} catch (ignored: Exception) {
     null
 }
 

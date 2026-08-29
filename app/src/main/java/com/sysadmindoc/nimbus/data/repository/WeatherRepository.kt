@@ -470,7 +470,7 @@ class WeatherRepository @Inject constructor(
                 weatherDao.deleteOlderThan(
                     System.currentTimeMillis() - maxOf(cacheMaxAgeMs, DEFAULT_STALE_FALLBACK_MS)
                 )
-            } catch (_: Exception) { /* Cache failure is non-fatal */ }
+            } catch (ignored: Exception) { /* Cache failure is non-fatal */ }
 
             Result.success(weatherData)
         } catch (e: Exception) {
@@ -496,7 +496,7 @@ class WeatherRepository @Inject constructor(
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
-            } catch (_: Exception) {
+            } catch (ignored: Exception) {
                 // Keep the existing JSON path authoritative while FlatBuffers remains opt-in.
             }
         }
@@ -578,7 +578,7 @@ class WeatherRepository @Inject constructor(
                     .toLocalDateTime(),
             ).copy(sourceProvider = WeatherSourceProvider.OPEN_METEO.displayName)
                 .withUniqueHourlyTimes()
-        } catch (_: Exception) {
+        } catch (ignored: Exception) {
             null
         }
     }
@@ -618,7 +618,7 @@ class WeatherRepository @Inject constructor(
             weatherDao.deleteWeatherDataOlderThan(
                 System.currentTimeMillis() - maxOf(cacheMaxAgeMs, DEFAULT_STALE_FALLBACK_MS)
             )
-        } catch (_: Exception) {
+        } catch (ignored: Exception) {
             // Cache failure is non-fatal.
         }
     }
@@ -688,7 +688,7 @@ class WeatherRepository @Inject constructor(
                     longitude = longitude,
                     timeZone = first?.timezone?.takeIf { it.toZoneIdOrNull() != null },
                 )
-            } catch (_: Exception) {
+            } catch (ignored: Exception) {
                 LocationInfo(
                     name = "Unknown Location",
                     latitude = latitude,
@@ -991,11 +991,11 @@ class WeatherRepository @Inject constructor(
 
     private fun parseDateTime(str: String): LocalDateTime? = try {
         LocalDateTime.parse(str, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-    } catch (_: Exception) { null }
+    } catch (ignored: Exception) { null }
 
     private fun parseDate(str: String): LocalDate? = try {
         LocalDate.parse(str, DateTimeFormatter.ISO_LOCAL_DATE)
-    } catch (_: Exception) { null }
+    } catch (ignored: Exception) { null }
 
     private suspend fun resolveRouteEndpoint(
         query: String,

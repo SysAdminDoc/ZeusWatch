@@ -136,18 +136,18 @@ class WeatherWallpaperService : WallpaperService() {
                     particleSystem.update(width, height)
                     particleSystem.draw(canvas, width, height)
                 }
-            } catch (_: IllegalStateException) {
+            } catch (ignored: IllegalStateException) {
                 // Surface torn down between the visibility check and
                 // lockCanvas() — bail this frame instead of crashing the
                 // wallpaper process; the reschedule below keeps the loop alive.
-            } catch (_: IllegalArgumentException) {
+            } catch (ignored: IllegalArgumentException) {
                 // Same teardown race, surfaced as an invalid-surface argument
                 // on some OEM builds.
             } finally {
                 if (canvas != null) {
                     try {
                         surfaceHolder.unlockCanvasAndPost(canvas)
-                    } catch (_: Exception) {
+                    } catch (ignored: Exception) {
                         // Surface already destroyed or other surface error
                     }
                 }

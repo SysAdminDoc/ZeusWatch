@@ -157,7 +157,7 @@ private fun parseSunArcTimes(
 private fun parseLocalDateTime(value: String, formatter: DateTimeFormatter): LocalDateTime? =
     try {
         LocalDateTime.parse(value, formatter)
-    } catch (_: Exception) {
+    } catch (ignored: Exception) {
         null
     }
 

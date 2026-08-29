@@ -223,7 +223,7 @@ object AlertNotificationHelper {
             nm.notify(NOTIFICATION_ID_NOWCAST, notification)
             nm.notify(AMBIENT_SUMMARY_NOTIFICATION_ID, ambientSummary(context, CHANNEL_NOWCAST))
             return true
-        } catch (_: SecurityException) {
+        } catch (ignored: SecurityException) {
             // Permission revoked after check
             return false
         }
@@ -333,7 +333,7 @@ object AlertNotificationHelper {
             nm.notify(notifId, notification)
             nm.notify(AMBIENT_SUMMARY_NOTIFICATION_ID, ambientSummary(context, CHANNEL_HEALTH))
             return true
-        } catch (_: SecurityException) {
+        } catch (ignored: SecurityException) {
             // Permission revoked after check
             return false
         }
@@ -372,7 +372,7 @@ object AlertNotificationHelper {
             nm.notify(id, notification)
             nm.notify(AMBIENT_SUMMARY_NOTIFICATION_ID, ambientSummary(context, CHANNEL_CUSTOM))
             return true
-        } catch (_: SecurityException) {
+        } catch (ignored: SecurityException) {
             // Permission revoked after check
             return false
         }
@@ -514,7 +514,7 @@ object AlertNotificationHelper {
                 .build()
             nm.notify(SUMMARY_NOTIFICATION_ID, summary)
             return true
-        } catch (_: SecurityException) {
+        } catch (ignored: SecurityException) {
             // Permission revoked after check
             return false
         }

@@ -915,7 +915,7 @@ internal fun RadarWebView(
                                                 addCategory(Intent.CATEGORY_BROWSABLE)
                                             },
                                         )
-                                    } catch (_: Exception) {
+                                    } catch (ignored: Exception) {
                                         // No browser available — swallow and block.
                                     }
                                     true

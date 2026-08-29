@@ -152,7 +152,7 @@ private fun formatExpiry(isoExpires: String): String {
         java.time.OffsetDateTime.parse(isoExpires)
             .atZoneSameInstant(java.time.ZoneId.systemDefault())
             .format(java.time.format.DateTimeFormatter.ofPattern("h:mm a"))
-    } catch (_: Exception) {
+    } catch (ignored: Exception) {
         // Not ISO with an offset (or unparseable) — show the raw string
         // rather than a misleadingly reformatted one.
         isoExpires

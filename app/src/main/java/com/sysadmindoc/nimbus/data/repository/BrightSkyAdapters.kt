@@ -243,19 +243,19 @@ class BrightSkyForecastAdapter @Inject constructor(
      */
     private fun parseTimestamp(ts: String, zone: ZoneId): LocalDateTime? = try {
         OffsetDateTime.parse(ts).atZoneSameInstant(zone).toLocalDateTime()
-    } catch (_: Exception) {
+    } catch (ignored: Exception) {
         try {
             // Falls through here for legacy responses without offset; we have
             // no instant to anchor against, so consume the wall-clock as-is.
             LocalDateTime.parse(ts, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-        } catch (_: Exception) {
+        } catch (ignored: Exception) {
             null
         }
     }
 
     private fun parseTimestampInstant(ts: String): Instant? = try {
         OffsetDateTime.parse(ts).toInstant()
-    } catch (_: Exception) {
+    } catch (ignored: Exception) {
         null
     }
 }

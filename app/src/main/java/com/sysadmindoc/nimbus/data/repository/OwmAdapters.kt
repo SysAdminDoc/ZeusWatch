@@ -85,7 +85,7 @@ class OwmForecastAdapter @Inject constructor(
         locationName: String?,
     ): WeatherData {
         val current = r.current ?: error("No current data from OWM")
-        val zone = try { ZoneId.of(r.timezone) } catch (_: Exception) { ZoneId.systemDefault() }
+        val zone = try { ZoneId.of(r.timezone) } catch (ignored: Exception) { ZoneId.systemDefault() }
         val firstDaily = r.daily.firstOrNull()
         val locationLocalNow = epochToLocalDateTime(current.dt, zone)
 
@@ -228,7 +228,7 @@ class OwmAlertAdapter @Inject constructor(
             )
         }
         response.alerts.mapIndexed { i, alert ->
-            val zone = try { ZoneId.of(response.timezone) } catch (_: Exception) { ZoneId.systemDefault() }
+            val zone = try { ZoneId.of(response.timezone) } catch (ignored: Exception) { ZoneId.systemDefault() }
             WeatherAlert(
                 id = "owm-${alert.start}-$i",
                 event = alert.event,
