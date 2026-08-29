@@ -8,6 +8,8 @@ import android.location.Geocoder
 import android.location.Location
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.sysadmindoc.nimbus.wear.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellableContinuation
@@ -38,7 +40,11 @@ class WearLocationProvider @Inject constructor(
     suspend fun getLocation(): LocationResult? {
         if (hasPermission()) {
             try {
-                val loc = fetchLastLocation()
+                // lastLocation is null on a watch where nothing has requested a
+                // fix recently — a fresh install is the common case. Without the
+                // active request below, a user who grants permission lands in
+                // the no-location state with no way out of it.
+                val loc = fetchLastLocation() ?: fetchCurrentLocation()
                 if (loc != null) {
                     cache(loc.latitude, loc.longitude)
                     val name = reverseGeocode(loc.latitude, loc.longitude)
@@ -65,6 +71,17 @@ class WearLocationProvider @Inject constructor(
     @SuppressLint("MissingPermission")
     private suspend fun fetchLastLocation(): Location? = suspendCancellableCoroutine { cont ->
         locationClient.lastLocation
+            .addOnSuccessListener { cont.resumeLocationIfActive(it) }
+            .addOnFailureListener { cont.resumeLocationIfActive(null) }
+    }
+
+    /** Balanced power: a watch weather card does not need GPS-grade accuracy. */
+    @SuppressLint("MissingPermission")
+    private suspend fun fetchCurrentLocation(): Location? = suspendCancellableCoroutine { cont ->
+        val tokenSource = CancellationTokenSource()
+        cont.invokeOnCancellation { tokenSource.cancel() }
+        locationClient
+            .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, tokenSource.token)
             .addOnSuccessListener { cont.resumeLocationIfActive(it) }
             .addOnFailureListener { cont.resumeLocationIfActive(null) }
     }

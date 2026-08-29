@@ -90,10 +90,27 @@ class WeatherTileServiceTest {
 
         val color = service.tileColor(LayoutColor(0xFF102030u.toInt(), dynamic), 0xFFFFFFFF.toInt())
 
-        // The theme color must survive; reading LayoutColor.prop directly is
-        // a RestrictedApi that fails wear lint, so it is rebuilt by hand.
+        // These assert the hand-rebuilt ColorProp is lossless, which is the
+        // half of NX-65 a unit test can see. The RestrictedApi regression
+        // itself is only caught by :wear:lintDebug (in localQualityGate).
         assertEquals(0xFF102030u.toInt(), color.argb)
         assertNotNull(color.dynamicValue)
+    }
+
+    @Test
+    fun `the tile names the missing location instead of saying no data`() {
+        val service = Robolectric.buildService(WeatherTileService::class.java).get()
+
+        // "No data" reads like a transient outage and hides the fact that the
+        // watch needs permission or a phone sync.
+        assertEquals(
+            service.getString(R.string.wear_tile_no_location),
+            service.emptyStateLabel(WearWeatherResult.NoLocation),
+        )
+        assertEquals(
+            service.getString(R.string.wear_tile_no_data),
+            service.emptyStateLabel(WearWeatherResult.Failed(IllegalStateException("offline"))),
+        )
     }
 
     @Test
