@@ -62,6 +62,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -114,9 +115,12 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.IconPack
 import com.sysadmindoc.nimbus.data.repository.*
 import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
+import com.sysadmindoc.nimbus.ui.component.LocalUnitSettings
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.component.ScreenHeader
 import com.sysadmindoc.nimbus.ui.theme.*
+import com.sysadmindoc.nimbus.util.ActivityThresholds
+import com.sysadmindoc.nimbus.util.WeatherFormatter
 import com.sysadmindoc.nimbus.util.displayNameRes
 import com.sysadmindoc.nimbus.util.labelRes
 import com.sysadmindoc.nimbus.util.summaryRes
@@ -124,6 +128,7 @@ import com.sysadmindoc.nimbus.util.summaryRes
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.roundToInt
 
 private enum class SettingsCategory(
     @StringRes val labelRes: Int,
@@ -146,6 +151,7 @@ internal fun SettingsContent(
     providerHealth: ProviderHealthSnapshot = ProviderHealthSnapshot(),
     deliveryHealth: DeliveryHealthSnapshot = DeliveryHealthSnapshot(),
     deliveryNextRuns: Map<DeliverySurface, Long> = emptyMap(),
+    activityThresholds: ActivityThresholds = ActivityThresholds(),
     transferStatus: SettingsTransferStatus? = null,
     transferInProgress: Boolean = false,
     pendingImportPreview: SettingsImportPreview? = null,
@@ -196,6 +202,7 @@ internal fun SettingsContent(
                     providerHealth = providerHealth,
                     deliveryHealth = deliveryHealth,
                     deliveryNextRuns = deliveryNextRuns,
+                    activityThresholds = activityThresholds,
                     transferStatus = transferStatus,
                     transferInProgress = transferInProgress,
                     pendingImportPreview = pendingImportPreview,
@@ -268,6 +275,7 @@ internal data class SettingsActions(
     val onExportProviderDiagnostics: () -> Unit = {},
     val onExportDeliveryDiagnostics: () -> Unit = {},
     val onRunDeliveryNow: (DeliverySurface) -> Unit = {},
+    val onActivityThresholds: (ActivityThresholds) -> Unit = {},
     val onConfirmSettingsImport: () -> Unit = {},
     val onCancelSettingsImport: () -> Unit = {},
     val onClearTransferStatus: () -> Unit = {},
@@ -277,6 +285,7 @@ private data class SettingsSupportState(
     val providerHealth: ProviderHealthSnapshot,
     val deliveryHealth: DeliveryHealthSnapshot,
     val deliveryNextRuns: Map<DeliverySurface, Long>,
+    val activityThresholds: ActivityThresholds,
     val transferStatus: SettingsTransferStatus?,
     val transferInProgress: Boolean,
     val pendingImportPreview: SettingsImportPreview?,
@@ -316,6 +325,7 @@ private fun SettingsCategoryContent(
                 providerHealth = supportState.providerHealth,
                 deliveryHealth = supportState.deliveryHealth,
                 deliveryNextRuns = supportState.deliveryNextRuns,
+                activityThresholds = supportState.activityThresholds,
                 transferInProgress = supportState.transferInProgress,
                 locationOverrideProviders = supportState.locationOverrideProviders,
                 actions = actions,
@@ -923,6 +933,7 @@ private fun SettingsDataSourcesSection(
     providerHealth: ProviderHealthSnapshot,
     deliveryHealth: DeliveryHealthSnapshot,
     deliveryNextRuns: Map<DeliverySurface, Long>,
+    activityThresholds: ActivityThresholds,
     transferInProgress: Boolean,
     locationOverrideProviders: Set<WeatherSourceProvider>,
     actions: SettingsActions,
@@ -979,6 +990,7 @@ private fun SettingsDataSourcesSection(
             transferInProgress = transferInProgress,
             actions = actions,
         )
+        ActivityThresholdsPanel(thresholds = activityThresholds, actions = actions)
         DeliveryHealthPanel(
             snapshot = deliveryHealth,
             nextRuns = deliveryNextRuns,
@@ -1103,6 +1115,137 @@ private fun ProviderHealthPanel(
  * question a user actually has when a widget goes stale, which is whether the
  * job that fills it ever ran, why it stopped, and when it will try again.
  */
+/**
+ * The comfort thresholds the activity best-window line is judged against.
+ *
+ * Sliders rather than free entry because every one of these has a range
+ * outside which the window logic stops meaning anything, and a text field
+ * would let someone set a band nothing ever satisfies and then wonder why the
+ * card says there is never a good time.
+ */
+@Composable
+private fun ActivityThresholdsPanel(
+    thresholds: ActivityThresholds,
+    actions: SettingsActions,
+) {
+    Spacer(modifier = Modifier.height(12.dp))
+    Text(
+        text = stringResource(R.string.settings_activity_thresholds_title),
+        style = MaterialTheme.typography.bodySmall,
+        color = NimbusTextSecondary,
+        modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+    )
+    Text(
+        text = stringResource(R.string.settings_activity_thresholds_desc),
+        style = MaterialTheme.typography.bodySmall,
+        color = NimbusTextTertiary,
+        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+    )
+
+    val settings = LocalUnitSettings.current
+    ThresholdSlider(
+        label = stringResource(R.string.settings_activity_min_temp),
+        valueLabel = WeatherFormatter.formatTemperatureUnit(thresholds.minComfortableTempC, settings),
+        value = thresholds.minComfortableTempC.toFloat(),
+        range = ActivityThresholds.MIN_TEMP_RANGE,
+        onChange = { actions.onActivityThresholds(thresholds.copy(minComfortableTempC = it.toDouble())) },
+    )
+    ThresholdSlider(
+        label = stringResource(R.string.settings_activity_max_temp),
+        valueLabel = WeatherFormatter.formatTemperatureUnit(thresholds.maxComfortableTempC, settings),
+        value = thresholds.maxComfortableTempC.toFloat(),
+        range = ActivityThresholds.MAX_TEMP_RANGE,
+        onChange = { actions.onActivityThresholds(thresholds.copy(maxComfortableTempC = it.toDouble())) },
+    )
+    ThresholdSlider(
+        label = stringResource(
+            R.string.settings_activity_max_precip,
+            thresholds.maxPrecipitationChance,
+        ),
+        valueLabel = null,
+        value = thresholds.maxPrecipitationChance.toFloat(),
+        range = ActivityThresholds.PRECIP_RANGE.first.toDouble()..
+            ActivityThresholds.PRECIP_RANGE.last.toDouble(),
+        onChange = {
+            actions.onActivityThresholds(
+                thresholds.copy(maxPrecipitationChance = it.roundToInt()),
+            )
+        },
+    )
+    ThresholdSlider(
+        label = stringResource(R.string.settings_activity_max_wind),
+        valueLabel = WeatherFormatter.formatWindSpeed(thresholds.maxWindKmh, settings),
+        value = thresholds.maxWindKmh.toFloat(),
+        range = ActivityThresholds.WIND_RANGE,
+        onChange = { actions.onActivityThresholds(thresholds.copy(maxWindKmh = it.toDouble())) },
+    )
+    ThresholdSlider(
+        label = stringResource(
+            R.string.settings_activity_max_uv,
+            thresholds.maxUvIndex.roundToInt().toString(),
+        ),
+        valueLabel = null,
+        value = thresholds.maxUvIndex.toFloat(),
+        range = ActivityThresholds.UV_RANGE,
+        onChange = { actions.onActivityThresholds(thresholds.copy(maxUvIndex = it.toDouble())) },
+    )
+    ThresholdSlider(
+        label = stringResource(R.string.settings_activity_max_aqi, thresholds.maxAqi),
+        valueLabel = null,
+        value = thresholds.maxAqi.toFloat(),
+        range = ActivityThresholds.AQI_RANGE.first.toDouble()..
+            ActivityThresholds.AQI_RANGE.last.toDouble(),
+        onChange = { actions.onActivityThresholds(thresholds.copy(maxAqi = it.roundToInt())) },
+    )
+
+    SettingsTransferButton(
+        label = stringResource(R.string.settings_activity_thresholds_reset),
+        icon = Icons.Filled.Refresh,
+        // Nothing to reset when nothing was changed.
+        enabled = !thresholds.isDefault,
+        modifier = Modifier.fillMaxWidth(),
+        onClick = { actions.onActivityThresholds(ActivityThresholds()) },
+    )
+}
+
+@Composable
+private fun ThresholdSlider(
+    label: String,
+    valueLabel: String?,
+    value: Float,
+    range: ClosedFloatingPointRange<Double>,
+    onChange: (Float) -> Unit,
+) {
+    Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = NimbusTextPrimary,
+                modifier = Modifier.weight(1f),
+            )
+            valueLabel?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NimbusTextSecondary,
+                )
+            }
+        }
+        Slider(
+            value = value.coerceIn(range.start.toFloat(), range.endInclusive.toFloat()),
+            onValueChange = onChange,
+            valueRange = range.start.toFloat()..range.endInclusive.toFloat(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = label },
+        )
+    }
+}
+
 @Composable
 private fun DeliveryHealthPanel(
     snapshot: DeliveryHealthSnapshot,

@@ -32,6 +32,7 @@ import com.sysadmindoc.nimbus.di.DefaultDispatcher
 import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.ui.component.TimeTravelStatus
 import com.sysadmindoc.nimbus.util.ActivityIndexEvaluator
+import com.sysadmindoc.nimbus.util.ActivityWindowEvaluator
 import com.sysadmindoc.nimbus.util.ClothingSuggestion
 import com.sysadmindoc.nimbus.util.ClothingSuggestionEvaluator
 import com.sysadmindoc.nimbus.util.DrivingAlert
@@ -224,11 +225,30 @@ class WeatherLoadCoordinator @Inject constructor(
                 emptyList()
             }
 
+            val activityWindows = if (settings.isCardEnabled(CardType.ACTIVITY_INDEX)) {
+                // Only the one AQI reading is available, so it stands for every
+                // hour rather than being left out: an hourly series would be a
+                // separate request, and an absent factor lowers confidence.
+                val aqi = stateSnapshot.airQuality?.usAqi
+                ActivityWindowEvaluator.evaluate(
+                    hourly = data.hourly,
+                    thresholds = stateSnapshot.activityThresholds,
+                    aqiByHour = if (aqi == null) {
+                        emptyMap()
+                    } else {
+                        data.hourly.associate { it.time to aqi }
+                    },
+                )
+            } else {
+                emptyList()
+            }
+
             DerivedWeatherState(
                 weatherSummary = templateSummary,
                 outdoorScore = outdoorBreakdown,
                 drivingAlerts = drivingAlerts.toImmutableList(),
                 healthAlerts = healthAlerts.toImmutableList(),
+                activityWindows = activityWindows.toImmutableList(),
                 clothingSuggestions = ClothingSuggestionEvaluator.evaluate(data.current).toImmutableList(),
                 petSafetyAlerts = PetSafetyEvaluator.evaluate(data.current).toImmutableList(),
                 goldenHourTimes = WeatherFormatter.goldenHourTimes(
@@ -252,6 +272,7 @@ class WeatherLoadCoordinator @Inject constructor(
                 petSafetyAlerts = derived.petSafetyAlerts,
                 goldenHourTimes = derived.goldenHourTimes,
                 activityIndices = derived.activityIndices,
+                activityWindows = derived.activityWindows,
             )
         }
 
@@ -1074,6 +1095,7 @@ private data class DerivedWeatherState(
     val petSafetyAlerts: ImmutableList<PetSafetyAlert>,
     val goldenHourTimes: Pair<String, String>?,
     val activityIndices: ImmutableList<com.sysadmindoc.nimbus.util.ActivityIndex>,
+    val activityWindows: ImmutableList<com.sysadmindoc.nimbus.util.ActivityWindow>,
 )
 
 private fun NimbusSettings.isCardEnabled(cardType: CardType): Boolean =

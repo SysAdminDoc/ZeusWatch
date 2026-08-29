@@ -1632,4 +1632,24 @@
     <string name="delivery_failure_no_receiver">لا مستقبل</string>
     <string name="delivery_failure_battery_restricted">مقيد بموفر البطارية</string>
     <string name="delivery_failure_unknown">غير معروف</string>
+    <string name="activity_window_range">الأفضل من %1$s إلى %2$s</string>
+    <string name="activity_window_none">لا يوجد وقت مناسب خلال الـ 24 ساعة القادمة</string>
+    <string name="activity_window_limited_by">يحد منه %1$s</string>
+    <string name="activity_window_low_confidence">بناء على بيانات جزئية</string>
+    <string name="activity_factor_temperature">درجة الحرارة</string>
+    <string name="activity_factor_rain">المطر</string>
+    <string name="activity_factor_wind">الرياح</string>
+    <string name="activity_factor_uv">الأشعة فوق البنفسجية</string>
+    <string name="activity_factor_humidity">الرطوبة</string>
+    <string name="activity_factor_cloud">الغيوم</string>
+    <string name="activity_factor_air_quality">جودة الهواء</string>
+    <string name="settings_activity_thresholds_title">راحة الأنشطة</string>
+    <string name="settings_activity_thresholds_desc">ما يُعد وقتا مناسبا للخروج. يستخدم في سطر أفضل وقت في بطاقة الأنشطة.</string>
+    <string name="settings_activity_thresholds_reset">إعادة الضبط الافتراضي</string>
+    <string name="settings_activity_min_temp">مريح من</string>
+    <string name="settings_activity_max_temp">مريح حتى</string>
+    <string name="settings_activity_max_precip">احتمال المطر حتى %1$d%%</string>
+    <string name="settings_activity_max_wind">الرياح حتى</string>
+    <string name="settings_activity_max_uv">الأشعة فوق البنفسجية حتى %1$s</string>
+    <string name="settings_activity_max_aqi">مؤشر جودة الهواء حتى %1$d</string>
 </resources>

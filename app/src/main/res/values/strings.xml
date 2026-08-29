@@ -1674,4 +1674,24 @@
     <string name="delivery_failure_no_receiver">nothing listening</string>
     <string name="delivery_failure_battery_restricted">restricted by battery saver</string>
     <string name="delivery_failure_unknown">unknown</string>
+    <string name="activity_window_range">Best %1$s to %2$s</string>
+    <string name="activity_window_none">No good window in the next 24 hours</string>
+    <string name="activity_window_limited_by">Held back by %1$s</string>
+    <string name="activity_window_low_confidence">Based on partial data</string>
+    <string name="activity_factor_temperature">temperature</string>
+    <string name="activity_factor_rain">rain</string>
+    <string name="activity_factor_wind">wind</string>
+    <string name="activity_factor_uv">UV</string>
+    <string name="activity_factor_humidity">humidity</string>
+    <string name="activity_factor_cloud">cloud cover</string>
+    <string name="activity_factor_air_quality">air quality</string>
+    <string name="settings_activity_thresholds_title">Activity comfort</string>
+    <string name="settings_activity_thresholds_desc">What counts as a good time to go out. Used for the best-window line on the Activity card.</string>
+    <string name="settings_activity_thresholds_reset">Reset to defaults</string>
+    <string name="settings_activity_min_temp">Comfortable from</string>
+    <string name="settings_activity_max_temp">Comfortable up to</string>
+    <string name="settings_activity_max_precip">Rain chance up to %1$d%%</string>
+    <string name="settings_activity_max_wind">Wind up to</string>
+    <string name="settings_activity_max_uv">UV up to %1$s</string>
+    <string name="settings_activity_max_aqi">Air quality index up to %1$d</string>
 </resources>
