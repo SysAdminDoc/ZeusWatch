@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.ui.theme
 
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 // Precision atmospheric palette
 val NimbusNavyDark = Color(0xFF01070D)
@@ -30,6 +31,16 @@ val NimbusHeroGlowSoft = Color(0x1F245B88)
 
 // Text
 val NimbusTextPrimary = Color(0xFFF4F7FB)
+
+/**
+ * Ink for text sitting on one of the bright accent fills.
+ *
+ * Filled buttons took the accent as their container and NimbusTextPrimary as
+ * their label, which is near-white on near-white: Retry read at 1.61:1 on the
+ * amber fill and the location actions at 2.32:1 on the blue. Against those two
+ * fills this reaches 10.1:1 and 7.0:1.
+ */
+val NimbusInkOnAccent = Color(0xFF0A1A2F)
 val NimbusTextSecondary = Color(0xFFB7C3D4)
 val NimbusTextTertiary = Color(0xFF8798AD)
 
@@ -90,3 +101,22 @@ fun skyGradient(isDay: Boolean, weatherCode: Int): Brush {
     }
     return Brush.verticalGradient(colors)
 }
+
+/**
+ * Readable ink for text drawn on [container].
+ *
+ * Filled controls take a caller-chosen accent as their fill, and hardcoding a
+ * near-white label put "Retry" at 1.61:1 on the amber fill. Choosing by the
+ * fill's own luminance keeps every accent readable, including ones added later.
+ */
+fun inkOn(container: Color): Color =
+    if (container.luminance() > LIGHT_INK_CROSSOVER) NimbusInkOnAccent else NimbusTextPrimary
+
+/**
+ * Relative luminance at which dark ink overtakes light ink on the same fill.
+ *
+ * 0.4 was the first guess and it was wrong for the blue accent, which sits at
+ * 0.357: bright enough that near-white on it reads 2.32:1, dark enough to fall
+ * under the threshold and keep the near-white.
+ */
+private const val LIGHT_INK_CROSSOVER = 0.179f

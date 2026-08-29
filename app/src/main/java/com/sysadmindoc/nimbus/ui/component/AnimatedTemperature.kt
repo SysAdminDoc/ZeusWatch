@@ -8,7 +8,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
 import kotlin.math.roundToInt
@@ -23,6 +25,10 @@ fun AnimatedTemperature(
     temperatureCelsius: Double,
     settings: NimbusSettings,
     modifier: Modifier = Modifier,
+    // Every sibling in the header sets this explicitly. Leaving it to
+    // LocalContentColor rendered the largest element on the screen in black on
+    // the dark background, at 1.9:1 against it.
+    color: Color = NimbusTextPrimary,
 ) {
     val reducedMotion = isReducedMotionEnabled()
 
@@ -30,6 +36,7 @@ fun AnimatedTemperature(
         Text(
             text = WeatherFormatter.formatTemperature(temperatureCelsius, settings),
             style = MaterialTheme.typography.displayLarge,
+            color = color,
             modifier = modifier,
         )
         return
@@ -55,6 +62,7 @@ fun AnimatedTemperature(
         // which the reduced-motion path above renders.
         text = "$displayValue°",
         style = MaterialTheme.typography.displayLarge,
+        color = color,
         modifier = modifier,
     )
 }
