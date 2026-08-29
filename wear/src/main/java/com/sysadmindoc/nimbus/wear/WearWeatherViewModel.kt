@@ -11,6 +11,7 @@ import com.sysadmindoc.nimbus.wear.data.WearDailyEntry
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
 import com.sysadmindoc.nimbus.wear.data.WearUnitFormatter
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
+import com.sysadmindoc.nimbus.wear.data.WearWeatherResult
 import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,14 +40,18 @@ class WearWeatherViewModel @Inject constructor(
 
     fun loadWeather() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-            val loc = locationProvider.getLocation()
-            repository.getCurrentWeather(
-                lat = loc.lat,
-                lon = loc.lon,
-                locationName = loc.name,
-            ).fold(
-                onSuccess = { data ->
+            _uiState.update { it.copy(isLoading = true, error = null, noLocation = false) }
+            when (val result = repository.loadWeather { locationProvider.getLocation() }) {
+                is WearWeatherResult.NoLocation -> {
+                    Log.d(TAG, "No location available for the watch")
+                    _uiState.update { it.copy(isLoading = false, noLocation = true) }
+                }
+                is WearWeatherResult.Failed -> {
+                    Log.w(TAG, "Failed to load wear weather", result.error)
+                    _uiState.update { it.copy(isLoading = false, error = WEATHER_LOAD_FAILED) }
+                }
+                is WearWeatherResult.Available -> {
+                    val data = result.data
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -73,14 +78,8 @@ class WearWeatherViewModel @Inject constructor(
                             windUnit = data.windUnit,
                         )
                     }
-                },
-                onFailure = { e ->
-                    Log.w(TAG, "Failed to load wear weather", e)
-                    _uiState.update {
-                        it.copy(isLoading = false, error = WEATHER_LOAD_FAILED)
-                    }
-                },
-            )
+                }
+            }
         }
     }
 
@@ -96,6 +95,8 @@ class WearWeatherViewModel @Inject constructor(
 data class WearUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
+    /** No permission, no cached fix and no phone sync — show the no-location card. */
+    val noLocation: Boolean = false,
     val temperature: Int = 0,
     val condition: String = "",
     val high: Int = 0,

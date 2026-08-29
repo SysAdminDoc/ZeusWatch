@@ -6,14 +6,13 @@ import com.sysadmindoc.nimbus.wear.data.DataSource
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
 import com.sysadmindoc.nimbus.wear.data.WearWeatherData
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
-import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
+import com.sysadmindoc.nimbus.wear.data.WearWeatherResult
+import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,51 +25,53 @@ import org.robolectric.annotation.Config
 class WeatherTileServiceTest {
 
     @Test
-    fun `loadTileData returns fresh synced data without repository fallback`() = runTest {
-        val syncedStore = mockk<SyncedWeatherStore>()
-        every { syncedStore.getFreshData() } returns WearWeatherData(
-            temperature = 72,
-            condition = "Clear Sky",
-            high = 80,
-            low = 62,
-            locationName = "Seattle",
-            humidity = 45,
-            windSpeed = 4,
-            uvIndex = 6,
-            precipChance = 5,
-            isDay = true,
-            weatherCode = 0,
+    fun `loadTileData passes the location resolver through to the repository`() = runTest {
+        val expected = WearWeatherResult.Available(
+            WearWeatherData(
+                temperature = 72,
+                condition = "Clear Sky",
+                high = 80,
+                low = 62,
+                locationName = "Seattle",
+                dataSource = DataSource.PHONE_SYNC,
+                syncedAtMs = 1_720_000_000_000L,
+            ),
         )
-        every { syncedStore.lastSyncTimestamp() } returns 1_720_000_000_000L
-        val repository = mockk<WearWeatherRepository>(relaxed = true)
-        val locationProvider = mockk<WearLocationProvider>(relaxed = true)
+        val resolvers = mutableListOf<suspend () -> WearLocationProvider.LocationResult?>()
+        val repository = mockk<WearWeatherRepository>()
+        coEvery { repository.loadWeather(capture(resolvers)) } returns expected
+        val locationProvider = mockk<WearLocationProvider>()
+        coEvery { locationProvider.getLocation() } returns
+            WearLocationProvider.LocationResult(47.61, -122.33, "Seattle")
         val service = Robolectric.buildService(WeatherTileService::class.java).get()
         service.repository = repository
         service.locationProvider = locationProvider
-        service.syncedStore = syncedStore
 
-        val data = service.loadTileData()
+        val result = service.loadTileData()
 
-        assertEquals(72, data!!.temperature)
-        assertEquals("Seattle", data.locationName)
-        // Synced data must carry source + sync age so the tile's freshness
-        // label renders on the dominant phone-sync path, not just API loads.
-        assertEquals(DataSource.PHONE_SYNC, data.dataSource)
-        assertEquals(1_720_000_000_000L, data.syncedAtMs)
+        assertEquals(expected, result)
+        // The repository decides whether a location fix is worth its battery
+        // cost; the tile must not resolve one up front.
         coVerify(exactly = 0) { locationProvider.getLocation() }
-        coVerify(exactly = 0) { repository.getCurrentWeather(any(), any(), any()) }
+        assertEquals(
+            WearLocationProvider.LocationResult(47.61, -122.33, "Seattle"),
+            resolvers.single().invoke(),
+        )
+        coVerify(exactly = 1) { locationProvider.getLocation() }
     }
 
     @Test
-    fun `tile data load degrades to no data on non-cancellation failure`() = runTest {
-        val syncedStore = mockk<SyncedWeatherStore>()
-        every { syncedStore.getFreshData() } throws IllegalStateException("store unavailable")
+    fun `tile data load degrades to a failure result on non-cancellation errors`() = runTest {
+        val repository = mockk<WearWeatherRepository>()
+        coEvery { repository.loadWeather(any()) } throws IllegalStateException("store unavailable")
         val service = Robolectric.buildService(WeatherTileService::class.java).get()
-        service.repository = mockk(relaxed = true)
+        service.repository = repository
         service.locationProvider = mockk(relaxed = true)
-        service.syncedStore = syncedStore
 
-        assertNull(service.loadTileDataForTile())
+        val result = service.loadTileDataForTile()
+
+        assertTrue(result is WearWeatherResult.Failed)
+        assertEquals("store unavailable", (result as WearWeatherResult.Failed).error.message)
     }
 
     @Test

@@ -19,9 +19,9 @@ class WearMainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         // Reload immediately on grant — the initial load already ran (and
-        // fell back to the cached/default location) before the user answered
-        // the prompt, so without this the new permission does nothing until
-        // a manual refresh.
+        // resolved to the cached fix or the no-location state) before the
+        // user answered the prompt, so without this the new permission does
+        // nothing until a manual refresh.
         if (granted) viewModel.loadWeather()
     }
 
@@ -30,7 +30,10 @@ class WearMainActivity : ComponentActivity() {
         requestLocationIfNeeded()
         setContent {
             MaterialTheme {
-                WearNavHost(viewModel = viewModel)
+                WearNavHost(
+                    viewModel = viewModel,
+                    onRequestLocation = ::requestLocation,
+                )
             }
         }
     }
@@ -38,7 +41,16 @@ class WearMainActivity : ComponentActivity() {
     private fun requestLocationIfNeeded() {
         val granted = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
         if (granted != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            locationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+            requestLocation()
         }
+    }
+
+    /**
+     * Re-prompt from the no-location card. A permanently denied permission
+     * returns without showing a dialog, and the result callback refreshes
+     * either way in case the user granted it from system settings.
+     */
+    private fun requestLocation() {
+        locationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
     }
 }

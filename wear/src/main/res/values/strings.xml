@@ -76,4 +76,10 @@
     <string name="wear_wmo_thunderstorm">Thunderstorm</string>
     <string name="wear_wmo_thunderstorm_hail">Thunderstorm + Hail</string>
     <string name="wear_wmo_unknown">Unknown</string>
+    <string name="wear_current_location">Current Location</string>
+    <string name="wear_saved_location">Saved Location</string>
+    <string name="wear_no_location">Location unknown</string>
+    <string name="wear_no_location_message">Allow location on the watch, or open ZeusWatch on your phone to sync weather here.</string>
+    <string name="wear_no_location_action">Allow location</string>
+    <string name="wear_tile_no_location">Open on phone</string>
 </resources>

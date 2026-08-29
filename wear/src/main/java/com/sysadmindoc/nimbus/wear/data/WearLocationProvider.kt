@@ -8,6 +8,7 @@ import android.location.Geocoder
 import android.location.Location
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.sysadmindoc.nimbus.wear.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CancellationException
@@ -26,13 +27,22 @@ class WearLocationProvider @Inject constructor(
 ) {
     private val prefs = context.getSharedPreferences("wear_location", Context.MODE_PRIVATE)
 
-    suspend fun getLocation(): LocationResult {
+    /**
+     * Resolves the watch's location, or `null` when nothing is known.
+     *
+     * A null result means "we have no idea where the user is" — callers must
+     * render a no-location state rather than fetching a forecast. The watch
+     * used to fall back to the geographic center of the contiguous US, which
+     * rendered Kansas weather as if it were the user's own.
+     */
+    suspend fun getLocation(): LocationResult? {
         if (hasPermission()) {
             try {
                 val loc = fetchLastLocation()
                 if (loc != null) {
                     cache(loc.latitude, loc.longitude)
-                    val name = reverseGeocode(loc.latitude, loc.longitude) ?: "Current Location"
+                    val name = reverseGeocode(loc.latitude, loc.longitude)
+                        ?: context.getString(R.string.wear_current_location)
                     prefs.edit().putString("name", name).apply()
                     return LocationResult(loc.latitude, loc.longitude, name)
                 }
@@ -85,32 +95,31 @@ class WearLocationProvider @Inject constructor(
             .apply()
     }
 
-    private fun cached(): LocationResult {
+    private fun cached(): LocationResult? {
         val hasBits = prefs.contains("lat_bits") && prefs.contains("lon_bits")
-        val lat = if (hasBits) {
-            java.lang.Double.longBitsToDouble(prefs.getLong("lat_bits", 0L))
-        } else {
-            // Legacy Float path — preserved so existing installs don't lose their
-            // cached location when they first run the updated build.
-            prefs.getFloat("lat", DEFAULT_LAT.toFloat()).toDouble()
+        if (hasBits) {
+            return LocationResult(
+                lat = java.lang.Double.longBitsToDouble(prefs.getLong("lat_bits", 0L)),
+                lon = java.lang.Double.longBitsToDouble(prefs.getLong("lon_bits", 0L)),
+                name = savedName(),
+            )
         }
-        val lon = if (hasBits) {
-            java.lang.Double.longBitsToDouble(prefs.getLong("lon_bits", 0L))
-        } else {
-            prefs.getFloat("lon", DEFAULT_LON.toFloat()).toDouble()
+        // Legacy Float path — preserved so existing installs don't lose their
+        // cached location when they first run the updated build.
+        if (prefs.contains("lat") && prefs.contains("lon")) {
+            return LocationResult(
+                lat = prefs.getFloat("lat", 0f).toDouble(),
+                lon = prefs.getFloat("lon", 0f).toDouble(),
+                name = savedName(),
+            )
         }
-        val everSaved = hasBits || prefs.contains("lat")
-        val name = prefs.getString("name", null)
-            ?: if (!everSaved) "Central US" else "Saved Location"
-        return LocationResult(lat, lon, name)
+        return null
     }
+
+    private fun savedName(): String =
+        prefs.getString("name", null) ?: context.getString(R.string.wear_saved_location)
 
     data class LocationResult(val lat: Double, val lon: Double, val name: String)
-
-    companion object {
-        const val DEFAULT_LAT = 39.8
-        const val DEFAULT_LON = -98.5
-    }
 }
 
 private fun CancellableContinuation<Location?>.resumeLocationIfActive(location: Location?) {

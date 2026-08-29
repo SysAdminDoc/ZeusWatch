@@ -29,6 +29,30 @@ class WearWeatherRepository @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true }
 
     /**
+     * Resolves weather, preferring phone-synced data when fresh.
+     *
+     * [resolveLocation] is only invoked when there is no fresh synced payload,
+     * so a phone-fed watch never pays for a location fix. When it yields null
+     * this returns [WearWeatherResult.NoLocation] without touching the
+     * network — the watch has no business fetching a forecast for coordinates
+     * it invented.
+     */
+    suspend fun loadWeather(
+        resolveLocation: suspend () -> WearLocationProvider.LocationResult?,
+    ): WearWeatherResult {
+        freshSyncedData()?.let { return WearWeatherResult.Available(it) }
+        val location = resolveLocation()
+        if (location == null) {
+            Log.d(TAG, "No synced data and no known location")
+            return WearWeatherResult.NoLocation
+        }
+        return fetchFromApi(location.lat, location.lon, location.name).fold(
+            onSuccess = { WearWeatherResult.Available(it) },
+            onFailure = { WearWeatherResult.Failed(it) },
+        )
+    }
+
+    /**
      * Returns weather data, preferring phone-synced data when fresh.
      * Falls back to a direct Open-Meteo API call when the phone hasn't
      * synced recently or no paired device is connected.
@@ -37,16 +61,24 @@ class WearWeatherRepository @Inject constructor(
         lat: Double,
         lon: Double,
         locationName: String = "Unknown",
+    ): Result<WearWeatherData> {
+        freshSyncedData()?.let { return Result.success(it) }
+        return fetchFromApi(lat, lon, locationName)
+    }
+
+    /** Phone-synced payload when it is still fresh (< 30 min), else null. */
+    private fun freshSyncedData(): WearWeatherData? {
+        val synced = syncedStore.getFreshData() ?: return null
+        val lastSync = syncedStore.lastSyncTimestamp()
+        Log.d(TAG, "Using phone-synced weather data (age ${(System.currentTimeMillis() - lastSync) / 1000}s)")
+        return synced.copy(dataSource = DataSource.PHONE_SYNC, syncedAtMs = lastSync)
+    }
+
+    private suspend fun fetchFromApi(
+        lat: Double,
+        lon: Double,
+        locationName: String,
     ): Result<WearWeatherData> = withContext(Dispatchers.IO) {
-        // Prefer phone-synced data if fresh (< 30 min)
-        val synced = syncedStore.getFreshData()
-        if (synced != null) {
-            val lastSync = syncedStore.lastSyncTimestamp()
-            Log.d(TAG, "Using phone-synced weather data (age ${(System.currentTimeMillis() - lastSync) / 1000}s)")
-            return@withContext Result.success(
-                synced.copy(dataSource = DataSource.PHONE_SYNC, syncedAtMs = lastSync),
-            )
-        }
         Log.d(TAG, "No fresh synced data, fetching from API")
         try {
             // Always request metric — values stay metric end-to-end and the
@@ -171,6 +203,18 @@ class WearWeatherRepository @Inject constructor(
             else -> "\uD83C\uDF21\uFE0F"
         }
     }
+}
+
+/** Outcome of a watch weather load. */
+sealed interface WearWeatherResult {
+    /** A forecast is available, from phone sync or a direct watch fetch. */
+    data class Available(val data: WearWeatherData) : WearWeatherResult
+
+    /** No permission, no cached fix and no phone sync — nothing to show. */
+    data object NoLocation : WearWeatherResult
+
+    /** A location was known but the fetch failed. */
+    data class Failed(val error: Throwable) : WearWeatherResult
 }
 
 enum class DataSource {
