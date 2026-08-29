@@ -1,5 +1,7 @@
 package com.sysadmindoc.nimbus.wear.tile
 
+import androidx.wear.protolayout.expression.DynamicBuilders.DynamicColor
+import androidx.wear.protolayout.types.LayoutColor
 import androidx.wear.tiles.Material3TileService
 import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.data.DataSource
@@ -72,6 +74,26 @@ class WeatherTileServiceTest {
 
         assertTrue(result is WearWeatherResult.Failed)
         assertEquals("store unavailable", (result as WearWeatherResult.Failed).error.message)
+    }
+
+    @Test
+    fun `tileColor falls back to the hard-coded argb when the theme has no color`() {
+        val service = Robolectric.buildService(WeatherTileService::class.java).get()
+
+        assertEquals(0xFFF0F0F5.toInt(), service.tileColor(null, 0xFFF0F0F5.toInt()).argb)
+    }
+
+    @Test
+    fun `tileColor carries the material color's static and dynamic parts`() {
+        val service = Robolectric.buildService(WeatherTileService::class.java).get()
+        val dynamic = DynamicColor.constant(0xFF00E5FFu.toInt())
+
+        val color = service.tileColor(LayoutColor(0xFF102030u.toInt(), dynamic), 0xFFFFFFFF.toInt())
+
+        // The theme color must survive; reading LayoutColor.prop directly is
+        // a RestrictedApi that fails wear lint, so it is rebuilt by hand.
+        assertEquals(0xFF102030u.toInt(), color.argb)
+        assertNotNull(color.dynamicValue)
     }
 
     @Test

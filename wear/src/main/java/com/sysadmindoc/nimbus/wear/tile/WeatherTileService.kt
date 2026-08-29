@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.wear.tile
 
 import androidx.wear.protolayout.ActionBuilders
+import androidx.wear.protolayout.ColorBuilders.ColorProp
 import androidx.wear.protolayout.ColorBuilders.argb
 import androidx.wear.protolayout.DimensionBuilders.dp
 import androidx.wear.protolayout.DimensionBuilders.sp
@@ -249,8 +250,19 @@ class WeatherTileService : Material3TileService(
             .build()
     }
 
-    private fun tileColor(materialColor: LayoutColor?, fallbackArgb: Int) =
-        materialColor?.prop ?: argb(fallbackArgb)
+    /**
+     * Rebuilds a [ColorProp] from the public parts of [materialColor].
+     *
+     * `LayoutColor.prop` is `@RestrictedApi` to the protolayout library group,
+     * so reading it fails `:wear:lintDebug`. `staticArgb` and `dynamicArgb`
+     * carry the same information and are public.
+     */
+    internal fun tileColor(materialColor: LayoutColor?, fallbackArgb: Int): ColorProp {
+        if (materialColor == null) return argb(fallbackArgb)
+        return ColorProp.Builder(materialColor.staticArgb)
+            .apply { materialColor.dynamicArgb?.let(::setDynamicValue) }
+            .build()
+    }
 }
 
 internal object WeatherTileLottieResources {
