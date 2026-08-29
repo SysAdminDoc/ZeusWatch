@@ -1,1 +1,1 @@
-Open-source weather app with 28 cards, native Wear OS, multi-source, no API keys.
+Open-source weather app: 37 cards, Wear OS, multi-source, no API keys needed.

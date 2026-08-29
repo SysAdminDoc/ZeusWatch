@@ -52,12 +52,40 @@ tasks.register("accessibilityGate") {
     dependsOn(":app:testStandardDebugUnitTest", ":app:connectedStandardDebugAndroidTest")
 }
 
+val docsGate = tasks.register<Exec>("docsGate") {
+    group = "verification"
+    description = "Fails when documentation, fastlane metadata, or version headers drift from the code."
+    // Declared inputs so the task is not permanently UP-TO-DATE: the script
+    // reads sources and metadata that Gradle otherwise knows nothing about.
+    inputs.file("$rootDir/tools/check_docs_consistency.py")
+    inputs.files(
+        "$rootDir/README.md",
+        "$rootDir/ROADMAP.md",
+        "$rootDir/app/build.gradle.kts",
+        "$rootDir/wear/build.gradle.kts",
+        "$rootDir/gradle/libs.versions.toml",
+        "$rootDir/app/src/main/AndroidManifest.xml",
+    )
+    inputs.dir("$rootDir/fastlane/metadata/android/en-US")
+    inputs.dir("$rootDir/app/src/main/java/com/sysadmindoc/nimbus/data/repository")
+    outputs.upToDateWhen { false }
+    // py launcher on Windows, python3 elsewhere.
+    val launcher = if (System.getProperty("os.name").startsWith("Windows")) {
+        listOf("py", "-3.13")
+    } else {
+        listOf("python3")
+    }
+    commandLine(launcher + listOf("tools/check_docs_consistency.py"))
+    workingDir = rootDir
+}
+
 tasks.register("localQualityGate") {
     group = "verification"
-    description = "Runs every JVM-verifiable check: detekt, phone + wear lint, phone + wear unit tests."
+    description = "Runs every JVM-verifiable check: docs, detekt, phone + wear lint, phone + wear unit tests."
     // :wear:lintDebug is here because it was silently red for releases — no
     // aggregate task ran it, so a RestrictedApi error sat unnoticed.
     dependsOn(
+        docsGate,
         ":detekt",
         ":app:lintStandardDebug",
         ":wear:lintDebug",
