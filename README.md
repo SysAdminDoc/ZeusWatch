@@ -162,7 +162,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | **Route Weather Overlay** | Radar includes a foreground route-weather estimator for straight-line corridors or imported GPX geometry, with sampled weather and risk timing |
 | **Map Layer Selector** | Overlay layers: Radar, Lightning, Satellite, Clouds |
 | **Active Warning Polygons** | Native radar renders NWS warning polygons with severity colors and tappable alert details |
-| **Lightning Strike Overlay** | Real-time global lightning data via Blitzortung WebSocket with capped GeoJSON rendering and reconnect backoff |
+| **Lightning Strike Overlay** | Real-time global lightning data via Blitzortung WebSocket with capped GeoJSON rendering and reconnect backoff. Shown for information, not as a warning system |
 | **Community Weather Reports** | Firebase Firestore-backed crowd-sourced condition reporting with rate limiting |
 
 ### Multi-Source Forecast System
@@ -363,7 +363,7 @@ All core APIs are free with no keys required:
 | [FMI Open Data](https://en.ilmatieteenlaitos.fi/open-data) | Nordic/Baltic HARMONIE WFS forecast | No key required |
 | [MET Norway](https://api.met.no/weatherapi/locationforecast/2.0/documentation) | Forecast fallback | Fair use |
 | [Bright Sky](https://brightsky.dev/) | Germany forecast fallback | Fair use |
-| [Blitzortung](https://www.blitzortung.org/) | Real-time lightning strike data (WebSocket) | Fair use |
+| [Blitzortung](https://www.blitzortung.org/) | Real-time lightning strike data (WebSocket). Informational only, not for protection of life or property; strikes may be delayed or missing | Fair use, private use only |
 | [Firebase Firestore](https://firebase.google.com/) | Community weather reports | Free tier |
 
 Optional fallback sources (require API keys configured in Settings):

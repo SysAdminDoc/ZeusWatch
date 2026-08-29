@@ -535,6 +535,7 @@ private fun BoxScope.RadarNativeContent(
             provider = state.settings.radarProvider,
             source = state.radarState.frameSet?.source,
             isCached = state.radarState.frameSet?.isFromCache == true,
+            showsLightning = showLightning,
             modifier = Modifier.align(Alignment.BottomStart),
         )
     }
@@ -545,6 +546,7 @@ private fun RadarAttribution(
     provider: RadarProvider,
     source: RadarTileSource?,
     isCached: Boolean,
+    showsLightning: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val attributionRes = when {
@@ -557,10 +559,17 @@ private fun RadarAttribution(
         isCached -> R.string.radar_attribution_rainviewer_limited_cached
         else -> R.string.radar_attribution_rainviewer_limited
     }
+    // Blitzortung's terms are explicit that the network is for private use and
+    // not a warning system, so the overlay says so wherever strikes are drawn.
+    val attribution = if (showsLightning) {
+        stringResource(attributionRes) + " " + stringResource(R.string.radar_attribution_lightning)
+    } else {
+        stringResource(attributionRes)
+    }
     // Scrim + larger/higher-contrast text: 9sp at 50% alpha directly over live
     // map tiles was illegible, including the cached-fallback status.
     Text(
-        text = stringResource(attributionRes),
+        text = attribution,
         color = NimbusTextPrimary.copy(alpha = 0.85f),
         fontSize = 10.sp,
         modifier = modifier

@@ -1645,4 +1645,6 @@
     <string name="licenses_section_providers">Weather data sources</string>
     <string name="licenses_section_dependencies">Libraries</string>
     <string name="licenses_open_link">Open project page</string>
+    <string name="radar_attribution_lightning">Lightning: Blitzortung.org contributors • informational only, not for protection of life or property • strikes may be delayed or missing</string>
+    <string name="pws_lightning_informational">(informational only)</string>
 </resources>

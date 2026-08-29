@@ -104,6 +104,31 @@ def check_root_documents():
     return issues
 
 
+def check_lightning_disclaimer():
+    """Blitzortung's terms are explicit that the network is not a warning
+    system. The wording is a licence obligation, so it is checked rather than
+    trusted to survive a translation pass or a string cleanup."""
+    issues = []
+    required = ("informational", "not for protection of life or property")
+    for label, path in (
+        ("values", REPO_ROOT / "app/src/main/res/values/strings.xml"),
+    ):
+        value = parse_string_value(path, "radar_attribution_lightning")
+        if value is None:
+            issues.append(f"{label}/strings.xml: missing radar_attribution_lightning")
+            continue
+        lowered = value.lower()
+        for phrase in required:
+            if phrase not in lowered:
+                issues.append(
+                    f"{label}/strings.xml: radar_attribution_lightning must say '{phrase}'"
+                )
+    readme = read_text(REPO_ROOT / "README.md") or ""
+    if "not for protection of life or property" not in readme:
+        issues.append("README.md: lightning source row must carry the informational-only qualifier")
+    return issues
+
+
 def check_fastlane_metadata():
     """F-Droid reads this metadata verbatim, so a stale card count ships as a
     user-visible lie and a missing changelog entry ships a silent release."""
@@ -774,6 +799,7 @@ def main():
     issues.extend(check_forbidden_files())
     issues.extend(check_root_documents())
     issues.extend(check_fastlane_metadata())
+    issues.extend(check_lightning_disclaimer())
     issues.extend(check_stale_references())
     issues.extend(check_readme_privacy())
     issues.extend(check_release_workflow_truth())

@@ -1603,4 +1603,6 @@
     <string name="licenses_section_providers">مصادر بيانات الطقس</string>
     <string name="licenses_section_dependencies">المكتبات</string>
     <string name="licenses_open_link">فتح صفحة المشروع</string>
+    <string name="radar_attribution_lightning">البرق: مساهمو Blitzortung.org • للاطلاع فقط، وليس لحماية الأرواح أو الممتلكات • قد تتأخر الصواعق أو لا تظهر</string>
+    <string name="pws_lightning_informational">(للاطلاع فقط)</string>
 </resources>
