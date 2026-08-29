@@ -39,6 +39,15 @@ data class PwCurrently(
     @SerialName("precipIntensity") val precipIntensity: Double = 0.0,
     @SerialName("precipProbability") val precipProbability: Double = 0.0,
     @SerialName("precipType") val precipType: String? = null,
+    // Air quality, present when the index is requested. The scale follows the
+    // requested unit system: US EPA AQI on "us", EU CAQI on "si".
+    @SerialName("airQualityIndex") val airQualityIndex: Double? = null,
+    @SerialName("pm25") val pm25: Double? = null,
+    @SerialName("pm10") val pm10: Double? = null,
+    @SerialName("ozoneConcentration") val ozoneConcentration: Double? = null,
+    @SerialName("no2Concentration") val nitrogenDioxide: Double? = null,
+    @SerialName("so2Concentration") val sulphurDioxide: Double? = null,
+    @SerialName("coConcentration") val carbonMonoxide: Double? = null,
 )
 
 @Serializable

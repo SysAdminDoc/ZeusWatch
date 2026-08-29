@@ -591,7 +591,7 @@ def provider_checks() -> list[ContractCheck]:
         ContractCheck(
             key="pirate-weather-forecast",
             name="Pirate Weather forecast",
-            url="https://api.pirateweather.net/forecast/{api_key}/40.7128,-74.0060?units=si&exclude=minutely",
+            url="https://api.pirateweather.net/forecast/{api_key}/40.7128,-74.0060?units=si&exclude=minutely,alerts",
             docs_url="https://docs.pirateweather.net/en/latest/API/",
             validator=validate_pirate_weather,
             providers=("PIRATE_WEATHER",),
@@ -601,7 +601,40 @@ def provider_checks() -> list[ContractCheck]:
             unavailable_policy="If PIRATE_WEATHER_API_KEY is unset, live validation is skipped but the key-required provider remains covered by this contract.",
             required_env_vars=("PIRATE_WEATHER_API_KEY",),
         ),
+        ContractCheck(
+            key="pirate-weather-air-quality",
+            name="Pirate Weather air quality",
+            url=(
+                "https://api.pirateweather.net/forecast/{api_key}/40.7128,-74.0060"
+                "?units=us&exclude=minutely,hourly,daily,alerts&include=airqualitydetails"
+            ),
+            docs_url="https://docs.pirateweather.net/en/latest/API/",
+            validator=validate_pirate_weather_air_quality,
+            providers=("PIRATE_WEATHER",),
+            data_types=("AIR_QUALITY",),
+            coverage=f"New York, US ({NYC_LATITUDE},{NYC_LONGITUDE})",
+            schema_assertion="currently block carries airQualityIndex on the US EPA scale",
+            unavailable_policy="If PIRATE_WEATHER_API_KEY is unset, live validation is skipped but the key-required provider remains covered by this contract.",
+            required_env_vars=("PIRATE_WEATHER_API_KEY",),
+        ),
     ]
+
+
+def validate_pirate_weather_air_quality(data: Any) -> ValidationResult:
+    """The index scale follows the requested units, so the request must stay on
+    `us` for the app's EPA-band AqiLevel tiers to mean anything."""
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    currently = data.get("currently")
+    if not isinstance(currently, dict):
+        return ValidationResult(False, "currently block missing")
+    if not isinstance(currently.get("airQualityIndex"), (int, float)):
+        return ValidationResult(False, "currently.airQualityIndex missing")
+    flags = data.get("flags")
+    units = flags.get("units") if isinstance(flags, dict) else None
+    if units is not None and units != "us":
+        return ValidationResult(False, f"expected us units for EPA AQI, got {units}")
+    return ValidationResult(True, "current US EPA air quality index present")
 
 
 def validate_wmo_members(data: Any) -> ValidationResult:

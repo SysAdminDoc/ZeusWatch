@@ -33,6 +33,7 @@ class WeatherSourceManagerTest {
     private lateinit var owmForecastAdapter: OwmForecastAdapter
     private lateinit var owmAlertAdapter: OwmAlertAdapter
     private lateinit var owmAqiAdapter: OwmAqiAdapter
+    private lateinit var pirateWeatherAqiAdapter: PirateWeatherAqiAdapter
     private lateinit var pirateWeatherAdapter: PirateWeatherForecastAdapter
     private lateinit var brightSkyForecastAdapter: BrightSkyForecastAdapter
     private lateinit var brightSkyAlertAdapter: BrightSkyAlertAdapter
@@ -106,6 +107,7 @@ class WeatherSourceManagerTest {
         owmAlertAdapter = mockk()
         owmAqiAdapter = mockk()
         pirateWeatherAdapter = mockk()
+        pirateWeatherAqiAdapter = mockk()
         brightSkyForecastAdapter = mockk()
         brightSkyAlertAdapter = mockk()
         metNorwayForecastAdapter = mockk()
@@ -161,6 +163,7 @@ class WeatherSourceManagerTest {
         ),
         WeatherSourceProvider.PIRATE_WEATHER to WeatherSourceAdapterModule.providePirateWeatherAdapter(
             pirateWeatherAdapter,
+            pirateWeatherAqiAdapter,
         ),
         WeatherSourceProvider.BRIGHT_SKY to WeatherSourceAdapterModule.provideBrightSkyAdapter(
             brightSkyForecastAdapter,
