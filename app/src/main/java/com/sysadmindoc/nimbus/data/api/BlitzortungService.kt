@@ -49,16 +49,23 @@ class BlitzortungService @Inject constructor(
     private val _recentStrikes = MutableStateFlow<List<LightningStrike>>(emptyList())
     val recentStrikes: StateFlow<List<LightningStrike>> = _recentStrikes.asStateFlow()
 
-    @Volatile private var webSocket: WebSocket? = null
-    @Volatile private var isConnected = false
-    @Volatile private var shouldReconnect = false
-    @Volatile private var reconnectAttempts = 0
-    @Volatile private var reconnectJob: Job? = null
-    @Volatile private var activeClients = 0
+    // Every one of these is read and written only inside a @Synchronized
+    // method, so the monitor already provides the visibility @Volatile would.
+    // Carrying both said "volatile is enough here", which it is not: the
+    // reconnect-attempt increment and the client refcount are read-modify-write
+    // and would race the moment someone touched them off the lock.
+    private var webSocket: WebSocket? = null
+    private var isConnected = false
+    private var shouldReconnect = false
+    private var reconnectAttempts = 0
+    private var reconnectJob: Job? = null
+    private var activeClients = 0
 
     private val strikeBuffer = mutableListOf<LightningStrike>()
     private val bufferLock = Any()
-    @Volatile private var lastEmitTime = 0L
+
+    // Guarded by bufferLock, the only place it is touched.
+    private var lastEmitTime = 0L
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val webSocketClient: OkHttpClient = okHttpClient.newBuilder()
         .retryOnConnectionFailure(true)
@@ -100,10 +107,7 @@ class BlitzortungService @Inject constructor(
         webSocket = webSocketClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 Log.d(TAG, "Blitzortung WebSocket connected")
-                isConnected = true
-                reconnectAttempts = 0
-                reconnectJob?.cancel()
-                reconnectJob = null
+                onSocketOpened()
                 // Subscribe to global lightning data (area 11 = worldwide)
                 webSocket.send(SUBSCRIBE_MESSAGE)
             }
@@ -129,6 +133,23 @@ class BlitzortungService @Inject constructor(
                 onSocketTerminated(webSocket, reconnect = code != NORMAL_CLOSURE)
             }
         })
+    }
+
+    /**
+     * Marks the connection live and stands the reconnect machinery down.
+     *
+     * Synchronized because OkHttp delivers onOpen on its own reader thread:
+     * clearing the attempt counter and cancelling the pending reconnect are one
+     * decision, and a connect() or disconnect() interleaving between them would
+     * leave a cancelled job counted as pending or a live socket scheduled for
+     * replacement.
+     */
+    @Synchronized
+    private fun onSocketOpened() {
+        isConnected = true
+        reconnectAttempts = 0
+        reconnectJob?.cancel()
+        reconnectJob = null
     }
 
     /**
