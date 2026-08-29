@@ -103,6 +103,7 @@ import com.sysadmindoc.nimbus.util.summaryRes
 fun SettingsScreen(
     onBack: () -> Unit,
     onNavigateToCustomAlerts: () -> Unit = {},
+    onNavigateToLicenses: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -136,6 +137,7 @@ fun SettingsScreen(
         settings = settings,
         onBack = onBack,
         onNavigateToCustomAlerts = onNavigateToCustomAlerts,
+        onNavigateToLicenses = onNavigateToLicenses,
         notificationsPermissionGranted = notificationsPermissionGranted,
         availableIconPacks = availableIconPacks,
         providerHealth = providerHealth,

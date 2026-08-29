@@ -83,13 +83,32 @@ val docsGate = tasks.register<Exec>("docsGate") {
     workingDir = rootDir
 }
 
+val ossNoticesGate = tasks.register<Exec>("ossNoticesGate") {
+    group = "verification"
+    description = "Fails when the packaged open-source notices no longer match the version catalog."
+    inputs.file("$rootDir/tools/generate_oss_notices.py")
+    inputs.file("$rootDir/config/oss-licenses.json")
+    inputs.file("$rootDir/gradle/libs.versions.toml")
+    inputs.file("$rootDir/app/src/main/assets/oss_notices.json")
+    inputs.file("$rootDir/app/src/main/java/com/sysadmindoc/nimbus/data/repository/WeatherSource.kt")
+    outputs.upToDateWhen { false }
+    val launcher = if (System.getProperty("os.name").startsWith("Windows")) {
+        listOf("py", "-3.13")
+    } else {
+        listOf("python3")
+    }
+    commandLine(launcher + listOf("tools/generate_oss_notices.py", "--check"))
+    workingDir = rootDir
+}
+
 tasks.register("localQualityGate") {
     group = "verification"
-    description = "Runs every JVM-verifiable check: docs, detekt, phone + wear lint, phone + wear unit tests."
+    description = "Runs every JVM-verifiable check: docs, notices, detekt, phone + wear lint, phone + wear unit tests."
     // :wear:lintDebug is here because it was silently red for releases — no
     // aggregate task ran it, so a RestrictedApi error sat unnoticed.
     dependsOn(
         docsGate,
+        ossNoticesGate,
         ":detekt",
         ":app:lintStandardDebug",
         ":wear:lintDebug",

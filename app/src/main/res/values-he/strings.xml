@@ -1583,4 +1583,14 @@
     <string name="custom_alert_metric_pollen_mugwort_summary">שיא אבקת הלענה היום</string>
     <string name="weather_source_open_meteo_aifs">Open-Meteo + ECMWF AIFS (בינה מלאכותית)</string>
     <string name="weather_source_open_meteo_graphcast">Open-Meteo + GFS GraphCast (בינה מלאכותית)</string>
+    <string name="settings_licenses">הודעות קוד פתוח</string>
+    <string name="settings_licenses_desc">הספריות ומקורות נתוני מזג האוויר שהאפליקציה נשענת עליהם</string>
+    <string name="settings_licenses_cd">הודעות קוד פתוח. פותח את רשימת הרישיונות.</string>
+    <string name="licenses_title">הודעות קוד פתוח</string>
+    <string name="licenses_subtitle">%1$d ספריות, %2$d מקורות נתונים</string>
+    <string name="licenses_search">חיפוש</string>
+    <string name="licenses_no_matches">אין תוצאות תואמות.</string>
+    <string name="licenses_section_providers">מקורות נתוני מזג אוויר</string>
+    <string name="licenses_section_dependencies">ספריות</string>
+    <string name="licenses_open_link">פתיחת דף הפרויקט</string>
 </resources>

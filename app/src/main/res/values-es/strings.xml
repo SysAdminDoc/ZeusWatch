@@ -1614,4 +1614,14 @@
     <string name="custom_alert_metric_pollen_mugwort_summary">Pico de polen de artemisa de hoy</string>
     <string name="weather_source_open_meteo_aifs">Open-Meteo + ECMWF AIFS (IA)</string>
     <string name="weather_source_open_meteo_graphcast">Open-Meteo + GFS GraphCast (IA)</string>
+    <string name="settings_licenses">Avisos de código abierto</string>
+    <string name="settings_licenses_desc">Bibliotecas y fuentes de datos meteorológicos en las que se apoya la app</string>
+    <string name="settings_licenses_cd">Avisos de código abierto. Abre la lista de licencias.</string>
+    <string name="licenses_title">Avisos de código abierto</string>
+    <string name="licenses_subtitle">%1$d bibliotecas, %2$d fuentes de datos</string>
+    <string name="licenses_search">Buscar</string>
+    <string name="licenses_no_matches">No hay coincidencias.</string>
+    <string name="licenses_section_providers">Fuentes de datos meteorológicos</string>
+    <string name="licenses_section_dependencies">Bibliotecas</string>
+    <string name="licenses_open_link">Abrir la página del proyecto</string>
 </resources>
