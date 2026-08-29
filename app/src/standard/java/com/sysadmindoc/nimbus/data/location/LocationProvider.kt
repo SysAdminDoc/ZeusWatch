@@ -105,9 +105,9 @@ class LocationProvider @Inject constructor(
                 .addOnSuccessListener { location -> cont.resume(location) }
                 .addOnFailureListener { cont.resume(null) }
         }
-    } catch (_: SecurityException) {
+    } catch (ignored: SecurityException) {
         null
-    } catch (_: Exception) {
+    } catch (ignored: Exception) {
         null
     }
 
@@ -120,7 +120,7 @@ class LocationProvider @Inject constructor(
             fusedClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cts.token)
                 .addOnSuccessListener { location -> cont.resume(location) }
                 .addOnFailureListener { cont.resume(null) }
-        } catch (_: SecurityException) {
+        } catch (ignored: SecurityException) {
             cont.resume(null)
         }
     }
@@ -137,7 +137,7 @@ class LocationProvider @Inject constructor(
         return providers.firstNotNullOfOrNull { provider ->
             try {
                 lm.getLastKnownLocation(provider)
-            } catch (_: Exception) {
+            } catch (ignored: Exception) {
                 null
             }
         }

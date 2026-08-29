@@ -386,7 +386,7 @@ private suspend fun reverseGeocode(
             addr?.countryName != null -> addr.countryName
             else -> String.format(Locale.US, "%.4f, %.4f", lat, lon)
         }
-    } catch (_: Exception) {
+    } catch (ignored: Exception) {
         String.format(Locale.US, "%.4f, %.4f", lat, lon)
     }
 }

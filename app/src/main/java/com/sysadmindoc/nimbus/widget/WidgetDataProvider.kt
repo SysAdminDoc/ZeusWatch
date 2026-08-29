@@ -95,10 +95,10 @@ object WidgetDataProvider {
             humidity = prefs[KEY_HUMIDITY] ?: 0,
             windSpeed = prefs[KEY_WIND_SPEED] ?: 0.0,
             hourly = hourlyJson?.let {
-                try { json.decodeFromString(WidgetHourlyList.serializer(), it).items } catch (_: Exception) { emptyList() }
+                try { json.decodeFromString(WidgetHourlyList.serializer(), it).items } catch (ignored: Exception) { emptyList() }
             } ?: emptyList(),
             daily = dailyJson?.let {
-                try { json.decodeFromString(WidgetDailyList.serializer(), it).items } catch (_: Exception) { emptyList() }
+                try { json.decodeFromString(WidgetDailyList.serializer(), it).items } catch (ignored: Exception) { emptyList() }
             } ?: emptyList(),
             updatedAt = prefs[KEY_UPDATED_AT] ?: 0L,
             observedAt = prefs[KEY_OBSERVED_AT] ?: 0L,
@@ -140,7 +140,7 @@ object WidgetDataProvider {
         val cityJson = prefs[KEY_SAVED_CITIES_JSON] ?: return emptyList()
         return try {
             json.decodeFromString(WidgetSavedCityList.serializer(), cityJson).items
-        } catch (_: Exception) {
+        } catch (ignored: Exception) {
             emptyList()
         }
     }
@@ -208,10 +208,10 @@ object WidgetDataProvider {
             humidity = prefs[intPreferencesKey(wKey(appWidgetId, "humidity"))] ?: 0,
             windSpeed = prefs[doublePreferencesKey(wKey(appWidgetId, "wind"))] ?: 0.0,
             hourly = hourlyJson?.let {
-                try { json.decodeFromString(WidgetHourlyList.serializer(), it).items } catch (_: Exception) { emptyList() }
+                try { json.decodeFromString(WidgetHourlyList.serializer(), it).items } catch (ignored: Exception) { emptyList() }
             } ?: emptyList(),
             daily = dailyJson?.let {
-                try { json.decodeFromString(WidgetDailyList.serializer(), it).items } catch (_: Exception) { emptyList() }
+                try { json.decodeFromString(WidgetDailyList.serializer(), it).items } catch (ignored: Exception) { emptyList() }
             } ?: emptyList(),
             updatedAt = prefs[longPreferencesKey(wKey(appWidgetId, "updated"))] ?: 0L,
             observedAt = prefs[longPreferencesKey(wKey(appWidgetId, "observed"))] ?: 0L,

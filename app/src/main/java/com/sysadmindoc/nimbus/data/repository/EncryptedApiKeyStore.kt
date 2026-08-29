@@ -90,7 +90,7 @@ class EncryptedApiKeyStore(context: Context) {
             if (encrypted.isEmpty()) return ApiKeys()
             val decrypted = aead.decrypt(encrypted, ASSOCIATED_DATA)
             json.decodeFromString(ApiKeys.serializer(), String(decrypted, Charsets.UTF_8))
-        } catch (_: Exception) {
+        } catch (ignored: Exception) {
             ApiKeys()
         }
     }
@@ -134,7 +134,7 @@ class EncryptedApiKeyStore(context: Context) {
                 writeToFile(migrated)
                 _keys.value = migrated
             }
-        } catch (_: Exception) {
+        } catch (ignored: Exception) {
             // Old file corrupt or AEAD mismatch — user re-enters keys
         }
         oldFile.delete()
@@ -155,7 +155,7 @@ private fun createAeadOrNull(context: Context): Aead? {
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
             null
-        } catch (_: Exception) {
+        } catch (ignored: Exception) {
             recoverAeadOrNull(context)
         }
     }

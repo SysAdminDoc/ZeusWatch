@@ -59,7 +59,7 @@ class PirateWeatherForecastAdapter @Inject constructor(
         locationName: String?,
     ): WeatherData {
         val current = r.currently ?: error("No current data from Pirate Weather")
-        val zone = try { ZoneId.of(r.timezone) } catch (_: Exception) { ZoneId.systemDefault() }
+        val zone = try { ZoneId.of(r.timezone) } catch (ignored: Exception) { ZoneId.systemDefault() }
         val dailyData = r.daily?.data ?: emptyList()
         val firstDaily = dailyData.firstOrNull()
         val locationLocalNow = epochToLocalDateTime(current.time, zone)

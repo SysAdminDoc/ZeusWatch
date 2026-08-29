@@ -150,7 +150,7 @@ private fun WidgetConfigScreen(
             withContext(Dispatchers.IO) { locationDao.getAll() }
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (_: Exception) {
+        } catch (ignored: Exception) {
             emptyList()
         }
     }

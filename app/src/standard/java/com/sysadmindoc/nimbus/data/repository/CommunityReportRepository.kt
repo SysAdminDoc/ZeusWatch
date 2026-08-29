@@ -200,7 +200,7 @@ class CommunityReportRepository @Inject constructor(
             geohash = (data["geohash"] as? String) ?: "",
             condition = try {
                 ReportCondition.valueOf(data["condition"] as? String ?: "SUNNY")
-            } catch (_: IllegalArgumentException) {
+            } catch (ignored: IllegalArgumentException) {
                 ReportCondition.SUNNY
             },
             note = (data["note"] as? String) ?: "",

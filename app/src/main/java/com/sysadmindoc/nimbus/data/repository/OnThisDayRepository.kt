@@ -127,7 +127,7 @@ class OnThisDayRepository @Inject constructor(
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
-            } catch (_: Exception) {
+            } catch (ignored: Exception) {
                 // Historical JSON remains the stable path while FlatBuffers is opt-in.
             }
         }

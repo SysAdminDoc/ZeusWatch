@@ -234,6 +234,6 @@ private fun formatAlertTime(isoString: String): String = try {
         ?.atZone(ZoneId.systemDefault())
         ?: return isoString
     zoned.format(DateTimeFormatter.ofPattern("EEE MMM d, h:mm a", Locale.getDefault()))
-} catch (_: Exception) {
+} catch (ignored: Exception) {
     isoString
 }

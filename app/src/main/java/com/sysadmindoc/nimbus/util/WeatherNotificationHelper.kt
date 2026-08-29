@@ -98,7 +98,7 @@ object WeatherNotificationHelper {
 
         try {
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
-        } catch (_: SecurityException) {}
+        } catch (ignored: SecurityException) {}
     }
 
     fun dismiss(context: Context) {
@@ -144,7 +144,7 @@ object WeatherNotificationHelper {
         return try {
             NotificationManagerCompat.from(context).notify(DAILY_BRIEFING_NOTIFICATION_ID, notification)
             true
-        } catch (_: SecurityException) {
+        } catch (ignored: SecurityException) {
             false
         }
     }

@@ -138,7 +138,7 @@ internal fun formatHour(
     // e.g. "2026-05-17T15:00". Malformed input degrades to the raw hour text.
     return try {
         formatter.format(java.time.LocalDateTime.parse(isoTime))
-    } catch (_: Exception) {
+    } catch (ignored: Exception) {
         isoTime.substringAfter("T").substringBefore(":")
     }
 }

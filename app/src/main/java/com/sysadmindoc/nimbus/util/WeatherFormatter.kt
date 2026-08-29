@@ -332,7 +332,7 @@ object WeatherFormatter {
                 TimeFormat.TWENTY_FOUR_HOUR -> "HH:mm"
             }
             dt.format(DateTimeFormatter.ofPattern(pattern, Locale.getDefault()))
-        } catch (_: Exception) {
+        } catch (ignored: Exception) {
             "--"
         }
     }
@@ -359,7 +359,7 @@ object WeatherFormatter {
             val rise = LocalDateTime.parse(sunrise, fmt)
             val set = LocalDateTime.parse(sunset, fmt)
             java.time.Duration.between(rise, set).toMinutes().takeIf { it > 0 }
-        } catch (_: Exception) {
+        } catch (ignored: Exception) {
             null
         }
     }
@@ -420,7 +420,7 @@ object WeatherFormatter {
             val morningEnd = rise.plusMinutes(60)
             val eveningStart = set.minusMinutes(60)
             Pair(formatTime(morningEnd.toString(), s), formatTime(eveningStart.toString(), s))
-        } catch (_: Exception) { null }
+        } catch (ignored: Exception) { null }
     }
 
     // ── Outdoor Activity Score ────────────────────────────────────────────

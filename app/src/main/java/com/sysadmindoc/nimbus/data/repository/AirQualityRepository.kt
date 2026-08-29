@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 import javax.inject.Inject
@@ -69,7 +70,7 @@ class AirQualityRepository @Inject constructor(
                     for (i in h.time.indices) {
                         val t = try {
                             LocalDateTime.parse(h.time[i], DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                        } catch (_: Exception) { continue }
+                        } catch (_: DateTimeParseException) { continue }
 
                         val aqi = h.usAqi?.getOrNull(i) ?: continue
 
@@ -183,7 +184,7 @@ class AirQualityRepository @Inject constructor(
             val minutes = ChronoUnit.MINUTES.between(rise, set)
             if (minutes < 0) return null
             String.format(Locale.US, "%dh %dm", minutes / 60, minutes % 60)
-        } catch (_: Exception) { null }
+        } catch (_: DateTimeParseException) { null }
     }
 
     /**
@@ -196,7 +197,7 @@ class AirQualityRepository @Inject constructor(
         if (value.isNullOrBlank()) return null
         return try {
             LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-        } catch (_: Exception) {
+        } catch (_: DateTimeParseException) {
             null
         }
     }
@@ -210,7 +211,7 @@ class AirQualityRepository @Inject constructor(
             try {
                 val t = LocalDateTime.parse(timeStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                 t.hour == now.hour && t.toLocalDate() == now.toLocalDate()
-            } catch (_: Exception) { false }
+            } catch (_: DateTimeParseException) { false }
         }
         if (currentIndex < 0) return PollenData()
         return PollenData(

@@ -55,7 +55,19 @@ exceptions:
   TooGenericExceptionCaught:
     active: false
   SwallowedException:
-    active: false
+    active: true
+    # Cancellation is rethrown explicitly everywhere it matters; catching it
+    # to unwind is not swallowing. Date/number parse failures on untrusted
+    # provider payloads are expected and handled by falling back, so logging
+    # each one would be noise on a hot path.
+    ignoredExceptionTypes:
+      - 'CancellationException'
+      - 'DateTimeParseException'
+      - 'NumberFormatException'
+      - 'InterruptedException'
+    # Deliberately NOT allowing '_': detekt's default permits `catch (_: X)`,
+    # which is exactly the silent-catch shape this rule is turned on to find.
+    allowedExceptionNameRegex: '(ignore|expected).*'
 
 naming:
   active: true

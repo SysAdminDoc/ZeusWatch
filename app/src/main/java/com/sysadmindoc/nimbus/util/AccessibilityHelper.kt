@@ -410,7 +410,7 @@ object AccessibilityHelper {
                 now.isBefore(set) -> "Daylight"
                 else -> "After sunset"
             }
-        } catch (_: Exception) {
+        } catch (ignored: Exception) {
             "Sun position unavailable"
         }
     }

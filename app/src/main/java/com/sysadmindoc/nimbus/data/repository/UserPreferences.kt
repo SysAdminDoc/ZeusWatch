@@ -855,7 +855,7 @@ data class SavedLocation(
 
 /** Safe enum valueOf that returns null instead of throwing. */
 private inline fun <reified T : Enum<T>> safeValueOf(name: String): T? =
-    try { enumValueOf<T>(name) } catch (_: IllegalArgumentException) { null }
+    try { enumValueOf<T>(name) } catch (ignored: IllegalArgumentException) { null }
 
 /**
  * Parse a persisted comma-separated card order. Unknown names are skipped and
@@ -866,7 +866,7 @@ private inline fun <reified T : Enum<T>> safeValueOf(name: String): T? =
 internal fun parseCardOrder(raw: String?): List<CardType> {
     if (raw.isNullOrBlank()) return DEFAULT_CARD_ORDER
     val parsed = raw.split(",").mapNotNull { name ->
-        try { CardType.valueOf(name) } catch (_: Exception) { null }
+        try { CardType.valueOf(name) } catch (ignored: Exception) { null }
     }
     // Add any missing cards at the end
     val missing = DEFAULT_CARD_ORDER.filter { it !in parsed }
