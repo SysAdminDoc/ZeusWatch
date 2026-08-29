@@ -66,7 +66,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
@@ -101,9 +100,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusError
-import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
-import com.sysadmindoc.nimbus.ui.theme.NimbusSurfaceVariant
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
@@ -174,13 +171,6 @@ internal fun LocationsContent(
     onNavigateToMapPicker: () -> Unit = {},
 ) {
     PredictiveBackScaffold(onBack = onBack) {
-        val emptySubtitle = stringResource(R.string.locations_empty_subtitle)
-        val savedCountSubtitle = pluralStringResource(R.plurals.locations_saved_count, saved.size, saved.size)
-        val savedPlacesSubtitle = if (saved.isEmpty()) {
-            emptySubtitle
-        } else {
-            savedCountSubtitle
-        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -189,13 +179,12 @@ internal fun LocationsContent(
         ) {
             ScreenHeader(
                 title = stringResource(R.string.locations_title),
-                subtitle = savedPlacesSubtitle,
-                eyebrow = stringResource(R.string.locations_eyebrow),
+                subtitle = "",
                 onBack = onBack,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             SearchBar(
                 query = search.query,
@@ -207,19 +196,31 @@ internal fun LocationsContent(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            Text(
-                text = stringResource(R.string.map_picker_pick_on_map),
-                style = MaterialTheme.typography.labelMedium,
-                color = NimbusBlueAccent,
+            Row(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
                     .heightIn(min = 48.dp)
                     .clickable(
                         onClick = onNavigateToMapPicker,
                         role = Role.Button,
                     )
-                    .padding(vertical = 14.dp),
-            )
+                    .padding(horizontal = 4.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Filled.LocationOn,
+                    contentDescription = null,
+                    tint = NimbusBlueAccent,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = stringResource(R.string.map_picker_pick_on_map),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NimbusTextPrimary,
+                )
+            }
 
             Spacer(modifier = Modifier.height(6.dp))
 
@@ -617,19 +618,13 @@ private fun SearchBar(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            stringResource(R.string.locations_search_label),
-            style = MaterialTheme.typography.labelLarge,
-            color = NimbusTextSecondary,
-            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
-        )
         TextField(
             value = query,
             onValueChange = onQueryChanged,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp)),
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp)),
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium.copy(color = NimbusTextPrimary),
             placeholder = {
@@ -637,12 +632,6 @@ private fun SearchBar(
                     stringResource(R.string.locations_search_placeholder),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NimbusTextTertiary,
-                )
-            },
-            label = {
-                Text(
-                    stringResource(R.string.locations_search_field_label),
-                    style = MaterialTheme.typography.bodySmall,
                 )
             },
             leadingIcon = {
@@ -701,15 +690,8 @@ private fun CurrentLocationQuickAction(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusBlueAccent.copy(alpha = 0.16f),
-                        NimbusCardBg,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusBlueAccent.copy(alpha = 0.32f), RoundedCornerShape(10.dp))
+            .background(NimbusBlueAccent.copy(alpha = 0.08f))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
             .clickable(onClick = onClick, role = Role.Button)
             .semantics(mergeDescendants = true) {
                 this.contentDescription = contentDescription
@@ -813,14 +795,7 @@ private fun SearchResultItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.78f),
-                        NimbusCardBg,
-                    ),
-                ),
-            )
+            .background(NimbusCardBg.copy(alpha = 0.36f))
             .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
             .clickable(
                 onClick = onAdd,
@@ -1081,21 +1056,8 @@ private fun SavedLocationRow(
     }
 }
 
-private fun savedLocationBackground(isCurrentLocation: Boolean): Brush {
-    return Brush.verticalGradient(
-        colors = if (isCurrentLocation) {
-            listOf(
-                NimbusBlueAccent.copy(alpha = 0.16f),
-                NimbusGlassBottom,
-            )
-        } else {
-            listOf(
-                NimbusGlassTop.copy(alpha = 0.78f),
-                NimbusSurfaceVariant,
-            )
-        },
-    )
-}
+private fun savedLocationBackground(isCurrentLocation: Boolean): Color =
+    if (isCurrentLocation) NimbusBlueAccent.copy(alpha = 0.08f) else NimbusCardBg.copy(alpha = 0.32f)
 
 @Composable
 private fun LocationLeadingControl(

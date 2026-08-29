@@ -4,8 +4,11 @@ import android.location.Geocoder
 import android.view.Gravity
 import android.widget.FrameLayout
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,9 +18,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -26,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +53,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
+import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -74,6 +82,9 @@ private const val PIN_LAYER = "picker-pin-layer"
 
 @Composable
 fun MapLocationPickerScreen(
+    initialLatitude: Double? = null,
+    initialLongitude: Double? = null,
+    initialName: String? = null,
     onLocationPicked: (lat: Double, lon: Double, name: String) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -89,6 +100,7 @@ fun MapLocationPickerScreen(
     var selectedLon by remember { mutableStateOf<Double?>(null) }
     var selectedName by remember { mutableStateOf<String?>(null) }
     var isGeocoding by remember { mutableStateOf(false) }
+    var hasUserSelection by remember { mutableStateOf(false) }
     // Request token: a slow earlier reverse-geocode must not overwrite the
     // name for a later tap (same guard pattern as LocationsViewModel search).
     val geocodeRequestId = remember { AtomicInteger(0) }
@@ -105,6 +117,26 @@ fun MapLocationPickerScreen(
     }
 
     MapPickerLifecycleEffect(mapView, lifecycleOwner)
+
+    LaunchedEffect(initialLatitude, initialLongitude, initialName, mapRef, styleRef) {
+        val latitude = initialLatitude ?: return@LaunchedEffect
+        val longitude = initialLongitude ?: return@LaunchedEffect
+        val map = mapRef ?: return@LaunchedEffect
+        val style = styleRef ?: return@LaunchedEffect
+        if (hasUserSelection || selectedLat != null || selectedLon != null) return@LaunchedEffect
+
+        selectedLat = latitude
+        selectedLon = longitude
+        selectedName = initialName
+        map.cameraPosition = CameraPosition.Builder()
+            .target(LatLng(latitude, longitude))
+            .zoom(10.0)
+            .build()
+        val pinPoint = Point.fromLngLat(longitude, latitude)
+        style.getSourceAs<GeoJsonSource>(PIN_SOURCE)?.setGeoJson(
+            FeatureCollection.fromFeature(Feature.fromGeometry(pinPoint)),
+        )
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
@@ -133,6 +165,7 @@ fun MapLocationPickerScreen(
                         }
 
                         map.addOnMapClickListener { latLng ->
+                            hasUserSelection = true
                             selectedLat = latLng.latitude
                             selectedLon = latLng.longitude
                             selectedName = null
@@ -159,65 +192,116 @@ fun MapLocationPickerScreen(
             modifier = Modifier.fillMaxSize(),
         )
 
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(16.dp),
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(R.string.common_back),
-                tint = NimbusTextPrimary,
-            )
-        }
+        MapPickerTopOverlay(onBack = onBack)
+        MapPickerSelectionPanel(
+            selectedLat = selectedLat,
+            selectedLon = selectedLon,
+            selectedName = selectedName,
+            isGeocoding = isGeocoding,
+            onLocationPicked = onLocationPicked,
+        )
+    }
+}
 
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(NimbusGlassTop.copy(alpha = 0.95f), NimbusCardBg),
-                    ),
+@Composable
+private fun BoxScope.MapPickerTopOverlay(onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .align(Alignment.TopStart)
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.common_back),
+                    tint = NimbusTextPrimary,
                 )
-                .padding(16.dp)
-                .navigationBarsPadding(),
-        ) {
+            }
             Text(
                 text = stringResource(R.string.map_picker_title),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleLarge,
                 color = NimbusTextPrimary,
             )
-            Spacer(modifier = Modifier.height(4.dp))
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(NimbusCardBg.copy(alpha = 0.94f))
+                .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Filled.Search,
+                contentDescription = null,
+                tint = NimbusTextSecondary,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = when {
-                    selectedName != null -> selectedName!!
-                    isGeocoding -> stringResource(R.string.map_picker_geocoding)
-                    else -> stringResource(R.string.map_picker_hint)
-                },
-                style = MaterialTheme.typography.bodyMedium,
+                text = stringResource(R.string.map_picker_hint),
+                style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            Button(
-                onClick = {
-                    val lat = selectedLat ?: return@Button
-                    val lon = selectedLon ?: return@Button
-                    val name = selectedName ?: String.format(Locale.US, "%.4f, %.4f", lat, lon)
-                    onLocationPicked(lat, lon, name)
-                },
-                enabled = selectedLat != null && !isGeocoding,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = NimbusBlueAccent,
-                ),
-            ) {
-                Text(stringResource(R.string.map_picker_save))
-            }
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.MapPickerSelectionPanel(
+    selectedLat: Double?,
+    selectedLon: Double?,
+    selectedName: String?,
+    isGeocoding: Boolean,
+    onLocationPicked: (lat: Double, lon: Double, name: String) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+            .background(NimbusCardBg.copy(alpha = 0.98f))
+            .border(
+                width = 1.dp,
+                color = NimbusCardBorder,
+                shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
+            )
+            .padding(16.dp)
+            .navigationBarsPadding(),
+    ) {
+        Text(
+            text = stringResource(R.string.map_picker_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = NimbusTextPrimary,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = when {
+                selectedName != null -> selectedName
+                isGeocoding -> stringResource(R.string.map_picker_geocoding)
+                else -> stringResource(R.string.map_picker_hint)
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = NimbusTextSecondary,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(
+            onClick = {
+                val lat = selectedLat ?: return@Button
+                val lon = selectedLon ?: return@Button
+                val name = selectedName ?: String.format(Locale.US, "%.4f, %.4f", lat, lon)
+                onLocationPicked(lat, lon, name)
+            },
+            enabled = selectedLat != null && !isGeocoding,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = NimbusBlueAccent),
+        ) {
+            Text(stringResource(R.string.map_picker_save))
         }
     }
 }

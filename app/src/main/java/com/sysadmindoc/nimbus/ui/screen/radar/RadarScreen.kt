@@ -771,7 +771,6 @@ private fun RadarTopControls(
     modifier: Modifier = Modifier,
 ) {
     val radarTitle = stringResource(R.string.nav_radar)
-    val interactiveMapLabel = stringResource(R.string.radar_interactive_map)
     val layerProviderLabel = selectedLayer?.let {
         stringResource(R.string.radar_layer_with_provider, stringResource(it.labelRes), providerLabel)
     } ?: providerLabel
@@ -793,7 +792,7 @@ private fun RadarTopControls(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = radarTitle,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.titleLarge,
                     color = NimbusTextPrimary,
                 )
                 Text(
@@ -804,10 +803,6 @@ private fun RadarTopControls(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            RadarInfoBadge(
-                text = if (selectedLayer == null) interactiveMapLabel else stringResource(selectedLayer.labelRes),
-                modifier = Modifier.widthIn(max = 220.dp),
-            )
         }
 
         if (selectedLayer != null && onLayerSelected != null) {

@@ -186,7 +186,8 @@ class UserPreferences @Inject constructor(
                 prefs[Keys.ALERT_SOURCE_PREF] ?: AlertSourcePreference.AUTO.name
             ) ?: AlertSourcePreference.AUTO,
             // Display
-            radarProvider = safeValueOf<RadarProvider>(prefs[Keys.RADAR_PROVIDER] ?: RadarProvider.WINDY_WEBVIEW.name) ?: RadarProvider.WINDY_WEBVIEW,
+            radarProvider = safeValueOf<RadarProvider>(prefs[Keys.RADAR_PROVIDER] ?: RadarProvider.NATIVE_MAPLIBRE.name)
+                ?: RadarProvider.NATIVE_MAPLIBRE,
             iconStyle = safeValueOf<IconStyle>(prefs[Keys.ICON_STYLE] ?: IconStyle.METEOCONS.name) ?: IconStyle.METEOCONS,
             customIconPackId = prefs[Keys.CUSTOM_ICON_PACK_ID] ?: "",
             themeMode = safeValueOf<ThemeMode>(prefs[Keys.THEME_MODE] ?: ThemeMode.STATIC_DARK.name) ?: ThemeMode.STATIC_DARK,
@@ -607,7 +608,7 @@ data class NimbusSettings(
     val alertCheckAllLocations: Boolean = true,
     val alertSourcePref: AlertSourcePreference = AlertSourcePreference.AUTO,
     // Display
-    val radarProvider: RadarProvider = RadarProvider.WINDY_WEBVIEW,
+    val radarProvider: RadarProvider = RadarProvider.NATIVE_MAPLIBRE,
     val iconStyle: IconStyle = IconStyle.METEOCONS,
     val customIconPackId: String = "",
     val themeMode: ThemeMode = ThemeMode.STATIC_DARK,

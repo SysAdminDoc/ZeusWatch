@@ -20,6 +20,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,6 +42,7 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
 import com.sysadmindoc.nimbus.ui.component.HourlyForecastDetailSheet
+import com.sysadmindoc.nimbus.ui.component.TemperatureGraph
 import com.sysadmindoc.nimbus.ui.component.WeatherIcon
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
@@ -98,27 +100,31 @@ fun HourlyTab(
             .fillMaxSize()
             .background(NimbusBackgroundGradient)
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         item {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Text(
                 stringResource(R.string.card_type_hourly_forecast),
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineMedium,
                 color = NimbusTextPrimary,
             )
             Text(
                 locationName,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(NimbusCardBg)
-                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.padding(top = 4.dp),
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+        }
+
+        item(key = "hourly_temperature_graph") {
+            TemperatureGraph(
+                hourly = hourly,
+                referenceTime = referenceTime,
+                confidenceBands = confidenceBands,
+                modifier = Modifier.padding(bottom = 14.dp),
+            )
         }
 
         groupedHourly.forEach { (date, hours) ->
@@ -164,17 +170,7 @@ private fun HourlyDayHeader(dayLabel: String) {
             color = NimbusBlueAccent,
             modifier = Modifier
                 .semantics { heading() }
-                .clip(RoundedCornerShape(8.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NimbusBlueAccent.copy(alpha = 0.18f),
-                            NimbusCardBg,
-                        ),
-                    ),
-                )
-                .border(1.dp, NimbusBlueAccent.copy(alpha = 0.32f), RoundedCornerShape(8.dp))
-                .padding(horizontal = 13.dp, vertical = 7.dp),
+                .padding(horizontal = 2.dp, vertical = 8.dp),
         )
     }
 }
@@ -188,35 +184,18 @@ private fun HourlyRow(
 ) {
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
     val context = LocalContext.current
-    val shape = RoundedCornerShape(12.dp)
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    colors = if (isCurrent) {
-                        listOf(
-                            NimbusBlueAccent.copy(alpha = 0.24f),
-                            NimbusGlassBottom,
-                        )
-                    } else {
-                        listOf(
-                            NimbusGlassTop.copy(alpha = 0.5f),
-                            NimbusCardBg,
-                            NimbusGlassBottom,
-                        )
-                    },
-                ),
-            )
-            .border(1.dp, if (isCurrent) NimbusBlueAccent.copy(alpha = 0.55f) else NimbusCardBorder, shape)
-            .clickable(
-                onClick = onClick,
-                role = Role.Button,
-            )
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .background(if (isCurrent) NimbusBlueAccent.copy(alpha = 0.09f) else androidx.compose.ui.graphics.Color.Transparent)
+            .clickable(onClick = onClick, role = Role.Button),
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
         Column(modifier = Modifier.width(76.dp)) {
             Text(
                 WeatherFormatter.formatRelativeHourLabel(
@@ -279,13 +258,14 @@ private fun HourlyRow(
             }
         }
 
-        // Precip probability
-        if (hour.precipitationProbability > 0) {
-            Text(
-                stringResource(R.string.forecast_hourly_rain_chance, hour.precipitationProbability),
-                style = MaterialTheme.typography.labelMedium,
-                color = NimbusBlueAccent,
-            )
+            if (hour.precipitationProbability > 0) {
+                Text(
+                    stringResource(R.string.forecast_hourly_rain_chance, hour.precipitationProbability),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = NimbusBlueAccent,
+                )
+            }
         }
+        HorizontalDivider(color = NimbusCardBorder.copy(alpha = 0.66f))
     }
 }

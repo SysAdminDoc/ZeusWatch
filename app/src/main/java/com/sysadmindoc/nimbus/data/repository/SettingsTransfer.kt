@@ -151,7 +151,7 @@ data class SettingsBackupPreferences(
     val alertMinSeverity: String = AlertMinSeverity.SEVERE.name,
     val alertCheckAllLocations: Boolean = true,
     val alertSourcePref: String = AlertSourcePreference.AUTO.name,
-    val radarProvider: String = RadarProvider.WINDY_WEBVIEW.name,
+    val radarProvider: String = RadarProvider.NATIVE_MAPLIBRE.name,
     val iconStyle: String = IconStyle.METEOCONS.name,
     val customIconPackId: String = "",
     val themeMode: String = ThemeMode.STATIC_DARK.name,

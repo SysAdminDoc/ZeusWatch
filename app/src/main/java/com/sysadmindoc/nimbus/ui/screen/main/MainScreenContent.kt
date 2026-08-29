@@ -9,7 +9,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +29,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
@@ -88,7 +86,6 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AstronomyData
-import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.ui.component.AdaptiveLayoutInfo
@@ -116,9 +113,6 @@ import com.sysadmindoc.nimbus.ui.component.HumidityCard
 import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
 import com.sysadmindoc.nimbus.ui.component.GlassActionButton
 import com.sysadmindoc.nimbus.ui.component.MoonPhaseCard
-import com.sysadmindoc.nimbus.ui.component.NimbusScrollableSegmentRow
-import com.sysadmindoc.nimbus.ui.component.NimbusSelectableSegment
-import com.sysadmindoc.nimbus.ui.component.NimbusStatusBadge
 import com.sysadmindoc.nimbus.ui.component.PrecipitationChartCard
 import com.sysadmindoc.nimbus.ui.component.PressureTrendCard
 import com.sysadmindoc.nimbus.ui.component.NowcastCard
@@ -481,26 +475,54 @@ private fun PhoneWeatherTabs(
     Crossfade(targetState = selectedTab, animationSpec = tween(300), label = "phoneTab") { tab ->
         when (tab) {
             BottomTab.TODAY.ordinal -> TodayContent(state = state, actions = actions)
-            BottomTab.HOURLY.ordinal -> HourlyTab(
-                hourly = data.hourly,
-                locationName = data.location.name,
-                referenceTime = referenceTime,
-                confidenceBands = state.confidenceBands,
-                isRefreshing = state.isRefreshing,
-                onRefresh = actions.content.onRefresh,
-            )
-            BottomTab.DAILY.ordinal -> DailyTab(
-                daily = data.daily,
-                locationName = data.location.name,
-                referenceDate = referenceDate,
-                confidenceBands = state.confidenceBands,
-                isRefreshing = state.isRefreshing,
-                onRefresh = actions.content.onRefresh,
-            )
+            BottomTab.HOURLY.ordinal -> WeatherSecondaryTabChrome(state, actions) {
+                HourlyTab(
+                    hourly = data.hourly,
+                    locationName = data.location.name,
+                    referenceTime = referenceTime,
+                    confidenceBands = state.confidenceBands,
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = actions.content.onRefresh,
+                )
+            }
+            BottomTab.DAILY.ordinal -> WeatherSecondaryTabChrome(state, actions) {
+                DailyTab(
+                    daily = data.daily,
+                    locationName = data.location.name,
+                    referenceDate = referenceDate,
+                    confidenceBands = state.confidenceBands,
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = actions.content.onRefresh,
+                )
+            }
             BottomTab.RADAR.ordinal -> RadarTab(
                 latitude = data.location.latitude,
                 longitude = data.location.longitude,
             )
+        }
+    }
+}
+
+@Composable
+private fun WeatherSecondaryTabChrome(
+    state: MainUiState,
+    actions: MainScreenActions,
+    content: @Composable () -> Unit,
+) {
+    val data = state.weatherData ?: return
+    var showShareMenu by remember { mutableStateOf(false) }
+    Column(modifier = Modifier.fillMaxSize()) {
+        WeatherToolbar(
+            layout = LocalAdaptiveLayout.current,
+            data = data,
+            airQuality = state.airQuality,
+            settings = LocalUnitSettings.current,
+            actions = actions.content,
+            showShareMenu = showShareMenu,
+            onShareMenuChange = { showShareMenu = it },
+        )
+        Box(modifier = Modifier.weight(1f)) {
+            content()
         }
     }
 }
@@ -668,7 +690,7 @@ private fun WeatherContent(
         modifier = Modifier.fillMaxSize(),
     ) {
         val cardPad = Modifier.padding(horizontal = layout.contentPadding)
-        val hasLocationBar = state.savedLocations.size > 1
+        val hasLocationBar = false
         val hasAlertBanner = alerts.isNotEmpty()
         val focusedItemIndex = weatherContentItemIndexForDeepLinkTarget(
             target = deepLinkTarget,
@@ -783,17 +805,6 @@ private fun LazyListScope.weatherHeaderItems(
         }
     }
 
-    if (state.savedLocations.size > 1) {
-        item(key = "location_bar") {
-            LocationSelectorBar(
-                locations = state.savedLocations,
-                currentIndex = state.currentPage,
-                onSelected = actions.onLocationSelected,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-            )
-        }
-    }
-
     if (state.alerts.isNotEmpty()) {
         item(key = "alert_banner") {
             WeatherAlertSection(
@@ -876,12 +887,34 @@ private fun WeatherToolbar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PremiumToolbarButton(
-            icon = Icons.Filled.LocationOn,
-            contentDescription = stringResource(R.string.main_manage_locations_cd),
-            onClick = actions.onNavigateToLocations,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .height(48.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(
+                    onClick = actions.onNavigateToLocations,
+                    role = Role.Button,
+                )
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.LocationOn,
+                contentDescription = null,
+                tint = NimbusTextPrimary,
+                modifier = Modifier.size(22.dp),
+            )
+            Text(
+                text = data.location.name,
+                style = MaterialTheme.typography.titleMedium,
+                color = NimbusTextPrimary,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Box {
                 PremiumToolbarButton(
                     icon = Icons.Filled.Share,
@@ -945,7 +978,6 @@ private fun WeatherHero(
         }
         CurrentConditionsHeader(
             current = data.current,
-            locationName = data.location.name,
             yesterdayHigh = state.yesterdayHigh.takeIf { settings.showYesterdayComparison },
         )
     }
@@ -961,49 +993,47 @@ private fun WeatherUpdatedRow(
     sourceProvider: String? = null,
     usedFallback: Boolean = false,
 ) {
+    val statusColor = when {
+        isCached -> NimbusTextTertiary.copy(alpha = 0.78f)
+        updatedAgeMinutes < 60 -> NimbusTextTertiary
+        updatedAgeMinutes < 120 -> NimbusWarning.copy(alpha = 0.7f)
+        else -> NimbusWarning
+    }
+    val details = buildList {
+        if (todayPrecipChance > 0) {
+            add(stringResource(R.string.main_rain_risk, todayPrecipChance))
+        }
+        add(
+            if (isCached) {
+                stringResource(R.string.main_offline_ready_status, updatedAgo)
+            } else {
+                stringResource(R.string.main_refreshed_status, updatedAgo)
+            },
+        )
+        sourceProvider?.let {
+            add(
+                if (usedFallback) {
+                    stringResource(R.string.main_source_fallback, it)
+                } else {
+                    stringResource(R.string.main_source_via, it)
+                },
+            )
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = layout.contentPadding),
+            .padding(horizontal = layout.contentPadding, vertical = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (todayPrecipChance > 0) {
-                NimbusStatusBadge(
-                    icon = Icons.Filled.WaterDrop,
-                    text = stringResource(R.string.main_rain_risk, todayPrecipChance),
-                    tint = NimbusBlueAccent,
-                )
-            }
-            val stalenessColor = when {
-                isCached -> NimbusTextTertiary.copy(alpha = 0.78f)
-                updatedAgeMinutes < 60 -> NimbusTextTertiary
-                updatedAgeMinutes < 120 -> NimbusWarning.copy(alpha = 0.7f)
-                else -> NimbusWarning
-            }
-            NimbusStatusBadge(
-                text = if (isCached) {
-                    stringResource(R.string.main_offline_ready_status, updatedAgo)
-                } else {
-                    stringResource(R.string.main_refreshed_status, updatedAgo)
-                },
-                tint = stalenessColor,
-            )
-            if (sourceProvider != null) {
-                NimbusStatusBadge(
-                    text = if (usedFallback) {
-                        stringResource(R.string.main_source_fallback, sourceProvider)
-                    } else {
-                        stringResource(R.string.main_source_via, sourceProvider)
-                    },
-                    tint = if (usedFallback) NimbusWarning.copy(alpha = 0.7f) else NimbusTextTertiary,
-                )
-            }
-        }
+        Text(
+            text = details.joinToString(" • "),
+            style = MaterialTheme.typography.labelSmall,
+            color = if (usedFallback) NimbusWarning.copy(alpha = 0.82f) else statusColor,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -1586,79 +1616,6 @@ private fun RenderDetailCard(
             }
         }
         else -> Unit
-    }
-}
-
-// ── Location Selector Bar with Animated Dot Indicator ─────────────────────
-
-@Composable
-private fun LocationSelectorBar(
-    locations: List<SavedLocationEntity>,
-    currentIndex: Int,
-    onSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        NimbusScrollableSegmentRow {
-            locations.forEachIndexed { index, loc ->
-                val isActive = index == currentIndex
-                NimbusSelectableSegment(
-                    label = if (loc.isCurrentLocation) stringResource(R.string.common_my_location) else loc.name,
-                    selected = isActive,
-                    onClick = { onSelected(index) },
-                    role = Role.Tab,
-                    leadingIcon = if (loc.isCurrentLocation) Icons.Filled.MyLocation else null,
-                    maxLines = 1,
-                )
-            }
-        }
-
-        // Animated dot indicator (breezy-weather InkPageIndicator style)
-        if (locations.size > 1) {
-            Spacer(modifier = Modifier.height(8.dp))
-            InkPageIndicator(
-                pageCount = locations.size,
-                currentPage = currentIndex,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
-}
-
-/**
- * Animated page indicator dots inspired by breezy-weather's InkPageIndicator.
- * Active dot is larger and colored, inactive dots are smaller and dimmed.
- */
-@Composable
-private fun InkPageIndicator(
-    pageCount: Int,
-    currentPage: Int,
-    modifier: Modifier = Modifier,
-) {
-    val dotSize = 6.dp
-    val activeDotSize = 10.dp
-    val spacing = 8.dp
-
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        repeat(pageCount) { index ->
-            val isActive = index == currentPage
-            val size = if (isActive) activeDotSize else dotSize
-            val color = if (isActive) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.4f)
-
-            Box(
-                modifier = Modifier
-                    .size(size)
-                    .clip(RoundedCornerShape(size / 2))
-                    .background(color),
-            )
-            if (index < pageCount - 1) {
-                Spacer(modifier = Modifier.width(spacing))
-            }
-        }
     }
 }
 

@@ -42,7 +42,7 @@ class UserPreferencesTest {
     fun defaultSettingsHaveCorrectDisplayDefaults() {
         val settings = NimbusSettings()
 
-        assertEquals(RadarProvider.WINDY_WEBVIEW, settings.radarProvider)
+        assertEquals(RadarProvider.NATIVE_MAPLIBRE, settings.radarProvider)
         assertEquals(IconStyle.METEOCONS, settings.iconStyle)
         assertEquals("", settings.customIconPackId)
         assertEquals(ThemeMode.STATIC_DARK, settings.themeMode)
@@ -243,7 +243,19 @@ class UserPreferencesTest {
 
     @Test
     fun defaultCardOrderContainsAllCardTypes() {
-        assertEquals(CardType.entries.toList(), DEFAULT_CARD_ORDER)
+        assertEquals(CardType.entries.size, DEFAULT_CARD_ORDER.size)
+        assertEquals(CardType.entries.toSet(), DEFAULT_CARD_ORDER.toSet())
+        assertEquals(
+            listOf(
+                CardType.HOURLY_FORECAST,
+                CardType.WEATHER_SUMMARY,
+                CardType.NOWCAST,
+                CardType.RADAR_PREVIEW,
+                CardType.DAILY_FORECAST,
+                CardType.TEMPERATURE_GRAPH,
+            ),
+            DEFAULT_CARD_ORDER.take(6),
+        )
     }
 
     @Test

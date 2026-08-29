@@ -55,7 +55,7 @@ class LocationsScreenTest {
         }
 
         composeTestRule.onNodeWithText("Locations").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Search Locations").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Search city, ZIP code, or region").assertIsDisplayed()
     }
 
     @Test

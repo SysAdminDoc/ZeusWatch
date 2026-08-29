@@ -71,6 +71,8 @@
     <string name="custom_alerts_subtitle">Create personal forecast triggers for heat, cold, wind, rain, and UV.</string>
     <string name="custom_alerts_eyebrow">Rule-based alerts</string>
     <string name="custom_alerts_add_cd">Add custom alert</string>
+    <string name="custom_alerts_add_rule">Add rule</string>
+    <string name="compare_swap_locations">Swap locations</string>
     <string name="custom_alerts_empty_title">No custom alerts yet</string>
     <string name="custom_alerts_empty_message">Create a rule for heat, low temperatures, heavy rain, strong wind, or high UV so ZeusWatch can watch the forecast for you.</string>
     <string name="custom_alerts_empty_action">Create first alert</string>
@@ -114,13 +116,13 @@
     <string name="common_no">No</string>
 
     <!-- First-run onboarding -->
-    <string name="onboarding_progress">Step %1$d of %2$d</string>
+    <string name="onboarding_progress">%1$d of %2$d</string>
     <string name="onboarding_title">Set up ZeusWatch</string>
     <string name="onboarding_subtitle">Choose the basics once, then tune everything later in Settings.</string>
-    <string name="onboarding_location_title">Start with the right forecast</string>
-    <string name="onboarding_location_body">ZeusWatch uses location permission to find your forecast, local alerts, radar position, and saved-place defaults.</string>
-    <string name="onboarding_location_notice_title">You stay in control</string>
-    <string name="onboarding_location_notice_body">The permission prompt appears on the main screen. You can allow once, allow while using the app, or search for a place manually.</string>
+    <string name="onboarding_location_title">Set your location</string>
+    <string name="onboarding_location_body">Get forecasts and alerts for the places that matter to you.</string>
+    <string name="onboarding_location_notice_title">Use my location</string>
+    <string name="onboarding_location_notice_body">Your precise location stays on this device. You can search for a place manually on the next screen.</string>
     <string name="onboarding_units_title">Pick your units</string>
     <string name="onboarding_units_body">This sets the full measurement bundle so wind, pressure, precipitation, and visibility match your temperature choice.</string>
     <string name="onboarding_units_fahrenheit">Fahrenheit</string>
@@ -853,6 +855,7 @@
     <string name="uv_index">UV Index</string>
     <string name="visibility">Visibility</string>
     <string name="dew_point">Dew Point</string>
+    <string name="current_metric_unavailable" translatable="false">N/A</string>
     <string name="sunrise">Sunrise</string>
     <string name="sunset">Sunset</string>
     <string name="precipitation">Precipitation</string>

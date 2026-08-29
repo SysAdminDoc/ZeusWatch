@@ -42,6 +42,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
+import com.sysadmindoc.nimbus.ui.theme.NimbusToolbarSurface
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
@@ -88,17 +89,10 @@ fun RadarPlaybackControls(
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 8.dp)
             .widthIn(max = 520.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.86f),
-                        NimbusGlassBottom,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .clip(RoundedCornerShape(8.dp))
+            .background(NimbusToolbarSurface)
+            .border(1.dp, NimbusCardBorder.copy(alpha = 0.78f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -198,13 +192,7 @@ fun RadarPlaybackControls(
                         text = if (isForecast) forecastLabel else pastLabel,
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isForecast) NimbusBlueAccent else NimbusTextSecondary,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(
-                                if (isForecast) NimbusBlueAccent.copy(alpha = 0.14f)
-                                else Color.White.copy(alpha = 0.06f),
-                            )
-                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp),
                     )
 
                     Text(
