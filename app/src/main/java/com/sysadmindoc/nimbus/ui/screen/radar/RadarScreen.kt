@@ -513,7 +513,7 @@ private fun BoxScope.RadarNativeContent(
 ) {
     val isRadarMode = state.selectedLayer == RadarLayer.RADAR
     val isLightningMode = state.selectedLayer == RadarLayer.LIGHTNING
-    val showLightning = isLightningMode || isRadarMode
+    val showLightning = radarLayerShowsLightning(state.selectedLayer)
     RadarMapView(
         latitude = coordinates.latitude,
         longitude = coordinates.longitude,
@@ -543,11 +543,7 @@ private fun BoxScope.RadarNativeContent(
     if (isRadarMode) {
         RadarPlaybackAndStatus(state, actions)
     }
-    // Outside the isRadarMode branch: the Lightning layer draws strikes with no
-    // radar frames, and that is the one surface where the informational-only
-    // qualifier matters most. Gating it on isRadarMode meant the dedicated
-    // lightning view carried no attribution at all.
-    if (isRadarMode || showLightning) {
+    if (radarLayerShowsAttribution(state.selectedLayer)) {
         RadarAttribution(
             provider = state.settings.radarProvider,
             source = state.radarState.frameSet?.source,
@@ -1113,6 +1109,27 @@ private fun RadarOfflineCard() {
         )
     }
 }
+
+/**
+ * True where the map draws lightning strikes.
+ *
+ * The Radar layer overlays them on the frames; the Lightning layer is nothing
+ * but strikes.
+ */
+internal fun radarLayerShowsLightning(layer: RadarLayer): Boolean =
+    layer == RadarLayer.RADAR || layer == RadarLayer.LIGHTNING
+
+/**
+ * True where the attribution strip must be drawn.
+ *
+ * This was gated on the Radar layer alone, so the dedicated Lightning view
+ * carried no attribution and, with it, none of the "informational only, not
+ * for protection of life or property" qualifier. That is the one surface where
+ * the qualifier matters most, because it is the one showing nothing but
+ * strikes.
+ */
+internal fun radarLayerShowsAttribution(layer: RadarLayer): Boolean =
+    radarLayerShowsLightning(layer)
 
 internal fun canOpenCommunityReport(
     isOffline: Boolean,
