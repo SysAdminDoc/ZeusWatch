@@ -26,6 +26,19 @@ FORBIDDEN_ROOT_FILES = {
     "HANDOFF.md",
 }
 
+# CLAUDE.md "Documentation hygiene" names these and nothing else.
+SHORT_DESCRIPTION_MAX_CHARS = 80
+
+ALLOWED_ROOT_MARKDOWN = {
+    "README.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "ROADMAP.md",
+    "Roadmap_Blocked.md",
+    "RESEARCH.md",
+}
+
 STALE_REFERENCES = [
     re.compile(r"COMPLETED\.md", re.IGNORECASE),
     re.compile(r"TODO\.md", re.IGNORECASE),
@@ -67,6 +80,70 @@ def check_forbidden_files():
         path = REPO_ROOT / name
         if path.exists():
             issues.append(f"Forbidden file exists: {name}")
+    return issues
+
+
+def check_root_documents():
+    """Root .md files are limited to the hygiene list, and a provenance file
+    left behind from an older release is worse than none: it advertises hashes
+    that no longer match anything shipped."""
+    issues = []
+    for path in sorted(REPO_ROOT.glob("*.md")):
+        if path.name not in ALLOWED_ROOT_MARKDOWN:
+            issues.append(
+                f"Unexpected root markdown file: {path.name} "
+                f"(allowed: {', '.join(sorted(ALLOWED_ROOT_MARKDOWN))})"
+            )
+
+    app_ver = parse_gradle_string(REPO_ROOT / "app" / "build.gradle.kts", "versionName")
+    for path in sorted(REPO_ROOT.glob("*-provenance.json")):
+        if app_ver and f"-v{app_ver}-provenance.json" != path.name[len("ZeusWatch"):]:
+            issues.append(
+                f"Stale provenance file at root: {path.name} (current version is v{app_ver})"
+            )
+    return issues
+
+
+def check_fastlane_metadata():
+    """F-Droid reads this metadata verbatim, so a stale card count ships as a
+    user-visible lie and a missing changelog entry ships a silent release."""
+    issues = []
+    metadata = REPO_ROOT / "fastlane" / "metadata" / "android" / "en-US"
+    if not metadata.is_dir():
+        return ["fastlane/metadata/android/en-US is missing"]
+
+    card_count = parse_card_type_count()
+    short_description = read_text(metadata / "short_description.txt")
+    if short_description is None:
+        issues.append("fastlane short_description.txt is missing")
+    else:
+        # Both F-Droid and Play truncate past 80 characters.
+        length = len(short_description.strip())
+        if length > SHORT_DESCRIPTION_MAX_CHARS:
+            issues.append(
+                f"fastlane short_description.txt: {length} characters, "
+                f"limit is {SHORT_DESCRIPTION_MAX_CHARS}"
+            )
+    if short_description is not None and card_count is not None:
+        match = re.search(r"(\d+)\s+cards", short_description)
+        if not match:
+            issues.append("fastlane short_description.txt: no card count to verify")
+        elif int(match.group(1)) != card_count:
+            issues.append(
+                f"fastlane short_description.txt: claims {match.group(1)} cards, "
+                f"CardType declares {card_count}"
+            )
+
+    app_code = parse_gradle_int(REPO_ROOT / "app" / "build.gradle.kts", "versionCode")
+    changelogs = metadata / "changelogs"
+    if app_code is not None:
+        entry = changelogs / f"{app_code}.txt"
+        if not entry.is_file():
+            issues.append(
+                f"fastlane changelogs/{app_code}.txt is missing for the current versionCode"
+            )
+        elif not (read_text(entry) or "").strip():
+            issues.append(f"fastlane changelogs/{app_code}.txt is empty")
     return issues
 
 
@@ -695,6 +772,8 @@ def check_version_sync():
 def main():
     issues = []
     issues.extend(check_forbidden_files())
+    issues.extend(check_root_documents())
+    issues.extend(check_fastlane_metadata())
     issues.extend(check_stale_references())
     issues.extend(check_readme_privacy())
     issues.extend(check_release_workflow_truth())
