@@ -78,7 +78,8 @@ class CustomAlertWorker @AssistedInject constructor(
                 )
                 return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
             }
-        deliveryHealth.recordSuccess(DeliverySurface.CUSTOM_ALERTS, startedAt)
+        // Recorded after the notifications are attempted, below.
+        var anyUndelivered = false
 
         // AQI is only fetched when an enabled rule needs it. A fetch FAILURE is
         // not the same as "no AQI rules": swallowing it silently no-oped users
@@ -115,7 +116,21 @@ class CustomAlertWorker @AssistedInject constructor(
             )
             if (!delivered) {
                 store.remove(dedupeKey)
+                anyUndelivered = true
             }
+        }
+
+        // Recorded here, after the notifications: a blocked notification
+        // permission is the most common real delivery failure, and having the
+        // forecast is not the same as having told anyone about it.
+        if (anyUndelivered) {
+            deliveryHealth.recordFailure(
+                DeliverySurface.CUSTOM_ALERTS,
+                DeliveryFailureReason.PERMISSION_DENIED,
+                startedAt,
+            )
+        } else {
+            deliveryHealth.recordSuccess(DeliverySurface.CUSTOM_ALERTS, startedAt)
         }
         return completionResult(aqiFetchFailed)
     }
@@ -139,6 +154,15 @@ class CustomAlertWorker @AssistedInject constructor(
         /** A one-off run of this worker, for the diagnostics panel's Run now. */
         fun oneTimeRequest(): OneTimeWorkRequest =
             OneTimeWorkRequestBuilder<CustomAlertWorker>()
+                .setConstraints(
+                    // The same network constraint the periodic work carries.
+                    // Without it Run now fires offline, every provider call
+                    // fails, and the diagnostic action manufactures the very
+                    // failure it exists to diagnose.
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                )
                 .build()
         private const val MAX_RETRY_ATTEMPTS = 3
 

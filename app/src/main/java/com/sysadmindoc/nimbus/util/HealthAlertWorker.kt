@@ -87,9 +87,10 @@ class HealthAlertWorker @AssistedInject constructor(
             // give up to the next hourly tick after that.
             return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
         }
-        // Evaluated the data successfully. Whether it produces an alert is the
-        // weather's business, not a delivery failure.
-        deliveryHealth.recordSuccess(DeliverySurface.HEALTH_ALERTS, startedAt)
+        // Recorded after the notifications are attempted, not here: having
+        // the forecast is not the same as having told anyone about it, and a
+        // blocked notification permission is the most common real failure.
+        var anyUndelivered = false
 
         val alerts = HealthAlertEvaluator.evaluate(
             hourly = data.hourly,
@@ -128,12 +129,25 @@ class HealthAlertWorker @AssistedInject constructor(
             )
             if (!delivered) {
                 store.release(alert.type, alert.severity, today)
+                anyUndelivered = true
             }
         }
 
         // Prune old entries (keep last 7 days)
         store.prune(today)
 
+        // Recorded here, after the notifications: a blocked notification
+        // permission is the most common real delivery failure, and having the
+        // forecast is not the same as having told anyone about it.
+        if (anyUndelivered) {
+            deliveryHealth.recordFailure(
+                DeliverySurface.HEALTH_ALERTS,
+                DeliveryFailureReason.PERMISSION_DENIED,
+                startedAt,
+            )
+        } else {
+            deliveryHealth.recordSuccess(DeliverySurface.HEALTH_ALERTS, startedAt)
+        }
         return Result.success()
     }
 
@@ -152,6 +166,15 @@ class HealthAlertWorker @AssistedInject constructor(
         /** A one-off run of this worker, for the diagnostics panel's Run now. */
         fun oneTimeRequest(): OneTimeWorkRequest =
             OneTimeWorkRequestBuilder<HealthAlertWorker>()
+                .setConstraints(
+                    // The same network constraint the periodic work carries.
+                    // Without it Run now fires offline, every provider call
+                    // fails, and the diagnostic action manufactures the very
+                    // failure it exists to diagnose.
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                )
                 .build()
         private const val MAX_RETRY_ATTEMPTS = 3
 

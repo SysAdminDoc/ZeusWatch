@@ -993,6 +993,7 @@ private fun SettingsDataSourcesSection(
         ActivityThresholdsPanel(thresholds = activityThresholds, actions = actions)
         DeliveryHealthPanel(
             snapshot = deliveryHealth,
+            enabledSurfaces = enabledDeliverySurfaces(settings),
             nextRuns = deliveryNextRuns,
             transferInProgress = transferInProgress,
             actions = actions,
@@ -1246,14 +1247,42 @@ private fun ThresholdSlider(
     }
 }
 
+/**
+ * The surfaces the user has switched on, so the panel can report a job that
+ * has never run rather than leaving it out.
+ *
+ * Widgets, watch sync and the Gadgetbridge broadcast are always listed: they
+ * have no single toggle, and a widget that is not refreshing is the case the
+ * panel exists for.
+ */
+private fun enabledDeliverySurfaces(settings: NimbusSettings): Set<DeliverySurface> = buildSet {
+    add(DeliverySurface.WIDGETS)
+    add(DeliverySurface.WEAR_SYNC)
+    if (settings.gadgetbridgeBroadcastEnabled) add(DeliverySurface.GADGETBRIDGE)
+    if (settings.dailyBriefingEnabled) add(DeliverySurface.DAILY_BRIEFING)
+    if (settings.alertNotificationsEnabled) add(DeliverySurface.WEATHER_ALERTS)
+    if (settings.nowcastingAlerts) add(DeliverySurface.NOWCAST_ALERTS)
+    if (settings.healthAlertsEnabled) add(DeliverySurface.HEALTH_ALERTS)
+}
+
 @Composable
 private fun DeliveryHealthPanel(
     snapshot: DeliveryHealthSnapshot,
+    enabledSurfaces: Set<DeliverySurface>,
     nextRuns: Map<DeliverySurface, Long>,
     transferInProgress: Boolean,
     actions: SettingsActions,
 ) {
-    val entries = remember(snapshot.entries) { snapshot.entries.sortedBy { it.surface.ordinal } }
+    // A row per surface the store knows about, and one per surface that is
+    // enabled but has never run. The panel exists to answer "did the job that
+    // fills my widget ever run", and rendering only recorded entries meant
+    // exactly that case had no row, no next-run time and no Run now button.
+    val entries = remember(snapshot.entries, enabledSurfaces) {
+        val recorded = snapshot.entries.associateBy { it.surface }
+        (recorded.keys + enabledSurfaces)
+            .sortedBy { it.ordinal }
+            .map { surface -> recorded[surface] ?: DeliveryHealthEntry(surface = surface) }
+    }
     val nowEpochMs by produceState(initialValue = System.currentTimeMillis()) {
         while (true) {
             kotlinx.coroutines.delay(60_000L)

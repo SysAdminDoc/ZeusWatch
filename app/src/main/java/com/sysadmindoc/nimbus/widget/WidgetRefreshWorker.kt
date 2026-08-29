@@ -37,6 +37,7 @@ import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import com.sysadmindoc.nimbus.data.repository.deliveryFailureReason
 import com.sysadmindoc.nimbus.data.repository.sourceOverrides
 import com.sysadmindoc.nimbus.sync.WearSyncManager
+import com.sysadmindoc.nimbus.sync.WearSyncOutcome
 import com.sysadmindoc.nimbus.util.BackgroundWorkSync
 import com.sysadmindoc.nimbus.util.GadgetbridgeWeatherBroadcaster
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
@@ -90,6 +91,10 @@ class WidgetRefreshWorker @AssistedInject constructor(
         if (!forceRefresh && shouldSkipForBattery()) {
             // No network work — but don't let the watch and the persistent
             // notification silently starve: push the cached data we have.
+            // This path still pushes cached data to the watch and to
+            // Gadgetbridge, so those two surfaces really did deliver and are
+            // recorded inside pushCachedDataOnly. Only the widget refresh was
+            // deferred.
             pushCachedDataOnly(settings, lastLoc)
             // Deferred, not delivered: the widgets are showing whatever they
             // had, and saying "last succeeded now" would hide exactly the
@@ -149,6 +154,25 @@ class WidgetRefreshWorker @AssistedInject constructor(
                 startedAt,
             )
             if (runAttemptCount >= WIDGET_REFRESH_MAX_RUN_ATTEMPTS) Result.failure() else Result.retry()
+        }
+    }
+
+    /**
+     * Records a watch sync, or forgets the surface where there is no watch.
+     *
+     * A device with no Wear OS support should not carry a row at all, rather
+     * than one that reports a failure the user cannot do anything about.
+     */
+    private suspend fun recordWearOutcome(outcome: WearSyncOutcome) {
+        when (outcome) {
+            WearSyncOutcome.SYNCED ->
+                deliveryHealth.recordSuccess(DeliverySurface.WEAR_SYNC, System.currentTimeMillis())
+            WearSyncOutcome.UNAVAILABLE -> deliveryHealth.forget(DeliverySurface.WEAR_SYNC)
+            WearSyncOutcome.FAILED -> deliveryHealth.recordFailure(
+                DeliverySurface.WEAR_SYNC,
+                DeliveryFailureReason.NO_RECEIVER,
+                System.currentTimeMillis(),
+            )
         }
     }
 
@@ -287,8 +311,12 @@ class WidgetRefreshWorker @AssistedInject constructor(
         WidgetDataProvider.save(applicationContext, buildWidgetData(primaryWeather, convertTemp))
         state.refreshedAnyLocation = true
         try {
-            wearSyncManager.syncWeather(primaryWeather)
-            deliveryHealth.recordSuccess(DeliverySurface.WEAR_SYNC, System.currentTimeMillis())
+            // The outcome, not the absence of a thrown exception: the sync
+            // manager catches everything internally, including "no Wear OS on
+            // this device", so this catch was unreachable and the panel showed
+            // a successful watch sync every 15 minutes on a phone with no
+            // watch, and on the whole freenet build.
+            recordWearOutcome(wearSyncManager.syncWeather(primaryWeather))
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -552,6 +580,15 @@ class WidgetRefreshWorker @AssistedInject constructor(
         /** A one-off run of this worker, for the diagnostics panel's Run now. */
         fun oneTimeRequest(): OneTimeWorkRequest =
             OneTimeWorkRequestBuilder<WidgetRefreshWorker>()
+                .setConstraints(
+                    // The same network constraint the periodic work carries.
+                    // Without it Run now fires offline, every provider call
+                    // fails, and the diagnostic action manufactures the very
+                    // failure it exists to diagnose.
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                )
                 .setInputData(
                     androidx.work.Data.Builder()
                         // A manual run is user-initiated, so it must

@@ -104,6 +104,7 @@ class AlertCheckWorker @AssistedInject constructor(
         }
 
         var anyUntrustworthy = false
+        var anyUndelivered = false
         for (location in locations) {
             val result = weatherSourceManager.getAlertsDetailed(
                 location.latitude,
@@ -149,6 +150,11 @@ class AlertCheckWorker @AssistedInject constructor(
                 )
                 if (delivered) {
                     newSeenIds.add(alert.id)
+                } else {
+                    // The system refused to post it, which is what a revoked
+                    // notification permission looks like. Having the forecast
+                    // is not the same as having told anyone about it.
+                    anyUndelivered = true
                 }
             }
         }
@@ -165,14 +171,18 @@ class AlertCheckWorker @AssistedInject constructor(
         // "Untrustworthy" is the state where every provider was down, so the
         // all-clear cannot be believed. That is the failure a user needs to see
         // in the panel: alerts are the one surface where silence is dangerous.
-        if (anyUntrustworthy) {
-            deliveryHealth.recordFailure(
+        when {
+            anyUndelivered -> deliveryHealth.recordFailure(
+                DeliverySurface.WEATHER_ALERTS,
+                DeliveryFailureReason.PERMISSION_DENIED,
+                startedAt,
+            )
+            anyUntrustworthy -> deliveryHealth.recordFailure(
                 DeliverySurface.WEATHER_ALERTS,
                 DeliveryFailureReason.FORECAST_UNAVAILABLE,
                 startedAt,
             )
-        } else {
-            deliveryHealth.recordSuccess(DeliverySurface.WEATHER_ALERTS, startedAt)
+            else -> deliveryHealth.recordSuccess(DeliverySurface.WEATHER_ALERTS, startedAt)
         }
 
         return if (anyUntrustworthy && runAttemptCount < MAX_RETRY_ATTEMPTS) {
@@ -201,6 +211,15 @@ class AlertCheckWorker @AssistedInject constructor(
         /** A one-off run of this worker, for the diagnostics panel's Run now. */
         fun oneTimeRequest(): OneTimeWorkRequest =
             OneTimeWorkRequestBuilder<AlertCheckWorker>()
+                .setConstraints(
+                    // The same network constraint the periodic work carries.
+                    // Without it Run now fires offline, every provider call
+                    // fails, and the diagnostic action manufactures the very
+                    // failure it exists to diagnose.
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                )
                 .build()
         // Cap retries per run so a sustained outage can't spin the worker; after
         // this it falls through to the next periodic tick.

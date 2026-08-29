@@ -21,7 +21,10 @@ class WearSyncManager @Inject constructor(
         data: WeatherData,
         alerts: List<WeatherAlert>? = null,
         airQuality: AirQualityData? = null,
-    ) {
-        // No-op — Wearable DataLayer API not available without GMS
+    ): WearSyncOutcome {
+        // No-op — Wearable DataLayer API not available without GMS. Reported
+        // as unavailable rather than done, so the delivery panel does not
+        // claim a watch sync this build cannot perform.
+        return WearSyncOutcome.UNAVAILABLE
     }
 }

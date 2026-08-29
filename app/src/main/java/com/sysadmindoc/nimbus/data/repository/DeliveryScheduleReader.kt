@@ -89,7 +89,12 @@ class DeliveryScheduleReader @Inject constructor(
      */
     fun runNow(surface: DeliverySurface) {
         WorkManager.getInstance(context).enqueueUniqueWork(
-            uniqueWorkName(surface) + "_manual",
+            // Keyed on the surface, not the worker. Watch sync, the
+            // Gadgetbridge broadcast and the widgets share one worker, so a
+            // single manual name meant Run now on one row cancelled an
+            // in-flight run started from another, which rethrows the
+            // cancellation and records nothing at all.
+            "manual_" + surface.name.lowercase(),
             ExistingWorkPolicy.REPLACE,
             oneTimeRequest(surface),
         )

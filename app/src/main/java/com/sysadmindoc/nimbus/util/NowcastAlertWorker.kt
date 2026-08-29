@@ -89,9 +89,10 @@ class NowcastAlertWorker @AssistedInject constructor(
             )
             return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
         }
-        // Data in hand. Whether it triggers an alert is the forecast's business,
-        // not a delivery problem, so this is the success point.
-        deliveryHealth.recordSuccess(DeliverySurface.NOWCAST_ALERTS, startedAt)
+        // Recorded after the notification is attempted, not here: a blocked
+        // notification permission is a delivery failure, and having the data
+        // is not the same as having told anyone.
+        var anyUndelivered = false
         val series = seriesResult.getOrNull()
         if (series.isNullOrEmpty()) {
             // Legitimately empty (no precip in the window) — nothing to do.
@@ -137,6 +138,21 @@ class NowcastAlertWorker @AssistedInject constructor(
             val nowEpoch = System.currentTimeMillis() / 1000
             store.record(signature, if (isCountdownUpdate) store.lastNotifiedAtEpoch() else nowEpoch)
             scheduleRecheck(applicationContext)
+        } else {
+            anyUndelivered = true
+        }
+
+        // Recorded here, after the notifications: a blocked notification
+        // permission is the most common real delivery failure, and having the
+        // forecast is not the same as having told anyone about it.
+        if (anyUndelivered) {
+            deliveryHealth.recordFailure(
+                DeliverySurface.NOWCAST_ALERTS,
+                DeliveryFailureReason.PERMISSION_DENIED,
+                startedAt,
+            )
+        } else {
+            deliveryHealth.recordSuccess(DeliverySurface.NOWCAST_ALERTS, startedAt)
         }
         return Result.success()
     }
@@ -156,6 +172,15 @@ class NowcastAlertWorker @AssistedInject constructor(
         /** A one-off run of this worker, for the diagnostics panel's Run now. */
         fun oneTimeRequest(): OneTimeWorkRequest =
             OneTimeWorkRequestBuilder<NowcastAlertWorker>()
+                .setConstraints(
+                    // The same network constraint the periodic work carries.
+                    // Without it Run now fires offline, every provider call
+                    // fails, and the diagnostic action manufactures the very
+                    // failure it exists to diagnose.
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                )
                 .build()
         private const val RECHECK_WORK_NAME = "nimbus_nowcast_recheck"
         private const val MAX_RETRY_ATTEMPTS = 3
