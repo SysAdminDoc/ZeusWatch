@@ -96,7 +96,15 @@ fun RadarScreen(
     // Starts unresolved rather than at the passed-in coordinates: for the
     // (0,0) deep-link sentinel those are not a place, and rendering them for a
     // frame put the map off the west coast of Africa before it settled.
-    var resolved by remember { mutableStateOf<RadarLocation?>(null) }
+    // Seeded with the passed-in coordinates unless they are the deep-link
+    // sentinel, which is not a place. Starting unresolved for every case left
+    // the screen blank for a frame even when the caller had real coordinates
+    // and resolveLocation never suspended.
+    var resolved by remember(latitude, longitude) {
+        mutableStateOf<RadarLocation?>(
+            if (latitude == 0.0 && longitude == 0.0) null else RadarLocation.Known(latitude, longitude),
+        )
+    }
     LaunchedEffect(latitude, longitude) {
         resolved = viewModel.resolveLocation(latitude, longitude)
     }
@@ -106,7 +114,13 @@ fun RadarScreen(
         RadarLocationNeeded(onBack = onBack)
         return
     }
-    if (known == null) return
+    if (known == null) {
+        // Only the sentinel reaches here, and only until the saved location is
+        // read. A background rather than nothing, so the screen does not flash
+        // through transparent on the way in.
+        Box(modifier = Modifier.fillMaxSize().background(NimbusNavyDark))
+        return
+    }
 
     val resolvedLat = known.latitude
     val resolvedLon = known.longitude

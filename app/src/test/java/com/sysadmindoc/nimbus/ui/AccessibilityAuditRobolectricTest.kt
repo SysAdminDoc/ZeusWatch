@@ -19,6 +19,7 @@ import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.testing.assertHasMergedDescription
 import com.sysadmindoc.nimbus.testing.assertMeasuredAtLeast
 import com.sysadmindoc.nimbus.testing.assertTextContrastMeetsMinimum
 import com.sysadmindoc.nimbus.testing.assertVisibleTouchTargetsMeetMinimum
@@ -260,6 +261,10 @@ class AccessibilityAuditRobolectricTest {
         }
 
         composeTestRule.assertVisibleTouchTargetsMeetMinimum()
+        // A card is not clickable, so the labelling check inside
+        // setContentWithAccessibilityChecks says nothing about it: all three
+        // of these passed with their merged descriptions removed.
+        composeTestRule.assertHasMergedDescription()
         composeTestRule.assertTextContrastMeetsMinimum().assertMeasuredAtLeast(1.0)
     }
 
