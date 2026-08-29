@@ -262,7 +262,9 @@ dependencies {
     "standardImplementation"("com.google.firebase:firebase-auth")
     // App Check attestation for the only user-writable backend surface.
     "standardImplementation"("com.google.firebase:firebase-appcheck-playintegrity")
-    debugImplementation("com.google.firebase:firebase-appcheck-debug:18.0.0")
+    // The App Check debug provider is declared below on standardDebug only.
+    // An unflavored debugImplementation pulls Firebase and Play Services into
+    // freenetDebug, which contradicts the whole point of the F-Droid flavor.
 
     // ACRA — crash reporting that works in both standard and freenet flavors
     // (no Google Play Services dependency). Core + mail sender so F-Droid
@@ -307,4 +309,14 @@ dependencies {
     kspAndroidTest(libs.hilt.compiler)
     debugImplementation(libs.compose.ui.test.manifest)
     baselineProfile(project(":benchmark"))
+}
+
+/**
+ * `standardDebugImplementation` is a variant configuration: AGP creates it
+ * after the `dependencies` block has already been evaluated, so it cannot be
+ * named there. Declaring it lazily keeps the App Check debug provider on
+ * standardDebug without dragging Firebase into the freenet flavor.
+ */
+configurations.matching { it.name == "standardDebugImplementation" }.configureEach {
+    dependencies.add(project.dependencies.create("com.google.firebase:firebase-appcheck-debug:18.0.0"))
 }
