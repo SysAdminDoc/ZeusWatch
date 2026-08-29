@@ -1234,6 +1234,9 @@ private fun RenderForecastCard(
             )
             RadarPreviewCard(
                 onOpenRadar = { context.onNavigateToRadar(data.location.latitude, data.location.longitude) },
+                provider = context.state.settings.radarProvider,
+                latitude = data.location.latitude,
+                longitude = data.location.longitude,
                 modifier = modifier,
                 radarTileUrl = context.radarPreviewTileUrl,
                 baseMapTileUrl = context.radarBaseMapUrl,

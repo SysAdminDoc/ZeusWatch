@@ -39,7 +39,7 @@ class RadarRepository @Inject constructor(
             .replace("{z}", supportedZoom.toString())
             .replace("{x}", tileX.toString())
             .replace("{y}", tileY.toString())
-        val baseMapUrl = "https://basemaps.cartocdn.com/dark_all/$supportedZoom/$tileX/$tileY@2x.png"
+        val baseMapUrl = "https://tile.openstreetmap.org/$supportedZoom/$tileX/$tileY.png"
         return RadarPreviewUrls(radarUrl, baseMapUrl)
     }
 

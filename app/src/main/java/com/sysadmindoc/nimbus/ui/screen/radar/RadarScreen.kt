@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.ui.screen.radar
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.view.MotionEvent
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -44,6 +45,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -866,20 +868,24 @@ private fun RadarBackButton(
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun RadarWebView(
+internal fun RadarWebView(
     provider: RadarProvider,
     latitude: Double,
     longitude: Double,
     modifier: Modifier = Modifier,
+    zoom: Int = 8,
+    interactive: Boolean = true,
+    onPreviewClick: (() -> Unit)? = null,
 ) {
-    val radarUrl = buildRadarProviderUrl(provider, latitude, longitude)
-    val webViewRef = remember(provider) { arrayOfNulls<WebView>(1) }
+    val radarUrl = buildRadarProviderUrl(provider, latitude, longitude, zoom)
+    val currentPreviewClick by rememberUpdatedState(onPreviewClick)
+    val webViewRef = remember(provider, interactive) { arrayOfNulls<WebView>(1) }
 
-    DisposableEffect(provider) {
+    DisposableEffect(provider, interactive) {
         onDispose { webViewRef[0]?.destroy() }
     }
 
-    key(provider) {
+    key(provider, interactive) {
         AndroidView(
             factory = { context ->
                 WebView(context).apply {
@@ -924,7 +930,7 @@ private fun RadarWebView(
                         domStorageEnabled = true
                         loadWithOverviewMode = true
                         useWideViewPort = true
-                        builtInZoomControls = true
+                        builtInZoomControls = interactive
                         displayZoomControls = false
                         cacheMode = WebSettings.LOAD_DEFAULT
                         mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
@@ -934,6 +940,18 @@ private fun RadarWebView(
                         // its OS/CPU detail and the radar policy does not depend
                         // on user-agent parsing.
                     }
+                    isClickable = interactive || onPreviewClick != null
+                    isFocusable = interactive
+                    isFocusableInTouchMode = interactive
+                    if (!interactive && onPreviewClick != null) {
+                        setOnTouchListener { view, event ->
+                            if (event.action == MotionEvent.ACTION_UP) {
+                                view.performClick()
+                                currentPreviewClick?.invoke()
+                            }
+                            true
+                        }
+                    }
                     setBackgroundColor(android.graphics.Color.parseColor("#0F1526"))
                     webViewRef[0] = this
                     if (RadarNavigationPolicy.canLoadInitialUrl(provider, radarUrl)) {
@@ -942,7 +960,7 @@ private fun RadarWebView(
                 }
             },
             update = { webView ->
-                val newUrl = buildRadarProviderUrl(provider, latitude, longitude)
+                val newUrl = buildRadarProviderUrl(provider, latitude, longitude, zoom)
                 if (
                     webView.url != newUrl &&
                     RadarNavigationPolicy.canLoadInitialUrl(provider, newUrl)

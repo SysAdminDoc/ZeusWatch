@@ -102,6 +102,7 @@ class SettingsTransferTest {
         val restored = backup.settings.toSettings()
 
         assertEquals(TempUnit.CELSIUS, restored.tempUnit)
+        assertEquals(RadarProvider.WINDY_WEBVIEW, restored.radarProvider)
         assertFalse(restored.showForecastAccuracy)
         assertFalse(restored.showConfidenceBands)
         assertFalse(restored.openMeteoFlatBuffersEnabled)
@@ -150,6 +151,7 @@ class SettingsTransferTest {
             migrainePressureThreshold = -10.0,
             cacheTtlMinutes = 5,
             sourceForecast = "NOT_A_PROVIDER",
+            radarProvider = "NOT_A_RADAR_PROVIDER",
             gadgetbridgeBroadcastEnabled = true,
         ).toSettings()
 
@@ -163,6 +165,7 @@ class SettingsTransferTest {
         assertEquals(72, restored.hourlyForecastHours)
         assertEquals(1.0, restored.migrainePressureThreshold, 0.0)
         assertEquals(15, restored.cacheTtlMinutes)
+        assertEquals(RadarProvider.WINDY_WEBVIEW, restored.radarProvider)
         assertEquals(
             WeatherSourceProvider.defaultFor(WeatherDataType.FORECAST),
             restored.sourceConfig.forecast,
