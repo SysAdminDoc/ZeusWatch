@@ -19,10 +19,10 @@ from typing import Callable, Iterable, Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SHA256SUMS = ROOT / "SHA256SUMS.txt"
+# The staged directory, not the raw AGP outputs: provenance must describe the
+# files that are actually uploaded, under the names they are uploaded with.
 DEFAULT_APK_PATTERNS = (
-    str(ROOT / "app" / "build" / "outputs" / "apk" / "standard" / "release" / "*.apk"),
-    str(ROOT / "app" / "build" / "outputs" / "apk" / "freenet" / "release" / "*.apk"),
-    str(ROOT / "wear" / "build" / "outputs" / "apk" / "release" / "*.apk"),
+    str(ROOT / "build" / "release-assets" / "*.apk"),
 )
 RELEASE_VERIFICATION_COMMANDS = (
     r".\gradlew.bat clean assembleStandardRelease assembleFreenetRelease :wear:assembleRelease",
@@ -169,6 +169,31 @@ def collect_toolchain(root: Path = ROOT, runner: Runner = subprocess.run, env: d
     }
 
 
+# The contracted release asset names. Uploading anything else silently breaks
+# the filename patterns Obtainium and IzzyOnDroid users configure once.
+RELEASE_ASSET_NAME = re.compile(
+    r"^ZeusWatch-v(?P<version>[0-9][0-9A-Za-z.\-]*)-"
+    r"(?:(?P<flavor>standard|freenet)-(?P<abi>arm64-v8a|armeabi-v7a|universal)|wear)\.apk$"
+)
+
+
+def validate_asset_names(apks: Sequence[Path], version: str) -> list[str]:
+    """Names that do not match the release contract, or carry the wrong version."""
+    problems = []
+    for apk in apks:
+        match = RELEASE_ASSET_NAME.match(apk.name)
+        if match is None:
+            problems.append(
+                f"{apk.name} does not match ZeusWatch-v{version}-<flavor>-<abi>.apk "
+                f"or ZeusWatch-v{version}-wear.apk"
+            )
+        elif match.group("version") != version:
+            problems.append(
+                f"{apk.name} carries version {match.group('version')}, expected {version}"
+            )
+    return problems
+
+
 def build_provenance(
     *,
     apks: Sequence[Path],
@@ -181,6 +206,11 @@ def build_provenance(
 ) -> dict[str, object]:
     if not apks:
         raise ValueError("no APKs found for provenance")
+    naming_problems = validate_asset_names(apks, version)
+    if naming_problems:
+        raise ValueError(
+            "release asset naming contract violated: " + "; ".join(naming_problems)
+        )
     expected_hashes = read_sha256sums(sha256sums)
     artifacts: list[Artifact] = []
     missing_from_sums: list[str] = []
