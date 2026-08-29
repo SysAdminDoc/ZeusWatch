@@ -1,11 +1,17 @@
 package com.sysadmindoc.nimbus.util
 
+import com.sysadmindoc.nimbus.data.model.AirQualityData
+import com.sysadmindoc.nimbus.data.model.AqiLevel
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import com.sysadmindoc.nimbus.data.model.CustomAlertMetric
 import com.sysadmindoc.nimbus.data.model.CustomAlertOperator
 import com.sysadmindoc.nimbus.data.model.CustomAlertRule
+import com.sysadmindoc.nimbus.data.model.CustomAlertUnit
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.LocationInfo
+import com.sysadmindoc.nimbus.data.model.PollenData
+import com.sysadmindoc.nimbus.data.model.PollenLevel
+import com.sysadmindoc.nimbus.data.model.PollenReading
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import org.junit.Assert.assertEquals
@@ -47,6 +53,115 @@ class CustomAlertEvaluatorTest {
         operator = CustomAlertOperator.GREATER_THAN,
         thresholdCanonical = thresholdMm,
         enabled = true,
+    )
+
+    @Test
+    fun `a ragweed rule fires on the peak count for that pollen only`() {
+        val rule = pollenRule(CustomAlertMetric.POLLEN_RAGWEED_PEAK_TODAY, threshold = 20.0)
+        val airQuality = airQualityWith(
+            ragweed = PollenReading(45.0, PollenLevel.HIGH),
+            grass = PollenReading(2.0, PollenLevel.LOW),
+        )
+
+        val triggered = evaluateCustomAlertRules(listOf(rule), weather(), airQuality)
+
+        assertEquals(1, triggered.size)
+        assertEquals(45.0, triggered.single().observedCanonical, 0.001)
+    }
+
+    @Test
+    fun `a rule for one pollen ignores a spike in another`() {
+        val rule = pollenRule(CustomAlertMetric.POLLEN_GRASS_PEAK_TODAY, threshold = 20.0)
+        val airQuality = airQualityWith(
+            ragweed = PollenReading(200.0, PollenLevel.VERY_HIGH),
+            grass = PollenReading(3.0, PollenLevel.LOW),
+        )
+
+        // An allergy is to a specific pollen; a birch spike is no reason to
+        // wake a grass-sensitive user.
+        assertTrue(evaluateCustomAlertRules(listOf(rule), weather(), airQuality).isEmpty())
+    }
+
+    @Test
+    fun `a pollen rule no-ops where the location has no pollen coverage`() {
+        val above = pollenRule(CustomAlertMetric.POLLEN_BIRCH_PEAK_TODAY, threshold = 20.0)
+        val below = pollenRule(
+            CustomAlertMetric.POLLEN_BIRCH_PEAK_TODAY,
+            threshold = 20.0,
+            operator = CustomAlertOperator.LESS_THAN,
+        )
+
+        // PollenReading.NONE means "no data", not "zero grains". Reading it as
+        // 0.0 would fire the below-threshold rule every single day in every
+        // region Open-Meteo has no pollen model for.
+        val airQuality = airQualityWith()
+
+        assertTrue(evaluateCustomAlertRules(listOf(above, below), weather(), airQuality).isEmpty())
+    }
+
+    @Test
+    fun `a pollen rule no-ops when air quality was never fetched`() {
+        val rule = pollenRule(CustomAlertMetric.POLLEN_OLIVE_PEAK_TODAY, threshold = 5.0)
+
+        assertTrue(evaluateCustomAlertRules(listOf(rule), weather(), airQuality = null).isEmpty())
+    }
+
+    @Test
+    fun `every pollen metric asks the worker to fetch air quality`() {
+        val pollenMetrics = CustomAlertMetric.entries.filter { it.unit == CustomAlertUnit.POLLEN }
+
+        assertEquals(6, pollenMetrics.size)
+        // Derived from the unit, so a seventh pollen type cannot be added
+        // without the worker learning to fetch for it.
+        assertTrue(pollenMetrics.all { it.requiresAirQuality })
+        assertTrue(CustomAlertMetric.AQI_NOW.requiresAirQuality)
+        assertTrue(CustomAlertMetric.entries.none { it.unit == CustomAlertUnit.CELSIUS && it.requiresAirQuality })
+    }
+
+    private fun pollenRule(
+        metric: CustomAlertMetric,
+        threshold: Double,
+        operator: CustomAlertOperator = CustomAlertOperator.GREATER_THAN,
+    ) = CustomAlertRule(
+        id = "pollen-rule",
+        metric = metric,
+        operator = operator,
+        thresholdCanonical = threshold,
+        enabled = true,
+    )
+
+    private fun airQualityWith(
+        grass: PollenReading = PollenReading.NONE,
+        birch: PollenReading = PollenReading.NONE,
+        ragweed: PollenReading = PollenReading.NONE,
+        olive: PollenReading = PollenReading.NONE,
+        alder: PollenReading = PollenReading.NONE,
+        mugwort: PollenReading = PollenReading.NONE,
+    ) = AirQualityData(
+        usAqi = 40,
+        europeanAqi = 30,
+        aqiLevel = AqiLevel.GOOD,
+        pm25 = 5.0,
+        pm10 = 8.0,
+        ozone = 30.0,
+        nitrogenDioxide = 10.0,
+        sulphurDioxide = 1.0,
+        carbonMonoxide = 100.0,
+        pollen = PollenData(
+            alder = alder,
+            birch = birch,
+            grass = grass,
+            mugwort = mugwort,
+            olive = olive,
+            ragweed = ragweed,
+        ),
+    )
+
+    private fun weather() = WeatherData(
+        location = LocationInfo(name = "Test", latitude = 40.0, longitude = -74.0),
+        current = current(),
+        hourly = emptyList(),
+        daily = emptyList(),
     )
 
     private fun weatherWithHourlySnowfallCm(snowfallCm: List<Double>): WeatherData {

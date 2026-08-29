@@ -7,6 +7,9 @@ import com.sysadmindoc.nimbus.data.model.CustomAlertOperator
 import com.sysadmindoc.nimbus.data.model.CustomAlertRule
 import com.sysadmindoc.nimbus.data.model.CustomAlertUnit
 import com.sysadmindoc.nimbus.data.model.AirQualityData
+import com.sysadmindoc.nimbus.data.model.PollenReading
+import com.sysadmindoc.nimbus.data.model.DailyConditions
+import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.PrecipUnit
@@ -14,6 +17,14 @@ import com.sysadmindoc.nimbus.data.repository.PressureUnit
 import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.data.repository.WindUnit
 import java.util.Locale
+
+/**
+ * The concentration this reading actually reports, or null when the location
+ * has no pollen coverage at all. [PollenReading.NONE] is the "no data"
+ * sentinel, so it must not read as a genuine zero.
+ */
+private fun PollenReading.reportedConcentration(): Double? =
+    if (this == PollenReading.NONE) null else concentration
 
 /** A custom-rule evaluation hit, ready to surface as a notification. */
 data class TriggeredCustomAlert(
@@ -44,28 +55,8 @@ internal fun evaluateCustomAlertRules(
     val results = mutableListOf<TriggeredCustomAlert>()
     for (rule in rules) {
         if (!rule.enabled) continue
-        val observed = when (rule.metric) {
-            CustomAlertMetric.TEMP_HIGH_TODAY -> today?.temperatureHigh
-            CustomAlertMetric.TEMP_LOW_TONIGHT -> tonight?.temperatureLow
-            CustomAlertMetric.WIND_GUST_NEXT_12H -> next12h.mapNotNull { it.windGusts ?: it.windSpeed }.maxOrNull()
-            // Only evaluate when at least one bucket actually reports precip —
-            // an all-null series summed as 0.0 would fire false LESS_THAN
-            // triggers when the provider omits the field (mirrors the UV
-            // branch's missing-data-means-skip behavior documented above).
-            CustomAlertMetric.PRECIP_SUM_NEXT_24H ->
-                if (next24h.any { it.precipitation != null }) next24h.sumOf { it.precipitation ?: 0.0 } else null
-            CustomAlertMetric.UV_INDEX_MAX_TODAY -> today?.uvIndexMax ?: next12h.mapNotNull { it.uvIndex }.maxOrNull()
-            CustomAlertMetric.DEW_POINT_NOW -> data.current.dewPoint
-            CustomAlertMetric.FEELS_LIKE_NOW -> data.current.feelsLike
-            CustomAlertMetric.SNOWFALL_SUM_NEXT_24H ->
-                // Open-Meteo snowfall is centimeters; the rule threshold is stored
-                // in canonical millimeters (CustomAlertUnit.MM), so convert cm -> mm
-                // (x10) before comparing. Without this, a "20 mm" rule only fired at
-                // 20 cm (= 200 mm) of snow — a 10x error.
-                if (next24h.any { it.snowfall != null }) next24h.sumOf { (it.snowfall ?: 0.0) * 10.0 } else null
-            CustomAlertMetric.PRESSURE_NOW -> data.current.pressure.takeIf { it > 0.0 }
-            CustomAlertMetric.AQI_NOW -> airQuality?.usAqi?.toDouble()?.takeIf { it > 0.0 }
-        } ?: continue
+        val observed = observeMetric(rule.metric, today, tonight, next12h, next24h, data, airQuality)
+            ?: continue
 
         val triggers = when (rule.operator) {
             CustomAlertOperator.GREATER_THAN -> observed > rule.thresholdCanonical
@@ -137,7 +128,8 @@ internal fun convertForDisplay(
         PressureUnit.INHG -> canonical * 0.02953
         PressureUnit.HPA, PressureUnit.MBAR -> canonical
     }
-    CustomAlertUnit.AQI -> canonical
+    // Grains per cubic metre everywhere; no display-unit choice to honour.
+    CustomAlertUnit.AQI, CustomAlertUnit.POLLEN -> canonical
 }
 
 /** Reverse of [convertForDisplay] — used when saving a user-entered threshold. */
@@ -164,7 +156,7 @@ internal fun convertToCanonical(
         PressureUnit.INHG -> displayValue / 0.02953
         PressureUnit.HPA, PressureUnit.MBAR -> displayValue
     }
-    CustomAlertUnit.AQI -> displayValue
+    CustomAlertUnit.AQI, CustomAlertUnit.POLLEN -> displayValue
 }
 
 internal fun displayUnitLabel(metric: CustomAlertMetric, settings: NimbusSettings): String =
@@ -187,6 +179,7 @@ internal fun displayUnitLabel(metric: CustomAlertMetric, settings: NimbusSetting
             PressureUnit.MBAR -> " mbar"
         }
         CustomAlertUnit.AQI -> " AQI"
+        CustomAlertUnit.POLLEN -> " grains/m³"
     }
 
 private fun formatWithPrecision(value: Double, metric: CustomAlertMetric): String {
@@ -198,7 +191,55 @@ private fun formatWithPrecision(value: Double, metric: CustomAlertMetric): Strin
             String.format(Locale.US, "%.1f", value)
         CustomAlertUnit.HPA ->
             String.format(Locale.US, "%.1f", value)
-        CustomAlertUnit.AQI ->
+        // Counts, not measurements: a fractional grain count is noise.
+        CustomAlertUnit.AQI, CustomAlertUnit.POLLEN ->
             kotlin.math.round(value).toInt().toString()
     }
 }
+
+/**
+ * The observed value for [metric], or null when this data cannot answer it.
+ *
+ * Split out of [evaluateCustomAlertRules] purely to keep that loop readable
+ * as metrics accumulate; null still means "skip", never "threshold not met".
+ */
+@Suppress("CyclomaticComplexMethod")
+private fun observeMetric(
+    metric: CustomAlertMetric,
+    today: DailyConditions?,
+    tonight: DailyConditions?,
+    next12h: List<HourlyConditions>,
+    next24h: List<HourlyConditions>,
+    data: WeatherData,
+    airQuality: AirQualityData?,
+): Double? = when (metric) {
+            CustomAlertMetric.TEMP_HIGH_TODAY -> today?.temperatureHigh
+            CustomAlertMetric.TEMP_LOW_TONIGHT -> tonight?.temperatureLow
+            CustomAlertMetric.WIND_GUST_NEXT_12H -> next12h.mapNotNull { it.windGusts ?: it.windSpeed }.maxOrNull()
+            // Only evaluate when at least one bucket actually reports precip —
+            // an all-null series summed as 0.0 would fire false LESS_THAN
+            // triggers when the provider omits the field (mirrors the UV
+            // branch's missing-data-means-skip behavior documented above).
+            CustomAlertMetric.PRECIP_SUM_NEXT_24H ->
+                if (next24h.any { it.precipitation != null }) next24h.sumOf { it.precipitation ?: 0.0 } else null
+            CustomAlertMetric.UV_INDEX_MAX_TODAY -> today?.uvIndexMax ?: next12h.mapNotNull { it.uvIndex }.maxOrNull()
+            CustomAlertMetric.DEW_POINT_NOW -> data.current.dewPoint
+            CustomAlertMetric.FEELS_LIKE_NOW -> data.current.feelsLike
+            CustomAlertMetric.SNOWFALL_SUM_NEXT_24H ->
+                // Open-Meteo snowfall is centimeters; the rule threshold is stored
+                // in canonical millimeters (CustomAlertUnit.MM), so convert cm -> mm
+                // (x10) before comparing. Without this, a "20 mm" rule only fired at
+                // 20 cm (= 200 mm) of snow — a 10x error.
+                if (next24h.any { it.snowfall != null }) next24h.sumOf { (it.snowfall ?: 0.0) * 10.0 } else null
+            CustomAlertMetric.PRESSURE_NOW -> data.current.pressure.takeIf { it > 0.0 }
+            CustomAlertMetric.AQI_NOW -> airQuality?.usAqi?.toDouble()?.takeIf { it > 0.0 }
+            // NONE is the sentinel for "this location has no pollen coverage",
+            // not "zero grains". Treating it as 0.0 would fire every
+            // LESS_THAN pollen rule daily everywhere the data is missing.
+            CustomAlertMetric.POLLEN_GRASS_PEAK_TODAY -> airQuality?.pollen?.grass?.reportedConcentration()
+            CustomAlertMetric.POLLEN_BIRCH_PEAK_TODAY -> airQuality?.pollen?.birch?.reportedConcentration()
+            CustomAlertMetric.POLLEN_RAGWEED_PEAK_TODAY -> airQuality?.pollen?.ragweed?.reportedConcentration()
+            CustomAlertMetric.POLLEN_OLIVE_PEAK_TODAY -> airQuality?.pollen?.olive?.reportedConcentration()
+            CustomAlertMetric.POLLEN_ALDER_PEAK_TODAY -> airQuality?.pollen?.alder?.reportedConcentration()
+            CustomAlertMetric.POLLEN_MUGWORT_PEAK_TODAY -> airQuality?.pollen?.mugwort?.reportedConcentration()
+        }

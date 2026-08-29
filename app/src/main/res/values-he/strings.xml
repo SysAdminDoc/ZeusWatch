@@ -1569,4 +1569,16 @@
     <string name="settings_skin_type_v">סוג V: כמעט אף פעם לא נכווה, משתזף עמוק</string>
     <string name="settings_skin_type_vi">סוג VI: אף פעם לא נכווה</string>
     <string name="uv_safe_exposure_for_skin_type">בערך %1$d דקות בשמש ללא הגנה (%2$s)</string>
+    <string name="custom_alert_metric_pollen_grass">אבקת דגניים</string>
+    <string name="custom_alert_metric_pollen_grass_summary">שיא אבקת הדגניים היום</string>
+    <string name="custom_alert_metric_pollen_birch">אבקת ליבנה</string>
+    <string name="custom_alert_metric_pollen_birch_summary">שיא אבקת הליבנה היום</string>
+    <string name="custom_alert_metric_pollen_ragweed">אבקת אמברוסיה</string>
+    <string name="custom_alert_metric_pollen_ragweed_summary">שיא אבקת האמברוסיה היום</string>
+    <string name="custom_alert_metric_pollen_olive">אבקת זית</string>
+    <string name="custom_alert_metric_pollen_olive_summary">שיא אבקת הזית היום</string>
+    <string name="custom_alert_metric_pollen_alder">אבקת אלמון</string>
+    <string name="custom_alert_metric_pollen_alder_summary">שיא אבקת האלמון היום</string>
+    <string name="custom_alert_metric_pollen_mugwort">אבקת לענה</string>
+    <string name="custom_alert_metric_pollen_mugwort_summary">שיא אבקת הלענה היום</string>
 </resources>

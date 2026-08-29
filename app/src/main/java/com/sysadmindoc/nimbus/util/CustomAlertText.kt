@@ -19,6 +19,12 @@ internal val CustomAlertMetric.labelRes: Int
         CustomAlertMetric.SNOWFALL_SUM_NEXT_24H -> R.string.custom_alert_metric_snowfall_sum_next_24h
         CustomAlertMetric.PRESSURE_NOW -> R.string.custom_alert_metric_pressure_now
         CustomAlertMetric.AQI_NOW -> R.string.custom_alert_metric_aqi_now
+        CustomAlertMetric.POLLEN_GRASS_PEAK_TODAY -> R.string.custom_alert_metric_pollen_grass
+        CustomAlertMetric.POLLEN_BIRCH_PEAK_TODAY -> R.string.custom_alert_metric_pollen_birch
+        CustomAlertMetric.POLLEN_RAGWEED_PEAK_TODAY -> R.string.custom_alert_metric_pollen_ragweed
+        CustomAlertMetric.POLLEN_OLIVE_PEAK_TODAY -> R.string.custom_alert_metric_pollen_olive
+        CustomAlertMetric.POLLEN_ALDER_PEAK_TODAY -> R.string.custom_alert_metric_pollen_alder
+        CustomAlertMetric.POLLEN_MUGWORT_PEAK_TODAY -> R.string.custom_alert_metric_pollen_mugwort
     }
 
 @get:StringRes
@@ -34,6 +40,12 @@ internal val CustomAlertMetric.summaryRes: Int
         CustomAlertMetric.SNOWFALL_SUM_NEXT_24H -> R.string.custom_alert_metric_snowfall_sum_next_24h_summary
         CustomAlertMetric.PRESSURE_NOW -> R.string.custom_alert_metric_pressure_now_summary
         CustomAlertMetric.AQI_NOW -> R.string.custom_alert_metric_aqi_now_summary
+        CustomAlertMetric.POLLEN_GRASS_PEAK_TODAY -> R.string.custom_alert_metric_pollen_grass_summary
+        CustomAlertMetric.POLLEN_BIRCH_PEAK_TODAY -> R.string.custom_alert_metric_pollen_birch_summary
+        CustomAlertMetric.POLLEN_RAGWEED_PEAK_TODAY -> R.string.custom_alert_metric_pollen_ragweed_summary
+        CustomAlertMetric.POLLEN_OLIVE_PEAK_TODAY -> R.string.custom_alert_metric_pollen_olive_summary
+        CustomAlertMetric.POLLEN_ALDER_PEAK_TODAY -> R.string.custom_alert_metric_pollen_alder_summary
+        CustomAlertMetric.POLLEN_MUGWORT_PEAK_TODAY -> R.string.custom_alert_metric_pollen_mugwort_summary
     }
 
 @get:StringRes

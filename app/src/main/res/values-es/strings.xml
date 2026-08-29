@@ -1600,4 +1600,16 @@
     <string name="settings_skin_type_v">Tipo V: casi nunca se quema, se broncea mucho</string>
     <string name="settings_skin_type_vi">Tipo VI: nunca se quema</string>
     <string name="uv_safe_exposure_for_skin_type">Unos %1$d min al sol sin protección (%2$s)</string>
+    <string name="custom_alert_metric_pollen_grass">Polen de gramíneas</string>
+    <string name="custom_alert_metric_pollen_grass_summary">Pico de polen de gramíneas de hoy</string>
+    <string name="custom_alert_metric_pollen_birch">Polen de abedul</string>
+    <string name="custom_alert_metric_pollen_birch_summary">Pico de polen de abedul de hoy</string>
+    <string name="custom_alert_metric_pollen_ragweed">Polen de ambrosía</string>
+    <string name="custom_alert_metric_pollen_ragweed_summary">Pico de polen de ambrosía de hoy</string>
+    <string name="custom_alert_metric_pollen_olive">Polen de olivo</string>
+    <string name="custom_alert_metric_pollen_olive_summary">Pico de polen de olivo de hoy</string>
+    <string name="custom_alert_metric_pollen_alder">Polen de aliso</string>
+    <string name="custom_alert_metric_pollen_alder_summary">Pico de polen de aliso de hoy</string>
+    <string name="custom_alert_metric_pollen_mugwort">Polen de artemisa</string>
+    <string name="custom_alert_metric_pollen_mugwort_summary">Pico de polen de artemisa de hoy</string>
 </resources>

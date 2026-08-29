@@ -1621,4 +1621,16 @@
     <string name="settings_skin_type_v">Type V: very rarely burns, tans deeply</string>
     <string name="settings_skin_type_vi">Type VI: never burns</string>
     <string name="uv_safe_exposure_for_skin_type">About %1$d min in the sun without SPF (%2$s)</string>
+    <string name="custom_alert_metric_pollen_grass">Grass pollen</string>
+    <string name="custom_alert_metric_pollen_grass_summary">Peak grass pollen count today</string>
+    <string name="custom_alert_metric_pollen_birch">Birch pollen</string>
+    <string name="custom_alert_metric_pollen_birch_summary">Peak birch pollen count today</string>
+    <string name="custom_alert_metric_pollen_ragweed">Ragweed pollen</string>
+    <string name="custom_alert_metric_pollen_ragweed_summary">Peak ragweed pollen count today</string>
+    <string name="custom_alert_metric_pollen_olive">Olive pollen</string>
+    <string name="custom_alert_metric_pollen_olive_summary">Peak olive pollen count today</string>
+    <string name="custom_alert_metric_pollen_alder">Alder pollen</string>
+    <string name="custom_alert_metric_pollen_alder_summary">Peak alder pollen count today</string>
+    <string name="custom_alert_metric_pollen_mugwort">Mugwort pollen</string>
+    <string name="custom_alert_metric_pollen_mugwort_summary">Peak mugwort pollen count today</string>
 </resources>

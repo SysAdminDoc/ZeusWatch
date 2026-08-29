@@ -81,6 +81,48 @@ enum class CustomAlertMetric(
         summary = "Current US EPA air quality index",
         unit = CustomAlertUnit.AQI,
     ),
+    // Per-type pollen peaks. Six separate metrics rather than one "pollen"
+    // metric because an allergy is to a specific pollen: a grass-sensitive
+    // user gets nothing useful from a birch spike.
+    POLLEN_GRASS_PEAK_TODAY(
+        label = "Grass pollen",
+        summary = "Today's peak grass pollen",
+        unit = CustomAlertUnit.POLLEN,
+    ),
+    POLLEN_BIRCH_PEAK_TODAY(
+        label = "Birch pollen",
+        summary = "Today's peak birch pollen",
+        unit = CustomAlertUnit.POLLEN,
+    ),
+    POLLEN_RAGWEED_PEAK_TODAY(
+        label = "Ragweed pollen",
+        summary = "Today's peak ragweed pollen",
+        unit = CustomAlertUnit.POLLEN,
+    ),
+    POLLEN_OLIVE_PEAK_TODAY(
+        label = "Olive pollen",
+        summary = "Today's peak olive pollen",
+        unit = CustomAlertUnit.POLLEN,
+    ),
+    POLLEN_ALDER_PEAK_TODAY(
+        label = "Alder pollen",
+        summary = "Today's peak alder pollen",
+        unit = CustomAlertUnit.POLLEN,
+    ),
+    POLLEN_MUGWORT_PEAK_TODAY(
+        label = "Mugwort pollen",
+        summary = "Today's peak mugwort pollen",
+        unit = CustomAlertUnit.POLLEN,
+    ),
+    ;
+
+    /**
+     * Whether evaluating this metric needs the air-quality fetch. Derived from
+     * the unit rather than an enumerated metric list, so a new pollen or AQI
+     * metric cannot be added without the worker learning to fetch for it.
+     */
+    val requiresAirQuality: Boolean
+        get() = unit == CustomAlertUnit.AQI || unit == CustomAlertUnit.POLLEN
 }
 
 /** Comparison direction. */
@@ -101,4 +143,5 @@ enum class CustomAlertUnit(val shortLabel: String) {
     UV(""),
     HPA("hPa"),
     AQI("AQI"),
+    POLLEN("grains/m³"),
 }
