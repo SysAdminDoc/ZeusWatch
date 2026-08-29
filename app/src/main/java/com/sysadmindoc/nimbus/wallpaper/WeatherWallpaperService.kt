@@ -39,14 +39,11 @@ class WeatherWallpaperService : WallpaperService() {
         private var visible = false
 
         /**
-         * The queued preload post, so [onDestroy] can cancel it.
-         *
-         * Volatile because it is assigned on the preload thread and read on
-         * the main thread; without it onDestroy can see a stale null and
-         * leave the post queued against a dead engine.
+         * The engine's one-shot preference read, handed back to the main
+         * thread. Cancelled in onDestroy so it cannot run against a dead
+         * engine.
          */
-        @Volatile
-        private var preloadRunnable: Runnable? = null
+        private val preload = CancellablePost()
         private var width = 0
         private var height = 0
 
@@ -71,11 +68,12 @@ class WeatherWallpaperService : WallpaperService() {
             // cache and are cheap.
             Thread {
                 val code = prefs.getInt(KEY_WEATHER_CODE, 0)
-                // Named so onDestroy can cancel it. Opening and closing the
-                // wallpaper preview quickly used to leave this post queued
-                // against an engine that no longer exists.
-                preloadRunnable = Runnable { applyWeatherCode(code) }
-                preloadRunnable?.let(handler::post)
+                // Cancellable, because opening and closing the wallpaper
+                // preview quickly used to leave this post queued against an
+                // engine that no longer exists. The flag inside covers the
+                // window between assigning the runnable and posting it, which
+                // holding a reference alone does not.
+                preload.submit(work = { applyWeatherCode(code) }, post = handler::post)
             }.start()
         }
 
@@ -120,8 +118,7 @@ class WeatherWallpaperService : WallpaperService() {
         override fun onDestroy() {
             super.onDestroy()
             stopAnimation()
-            preloadRunnable?.let(handler::removeCallbacks)
-            preloadRunnable = null
+            preload.cancel(remove = handler::removeCallbacks)
         }
 
         // ── Animation loop ──────────────────────────────────────────

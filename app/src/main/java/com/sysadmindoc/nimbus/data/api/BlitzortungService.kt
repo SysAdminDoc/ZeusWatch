@@ -1,6 +1,8 @@
 package com.sysadmindoc.nimbus.data.api
 
 import android.util.Log
+import com.sysadmindoc.nimbus.di.IoDispatcher
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -42,6 +44,9 @@ data class LightningStrike(
 @Singleton
 class BlitzortungService @Inject constructor(
     private val okHttpClient: OkHttpClient,
+    // Injected so a test can drive the reconnect backoff on a scheduler it
+    // controls; the backoff was otherwise only observable by waiting.
+    @IoDispatcher ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val _strikes = MutableSharedFlow<LightningStrike>(extraBufferCapacity = 64)
     val strikes: SharedFlow<LightningStrike> = _strikes.asSharedFlow()
@@ -66,7 +71,7 @@ class BlitzortungService @Inject constructor(
 
     // Guarded by bufferLock, the only place it is touched.
     private var lastEmitTime = 0L
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val serviceScope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val webSocketClient: OkHttpClient = okHttpClient.newBuilder()
         .retryOnConnectionFailure(true)
         .build()
