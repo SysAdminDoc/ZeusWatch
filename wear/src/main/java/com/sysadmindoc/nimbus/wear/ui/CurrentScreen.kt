@@ -44,6 +44,7 @@ fun CurrentScreen(
     onAlertsTap: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onTempUnitToggle: () -> Unit = {},
+    onRequestLocation: () -> Unit = {},
 ) {
     Box(
         modifier = modifier
@@ -56,6 +57,15 @@ fun CurrentScreen(
                 title = stringResource(R.string.wear_refreshing_forecast),
                 message = stringResource(R.string.wear_refreshing_forecast_message),
                 icon = "\uD83C\uDF26\uFE0F",
+                modifier = Modifier.padding(horizontal = 20.dp),
+            )
+        } else if (state.noLocation) {
+            WearStateCard(
+                title = stringResource(R.string.wear_no_location),
+                message = stringResource(R.string.wear_no_location_message),
+                icon = "\uD83D\uDCCD",
+                actionLabel = stringResource(R.string.wear_no_location_action),
+                onAction = onRequestLocation,
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
         } else if (state.error != null) {

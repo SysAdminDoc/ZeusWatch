@@ -76,4 +76,10 @@
     <string name="wear_wmo_thunderstorm">Tormenta</string>
     <string name="wear_wmo_thunderstorm_hail">Tormenta con granizo</string>
     <string name="wear_wmo_unknown">Desconocido</string>
+    <string name="wear_current_location">Ubicación actual</string>
+    <string name="wear_saved_location">Ubicación guardada</string>
+    <string name="wear_no_location">Ubicación desconocida</string>
+    <string name="wear_no_location_message">Permite la ubicación en el reloj o abre ZeusWatch en el teléfono para sincronizar el tiempo.</string>
+    <string name="wear_no_location_action">Permitir ubicación</string>
+    <string name="wear_tile_no_location">Abre en el teléfono</string>
 </resources>

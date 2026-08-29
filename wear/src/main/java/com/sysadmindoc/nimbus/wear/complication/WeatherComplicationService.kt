@@ -34,9 +34,12 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData? {
         // Prefer phone-synced data to avoid network calls from the watch
         val syncedData = syncedStore.getFreshData()
+        // With no synced payload and no known location there is nothing to
+        // show — never fetch a forecast for coordinates the watch invented.
         val fallbackData = if (syncedData == null) {
-            val loc = locationProvider.getLocation()
-            repository.getCurrentWeather(loc.lat, loc.lon, loc.name).getOrNull()
+            locationProvider.getLocation()?.let { loc ->
+                repository.getCurrentWeather(loc.lat, loc.lon, loc.name).getOrNull()
+            }
         } else {
             null
         }

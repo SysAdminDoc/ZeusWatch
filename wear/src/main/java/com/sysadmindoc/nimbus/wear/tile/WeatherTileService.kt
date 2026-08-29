@@ -22,12 +22,10 @@ import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.TileBuilders
 import com.sysadmindoc.nimbus.wear.R
 import com.sysadmindoc.nimbus.wear.WearMainActivity
-import com.sysadmindoc.nimbus.wear.data.DataSource
 import com.sysadmindoc.nimbus.wear.data.WearLocationProvider
 import com.sysadmindoc.nimbus.wear.data.WearUnitFormatter
-import com.sysadmindoc.nimbus.wear.data.WearWeatherData
 import com.sysadmindoc.nimbus.wear.data.WearWeatherRepository
-import com.sysadmindoc.nimbus.wear.sync.SyncedWeatherStore
+import com.sysadmindoc.nimbus.wear.data.WearWeatherResult
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -46,38 +44,47 @@ class WeatherTileService : Material3TileService(
 
     @Inject lateinit var repository: WearWeatherRepository
     @Inject lateinit var locationProvider: WearLocationProvider
-    @Inject lateinit var syncedStore: SyncedWeatherStore
 
     override suspend fun MaterialScope.tileResponse(
         requestParams: RequestBuilders.TileRequest,
     ): TileBuilders.Tile = buildTile(loadTileDataForTile(), this)
 
-    internal suspend fun loadTileData(): WearWeatherData? {
-        // Prefer phone-synced data to avoid network calls from the watch.
-        val synced = syncedStore.getFreshData()
-        return synced?.copy(
-            dataSource = DataSource.PHONE_SYNC,
-            syncedAtMs = syncedStore.lastSyncTimestamp(),
-        ) ?: run {
-            val loc = locationProvider.getLocation()
-            repository.getCurrentWeather(loc.lat, loc.lon, loc.name).getOrNull()
-        }
-    }
+    internal suspend fun loadTileData(): WearWeatherResult =
+        repository.loadWeather { locationProvider.getLocation() }
 
-    internal suspend fun loadTileDataForTile(): WearWeatherData? =
+    internal suspend fun loadTileDataForTile(): WearWeatherResult =
         try {
             loadTileData()
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (e: Exception) {
-            null
+            WearWeatherResult.Failed(e)
         }
 
+    /**
+     * A tile with no location must say so. "No data" reads like a transient
+     * outage and hides the fact that the watch needs permission or a phone sync.
+     */
+    private fun emptyStateLabel(result: WearWeatherResult): String =
+        if (result is WearWeatherResult.NoLocation) {
+            getString(R.string.wear_tile_no_location)
+        } else {
+            getString(R.string.wear_tile_no_data)
+        }
+
+    private fun freshnessLabel(ageMin: Long): String = when {
+        ageMin < 1 -> getString(R.string.wear_tile_just_now)
+        ageMin < 60 -> getString(R.string.wear_tile_updated_min, ageMin)
+        else -> getString(R.string.wear_tile_updated_hr, ageMin / 60)
+    }
+
     private fun buildTile(
-        data: WearWeatherData?,
+        result: WearWeatherResult,
         materialScope: MaterialScope?,
         launchPackageName: String = packageName,
     ): TileBuilders.Tile {
+        val data = (result as? WearWeatherResult.Available)?.data
+        val emptyLabel = emptyStateLabel(result)
         val layout = Column.Builder()
             .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
             // Tap anywhere on the tile opens the full app.
@@ -134,7 +141,7 @@ class WeatherTileService : Material3TileService(
             .addContent(Spacer.Builder().setHeight(dp(4f)).build())
             .addContent(
                 Text.Builder()
-                    .setText(data?.condition ?: getString(R.string.wear_tile_no_data))
+                    .setText(data?.condition ?: emptyLabel)
                     .setFontStyle(
                         LayoutElementBuilders.FontStyle.Builder()
                             .setSize(sp(14f))
@@ -209,14 +216,9 @@ class WeatherTileService : Material3TileService(
             val freshnessAnchorMs = if (data.updatedAtMs > 0L) data.updatedAtMs else data.syncedAtMs
             if (freshnessAnchorMs > 0L) {
                 val ageMin = ((System.currentTimeMillis() - freshnessAnchorMs) / 60_000L).coerceAtLeast(0)
-                val ageLabel = when {
-                    ageMin < 1 -> getString(R.string.wear_tile_just_now)
-                    ageMin < 60 -> getString(R.string.wear_tile_updated_min, ageMin)
-                    else -> getString(R.string.wear_tile_updated_hr, ageMin / 60)
-                }
                 layout.addContent(
                     Text.Builder()
-                        .setText(ageLabel)
+                        .setText(freshnessLabel(ageMin))
                         .setFontStyle(
                             LayoutElementBuilders.FontStyle.Builder()
                                 .setSize(sp(9f))

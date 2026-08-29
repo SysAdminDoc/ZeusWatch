@@ -19,6 +19,7 @@ object WearRoutes {
 @Composable
 fun WearNavHost(
     viewModel: WearWeatherViewModel = hiltViewModel(),
+    onRequestLocation: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val navController = rememberSwipeDismissableNavController()
@@ -35,6 +36,7 @@ fun WearNavHost(
                 onAlertsTap = { navController.navigate(WearRoutes.ALERTS) },
                 onRefresh = { viewModel.loadWeather() },
                 onTempUnitToggle = { viewModel.cycleTempUnit() },
+                onRequestLocation = onRequestLocation,
             )
         }
         composable(WearRoutes.HOURLY) {

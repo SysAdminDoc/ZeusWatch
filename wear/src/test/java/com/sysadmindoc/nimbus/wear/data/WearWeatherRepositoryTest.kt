@@ -240,6 +240,102 @@ class WearWeatherRepositoryTest {
     }
 
     @Test
+    fun `loadWeather reports NoLocation without touching the network`() = runTest {
+        var requestCount = 0
+        val repository = WearWeatherRepository(
+            context = appContext,
+            client = okHttpClient(onRequest = { requestCount++ }),
+            syncedStore = emptySyncedStore(),
+        )
+
+        val result = repository.loadWeather { null }
+
+        assertEquals(WearWeatherResult.NoLocation, result)
+        // The watch used to fetch 39.8,-98.5 here and render Kansas weather
+        // as the user's own. It must issue no request at all.
+        assertEquals(0, requestCount)
+    }
+
+    @Test
+    fun `loadWeather never resolves a location when synced data is fresh`() = runTest {
+        val store = emptySyncedStore()
+        store.save(
+            SyncedWeatherPayload(
+                temperature = 72,
+                condition = "Clear Sky",
+                high = 80,
+                low = 62,
+                locationName = "Phone",
+                humidity = 45,
+                windSpeed = 4,
+                uvIndex = 6,
+                precipChance = 5,
+                isDay = true,
+                weatherCode = 0,
+                timestampMs = System.currentTimeMillis(),
+                hourly = emptyList(),
+            ),
+        )
+        val repository = WearWeatherRepository(
+            context = appContext,
+            client = okHttpClient(onRequest = { error("network should not be used for fresh sync") }),
+            syncedStore = store,
+        )
+        var resolveCount = 0
+
+        val result = repository.loadWeather {
+            resolveCount++
+            null
+        }
+
+        // A location fix costs GPS and a reverse geocode on the watch; a
+        // phone-fed watch must never pay for one.
+        assertEquals(0, resolveCount)
+        assertTrue(result is WearWeatherResult.Available)
+        assertEquals(DataSource.PHONE_SYNC, (result as WearWeatherResult.Available).data.dataSource)
+    }
+
+    @Test
+    fun `loadWeather fetches for a known location`() = runTest {
+        val requests = mutableListOf<Request>()
+        val repository = WearWeatherRepository(
+            context = appContext,
+            client = okHttpClient(
+                code = 200,
+                body = """{"current":{"temperature_2m":14.0,"weather_code":3}}""",
+                onRequest = requests::add,
+            ),
+            syncedStore = emptySyncedStore(),
+        )
+
+        val result = repository.loadWeather {
+            WearLocationProvider.LocationResult(47.61, -122.33, "Seattle")
+        }
+
+        assertTrue(result is WearWeatherResult.Available)
+        val data = (result as WearWeatherResult.Available).data
+        assertEquals(14, data.temperature)
+        assertEquals("Seattle", data.locationName)
+        assertEquals(DataSource.DIRECT_API, data.dataSource)
+        assertEquals("47.61", requests.single().url.queryParameter("latitude"))
+    }
+
+    @Test
+    fun `loadWeather reports a failure when the fetch fails`() = runTest {
+        val repository = WearWeatherRepository(
+            context = appContext,
+            client = okHttpClient(code = 503, body = "{}"),
+            syncedStore = emptySyncedStore(),
+        )
+
+        val result = repository.loadWeather {
+            WearLocationProvider.LocationResult(47.61, -122.33, "Seattle")
+        }
+
+        assertTrue(result is WearWeatherResult.Failed)
+    }
+
+    @Test
     fun `wmoDescription maps clear sky and overcast bands`() {
         assertEquals("Clear Sky", WearWeatherRepository.wmoDescription(appContext, 0))
         assertEquals("Mostly Clear", WearWeatherRepository.wmoDescription(appContext, 1))
