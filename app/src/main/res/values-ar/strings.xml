@@ -1593,4 +1593,14 @@
     <string name="custom_alert_metric_pollen_mugwort_summary">أعلى مستوى لحبوب لقاح الشيح اليوم</string>
     <string name="weather_source_open_meteo_aifs">Open-Meteo + ECMWF AIFS (ذكاء اصطناعي)</string>
     <string name="weather_source_open_meteo_graphcast">Open-Meteo + GFS GraphCast (ذكاء اصطناعي)</string>
+    <string name="settings_licenses">إشعارات المصدر المفتوح</string>
+    <string name="settings_licenses_desc">المكتبات ومصادر بيانات الطقس التي يعتمد عليها التطبيق</string>
+    <string name="settings_licenses_cd">إشعارات المصدر المفتوح. يفتح قائمة التراخيص.</string>
+    <string name="licenses_title">إشعارات المصدر المفتوح</string>
+    <string name="licenses_subtitle">%1$d مكتبة، %2$d مصدر بيانات</string>
+    <string name="licenses_search">بحث</string>
+    <string name="licenses_no_matches">لا توجد نتائج مطابقة.</string>
+    <string name="licenses_section_providers">مصادر بيانات الطقس</string>
+    <string name="licenses_section_dependencies">المكتبات</string>
+    <string name="licenses_open_link">فتح صفحة المشروع</string>
 </resources>

@@ -139,6 +139,7 @@ internal fun SettingsContent(
     settings: NimbusSettings,
     onBack: () -> Unit,
     onNavigateToCustomAlerts: () -> Unit = {},
+    onNavigateToLicenses: () -> Unit = {},
     notificationsPermissionGranted: Boolean = true,
     availableIconPacks: List<IconPack> = emptyList(),
     providerHealth: ProviderHealthSnapshot = ProviderHealthSnapshot(),
@@ -187,6 +188,7 @@ internal fun SettingsContent(
                 notificationsPermissionGranted = notificationsPermissionGranted,
                 availableIconPacks = availableIconPacks,
                 onNavigateToCustomAlerts = onNavigateToCustomAlerts,
+                onNavigateToLicenses = onNavigateToLicenses,
                 supportState = SettingsSupportState(
                     providerHealth = providerHealth,
                     transferStatus = transferStatus,
@@ -279,6 +281,7 @@ private fun SettingsCategoryContent(
     notificationsPermissionGranted: Boolean,
     availableIconPacks: List<IconPack>,
     onNavigateToCustomAlerts: () -> Unit,
+    onNavigateToLicenses: () -> Unit,
     supportState: SettingsSupportState,
     actions: SettingsActions,
 ) {
@@ -313,7 +316,7 @@ private fun SettingsCategoryContent(
                 supportState.pendingImportPreview,
                 actions,
             )
-            SettingsAboutSection()
+            SettingsAboutSection(onNavigateToLicenses)
             SettingsWidgetTroubleshootSection()
         }
     }
@@ -759,20 +762,34 @@ private fun DailyBriefingTimeSetting(
 
 @Composable
 private fun CustomAlertRulesRow(onNavigateToCustomAlerts: () -> Unit) {
-    val customAlertRulesDescription = stringResource(R.string.settings_custom_alert_rules_cd)
+    SettingNavigationRow(
+        title = stringResource(R.string.settings_custom_alert_rules),
+        description = stringResource(R.string.settings_custom_alert_rules_desc),
+        contentDescription = stringResource(R.string.settings_custom_alert_rules_cd),
+        onClick = onNavigateToCustomAlerts,
+    )
+}
+
+@Composable
+private fun SettingNavigationRow(
+    title: String,
+    description: String,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(NimbusCardBg)
-            .clickable(onClick = onNavigateToCustomAlerts, role = Role.Button)
-            .semantics(mergeDescendants = true) { contentDescription = customAlertRulesDescription }
+            .clickable(onClick = onClick, role = Role.Button)
+            .semantics(mergeDescendants = true) { this.contentDescription = contentDescription }
             .padding(horizontal = 14.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(stringResource(R.string.settings_custom_alert_rules), style = MaterialTheme.typography.bodyMedium, color = NimbusTextPrimary)
-            Text(stringResource(R.string.settings_custom_alert_rules_desc), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary)
+            Text(title, style = MaterialTheme.typography.bodyMedium, color = NimbusTextPrimary)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary)
         }
         Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = NimbusTextTertiary, modifier = Modifier.size(20.dp))
     }
@@ -1468,7 +1485,7 @@ private val ProviderFailureReason.labelRes: Int
     }
 
 @Composable
-private fun SettingsAboutSection() {
+private fun SettingsAboutSection(onNavigateToLicenses: () -> Unit) {
     SettingSection(
         title = stringResource(R.string.settings_about_title),
         description = stringResource(R.string.settings_about_desc),
@@ -1477,6 +1494,13 @@ private fun SettingsAboutSection() {
         SettingInfo(stringResource(R.string.settings_data_sources_title), stringResource(R.string.settings_data_sources_value))
         SettingInfo(stringResource(R.string.settings_privacy_label), stringResource(R.string.settings_privacy_value))
         SettingInfo(stringResource(R.string.settings_license), "LGPL-3.0")
+        Spacer(modifier = Modifier.height(6.dp))
+        SettingNavigationRow(
+            title = stringResource(R.string.settings_licenses),
+            description = stringResource(R.string.settings_licenses_desc),
+            contentDescription = stringResource(R.string.settings_licenses_cd),
+            onClick = onNavigateToLicenses,
+        )
     }
 }
 

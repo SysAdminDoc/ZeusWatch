@@ -64,6 +64,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.screen.compare.CompareScreen
 import com.sysadmindoc.nimbus.ui.screen.customalerts.CustomAlertsScreen
+import com.sysadmindoc.nimbus.ui.screen.licenses.LicensesScreen
 import com.sysadmindoc.nimbus.ui.screen.locations.LocationsScreen
 import com.sysadmindoc.nimbus.ui.screen.locations.LocationsViewModel
 import com.sysadmindoc.nimbus.ui.screen.locations.MapLocationPickerScreen
@@ -93,6 +94,7 @@ object Routes {
     const val LOCATION_PICKER = "location_picker"
     const val COMPARE = "compare"
     const val CUSTOM_ALERTS = "custom_alerts"
+    const val LICENSES = "licenses"
 
     fun radar(lat: Double, lon: Double, routeText: String? = null): String {
         val base = "radar/$lat/$lon"
@@ -267,7 +269,11 @@ fun NimbusNavHost(
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onNavigateToCustomAlerts = { navController.navigate(Routes.CUSTOM_ALERTS) },
+                onNavigateToLicenses = { navController.navigate(Routes.LICENSES) },
             )
+        }
+        composable(Routes.LICENSES) {
+            LicensesScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.CUSTOM_ALERTS) {
             CustomAlertsScreen(
