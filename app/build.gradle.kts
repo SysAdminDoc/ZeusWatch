@@ -249,7 +249,7 @@ dependencies {
     // Firebase (Phase 3.8 — Community Reports) — standard flavor only
     // NOTE: Requires google-services.json in app/ directory.
     // Configure at https://console.firebase.google.com and download the config file.
-    "standardImplementation"(platform("com.google.firebase:firebase-bom:34.12.0"))
+    "standardImplementation"(platform("com.google.firebase:firebase-bom:34.18.0"))
     "standardImplementation"("com.google.firebase:firebase-firestore")
     // Anonymous Authentication — binds community reports to an anonymous account
     // so Firestore rules can enforce ownerUid + server-side write-rate limiting
