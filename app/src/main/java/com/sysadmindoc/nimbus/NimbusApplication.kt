@@ -18,6 +18,7 @@ import com.sysadmindoc.nimbus.util.BackgroundWorkSync
 import com.sysadmindoc.nimbus.util.CrashReporting
 import com.sysadmindoc.nimbus.util.DatabaseMaintenanceWorker
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
+import com.sysadmindoc.nimbus.widget.WidgetPreviewPublisher
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -85,6 +86,7 @@ class NimbusApplication : Application(), Configuration.Provider, SingletonImageL
             // Shared with the settings-import path so cold start and import
             // schedule/cancel workers identically.
             BackgroundWorkSync.syncAll(this@NimbusApplication, prefs)
+            WidgetPreviewPublisher.publishIfNeeded(this@NimbusApplication)
         }
     }
 

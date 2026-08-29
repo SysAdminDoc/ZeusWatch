@@ -1600,4 +1600,7 @@
         <item quantity="one">%1$d custom alert ready to watch the forecast.</item>
         <item quantity="other">%1$d custom alerts ready to watch the forecast.</item>
     </plurals>
+    <string name="widget_preview_location">Seattle</string>
+    <string name="widget_preview_location_second">Austin</string>
+    <string name="widget_preview_location_third">Denver</string>
 </resources>

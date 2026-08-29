@@ -1548,4 +1548,7 @@
     </plurals>
     <string name="custom_alerts_add_rule">הוספת כלל</string>
     <string name="compare_swap_locations">החלפת מיקומים</string>
+    <string name="widget_preview_location">סיאטל</string>
+    <string name="widget_preview_location_second">אוסטין</string>
+    <string name="widget_preview_location_third">דנבר</string>
 </resources>

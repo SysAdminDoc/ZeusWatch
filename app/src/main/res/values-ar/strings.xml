@@ -1558,4 +1558,7 @@
     </plurals>
     <string name="custom_alerts_add_rule">إضافة قاعدة</string>
     <string name="compare_swap_locations">تبديل المواقع</string>
+    <string name="widget_preview_location">سياتل</string>
+    <string name="widget_preview_location_second">أوستن</string>
+    <string name="widget_preview_location_third">دينفر</string>
 </resources>

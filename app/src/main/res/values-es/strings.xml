@@ -1579,4 +1579,7 @@
     </plurals>
     <string name="custom_alerts_add_rule">Añadir regla</string>
     <string name="compare_swap_locations">Intercambiar ubicaciones</string>
+    <string name="widget_preview_location">Seattle</string>
+    <string name="widget_preview_location_second">Austin</string>
+    <string name="widget_preview_location_third">Denver</string>
 </resources>
