@@ -132,6 +132,7 @@ class UserPreferences @Inject constructor(
         val SHOW_FORECAST_ACCURACY = booleanPreferencesKey("show_forecast_accuracy")
         val SHOW_CONFIDENCE_BANDS = booleanPreferencesKey("show_confidence_bands")
         val ENSEMBLE_MODEL = stringPreferencesKey("ensemble_model")
+        val SKIN_TYPE = stringPreferencesKey("skin_type")
         val SHOW_COMPARE_CHART_OVERLAY = booleanPreferencesKey("show_compare_chart_overlay")
 
         // Health thresholds
@@ -260,6 +261,9 @@ class UserPreferences @Inject constructor(
             ensembleModel = safeValueOf<EnsembleModel>(
                 prefs[Keys.ENSEMBLE_MODEL] ?: EnsembleModel.ICON.name,
             ) ?: EnsembleModel.ICON,
+            skinType = safeValueOf<SkinType>(
+                prefs[Keys.SKIN_TYPE] ?: SkinType.NOT_SET.name,
+            ) ?: SkinType.NOT_SET,
             showCompareChartOverlay = prefs[Keys.SHOW_COMPARE_CHART_OVERLAY] ?: true,
             // Forecast range
             hourlyForecastHours = prefs[Keys.HOURLY_FORECAST_HOURS]?.toIntOrNull() ?: 72,
@@ -489,6 +493,7 @@ class UserPreferences @Inject constructor(
     suspend fun setShowForecastAccuracy(enabled: Boolean) = store.edit { it[Keys.SHOW_FORECAST_ACCURACY] = enabled }
     suspend fun setShowConfidenceBands(enabled: Boolean) = store.edit { it[Keys.SHOW_CONFIDENCE_BANDS] = enabled }
     suspend fun setEnsembleModel(model: EnsembleModel) = store.edit { it[Keys.ENSEMBLE_MODEL] = model.name }
+    suspend fun setSkinType(skinType: SkinType) = store.edit { it[Keys.SKIN_TYPE] = skinType.name }
     suspend fun setShowCompareChartOverlay(enabled: Boolean) = store.edit { it[Keys.SHOW_COMPARE_CHART_OVERLAY] = enabled }
 
     // Health
@@ -670,6 +675,7 @@ data class NimbusSettings(
     val showForecastAccuracy: Boolean = false,
     val showConfidenceBands: Boolean = false,
     val ensembleModel: EnsembleModel = EnsembleModel.ICON,
+    val skinType: SkinType = SkinType.NOT_SET,
     val showCompareChartOverlay: Boolean = true,
     // Forecast range
     val hourlyForecastHours: Int = 72,
@@ -771,6 +777,24 @@ enum class AlertSourcePreference(val label: String) {
  * more members but are documented to under-cover extremes, so which one drew
  * the band is worth naming in the legend rather than hiding.
  */
+/**
+ * Fitzpatrick skin type, used only to scale the UV safe-exposure estimate.
+ *
+ * [exposureMultiplier] is the ratio of each type's minimal erythemal dose to
+ * type I's, from the conventional MED table (I 200, II 250, III 300, IV 450,
+ * V 600, VI 1000 J/m2). [NOT_SET] keeps the cautious estimate the app has
+ * always shown, so nothing changes until a user opts in.
+ */
+enum class SkinType(val exposureMultiplier: Double) {
+    NOT_SET(1.0),
+    TYPE_I(1.0),
+    TYPE_II(1.25),
+    TYPE_III(1.5),
+    TYPE_IV(2.25),
+    TYPE_V(3.0),
+    TYPE_VI(5.0),
+}
+
 enum class EnsembleModel(val apiId: String) {
     ICON("icon_seamless"),
     WEATHERNEXT_2("google_weathernext2_ensemble"),

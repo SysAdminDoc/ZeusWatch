@@ -1611,4 +1611,14 @@
     <string name="settings_ensemble_aifs">AIFS-ENS</string>
     <string name="settings_ensemble_aifs_summary">ECMWF AI ensemble at 0.25 degrees. Sharper detail, though AI ensembles tend to under-cover extremes.</string>
     <string name="temperature_graph_band_source">Spread from %1$s</string>
+    <string name="settings_skin_type">Skin type</string>
+    <string name="settings_skin_type_desc">Used only to estimate safe sun time on the UV card. Leave it unset and you get the most cautious estimate.</string>
+    <string name="settings_skin_type_not_set">Not set</string>
+    <string name="settings_skin_type_i">Type I: always burns, never tans</string>
+    <string name="settings_skin_type_ii">Type II: burns easily, tans a little</string>
+    <string name="settings_skin_type_iii">Type III: sometimes burns, tans gradually</string>
+    <string name="settings_skin_type_iv">Type IV: rarely burns, tans easily</string>
+    <string name="settings_skin_type_v">Type V: very rarely burns, tans deeply</string>
+    <string name="settings_skin_type_vi">Type VI: never burns</string>
+    <string name="uv_safe_exposure_for_skin_type">About %1$d min in the sun without SPF (%2$s)</string>
 </resources>

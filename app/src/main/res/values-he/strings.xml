@@ -1559,4 +1559,14 @@
     <string name="settings_ensemble_aifs">AIFS-ENS</string>
     <string name="settings_ensemble_aifs_summary">מקבץ בינה מלאכותית של ECMWF ברזולוציית 0.25 מעלות. פירוט חד יותר, אך מקבצי בינה מלאכותית נוטים להמעיט בקיצוניות.</string>
     <string name="temperature_graph_band_source">פיזור מתוך %1$s</string>
+    <string name="settings_skin_type">סוג עור</string>
+    <string name="settings_skin_type_desc">משמש רק להערכת זמן שהייה בטוח בשמש בכרטיס ה-UV. אם לא תבחר, תקבל את ההערכה הזהירה ביותר.</string>
+    <string name="settings_skin_type_not_set">לא הוגדר</string>
+    <string name="settings_skin_type_i">סוג I: תמיד נכווה, אף פעם לא משתזף</string>
+    <string name="settings_skin_type_ii">סוג II: נכווה בקלות, משתזף מעט</string>
+    <string name="settings_skin_type_iii">סוג III: לפעמים נכווה, משתזף בהדרגה</string>
+    <string name="settings_skin_type_iv">סוג IV: לעיתים רחוקות נכווה, משתזף בקלות</string>
+    <string name="settings_skin_type_v">סוג V: כמעט אף פעם לא נכווה, משתזף עמוק</string>
+    <string name="settings_skin_type_vi">סוג VI: אף פעם לא נכווה</string>
+    <string name="uv_safe_exposure_for_skin_type">בערך %1$d דקות בשמש ללא הגנה (%2$s)</string>
 </resources>

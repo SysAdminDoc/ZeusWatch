@@ -235,6 +235,7 @@ internal data class SettingsActions(
     val onShowForecastAccuracy: (Boolean) -> Unit = {},
     val onShowConfidenceBands: (Boolean) -> Unit = {},
     val onEnsembleModel: (EnsembleModel) -> Unit = {},
+    val onSkinType: (SkinType) -> Unit = {},
     val onHourlyForecastHours: (Int) -> Unit = {},
     val onMigraineAlerts: (Boolean) -> Unit = {},
     val onMigrainePressureThreshold: (Double) -> Unit = {},
@@ -840,6 +841,26 @@ private fun SettingsHealthSection(
                 sublabel = pressureThresholdSublabel(threshold),
                 selected = settings.migrainePressureThreshold == threshold,
                 onClick = { actions.onMigrainePressureThreshold(threshold) },
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            stringResource(R.string.settings_skin_type),
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+        )
+        Text(
+            stringResource(R.string.settings_skin_type_desc),
+            style = MaterialTheme.typography.labelSmall,
+            color = NimbusTextTertiary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+        )
+        SkinType.entries.forEach { skinType ->
+            SettingRadio(
+                label = stringResource(skinType.labelRes),
+                selected = settings.skinType == skinType,
+                onClick = { actions.onSkinType(skinType) },
             )
         }
     }

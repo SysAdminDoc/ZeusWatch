@@ -28,6 +28,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.data.repository.SkinType
+import com.sysadmindoc.nimbus.util.UvExposureCalculator
+import com.sysadmindoc.nimbus.util.labelRes
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.theme.*
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -59,7 +62,7 @@ fun UvIndexBar(
             stringResource(R.string.uv_peak_at, peakTimeLabel ?: "")
         } else null
     } else null
-    val safeMinutes = if (uvIndex >= 1) (200.0 / (uvIndex * 3.0)).toInt().coerceIn(5, 120) else null
+    val safeMinutes = UvExposureCalculator.safeMinutes(uvIndex, s.skinType)
     val peakSemantic = if (peakHour != null && peakTimeLabel != null && (peakHour.uvIndex ?: 0.0) > uvIndex) {
         stringResource(R.string.uv_semantics_peak, peakTimeLabel, (peakHour.uvIndex ?: 0.0).toInt())
     } else null
@@ -114,10 +117,20 @@ fun UvIndexBar(
                         color = NimbusTextTertiary,
                     )
                 }
-                // Safe sun exposure estimate (average skin type, SPF-free)
+                // Safe sun exposure estimate, SPF-free. Naming the skin type
+                // matters: the same number means very different things for
+                // type I and type VI.
                 if (safeMinutes != null) {
                     Text(
-                        text = stringResource(R.string.uv_safe_exposure_without_spf, safeMinutes),
+                        text = if (s.skinType == SkinType.NOT_SET) {
+                            stringResource(R.string.uv_safe_exposure_without_spf, safeMinutes)
+                        } else {
+                            stringResource(
+                                R.string.uv_safe_exposure_for_skin_type,
+                                safeMinutes,
+                                stringResource(s.skinType.labelRes),
+                            )
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         color = NimbusTextTertiary,
                     )

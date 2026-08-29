@@ -1569,4 +1569,14 @@
     <string name="settings_ensemble_aifs">AIFS-ENS</string>
     <string name="settings_ensemble_aifs_summary">مجموعة ذكاء اصطناعي من ECMWF بدقة 0.25 درجة. تفاصيل أدق، لكنها تقلل من تقدير القيم المتطرفة.</string>
     <string name="temperature_graph_band_source">التشتت من %1$s</string>
+    <string name="settings_skin_type">نوع البشرة</string>
+    <string name="settings_skin_type_desc">يُستخدم فقط لتقدير الوقت الآمن تحت الشمس في بطاقة الأشعة فوق البنفسجية. إذا لم تحدده، ستحصل على التقدير الأكثر حذرًا.</string>
+    <string name="settings_skin_type_not_set">غير محدد</string>
+    <string name="settings_skin_type_i">النوع I: يحترق دائمًا ولا يسمرّ</string>
+    <string name="settings_skin_type_ii">النوع II: يحترق بسهولة ويسمرّ قليلًا</string>
+    <string name="settings_skin_type_iii">النوع III: يحترق أحيانًا ويسمرّ تدريجيًا</string>
+    <string name="settings_skin_type_iv">النوع IV: نادرًا ما يحترق ويسمرّ بسهولة</string>
+    <string name="settings_skin_type_v">النوع V: نادرًا جدًا ما يحترق ويسمرّ بعمق</string>
+    <string name="settings_skin_type_vi">النوع VI: لا يحترق أبدًا</string>
+    <string name="uv_safe_exposure_for_skin_type">نحو %1$d دقيقة في الشمس دون واقٍ (%2$s)</string>
 </resources>

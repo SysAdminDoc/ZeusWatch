@@ -185,6 +185,7 @@ class SettingsViewModel @Inject constructor(
     fun setShowForecastAccuracy(enabled: Boolean) = viewModelScope.launch { prefs.setShowForecastAccuracy(enabled) }
     fun setShowConfidenceBands(enabled: Boolean) = viewModelScope.launch { prefs.setShowConfidenceBands(enabled) }
     fun setEnsembleModel(model: EnsembleModel) = viewModelScope.launch { prefs.setEnsembleModel(model) }
+    fun setSkinType(skinType: SkinType) = viewModelScope.launch { prefs.setSkinType(skinType) }
 
     // Forecast range
     fun setHourlyForecastHours(hours: Int) = viewModelScope.launch { prefs.setHourlyForecastHours(hours) }
