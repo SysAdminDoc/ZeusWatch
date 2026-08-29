@@ -289,6 +289,11 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.junit.ext)
     testImplementation(platform(libs.compose.bom))
+    // Hilt on the JVM suite: without it the ecosystem ContentProvider and
+    // the widget config activity could not be tested at all, because both
+    // reach the graph through EntryPointAccessors.fromApplication.
+    testImplementation(libs.hilt.testing)
+    kspTest(libs.hilt.compiler)
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation(libs.compose.ui.test.junit4.accessibility)
     testImplementation(libs.compose.ui.test.manifest)
