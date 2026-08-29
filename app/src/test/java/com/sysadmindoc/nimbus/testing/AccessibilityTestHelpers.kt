@@ -236,6 +236,16 @@ fun ContrastCoverage.assertMeasuredAtLeast(minimumFraction: Double) {
     }
 }
 
+/**
+ * Fails when a control is drawn smaller than a finger.
+ *
+ * Measured from the node's drawn size, deliberately. `touchBoundsInRoot` looks
+ * like the more correct property and is useless here: Compose expands the
+ * touch bounds of every clickable to the minimum, so it reports 48dp for a
+ * 10dp button and the check passes everything. That expansion is also only a
+ * best effort, since neighbouring controls cannot all claim the same space, so
+ * a control that draws at 10dp is still a control nobody can hit reliably.
+ */
 fun ComposeContentTestRule.assertVisibleTouchTargetsMeetMinimum(
     minSize: Dp = 48.dp,
 ) {

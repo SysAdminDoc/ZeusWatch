@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -651,5 +652,31 @@ fun InlineNoticeCard(
                 overflow = TextOverflow.Ellipsis,
             )
         }
+    }
+}
+
+/**
+ * The grab bar at the top of a modal bottom sheet.
+ *
+ * The visible bar is 40x4, but the node Material makes clickable is this whole
+ * 48dp box: drawn at its natural size the target came out 40x24, which is
+ * under the minimum and was shipping on two of the four sheets.
+ */
+@Composable
+fun NimbusSheetDragHandle() {
+    val description = stringResource(R.string.common_bottom_sheet_handle)
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clearAndSetSemantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(40.dp)
+                .height(4.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color.White.copy(alpha = 0.16f)),
+        )
     }
 }

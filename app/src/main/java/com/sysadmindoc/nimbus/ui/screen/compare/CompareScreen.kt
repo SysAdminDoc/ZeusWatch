@@ -102,7 +102,11 @@ fun CompareScreen(
     }
 }
 
-private data class CompareScreenActions(
+/**
+ * Internal rather than private so the accessibility audit can render the
+ * screen body without standing up a Hilt view model.
+ */
+internal data class CompareScreenActions(
     val onBack: () -> Unit,
     val onNavigateToLocations: () -> Unit,
     val onRetry: () -> Unit,
@@ -113,7 +117,7 @@ private data class CompareScreenActions(
 )
 
 @Composable
-private fun CompareScreenBody(
+internal fun CompareScreenBody(
     state: CompareUiState,
     settings: NimbusSettings,
     actions: CompareScreenActions,
@@ -237,7 +241,9 @@ private fun CompareSelectorRow(
         )
         Box(
             modifier = Modifier
-                .size(36.dp)
+                // 48dp, not the 36dp this used to be: the icon inside stays
+                // small, but the thing a finger has to hit cannot be.
+                .size(48.dp)
                 .clickable(
                     enabled = state.location1 != null && state.location2 != null,
                     role = Role.Button,

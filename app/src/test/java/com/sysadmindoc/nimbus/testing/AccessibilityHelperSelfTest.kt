@@ -204,6 +204,30 @@ class AccessibilityHelperSelfTest {
         composeTestRule.assertTextContrastMeetsMinimum().assertMeasuredAtLeast(1.0)
     }
 
+    @Test
+    fun aTinyClickableFailsTheTouchTargetCheck() {
+        // Pins that the check is not inert. It was briefly switched to
+        // touchBoundsInRoot, which sounds more correct and reports 48dp for a
+        // 10dp button, so every control passed and the check meant nothing.
+        composeTestRule.setContent {
+            Column(Modifier.fillMaxSize().background(Color.White)) {
+                Box(
+                    Modifier
+                        .size(10.dp)
+                        .semantics { contentDescription = "Tiny" }
+                        .clickable {},
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        val error = runCatching { composeTestRule.assertVisibleTouchTargetsMeetMinimum() }
+            .exceptionOrNull()
+
+        assertTrue("a 10dp control must fail", error is AssertionError)
+        assertTrue(error!!.message.orEmpty().contains("Tiny"))
+    }
+
     @Composable
     private fun Surface(content: @Composable () -> Unit) {
         Column(Modifier.fillMaxSize().background(Color.White)) { content() }

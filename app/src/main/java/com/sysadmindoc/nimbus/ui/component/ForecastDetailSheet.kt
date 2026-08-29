@@ -176,23 +176,7 @@ private fun ForecastDetailSheetFrame(
         containerColor = NimbusSurface,
         scrimColor = NimbusNavyDark.copy(alpha = 0.6f),
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clearAndSetSemantics {
-                        contentDescription = bottomSheetHandleDescription
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(40.dp)
-                        .height(4.dp)
-                        .background(Color.White.copy(alpha = 0.16f)),
-                )
-            }
-        },
+        dragHandle = { NimbusSheetDragHandle() },
     ) {
         ForecastDetailContent(
             title = title,
