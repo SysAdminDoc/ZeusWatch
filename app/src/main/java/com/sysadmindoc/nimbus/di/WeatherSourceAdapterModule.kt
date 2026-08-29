@@ -25,6 +25,8 @@ import com.sysadmindoc.nimbus.data.repository.OpenMeteoMeteoFranceMinutelyAdapte
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoMinutelyAdapter
 import com.sysadmindoc.nimbus.data.repository.OpenMeteoUkmoForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.OwmAlertAdapter
+import com.sysadmindoc.nimbus.data.repository.OpenMeteoAifsForecastAdapter
+import com.sysadmindoc.nimbus.data.repository.OpenMeteoGraphCastForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.OwmAqiAdapter
 import com.sysadmindoc.nimbus.data.repository.OwmForecastAdapter
 import com.sysadmindoc.nimbus.data.repository.PirateWeatherAqiAdapter
@@ -108,6 +110,24 @@ object WeatherSourceAdapterModule {
     @WeatherSourceKey(WeatherSourceProvider.OPEN_METEO_DMI)
     fun provideOpenMeteoDmiAdapter(adapter: OpenMeteoDmiForecastAdapter): WeatherSourceAdapter =
         forecastOnlyAdapter(WeatherSourceProvider.OPEN_METEO_DMI) { request ->
+            adapter.getWeather(request.latitude, request.longitude, request.locationName)
+        }
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @WeatherSourceKey(WeatherSourceProvider.OPEN_METEO_AIFS)
+    fun provideOpenMeteoAifsAdapter(adapter: OpenMeteoAifsForecastAdapter): WeatherSourceAdapter =
+        forecastOnlyAdapter(WeatherSourceProvider.OPEN_METEO_AIFS) { request ->
+            adapter.getWeather(request.latitude, request.longitude, request.locationName)
+        }
+
+    @Provides
+    @Singleton
+    @IntoMap
+    @WeatherSourceKey(WeatherSourceProvider.OPEN_METEO_GRAPHCAST)
+    fun provideOpenMeteoGraphCastAdapter(adapter: OpenMeteoGraphCastForecastAdapter): WeatherSourceAdapter =
+        forecastOnlyAdapter(WeatherSourceProvider.OPEN_METEO_GRAPHCAST) { request ->
             adapter.getWeather(request.latitude, request.longitude, request.locationName)
         }
 

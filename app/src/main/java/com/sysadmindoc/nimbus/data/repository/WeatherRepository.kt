@@ -396,6 +396,32 @@ class WeatherRepository @Inject constructor(
         },
     )
 
+    suspend fun getAifsWeatherDirect(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = getOpenMeteoWeather(
+        latitude = latitude,
+        longitude = longitude,
+        locationName = locationName,
+        fetch = { forecastHours, _ ->
+            weatherApi.getAifsForecast(latitude, longitude, forecastHours = forecastHours)
+        },
+    )
+
+    suspend fun getGraphCastWeatherDirect(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = getOpenMeteoWeather(
+        latitude = latitude,
+        longitude = longitude,
+        locationName = locationName,
+        fetch = { forecastHours, _ ->
+            weatherApi.getGraphCastForecast(latitude, longitude, forecastHours = forecastHours)
+        },
+    )
+
     suspend fun getMeteoFranceWeatherDirect(
         latitude: Double,
         longitude: Double,

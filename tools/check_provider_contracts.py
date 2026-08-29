@@ -116,6 +116,25 @@ class CheckResult:
         }
 
 
+# Mirrors the AI entries in WeatherSourceProvider / OpenMeteoApi.
+AI_FORECAST_MODELS = (
+    (
+        "aifs",
+        "ECMWF AIFS (AI)",
+        "ecmwf_aifs025",
+        "OPEN_METEO_AIFS",
+        "https://open-meteo.com/en/docs/ecmwf-api",
+    ),
+    (
+        "graphcast",
+        "GFS GraphCast (AI)",
+        "gfs_graphcast025",
+        "OPEN_METEO_GRAPHCAST",
+        "https://open-meteo.com/en/docs/gfs-api",
+    ),
+)
+
+
 # Mirrors EnsembleModel in UserPreferences.kt.
 ENSEMBLE_MODELS = (
     ("icon", "ICON", "icon_seamless"),
@@ -325,6 +344,32 @@ def provider_checks() -> list[ContractCheck]:
             # Each selectable confidence-band model is checked separately: a
             # renamed identifier only breaks the model that uses it.
             for key, label, model_id in ENSEMBLE_MODELS
+        ),
+        *(
+            ContractCheck(
+                key=f"open-meteo-{key}",
+                name=f"Open-Meteo {label}",
+                url="https://api.open-meteo.com/v1/forecast?"
+                + urlencode(
+                    {
+                        "latitude": NYC_LATITUDE,
+                        "longitude": NYC_LONGITUDE,
+                        "hourly": "temperature_2m",
+                        "models": model_id,
+                        "forecast_days": "1",
+                        "timezone": "UTC",
+                    }
+                ),
+                docs_url=docs,
+                validator=validate_open_meteo_model_hourly,
+                providers=(provider,),
+                data_types=("FORECAST",),
+                coverage=f"New York, US ({NYC_LATITUDE},{NYC_LONGITUDE})",
+                schema_assertion="hourly temperature series for the selected model",
+            )
+            # AI models are newer upstream and have been renamed before, so each
+            # is checked on its own rather than assumed from the physics models.
+            for key, label, model_id, provider, docs in AI_FORECAST_MODELS
         ),
         ContractCheck(
             key="open-meteo-air-quality",
@@ -738,6 +783,20 @@ def validate_open_meteo_air_quality(data: Any) -> ValidationResult:
     if errors:
         return ValidationResult(False, "; ".join(errors))
     return ValidationResult(True, "current AQI and hourly AQI series present")
+
+
+def validate_open_meteo_model_hourly(data: Any) -> ValidationResult:
+    """AI models expose a reduced variable set, so only the hourly temperature
+    series is asserted: anything more would fail for a reason the app tolerates."""
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    hourly = data.get("hourly")
+    if not _has_non_empty_time_series(hourly):
+        return ValidationResult(False, "hourly.time missing or empty")
+    temps = hourly.get("temperature_2m")
+    if not isinstance(temps, list) or not temps:
+        return ValidationResult(False, "hourly.temperature_2m missing or empty")
+    return ValidationResult(True, f"{len(temps)} hourly temperature values present")
 
 
 def validate_open_meteo_ensemble(data: Any) -> ValidationResult:

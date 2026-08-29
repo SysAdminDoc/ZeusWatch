@@ -509,6 +509,28 @@ class OpenMeteoDmiForecastAdapter @Inject constructor(
 }
 
 @Singleton
+class OpenMeteoAifsForecastAdapter @Inject constructor(
+    private val weatherRepository: dagger.Lazy<WeatherRepository>,
+) {
+    suspend fun getWeather(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = weatherRepository.get().getAifsWeatherDirect(latitude, longitude, locationName)
+}
+
+@Singleton
+class OpenMeteoGraphCastForecastAdapter @Inject constructor(
+    private val weatherRepository: dagger.Lazy<WeatherRepository>,
+) {
+    suspend fun getWeather(
+        latitude: Double,
+        longitude: Double,
+        locationName: String? = null,
+    ): Result<WeatherData> = weatherRepository.get().getGraphCastWeatherDirect(latitude, longitude, locationName)
+}
+
+@Singleton
 class OpenMeteoMeteoFranceForecastAdapter @Inject constructor(
     private val weatherRepository: dagger.Lazy<WeatherRepository>,
 ) {
