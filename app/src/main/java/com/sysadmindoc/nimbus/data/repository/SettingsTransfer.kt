@@ -13,7 +13,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToLong
 
-private const val SETTINGS_BACKUP_SCHEMA_VERSION = 1
+private const val SETTINGS_BACKUP_SCHEMA_VERSION = 2
+private const val MIN_SUPPORTED_SETTINGS_BACKUP_SCHEMA_VERSION = 1
 internal const val MAX_SETTINGS_BACKUP_BYTES = 1_048_576
 private const val MAX_SETTINGS_BACKUP_SAVED_LOCATIONS = 250
 private const val MAX_SETTINGS_BACKUP_CUSTOM_ALERTS = 100
@@ -243,7 +244,7 @@ private fun parseSettingsBackup(rawJson: String): SettingsBackup {
         "Settings backup exceeds the ${MAX_SETTINGS_BACKUP_BYTES / 1024} KB import limit."
     }
     val backup = settingsTransferJson.decodeFromString(SettingsBackup.serializer(), rawJson)
-    require(backup.schemaVersion == SETTINGS_BACKUP_SCHEMA_VERSION) {
+    require(backup.schemaVersion in MIN_SUPPORTED_SETTINGS_BACKUP_SCHEMA_VERSION..SETTINGS_BACKUP_SCHEMA_VERSION) {
         "Unsupported settings backup version ${backup.schemaVersion}."
     }
     require(backup.savedLocations.size <= MAX_SETTINGS_BACKUP_SAVED_LOCATIONS) {
@@ -376,12 +377,12 @@ fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPrefere
     drivingAlerts = drivingAlerts,
     healthAlertsEnabled = healthAlertsEnabled,
     migraineAlerts = migraineAlerts,
-    showSnowfall = showSnowfall,
-    showCape = showCape,
-    showSunshineDuration = showSunshineDuration,
-    showGoldenHour = showGoldenHour,
+    showSnowfall = CardType.SNOWFALL.name !in disabledCards,
+    showCape = CardType.SEVERE_WEATHER.name !in disabledCards,
+    showSunshineDuration = CardType.SUNSHINE.name !in disabledCards,
+    showGoldenHour = CardType.GOLDEN_HOUR.name !in disabledCards,
     showBeaufortColors = showBeaufortColors,
-    showOutdoorScore = showOutdoorScore,
+    showOutdoorScore = CardType.OUTDOOR_SCORE.name !in disabledCards,
     showYesterdayComparison = showYesterdayComparison,
     showForecastAccuracy = showForecastAccuracy,
     showConfidenceBands = showConfidenceBands,
@@ -423,7 +424,16 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
     themeMode = enumOrDefault(themeMode, ThemeMode.STATIC_DARK),
     summaryStyle = enumOrDefault(summaryStyle, SummaryStyle.AI_GENERATED),
     customSummaryTemplate = customSummaryTemplate.take(MAX_CUSTOM_SUMMARY_TEMPLATE_CHARS),
-    disabledCards = disabledCards.filter { runCatching { CardType.valueOf(it) }.isSuccess }.toSet(),
+    disabledCards = applyLegacyCardVisibility(
+        disabledCards = disabledCards.filter { runCatching { CardType.valueOf(it) }.isSuccess }.toSet(),
+        legacyVisibility = mapOf(
+            CardType.SNOWFALL to showSnowfall,
+            CardType.SEVERE_WEATHER to showCape,
+            CardType.SUNSHINE to showSunshineDuration,
+            CardType.GOLDEN_HOUR to showGoldenHour,
+            CardType.OUTDOOR_SCORE to showOutdoorScore,
+        ),
+    ),
     cardOrder = parseCardOrder(cardOrder.joinToString(",")),
     persistentWeatherNotif = persistentWeatherNotif,
     statusBarTemperature = statusBarTemperature,
@@ -433,12 +443,7 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
     drivingAlerts = drivingAlerts,
     healthAlertsEnabled = healthAlertsEnabled,
     migraineAlerts = migraineAlerts,
-    showSnowfall = showSnowfall,
-    showCape = showCape,
-    showSunshineDuration = showSunshineDuration,
-    showGoldenHour = showGoldenHour,
     showBeaufortColors = showBeaufortColors,
-    showOutdoorScore = showOutdoorScore,
     showYesterdayComparison = showYesterdayComparison,
     showForecastAccuracy = showForecastAccuracy,
     showConfidenceBands = showConfidenceBands,
@@ -556,12 +561,7 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setDrivingAlerts(settings.drivingAlerts)
     setHealthAlertsEnabled(settings.healthAlertsEnabled)
     setMigraineAlerts(settings.migraineAlerts)
-    setShowSnowfall(settings.showSnowfall)
-    setShowCape(settings.showCape)
-    setShowSunshineDuration(settings.showSunshineDuration)
-    setShowGoldenHour(settings.showGoldenHour)
     setShowBeaufortColors(settings.showBeaufortColors)
-    setShowOutdoorScore(settings.showOutdoorScore)
     setShowYesterdayComparison(settings.showYesterdayComparison)
     setShowForecastAccuracy(settings.showForecastAccuracy)
     setShowConfidenceBands(settings.showConfidenceBands)

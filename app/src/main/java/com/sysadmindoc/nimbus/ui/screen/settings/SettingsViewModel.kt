@@ -180,12 +180,7 @@ class SettingsViewModel @Inject constructor(
     fun setMigraineAlerts(enabled: Boolean) = viewModelScope.launch { prefs.setMigraineAlerts(enabled) }
 
     // Data display
-    fun setShowSnowfall(enabled: Boolean) = viewModelScope.launch { prefs.setShowSnowfall(enabled) }
-    fun setShowCape(enabled: Boolean) = viewModelScope.launch { prefs.setShowCape(enabled) }
-    fun setShowSunshineDuration(enabled: Boolean) = viewModelScope.launch { prefs.setShowSunshineDuration(enabled) }
-    fun setShowGoldenHour(enabled: Boolean) = viewModelScope.launch { prefs.setShowGoldenHour(enabled) }
     fun setShowBeaufortColors(enabled: Boolean) = viewModelScope.launch { prefs.setShowBeaufortColors(enabled) }
-    fun setShowOutdoorScore(enabled: Boolean) = viewModelScope.launch { prefs.setShowOutdoorScore(enabled) }
     fun setShowYesterdayComparison(enabled: Boolean) = viewModelScope.launch { prefs.setShowYesterdayComparison(enabled) }
     fun setShowForecastAccuracy(enabled: Boolean) = viewModelScope.launch { prefs.setShowForecastAccuracy(enabled) }
     fun setShowConfidenceBands(enabled: Boolean) = viewModelScope.launch { prefs.setShowConfidenceBands(enabled) }

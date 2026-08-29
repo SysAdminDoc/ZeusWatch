@@ -229,12 +229,7 @@ internal data class SettingsActions(
     val onDailyBriefingMinutes: (Int) -> Unit = {},
     val onDrivingAlerts: (Boolean) -> Unit = {},
     val onHealthAlertsEnabled: (Boolean) -> Unit = {},
-    val onShowSnowfall: (Boolean) -> Unit = {},
-    val onShowCape: (Boolean) -> Unit = {},
-    val onShowSunshineDuration: (Boolean) -> Unit = {},
-    val onShowGoldenHour: (Boolean) -> Unit = {},
     val onShowBeaufortColors: (Boolean) -> Unit = {},
-    val onShowOutdoorScore: (Boolean) -> Unit = {},
     val onShowYesterdayComparison: (Boolean) -> Unit = {},
     val onShowForecastAccuracy: (Boolean) -> Unit = {},
     val onShowConfidenceBands: (Boolean) -> Unit = {},
@@ -792,11 +787,6 @@ private fun SettingsDataDisplaySection(
         SettingToggle(stringResource(R.string.settings_yesterday_comparison), stringResource(R.string.settings_yesterday_comparison_desc), settings.showYesterdayComparison, actions.onShowYesterdayComparison)
         SettingToggle(stringResource(R.string.settings_show_forecast_accuracy), stringResource(R.string.settings_show_forecast_accuracy_desc), settings.showForecastAccuracy, actions.onShowForecastAccuracy)
         SettingToggle(stringResource(R.string.settings_show_confidence_bands), stringResource(R.string.settings_show_confidence_bands_desc), settings.showConfidenceBands, actions.onShowConfidenceBands)
-        SettingToggle(stringResource(R.string.settings_outdoor_score), stringResource(R.string.settings_outdoor_score_desc), settings.showOutdoorScore, actions.onShowOutdoorScore)
-        SettingToggle(stringResource(R.string.settings_snowfall_insights), stringResource(R.string.settings_snowfall_insights_desc), settings.showSnowfall, actions.onShowSnowfall)
-        SettingToggle(stringResource(R.string.settings_storm_potential), stringResource(R.string.settings_storm_potential_desc), settings.showCape, actions.onShowCape)
-        SettingToggle(stringResource(R.string.settings_golden_hour_times), stringResource(R.string.settings_golden_hour_times_desc), settings.showGoldenHour, actions.onShowGoldenHour)
-        SettingToggle(stringResource(R.string.settings_sunshine_duration), stringResource(R.string.settings_sunshine_duration_desc), settings.showSunshineDuration, actions.onShowSunshineDuration)
         SettingToggle(stringResource(R.string.settings_beaufort_colors), checked = settings.showBeaufortColors, onCheckedChange = actions.onShowBeaufortColors)
         Text(stringResource(R.string.settings_hourly_range), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp))
         listOf(48, 72).forEach { hours ->

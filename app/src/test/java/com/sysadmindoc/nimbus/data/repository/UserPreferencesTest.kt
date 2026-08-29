@@ -75,14 +75,25 @@ class UserPreferencesTest {
     fun defaultSettingsHaveCorrectDataDisplayDefaults() {
         val settings = NimbusSettings()
 
-        assertTrue(settings.showSnowfall)
-        assertTrue(settings.showCape)
-        assertTrue(settings.showSunshineDuration)
-        assertTrue(settings.showGoldenHour)
         assertTrue(settings.showBeaufortColors)
-        assertTrue(settings.showOutdoorScore)
         assertTrue(settings.showYesterdayComparison)
         assertTrue(settings.showCompareChartOverlay)
+    }
+
+    @Test
+    fun legacyCardTogglesMigrateIntoCardVisibility() {
+        val migrated = applyLegacyCardVisibility(
+            disabledCards = setOf(CardType.SNOWFALL.name, CardType.GOLDEN_HOUR.name),
+            legacyVisibility = mapOf(
+                CardType.SNOWFALL to true,
+                CardType.SEVERE_WEATHER to false,
+                CardType.GOLDEN_HOUR to null,
+            ),
+        )
+
+        assertFalse(CardType.SNOWFALL.name in migrated)
+        assertTrue(CardType.SEVERE_WEATHER.name in migrated)
+        assertTrue(CardType.GOLDEN_HOUR.name in migrated)
     }
 
     @Test

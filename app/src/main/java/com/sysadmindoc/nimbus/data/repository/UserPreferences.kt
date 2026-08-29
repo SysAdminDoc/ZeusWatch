@@ -1,14 +1,16 @@
 package com.sysadmindoc.nimbus.data.repository
 
 import android.content.Context
+import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.compose.runtime.Stable
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
@@ -24,12 +26,58 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private val disabledCardsPreferenceKey = stringSetPreferencesKey("disabled_cards")
+private val legacyShowSnowfallKey = booleanPreferencesKey("show_snowfall")
+private val legacyShowCapeKey = booleanPreferencesKey("show_cape")
+private val legacyShowSunshineDurationKey = booleanPreferencesKey("show_sunshine_duration")
+private val legacyShowGoldenHourKey = booleanPreferencesKey("show_golden_hour")
+private val legacyShowOutdoorScoreKey = booleanPreferencesKey("show_outdoor_score")
+
+private val legacyCardToggleKeys = mapOf(
+    CardType.SNOWFALL to legacyShowSnowfallKey,
+    CardType.SEVERE_WEATHER to legacyShowCapeKey,
+    CardType.SUNSHINE to legacyShowSunshineDurationKey,
+    CardType.GOLDEN_HOUR to legacyShowGoldenHourKey,
+    CardType.OUTDOOR_SCORE to legacyShowOutdoorScoreKey,
+)
+
+internal fun applyLegacyCardVisibility(
+    disabledCards: Set<String>,
+    legacyVisibility: Map<CardType, Boolean?>,
+): Set<String> = disabledCards.toMutableSet().apply {
+    legacyVisibility.forEach { (card, enabled) ->
+        when (enabled) {
+            true -> remove(card.name)
+            false -> add(card.name)
+            null -> Unit
+        }
+    }
+}
+
+private class LegacyCardToggleMigration : DataMigration<Preferences> {
+    override suspend fun shouldMigrate(currentData: Preferences): Boolean =
+        legacyCardToggleKeys.values.any { it in currentData }
+
+    override suspend fun migrate(currentData: Preferences): Preferences {
+        val migrated = mutablePreferencesOf().apply { this += currentData }
+        migrated[disabledCardsPreferenceKey] = applyLegacyCardVisibility(
+            disabledCards = currentData[disabledCardsPreferenceKey] ?: DEFAULT_DISABLED_CARDS,
+            legacyVisibility = legacyCardToggleKeys.mapValues { (_, key) -> currentData[key] },
+        )
+        legacyCardToggleKeys.values.forEach(migrated::remove)
+        return migrated
+    }
+
+    override suspend fun cleanUp() = Unit
+}
+
 // Corruption handler: without it a corrupted file makes every edit{} throw
 // CorruptionException forever (reads mask it via the IOException catch), so
 // each settings interaction would crash until the user clears app data.
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     name = "nimbus_prefs",
     corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+    produceMigrations = { listOf(LegacyCardToggleMigration()) },
 )
 
 private val customAlertRulesKey = stringPreferencesKey("custom_alert_rules")
@@ -66,7 +114,7 @@ class UserPreferences @Inject constructor(
 
         // Card config (stored as JSON strings)
         val CARD_ORDER = stringPreferencesKey("card_order")
-        val DISABLED_CARDS = stringSetPreferencesKey("disabled_cards")
+        val DISABLED_CARDS = disabledCardsPreferenceKey
 
         // Notifications
         val PERSISTENT_WEATHER_NOTIF = booleanPreferencesKey("persistent_weather_notif")
@@ -79,12 +127,7 @@ class UserPreferences @Inject constructor(
         val MIGRAINE_ALERTS = booleanPreferencesKey("migraine_alerts")
 
         // Data display toggles
-        val SHOW_SNOWFALL = booleanPreferencesKey("show_snowfall")
-        val SHOW_CAPE = booleanPreferencesKey("show_cape")
-        val SHOW_SUNSHINE_DURATION = booleanPreferencesKey("show_sunshine_duration")
-        val SHOW_GOLDEN_HOUR = booleanPreferencesKey("show_golden_hour")
         val SHOW_BEAUFORT_COLORS = booleanPreferencesKey("show_beaufort_colors")
-        val SHOW_OUTDOOR_SCORE = booleanPreferencesKey("show_outdoor_score")
         val SHOW_YESTERDAY_COMPARISON = booleanPreferencesKey("show_yesterday_comparison")
         val SHOW_FORECAST_ACCURACY = booleanPreferencesKey("show_forecast_accuracy")
         val SHOW_CONFIDENCE_BANDS = booleanPreferencesKey("show_confidence_bands")
@@ -209,12 +252,7 @@ class UserPreferences @Inject constructor(
             healthAlertsEnabled = prefs[Keys.HEALTH_ALERTS_ENABLED] ?: false,
             migraineAlerts = prefs[Keys.MIGRAINE_ALERTS] ?: false,
             // Data display
-            showSnowfall = prefs[Keys.SHOW_SNOWFALL] ?: true,
-            showCape = prefs[Keys.SHOW_CAPE] ?: true,
-            showSunshineDuration = prefs[Keys.SHOW_SUNSHINE_DURATION] ?: true,
-            showGoldenHour = prefs[Keys.SHOW_GOLDEN_HOUR] ?: true,
             showBeaufortColors = prefs[Keys.SHOW_BEAUFORT_COLORS] ?: true,
-            showOutdoorScore = prefs[Keys.SHOW_OUTDOOR_SCORE] ?: true,
             showYesterdayComparison = prefs[Keys.SHOW_YESTERDAY_COMPARISON] ?: true,
             showForecastAccuracy = prefs[Keys.SHOW_FORECAST_ACCURACY] ?: false,
             showConfidenceBands = prefs[Keys.SHOW_CONFIDENCE_BANDS] ?: false,
@@ -442,12 +480,7 @@ class UserPreferences @Inject constructor(
     suspend fun setMigraineAlerts(enabled: Boolean) = store.edit { it[Keys.MIGRAINE_ALERTS] = enabled }
 
     // Data display
-    suspend fun setShowSnowfall(enabled: Boolean) = store.edit { it[Keys.SHOW_SNOWFALL] = enabled }
-    suspend fun setShowCape(enabled: Boolean) = store.edit { it[Keys.SHOW_CAPE] = enabled }
-    suspend fun setShowSunshineDuration(enabled: Boolean) = store.edit { it[Keys.SHOW_SUNSHINE_DURATION] = enabled }
-    suspend fun setShowGoldenHour(enabled: Boolean) = store.edit { it[Keys.SHOW_GOLDEN_HOUR] = enabled }
     suspend fun setShowBeaufortColors(enabled: Boolean) = store.edit { it[Keys.SHOW_BEAUFORT_COLORS] = enabled }
-    suspend fun setShowOutdoorScore(enabled: Boolean) = store.edit { it[Keys.SHOW_OUTDOOR_SCORE] = enabled }
     suspend fun setShowYesterdayComparison(enabled: Boolean) = store.edit { it[Keys.SHOW_YESTERDAY_COMPARISON] = enabled }
     suspend fun setShowForecastAccuracy(enabled: Boolean) = store.edit { it[Keys.SHOW_FORECAST_ACCURACY] = enabled }
     suspend fun setShowConfidenceBands(enabled: Boolean) = store.edit { it[Keys.SHOW_CONFIDENCE_BANDS] = enabled }
@@ -627,12 +660,7 @@ data class NimbusSettings(
     val healthAlertsEnabled: Boolean = false,
     val migraineAlerts: Boolean = false,
     // Data display
-    val showSnowfall: Boolean = true,
-    val showCape: Boolean = true,
-    val showSunshineDuration: Boolean = true,
-    val showGoldenHour: Boolean = true,
     val showBeaufortColors: Boolean = true,
-    val showOutdoorScore: Boolean = true,
     val showYesterdayComparison: Boolean = true,
     val showForecastAccuracy: Boolean = false,
     val showConfidenceBands: Boolean = false,
