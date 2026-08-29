@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,7 +43,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -79,6 +79,7 @@ import com.sysadmindoc.nimbus.ui.component.PremiumMessageCard
 import com.sysadmindoc.nimbus.ui.component.ReportSubmitSheet
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
+import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
@@ -92,13 +93,23 @@ fun RadarScreen(
     sharedRouteText: String? = null,
     viewModel: RadarViewModel = hiltViewModel(),
 ) {
-    var resolvedLat by remember { mutableDoubleStateOf(latitude) }
-    var resolvedLon by remember { mutableDoubleStateOf(longitude) }
+    // Starts unresolved rather than at the passed-in coordinates: for the
+    // (0,0) deep-link sentinel those are not a place, and rendering them for a
+    // frame put the map off the west coast of Africa before it settled.
+    var resolved by remember { mutableStateOf<RadarLocation?>(null) }
     LaunchedEffect(latitude, longitude) {
-        val (lat, lon) = viewModel.resolveLocation(latitude, longitude)
-        resolvedLat = lat
-        resolvedLon = lon
+        resolved = viewModel.resolveLocation(latitude, longitude)
     }
+
+    val known = resolved as? RadarLocation.Known
+    if (resolved is RadarLocation.Unknown) {
+        RadarLocationNeeded(onBack = onBack)
+        return
+    }
+    if (known == null) return
+
+    val resolvedLat = known.latitude
+    val resolvedLon = known.longitude
 
     val settings by viewModel.settings.collectAsStateWithLifecycle(initialValue = NimbusSettings())
     val radarState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -1056,6 +1067,34 @@ private fun RadarStatusCard(
             .padding(horizontal = 24.dp)
             .widthIn(max = 420.dp)
     )
+}
+
+/**
+ * Shown when the radar shortcut carried no place and nothing is saved.
+ *
+ * The alternative, and what this replaced, was centring on the geographic
+ * centre of the United States and saying nothing about it.
+ */
+@Composable
+private fun RadarLocationNeeded(onBack: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NimbusNavyDark),
+        contentAlignment = Alignment.Center,
+    ) {
+        PremiumMessageCard(
+            title = stringResource(R.string.radar_location_needed_title),
+            message = stringResource(R.string.radar_location_needed_message),
+            icon = Icons.Filled.LocationOn,
+            primaryActionLabel = stringResource(R.string.common_choose_location),
+            primaryActionIcon = Icons.Filled.LocationOn,
+            onPrimaryAction = onBack,
+            modifier = Modifier
+                .padding(24.dp)
+                .widthIn(max = 420.dp),
+        )
+    }
 }
 
 @Composable

@@ -403,6 +403,8 @@
     <string name="radar_interactive_map">Mapa interactivo</string>
     <string name="radar_loading_title">Cargando radar</string>
     <string name="radar_loading_message">Obteniendo los fotogramas de radar más recientes para esta zona.</string>
+    <string name="radar_location_needed_title">Elige una ubicacion primero</string>
+    <string name="radar_location_needed_message">El acceso directo del radar no incluia ningun lugar y no hay ninguna ubicacion guardada. Elige una y el mapa se abrira ahi.</string>
     <string name="radar_unavailable_title">Radar no disponible</string>
     <string name="radar_unavailable_message">No pudimos cargar fotogramas de radar pasado compatibles de RainViewer ahora mismo. Inténtalo de nuevo o cambia de proveedor de radar.</string>
     <plurals name="radar_alert_overlay_count">

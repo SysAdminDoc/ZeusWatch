@@ -391,6 +391,8 @@
     <string name="radar_interactive_map">מפה אינטראקטיבית</string>
     <string name="radar_loading_title">טוען רדאר</string>
     <string name="radar_loading_message">מביא את מסגרות הרדאר האחרונות לאזור זה.</string>
+    <string name="radar_location_needed_title">בחר מיקום תחילה</string>
+    <string name="radar_location_needed_message">קיצור הדרך של הרדאר לא כלל מקום, ואין מיקום שמור לחזור אליו. בחר מיקום והמפה תיפתח שם.</string>
     <string name="radar_unavailable_title">הרדאר אינו זמין</string>
     <string name="radar_unavailable_message">We couldn\'t load supported RainViewer past radar frames right now. Try again or switch radar providers.</string>
     <plurals name="radar_alert_overlay_count">
