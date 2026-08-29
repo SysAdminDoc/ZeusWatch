@@ -261,7 +261,13 @@ class CompareViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.overlayLoadFailed)
         assertFalse(state.overlayUnavailable)
-        assertEquals(2, state.overlayForecasts.size)
+        // Derived, not the literal 2 this used to assert: that number was the
+        // length of the hardcoded candidate list this change removed, so it
+        // would have to be edited again the next time a provider is added.
+        assertEquals(
+            compareOverlayCandidates(WeatherSourceProvider.OPEN_METEO).size,
+            state.overlayForecasts.size,
+        )
     }
 
     @Test
@@ -297,7 +303,13 @@ class CompareViewModelTest {
 
         val state = viewModel.uiState.value
         assertTrue(state.showChartOverlay)
-        assertEquals(2, state.overlayForecasts.size)
+        // Derived, not the literal 2 this used to assert: that number was the
+        // length of the hardcoded candidate list this change removed, so it
+        // would have to be edited again the next time a provider is added.
+        assertEquals(
+            compareOverlayCandidates(WeatherSourceProvider.OPEN_METEO).size,
+            state.overlayForecasts.size,
+        )
         coVerify(atLeast = 1) {
             weatherSourceManager.getWeatherFromProvider(any(), any(), any(), any(), any())
         }

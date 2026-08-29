@@ -602,14 +602,7 @@ class WeatherLoadCoordinator @Inject constructor(
     }
 
     private fun providerAgreementCandidates(primaryProvider: WeatherSourceProvider): List<WeatherSourceProvider> =
-        listOf(
-            primaryProvider,
-            WeatherSourceProvider.OPEN_METEO,
-            WeatherSourceProvider.MET_NORWAY,
-        )
-            .filter { it.isSelectableFor(WeatherDataType.FORECAST) }
-            .distinct()
-            .take(3)
+        WeatherSourceProvider.forecastComparisonCandidates(primaryProvider)
 
     private fun markProviderAgreementUnavailable(
         requestId: Long,
