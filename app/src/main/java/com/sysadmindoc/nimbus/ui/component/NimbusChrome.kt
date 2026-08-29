@@ -69,6 +69,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.inkOn
 
 @Composable
 fun GlassActionButton(
@@ -311,7 +312,9 @@ fun PremiumMessageCard(
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = tint,
-                    contentColor = NimbusTextPrimary,
+                    // Derived from the fill rather than fixed: the tint is a
+                    // caller-chosen accent, and the light ones need dark ink.
+                    contentColor = inkOn(tint),
                 ),
             ) {
                 if (primaryActionIcon != null) {

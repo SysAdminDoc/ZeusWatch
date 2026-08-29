@@ -993,9 +993,13 @@ private fun WeatherUpdatedRow(
     sourceProvider: String? = null,
     usedFallback: Boolean = false,
 ) {
+    // Secondary rather than tertiary, and no alpha on the cached case: this
+    // row sits on the bright header, where tertiary measured 2.90:1 and the
+    // dimmed cached variant 2.32:1. Secondary clears 4.79:1 there. The two
+    // warning tiers already clear 3:1 on the same background.
     val statusColor = when {
-        isCached -> NimbusTextTertiary.copy(alpha = 0.78f)
-        updatedAgeMinutes < 60 -> NimbusTextTertiary
+        isCached -> NimbusTextSecondary
+        updatedAgeMinutes < 60 -> NimbusTextSecondary
         updatedAgeMinutes < 120 -> NimbusWarning.copy(alpha = 0.7f)
         else -> NimbusWarning
     }
