@@ -72,18 +72,7 @@ fun AlertDetailSheet(
         containerColor = NimbusSurface,
         scrimColor = NimbusNavyDark.copy(alpha = 0.6f),
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(vertical = 10.dp)
-                    .width(40.dp)
-                    .height(4.dp)
-                    .background(Color.White.copy(alpha = 0.16f))
-                    .clearAndSetSemantics {
-                        contentDescription = bottomSheetHandleDescription
-                    },
-            )
-        },
+        dragHandle = { NimbusSheetDragHandle() },
     ) {
         Column(
             modifier = Modifier

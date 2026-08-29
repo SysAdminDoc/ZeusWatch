@@ -61,6 +61,7 @@ import com.sysadmindoc.nimbus.data.repository.DrivingRouteRiskLevel
 import com.sysadmindoc.nimbus.data.repository.DrivingRouteWaypoint
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.VisibilityUnit
+import com.sysadmindoc.nimbus.ui.component.NimbusSheetDragHandle
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
@@ -128,19 +129,7 @@ fun RouteWeatherPlannerSheet(
         onDismissRequest = actions.onDismiss,
         sheetState = sheetState,
         containerColor = NimbusNavyDark,
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(vertical = 10.dp)
-                    .width(40.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color.White.copy(alpha = 0.16f))
-                    .clearAndSetSemantics {
-                        contentDescription = bottomSheetHandleDescription
-                    },
-            )
-        },
+        dragHandle = { NimbusSheetDragHandle() },
     ) {
         Column(
             modifier = Modifier
@@ -365,6 +354,10 @@ private fun RouteDepartureSelector(
                 FilterChip(
                     selected = selected,
                     onClick = { onSelected(minutes) },
+                    // A Material chip draws 32dp tall. Compose expands the
+                    // touch bounds, but only where there is room to, and these
+                    // sit in a tightly spaced scrolling row.
+                    modifier = Modifier.heightIn(min = 48.dp),
                     label = {
                         Text(
                             text = if (minutes == 0) {
