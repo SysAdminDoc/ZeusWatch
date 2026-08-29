@@ -899,9 +899,6 @@
     <string name="locations_remove_recent_cd">Quitar %1$s de las búsquedas recientes</string>
     <string name="locations_clear_recent_title">¿Borrar búsquedas recientes?</string>
     <string name="locations_clear_recent_message">Esto elimina tu historial de búsquedas recientes de este dispositivo. Tus lugares guardados no se ven afectados.</string>
-    <string name="locations_remove_title">¿Eliminar %1$s?</string>
-    <string name="locations_remove_message">Esto elimina %1$s de los lugares guardados. Los widgets, alertas y accesos directos que lo usaban podrían necesitar una nueva ubicación.</string>
-    <string name="locations_remove_action">Eliminar</string>
 
     <!-- Compare -->
     <string name="compare_preparing_title">Preparando comparación</string>
@@ -1625,4 +1622,5 @@
     <string name="licenses_open_link">Abrir la página del proyecto</string>
     <string name="radar_attribution_lightning">Rayos: colaboradores de Blitzortung.org • solo informativo, no sirve para proteger vidas ni bienes • pueden faltar rayos o llegar con retraso</string>
     <string name="pws_lightning_informational">(solo informativo)</string>
+    <string name="locations_removed">Ubicación eliminada</string>
 </resources>
