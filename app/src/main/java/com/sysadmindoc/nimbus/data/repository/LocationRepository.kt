@@ -68,8 +68,19 @@ class LocationRepository @Inject constructor(
         )
     }
 
-    suspend fun removeLocation(id: Long) {
+    /**
+     * Deletes a saved location, refusing the GPS current-location row.
+     *
+     * The guard lives here rather than only in the Locations screen: deletion
+     * is immediate now, with nothing but an undo snackbar behind it, and the
+     * current-location row is what every background surface falls back to.
+     * Returns the row that was removed, or null if nothing was.
+     */
+    suspend fun removeLocation(id: Long): SavedLocationEntity? {
+        val existing = dao.getAll().firstOrNull { it.id == id } ?: return null
+        if (existing.isCurrentLocation) return null
         dao.deleteById(id)
+        return existing
     }
 
     suspend fun getAll(): List<SavedLocationEntity> = dao.getAll()
@@ -88,6 +99,11 @@ class LocationRepository @Inject constructor(
 
     suspend fun restoreAll(locations: List<SavedLocationEntity>) {
         dao.restoreAll(locations)
+    }
+
+    /** Puts a single deleted location back without touching the others. */
+    suspend fun restoreLocation(location: SavedLocationEntity) {
+        dao.restore(location)
     }
 
     suspend fun reorderLocations(orderedIds: List<Long>) {

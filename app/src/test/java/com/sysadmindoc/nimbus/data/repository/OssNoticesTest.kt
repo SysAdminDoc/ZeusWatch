@@ -24,7 +24,10 @@ class OssNoticesTest {
 
     @Test
     fun `the packaged asset carries dependencies and data providers`() {
-        assertTrue("expected dependencies", notices.dependencies.size > 40)
+        // Derived from the resolved runtime classpath, not the version
+        // catalog: the catalog listed 71 entries while the app actually
+        // ships around 300, and included test-only artifacts it does not.
+        assertTrue("expected the full runtime classpath", notices.dependencies.size > 250)
         assertTrue("expected data providers", notices.providers.size > 10)
     }
 
@@ -39,6 +42,45 @@ class OssNoticesTest {
             assertTrue("${provider.name} has no licence", provider.license.isNotBlank())
             assertTrue("${provider.name} has a non-http url: ${provider.url}", provider.url.startsWith("http"))
         }
+    }
+
+    @Test
+    fun `every dependency carries a real resolved version`() {
+        // "managed" was the old catalog's placeholder for BOM-managed
+        // artifacts, which is not a version anyone can look up.
+        val unresolved = notices.dependencies.filter {
+            it.version == "managed" || it.version == "unknown"
+        }
+        assertEquals(emptyList<OssNotice>(), unresolved)
+    }
+
+    @Test
+    fun `test-only artifacts are not claimed as shipped`() {
+        val testOnly = listOf(
+            "junit:junit",
+            "io.mockk:mockk",
+            "org.robolectric:robolectric",
+            "app.cash.turbine:turbine",
+            "androidx.test.espresso:espresso-core",
+        )
+        val claimed = notices.dependencies.map { it.name }.filter { it in testOnly }
+        assertEquals(emptyList<String>(), claimed)
+    }
+
+    @Test
+    fun `the Firebase stack is present and marked standard-only`() {
+        // Declared as string literals, so the catalog-driven generator missed
+        // all of it while the standard APK shipped every one.
+        val firebase = notices.dependencies.filter { it.name.startsWith("com.google.firebase:") }
+
+        assertTrue("Firebase must be attributed", firebase.size >= 10)
+        assertTrue("Firebase must not be claimed by freenet", firebase.all { it.standardOnly })
+    }
+
+    @Test
+    fun `each artifact appears once`() {
+        val names = notices.dependencies.map { it.name }
+        assertEquals(names.size, names.distinct().size)
     }
 
     @Test

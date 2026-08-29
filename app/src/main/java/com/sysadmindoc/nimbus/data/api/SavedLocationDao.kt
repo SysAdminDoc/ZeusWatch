@@ -83,9 +83,26 @@ interface SavedLocationDao {
         locations.forEach { insert(it.copy(id = 0)) }
     }
 
+    /**
+     * Whole-table replace for settings import. Wipes what is there first.
+     *
+     * Never use this to put one row back: it is a replace, not an insert, and
+     * restoring a single location this way deletes every other saved place.
+     */
     @Transaction
     suspend fun restoreAll(locations: List<SavedLocationEntity>) {
         deleteAll()
         locations.forEach { insert(it) }
+    }
+
+    /**
+     * Reinserts one previously deleted row, keeping its id and sortOrder.
+     *
+     * `insert` with a non-zero id preserves it despite autoGenerate, so the
+     * row comes back in its original position with its per-location source
+     * overrides intact.
+     */
+    suspend fun restore(location: SavedLocationEntity) {
+        insert(location)
     }
 }
