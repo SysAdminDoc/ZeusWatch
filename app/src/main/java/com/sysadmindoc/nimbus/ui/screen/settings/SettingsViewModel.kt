@@ -43,11 +43,62 @@ class SettingsViewModel @Inject constructor(
     private val iconPackManager: IconPackManager,
     private val settingsTransferManager: SettingsTransferManager,
     private val providerHealthRepository: ProviderHealthRepository,
+    private val deliveryHealthRepository: DeliveryHealthRepository,
+    private val deliveryScheduleReader: DeliveryScheduleReader,
     locationRepository: LocationRepository,
 ) : ViewModel() {
 
     val settings = prefs.settings
     val providerHealth = providerHealthRepository.snapshot
+    val deliveryHealth = deliveryHealthRepository.snapshot
+
+    private val _deliveryNextRuns = MutableStateFlow<Map<DeliverySurface, Long>>(emptyMap())
+
+    /**
+     * Next scheduled run per surface, read from WorkManager.
+     *
+     * Kept out of the persisted snapshot because it is not a fact about
+     * what happened; it changes with every reschedule and backoff.
+     */
+    val deliveryNextRuns: StateFlow<Map<DeliverySurface, Long>> = _deliveryNextRuns
+
+    fun refreshDeliverySchedule() = viewModelScope.launch {
+        _deliveryNextRuns.value = deliveryScheduleReader.nextScheduledRuns()
+    }
+
+    fun runDeliveryNow(surface: DeliverySurface) = viewModelScope.launch {
+        deliveryScheduleReader.runNow(surface)
+        // The enqueue is immediate but the run is not, so re-read the
+        // schedule rather than leaving a stale next-run time on screen.
+        _deliveryNextRuns.value = deliveryScheduleReader.nextScheduledRuns()
+    }
+
+    fun exportDeliveryDiagnostics(uri: Uri) = viewModelScope.launch {
+        if (!beginTransfer()) return@launch
+        clearPendingImport()
+        try {
+            runCatching {
+                val text = withContext(Dispatchers.IO) {
+                    deliveryHealthRepository.diagnosticsText(
+                        nextScheduledRuns = deliveryScheduleReader.nextScheduledRuns(),
+                    )
+                }
+                withContext(Dispatchers.IO) {
+                    appContext.contentResolver.openOutputStream(uri, "wt")
+                        ?.bufferedWriter()?.use { writer -> writer.write(text) }
+                        ?: error("Could not open diagnostics file.")
+                }
+            }.fold(
+                onSuccess = { _transferStatus.value = SettingsTransferStatus.DiagnosticsExportSuccess },
+                onFailure = {
+                    Log.w(TAG, "Failed to export delivery diagnostics", it)
+                    _transferStatus.value = SettingsTransferStatus.DiagnosticsExportError
+                },
+            )
+        } finally {
+            _transferInProgress.value = false
+        }
+    }
 
     /**
      * Providers referenced only by saved locations' per-location source

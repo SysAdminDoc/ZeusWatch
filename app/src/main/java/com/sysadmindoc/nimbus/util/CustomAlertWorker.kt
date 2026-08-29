@@ -8,10 +8,15 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.sysadmindoc.nimbus.data.repository.AirQualityRepository
+import com.sysadmindoc.nimbus.data.repository.DeliveryFailureReason
+import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
+import com.sysadmindoc.nimbus.data.repository.DeliverySurface
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import dagger.assisted.Assisted
@@ -41,18 +46,39 @@ class CustomAlertWorker @AssistedInject constructor(
     private val weatherRepository: WeatherRepository,
     private val airQualityRepository: AirQualityRepository,
     private val prefs: UserPreferences,
+    private val deliveryHealth: DeliveryHealthRepository,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
+        val startedAt = System.currentTimeMillis()
         val rules = prefs.customAlertRules.first()
-        if (rules.none { it.enabled }) return Result.success()
+        if (rules.none { it.enabled }) {
+            deliveryHealth.forget(DeliverySurface.CUSTOM_ALERTS)
+            return Result.success()
+        }
+        deliveryHealth.recordAttempt(DeliverySurface.CUSTOM_ALERTS, startedAt)
 
         val settings = prefs.settings.first()
-        val loc = prefs.backgroundAlertLocation.first() ?: return Result.success()
+        val loc = prefs.backgroundAlertLocation.first() ?: run {
+            deliveryHealth.recordFailure(
+                DeliverySurface.CUSTOM_ALERTS,
+                DeliveryFailureReason.NO_LOCATION,
+                startedAt,
+            )
+            return Result.success()
+        }
 
         val weatherResult = weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
         val weather = weatherResult.getOrNull()
-            ?: return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
+            ?: run {
+                deliveryHealth.recordFailure(
+                    DeliverySurface.CUSTOM_ALERTS,
+                    DeliveryFailureReason.FORECAST_UNAVAILABLE,
+                    startedAt,
+                )
+                return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
+            }
+        deliveryHealth.recordSuccess(DeliverySurface.CUSTOM_ALERTS, startedAt)
 
         // AQI is only fetched when an enabled rule needs it. A fetch FAILURE is
         // not the same as "no AQI rules": swallowing it silently no-oped users
@@ -100,6 +126,20 @@ class CustomAlertWorker @AssistedInject constructor(
 
     companion object {
         private const val WORK_NAME = "nimbus_custom_alert"
+
+        /**
+         * The unique periodic work this worker runs as.
+         *
+         * Public so the delivery diagnostics can ask WorkManager when it next
+         * runs and enqueue a manual run; the panel cannot report on a job whose
+         * name it does not know.
+         */
+        const val UNIQUE_WORK_NAME = "nimbus_custom_alert"
+
+        /** A one-off run of this worker, for the diagnostics panel's Run now. */
+        fun oneTimeRequest(): OneTimeWorkRequest =
+            OneTimeWorkRequestBuilder<CustomAlertWorker>()
+                .build()
         private const val MAX_RETRY_ATTEMPTS = 3
 
         fun schedule(context: Context) {

@@ -9,11 +9,15 @@ import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.data.repository.DeliveryFailureReason
+import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
+import com.sysadmindoc.nimbus.data.repository.DeliverySurface
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import dagger.assisted.Assisted
@@ -51,16 +55,25 @@ class NowcastAlertWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val weatherRepository: WeatherRepository,
     private val prefs: UserPreferences,
+    private val deliveryHealth: DeliveryHealthRepository,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
+        val startedAt = System.currentTimeMillis()
         val settings = prefs.settings.first()
         if (!settings.nowcastingAlerts) {
             Log.d(TAG, "Nowcast alerts disabled; skipping")
+            deliveryHealth.forget(DeliverySurface.NOWCAST_ALERTS)
             return Result.success()
         }
+        deliveryHealth.recordAttempt(DeliverySurface.NOWCAST_ALERTS, startedAt)
         val loc = prefs.backgroundAlertLocation.first() ?: run {
             Log.d(TAG, "No background alert location; skipping")
+            deliveryHealth.recordFailure(
+                DeliverySurface.NOWCAST_ALERTS,
+                DeliveryFailureReason.NO_LOCATION,
+                startedAt,
+            )
             return Result.success()
         }
 
@@ -69,8 +82,16 @@ class NowcastAlertWorker @AssistedInject constructor(
             // A genuine fetch failure (network/provider) — retry with backoff so
             // an incoming rain transition isn't missed for a full period.
             Log.w(TAG, "Minutely fetch failed", seriesResult.exceptionOrNull())
+            deliveryHealth.recordFailure(
+                DeliverySurface.NOWCAST_ALERTS,
+                DeliveryFailureReason.FORECAST_UNAVAILABLE,
+                startedAt,
+            )
             return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
         }
+        // Data in hand. Whether it triggers an alert is the forecast's business,
+        // not a delivery problem, so this is the success point.
+        deliveryHealth.recordSuccess(DeliverySurface.NOWCAST_ALERTS, startedAt)
         val series = seriesResult.getOrNull()
         if (series.isNullOrEmpty()) {
             // Legitimately empty (no precip in the window) — nothing to do.
@@ -122,6 +143,20 @@ class NowcastAlertWorker @AssistedInject constructor(
 
     companion object {
         private const val WORK_NAME = "nimbus_nowcast_alert"
+
+        /**
+         * The unique periodic work this worker runs as.
+         *
+         * Public so the delivery diagnostics can ask WorkManager when it next
+         * runs and enqueue a manual run; the panel cannot report on a job whose
+         * name it does not know.
+         */
+        const val UNIQUE_WORK_NAME = "nimbus_nowcast_alert"
+
+        /** A one-off run of this worker, for the diagnostics panel's Run now. */
+        fun oneTimeRequest(): OneTimeWorkRequest =
+            OneTimeWorkRequestBuilder<NowcastAlertWorker>()
+                .build()
         private const val RECHECK_WORK_NAME = "nimbus_nowcast_recheck"
         private const val MAX_RETRY_ATTEMPTS = 3
 

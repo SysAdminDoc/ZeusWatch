@@ -49,6 +49,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AlertDialog
@@ -143,6 +144,8 @@ internal fun SettingsContent(
     notificationsPermissionGranted: Boolean = true,
     availableIconPacks: List<IconPack> = emptyList(),
     providerHealth: ProviderHealthSnapshot = ProviderHealthSnapshot(),
+    deliveryHealth: DeliveryHealthSnapshot = DeliveryHealthSnapshot(),
+    deliveryNextRuns: Map<DeliverySurface, Long> = emptyMap(),
     transferStatus: SettingsTransferStatus? = null,
     transferInProgress: Boolean = false,
     pendingImportPreview: SettingsImportPreview? = null,
@@ -191,6 +194,8 @@ internal fun SettingsContent(
                 onNavigateToLicenses = onNavigateToLicenses,
                 supportState = SettingsSupportState(
                     providerHealth = providerHealth,
+                    deliveryHealth = deliveryHealth,
+                    deliveryNextRuns = deliveryNextRuns,
                     transferStatus = transferStatus,
                     transferInProgress = transferInProgress,
                     pendingImportPreview = pendingImportPreview,
@@ -261,6 +266,8 @@ internal data class SettingsActions(
     val onExportSettings: () -> Unit = {},
     val onImportSettings: () -> Unit = {},
     val onExportProviderDiagnostics: () -> Unit = {},
+    val onExportDeliveryDiagnostics: () -> Unit = {},
+    val onRunDeliveryNow: (DeliverySurface) -> Unit = {},
     val onConfirmSettingsImport: () -> Unit = {},
     val onCancelSettingsImport: () -> Unit = {},
     val onClearTransferStatus: () -> Unit = {},
@@ -268,6 +275,8 @@ internal data class SettingsActions(
 
 private data class SettingsSupportState(
     val providerHealth: ProviderHealthSnapshot,
+    val deliveryHealth: DeliveryHealthSnapshot,
+    val deliveryNextRuns: Map<DeliverySurface, Long>,
     val transferStatus: SettingsTransferStatus?,
     val transferInProgress: Boolean,
     val pendingImportPreview: SettingsImportPreview?,
@@ -303,11 +312,13 @@ private fun SettingsCategoryContent(
         }
         SettingsCategory.ADVANCED -> {
             SettingsDataSourcesSection(
-                settings,
-                supportState.providerHealth,
-                supportState.transferInProgress,
-                supportState.locationOverrideProviders,
-                actions,
+                settings = settings,
+                providerHealth = supportState.providerHealth,
+                deliveryHealth = supportState.deliveryHealth,
+                deliveryNextRuns = supportState.deliveryNextRuns,
+                transferInProgress = supportState.transferInProgress,
+                locationOverrideProviders = supportState.locationOverrideProviders,
+                actions = actions,
             )
             SettingsAdvancedSection(
                 settings,
@@ -910,6 +921,8 @@ private fun SettingsAccessibilitySection(
 private fun SettingsDataSourcesSection(
     settings: NimbusSettings,
     providerHealth: ProviderHealthSnapshot,
+    deliveryHealth: DeliveryHealthSnapshot,
+    deliveryNextRuns: Map<DeliverySurface, Long>,
     transferInProgress: Boolean,
     locationOverrideProviders: Set<WeatherSourceProvider>,
     actions: SettingsActions,
@@ -963,6 +976,12 @@ private fun SettingsDataSourcesSection(
         SettingsApiKeyFields(settings, locationOverrideProviders, actions)
         ProviderHealthPanel(
             snapshot = providerHealth,
+            transferInProgress = transferInProgress,
+            actions = actions,
+        )
+        DeliveryHealthPanel(
+            snapshot = deliveryHealth,
+            nextRuns = deliveryNextRuns,
             transferInProgress = transferInProgress,
             actions = actions,
         )
@@ -1076,6 +1095,209 @@ private fun ProviderHealthPanel(
         onClick = actions.onExportProviderDiagnostics,
     )
 }
+
+/**
+ * Per-surface status for the background jobs that deliver weather elsewhere.
+ *
+ * Provider health answers whether the forecast is arriving. This answers the
+ * question a user actually has when a widget goes stale, which is whether the
+ * job that fills it ever ran, why it stopped, and when it will try again.
+ */
+@Composable
+private fun DeliveryHealthPanel(
+    snapshot: DeliveryHealthSnapshot,
+    nextRuns: Map<DeliverySurface, Long>,
+    transferInProgress: Boolean,
+    actions: SettingsActions,
+) {
+    val entries = remember(snapshot.entries) { snapshot.entries.sortedBy { it.surface.ordinal } }
+    val nowEpochMs by produceState(initialValue = System.currentTimeMillis()) {
+        while (true) {
+            kotlinx.coroutines.delay(60_000L)
+            value = System.currentTimeMillis()
+        }
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+    Text(
+        text = stringResource(R.string.settings_delivery_health_title),
+        style = MaterialTheme.typography.bodySmall,
+        color = NimbusTextSecondary,
+        modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
+    )
+    Text(
+        text = stringResource(R.string.settings_delivery_health_desc),
+        style = MaterialTheme.typography.bodySmall,
+        color = NimbusTextTertiary,
+        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+    )
+    if (entries.isEmpty()) {
+        Text(
+            text = stringResource(R.string.settings_delivery_health_empty),
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+        )
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            entries.forEach { entry ->
+                DeliveryHealthRow(
+                    entry = entry,
+                    nextRunEpochMs = nextRuns[entry.surface] ?: entry.nextScheduledEpochMs,
+                    nowEpochMs = nowEpochMs,
+                    onRunNow = { actions.onRunDeliveryNow(entry.surface) },
+                )
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    SettingsTransferButton(
+        label = stringResource(R.string.settings_delivery_health_export),
+        icon = Icons.Filled.FileUpload,
+        enabled = !transferInProgress,
+        modifier = Modifier.fillMaxWidth(),
+        onClick = actions.onExportDeliveryDiagnostics,
+    )
+}
+
+@Composable
+private fun DeliveryHealthRow(
+    entry: DeliveryHealthEntry,
+    nextRunEpochMs: Long?,
+    nowEpochMs: Long,
+    onRunNow: () -> Unit,
+) {
+    val surfaceLabel = stringResource(entry.surface.labelRes)
+    val neverLabel = stringResource(R.string.settings_delivery_health_never)
+    val successLabel = stringResource(
+        R.string.settings_delivery_health_last_success,
+        entry.lastSuccessEpochMs?.let { relativeDeliveryTime(it, nowEpochMs) } ?: neverLabel,
+    )
+    val attemptLabel = stringResource(
+        R.string.settings_delivery_health_last_attempt,
+        entry.lastAttemptEpochMs?.let { relativeDeliveryTime(it, nowEpochMs) } ?: neverLabel,
+    )
+    val failureLabel = entry.lastFailureEpochMs?.let { failedAt ->
+        stringResource(
+            R.string.settings_delivery_health_last_failure,
+            relativeDeliveryTime(failedAt, nowEpochMs),
+            stringResource(
+                (entry.lastFailureReason ?: DeliveryFailureReason.UNKNOWN).labelRes,
+            ),
+        )
+    }
+    val nextLabel = nextRunEpochMs?.let {
+        stringResource(R.string.settings_delivery_health_next_run, relativeDeliveryTime(it, nowEpochMs))
+    } ?: stringResource(R.string.settings_delivery_health_next_unknown)
+
+    // One merged description rather than five nodes: a screen reader reading
+    // this row field by field is unusable. The button inside keeps its own
+    // label, which a merged row would otherwise swallow.
+    val runNowDescription = stringResource(
+        R.string.settings_delivery_health_retry_cd,
+        surfaceLabel,
+    )
+    val description = stringResource(
+        R.string.settings_delivery_health_row_cd,
+        surfaceLabel,
+        failureLabel ?: successLabel,
+        nextLabel,
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        NimbusGlassTop.copy(alpha = 0.42f),
+                        NimbusCardBg,
+                    ),
+                ),
+            )
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
+            .semantics(mergeDescendants = true) { contentDescription = description }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        Text(
+            text = surfaceLabel,
+            style = MaterialTheme.typography.bodyMedium,
+            color = NimbusTextPrimary,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = successLabel,
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+        )
+        Text(
+            text = attemptLabel,
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextTertiary,
+        )
+        if (failureLabel != null) {
+            Text(
+                text = failureLabel,
+                style = MaterialTheme.typography.bodySmall,
+                // The standing-failure line is the one a user is looking for.
+                color = if (entry.consecutiveFailures > 0) NimbusWarning else NimbusTextTertiary,
+            )
+        }
+        Text(
+            text = nextLabel,
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextTertiary,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        SettingsTransferButton(
+            label = stringResource(R.string.settings_delivery_health_retry),
+            icon = Icons.Filled.Refresh,
+            enabled = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription = runNowDescription
+                },
+            onClick = onRunNow,
+        )
+    }
+}
+
+/**
+ * "3 min ago" style label, reusing the provider panel's own wording so the two
+ * diagnostics sections do not describe time two different ways.
+ */
+@Composable
+private fun relativeDeliveryTime(epochMs: Long, nowEpochMs: Long): String =
+    providerHealthRelativeTime(
+        epochMs,
+        nowEpochMs,
+        emptyRes = R.string.settings_delivery_health_never,
+    )
+
+private val DeliverySurface.labelRes: Int
+    get() = when (this) {
+        DeliverySurface.WIDGETS -> R.string.delivery_surface_widgets
+        DeliverySurface.DAILY_BRIEFING -> R.string.delivery_surface_daily_briefing
+        DeliverySurface.WEAR_SYNC -> R.string.delivery_surface_wear_sync
+        DeliverySurface.GADGETBRIDGE -> R.string.delivery_surface_gadgetbridge
+        DeliverySurface.WEATHER_ALERTS -> R.string.delivery_surface_weather_alerts
+        DeliverySurface.CUSTOM_ALERTS -> R.string.delivery_surface_custom_alerts
+        DeliverySurface.NOWCAST_ALERTS -> R.string.delivery_surface_nowcast_alerts
+        DeliverySurface.HEALTH_ALERTS -> R.string.delivery_surface_health_alerts
+    }
+
+private val DeliveryFailureReason.labelRes: Int
+    get() = when (this) {
+        DeliveryFailureReason.NO_LOCATION -> R.string.delivery_failure_no_location
+        DeliveryFailureReason.NO_NETWORK -> R.string.delivery_failure_no_network
+        DeliveryFailureReason.FORECAST_UNAVAILABLE -> R.string.delivery_failure_forecast_unavailable
+        DeliveryFailureReason.PERMISSION_DENIED -> R.string.delivery_failure_permission_denied
+        DeliveryFailureReason.NO_RECEIVER -> R.string.delivery_failure_no_receiver
+        DeliveryFailureReason.BATTERY_RESTRICTED -> R.string.delivery_failure_battery_restricted
+        DeliveryFailureReason.UNKNOWN -> R.string.delivery_failure_unknown
+    }
 
 @Composable
 private fun ProviderHealthRow(

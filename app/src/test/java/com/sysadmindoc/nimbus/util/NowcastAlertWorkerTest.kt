@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
 import com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation
+import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.SavedLocation
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
@@ -30,6 +31,10 @@ import java.time.LocalDateTime
  * a new signature must alert audibly.
  */
 class NowcastAlertWorkerTest {
+    // Relaxed: these tests are about what the worker delivers, not
+    // about the diagnostics recording, which has its own tests.
+    private val deliveryHealth: DeliveryHealthRepository = io.mockk.mockk(relaxed = true)
+
 
     private lateinit var context: Context
     private lateinit var params: WorkerParameters
@@ -81,7 +86,7 @@ class NowcastAlertWorkerTest {
         every { dedupePrefs.getString("last_signature", null) } returns null
         every { dedupePrefs.getLong("last_notified_at", 0L) } returns 0L
 
-        val worker = NowcastAlertWorker(context, params, weatherRepository, prefs)
+        val worker = NowcastAlertWorker(context, params, weatherRepository, prefs, deliveryHealth)
         val result = worker.doWork()
 
         assertEquals(ListenableWorker.Result.success(), result)
@@ -94,7 +99,7 @@ class NowcastAlertWorkerTest {
     fun `countdown refresh of the same transition requests a silent update`() = runTest {
         every { dedupePrefs.getString("last_signature", null) } returns expectedSignature()
 
-        val worker = NowcastAlertWorker(context, params, weatherRepository, prefs)
+        val worker = NowcastAlertWorker(context, params, weatherRepository, prefs, deliveryHealth)
         val result = worker.doWork()
 
         assertEquals(ListenableWorker.Result.success(), result)

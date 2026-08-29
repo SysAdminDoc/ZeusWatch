@@ -9,6 +9,7 @@ import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.SavedLocation
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
@@ -29,6 +30,10 @@ import org.junit.Test
 import java.time.LocalDateTime
 
 class HealthAlertWorkerTest {
+    // Relaxed: these tests are about what the worker delivers, not
+    // about the diagnostics recording, which has its own tests.
+    private val deliveryHealth: DeliveryHealthRepository = io.mockk.mockk(relaxed = true)
+
 
     @Test
     fun `doWork uses configured weather source path`() = runTest {
@@ -74,7 +79,7 @@ class HealthAlertWorkerTest {
             )
         )
 
-        val worker = HealthAlertWorker(context, params, weatherRepository, prefs)
+        val worker = HealthAlertWorker(context, params, weatherRepository, prefs, deliveryHealth)
         val result = worker.doWork()
 
         assertTrue(result is ListenableWorker.Result.Success)
@@ -103,7 +108,7 @@ class HealthAlertWorkerTest {
             )
             every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
 
-            val worker = HealthAlertWorker(context, params, weatherRepository, prefs)
+            val worker = HealthAlertWorker(context, params, weatherRepository, prefs, deliveryHealth)
 
             // Run 1: ADVISORY-range pressure delta (4 hPa / 3h) → notifies.
             coEvery { weatherRepository.getWeather(39.7, -104.9, "Denver") } returns
@@ -161,7 +166,7 @@ class HealthAlertWorkerTest {
             coEvery { weatherRepository.getWeather(39.7, -104.9, "Denver") } returns
                 Result.success(weatherWithPressures(WARNING_PRESSURES))
 
-            val worker = HealthAlertWorker(context, params, weatherRepository, prefs)
+            val worker = HealthAlertWorker(context, params, weatherRepository, prefs, deliveryHealth)
 
             // Run 1: POST_NOTIFICATIONS revoked → delivery fails. The claim
             // must be rolled back instead of burning the daily slot.
