@@ -29,15 +29,19 @@ class PirateWeatherAqiAdapterTest {
     private val adapter = PirateWeatherAqiAdapter(api, prefs)
 
     @Test
-    fun `air quality is requested on US units with only the current block`() = runTest {
+    fun `air quality is requested on US units at version 2 with only the current block`() = runTest {
         val units = slot<String>()
+        val version = slot<Int>()
         val exclude = slot<String>()
         val include = slot<String>()
-        stub(currently(airQualityIndex = 42.0), units, exclude, include)
+        stub(currently(airQualityIndex = 42.0), units, version, exclude, include)
 
         adapter.getAirQuality(40.71, -74.01).getOrThrow()
 
         assertEquals("us", units.captured)
+        // airQualityIndex is a version>1 field. Without it the reply parses
+        // fine and the index is simply absent, which reads as "no data here".
+        assertEquals(2, version.captured)
         assertEquals("airqualitydetails", include.captured)
         // Only the current index is consumed; everything else is payload the
         // app pays for and throws away.
@@ -112,13 +116,13 @@ class PirateWeatherAqiAdapterTest {
         every { prefs.settings } returns flowOf(NimbusSettings(pirateWeatherApiKey = ""))
 
         assertTrue(adapter.getAirQuality(40.71, -74.01).isFailure)
-        coVerify(exactly = 0) { api.getAirQuality(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { api.getAirQuality(any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun `a network failure surfaces as a failed result`() = runTest {
         every { prefs.settings } returns flowOf(NimbusSettings(pirateWeatherApiKey = "test-key"))
-        coEvery { api.getAirQuality(any(), any(), any(), any(), any(), any()) } throws IOException("offline")
+        coEvery { api.getAirQuality(any(), any(), any(), any(), any(), any(), any()) } throws IOException("offline")
 
         assertTrue(adapter.getAirQuality(40.71, -74.01).isFailure)
     }
@@ -146,6 +150,7 @@ class PirateWeatherAqiAdapterTest {
     private fun stub(
         currently: PwCurrently?,
         units: io.mockk.CapturingSlot<String>? = null,
+        version: io.mockk.CapturingSlot<Int>? = null,
         exclude: io.mockk.CapturingSlot<String>? = null,
         include: io.mockk.CapturingSlot<String>? = null,
     ) {
@@ -156,6 +161,7 @@ class PirateWeatherAqiAdapterTest {
                 any(),
                 any(),
                 units?.let { capture(it) } ?: any(),
+                version?.let { capture(it) } ?: any(),
                 exclude?.let { capture(it) } ?: any(),
                 include?.let { capture(it) } ?: any(),
             )

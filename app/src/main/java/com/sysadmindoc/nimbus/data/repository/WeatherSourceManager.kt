@@ -306,10 +306,19 @@ class WeatherSourceManager @Inject constructor(
     ): Result<AirQualityData> {
         val config = prefs.settings.first().sourceConfig
         val primary = config.airQuality
+        val fallback = config.airQualityFallback
 
         val result = withRetry { getAirQualityFrom(primary, latitude, longitude) }
         recordHealthResult(WeatherDataType.AIR_QUALITY, primary, result)
-        return result
+        if (result.isSuccess || fallback == null || fallback == primary) return result
+
+        // A key-required source with no key, or one that simply has no reading
+        // for this location, should degrade to the keyless default rather than
+        // switching the air quality card off.
+        Log.w(TAG, "Primary AQI source ${primary.displayName} failed, trying fallback", result.exceptionOrNull())
+        val fallbackResult = withRetry { getAirQualityFrom(fallback, latitude, longitude) }
+        recordHealthResult(WeatherDataType.AIR_QUALITY, fallback, fallbackResult)
+        return if (fallbackResult.isSuccess) fallbackResult else result
     }
 
     private suspend fun getAirQualityFrom(

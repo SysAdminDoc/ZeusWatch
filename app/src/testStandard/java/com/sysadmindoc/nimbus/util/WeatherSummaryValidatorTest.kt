@@ -5,94 +5,73 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * A free-text on-device model will invent a plausible temperature or rain
- * chance the forecast never contained. These lock down the rule that keeps
- * one off the screen: every number in the summary has to trace back to the
- * forecast the model was handed, or the whole draft is thrown away and the
- * template summary is shown instead.
+ * An on-device model will happily write a plausible number the forecast never
+ * contained. An earlier version of this validator scanned the prose and
+ * accepted any number that matched *some* forecast value, which let a model
+ * quote today's high as the current temperature and pass. The rule is now
+ * simpler and actually holds: the prose carries no digits at all, and each
+ * numeric claim is checked against the one fact it names.
  */
 class WeatherSummaryValidatorTest {
 
-    private val facts = SummaryFacts.from(
-        currentTemp = "72°F",
-        high = "78°F",
-        low = "61°F",
-        humidity = 55,
-        windSpeed = "9 mph NW",
-        precipChance = 20,
-        uvIndex = 6.4,
-    )
+    private val facts = SummaryFacts.from(currentTemp = "72°F", precipChance = 20)
 
     @Test
-    fun `formatted display values are parsed back into forecast numbers`() {
+    fun `the current temperature is parsed out of the display string`() {
         assertEquals(72, facts.currentTemp)
-        assertEquals(78, facts.high)
-        assertEquals(61, facts.low)
-        assertEquals(9, facts.windSpeed)
-        assertEquals(6, facts.uvIndex)
+        assertEquals(-5, SummaryFacts.from("-5°C", 0).currentTemp)
+        assertEquals(null, SummaryFacts.from("—", 0).currentTemp)
     }
 
     @Test
-    fun `negative temperatures survive parsing`() {
-        val cold = SummaryFacts.from("-5°C", "-1°C", "-9°C", 80, "12 km/h", 60, 0.0)
-
-        assertEquals(-5, cold.currentTemp)
-        assertEquals(-9, cold.low)
-    }
-
-    @Test
-    fun `a grounded summary is accepted and joined`() {
-        val draft = WeatherSummaryDraft(
-            headline = "It is 72 out and pleasant.",
-            detail = "Expect a high of 78 with a 20% chance of rain.",
-            statedTemperature = 72,
-            statedPrecipChance = 20,
-        )
-
-        val result = WeatherSummaryValidator.validate(draft, facts)
-
-        assertEquals(
-            "It is 72 out and pleasant. Expect a high of 78 with a 20% chance of rain.",
-            result.getOrThrow(),
-        )
-    }
-
-    @Test
-    fun `a temperature the forecast never contained is rejected`() {
-        val draft = WeatherSummaryDraft(
-            headline = "A scorching 95 degrees out there.",
-            statedTemperature = 72,
-            statedPrecipChance = 20,
-        )
-
-        // The structured claim is honest; the prose is not. The prose is what
-        // the user reads, so scanning it is the check that matters.
-        val reason = rejectionOf(draft)
-
-        assertEquals(SummaryRejection.UnsupportedNumber(95), reason)
-    }
-
-    @Test
-    fun `a rain claim that disagrees with the forecast is rejected`() {
-        val draft = WeatherSummaryDraft(
-            headline = "Clear skies today.",
-            statedTemperature = 72,
-            statedPrecipChance = 80,
+    fun `a number-free summary with matching claims is accepted`() {
+        val draft = draft(
+            headline = "Mild and clear right now.",
+            detail = "A slim chance of showers later on.",
         )
 
         assertEquals(
-            SummaryRejection.ClaimMismatch("statedPrecipChance", 80, 20),
-            rejectionOf(draft),
+            "Mild and clear right now. A slim chance of showers later on.",
+            WeatherSummaryValidator.validate(draft, facts).getOrThrow(),
         )
+    }
+
+    @Test
+    fun `a real forecast value quoted in the wrong role is rejected`() {
+        // 78 is a genuine forecast number (today's high) used as the current
+        // temperature. The old pooled prose scan accepted this.
+        val draft = draft(headline = "It is a warm 78 out right now.")
+
+        assertTrue(rejectionOf(draft) is SummaryRejection.NumberInProse)
+    }
+
+    @Test
+    fun `a rain chance invented in the prose is rejected`() {
+        // statedPrecipChance is honest here; the sentence is not. The sentence
+        // is what the user reads.
+        val draft = draft(
+            headline = "Clear for now.",
+            detail = "Rain chance climbs to 61% this evening.",
+        )
+
+        assertTrue(rejectionOf(draft) is SummaryRejection.NumberInProse)
+    }
+
+    @Test
+    fun `any digit anywhere in the prose is rejected`() {
+        listOf(
+            "Temps run 61-78 today.",
+            "Winds pick up after 3pm.",
+            "A 20% chance of rain.",
+            "Clear skies. Highs near 78.",
+        ).forEach { text ->
+            assertTrue("$text should be rejected", rejectionOf(draft(headline = text)) is SummaryRejection.NumberInProse)
+        }
     }
 
     @Test
     fun `a stated temperature that disagrees with the forecast is rejected`() {
-        val draft = WeatherSummaryDraft(
-            headline = "Mild and clear.",
-            statedTemperature = 60,
-            statedPrecipChance = 20,
-        )
+        val draft = draft(headline = "Mild and clear.", statedTemperature = 60)
 
         assertEquals(
             SummaryRejection.ClaimMismatch("statedTemperature", 60, 72),
@@ -101,80 +80,91 @@ class WeatherSummaryValidatorTest {
     }
 
     @Test
+    fun `a stated rain chance that disagrees with the forecast is rejected`() {
+        val draft = draft(headline = "Clear skies today.", statedPrecipChance = 80)
+
+        assertEquals(
+            SummaryRejection.ClaimMismatch("statedPrecipChance", 80, 20),
+            rejectionOf(draft),
+        )
+    }
+
+    @Test
+    fun `an unfilled claim is rejected rather than passing unchecked`() {
+        // Leaving the field unset is the easiest way to dodge the check, and
+        // zero cannot double as "missing" because zero rain is a real forecast.
+        assertEquals(
+            SummaryRejection.ClaimMismatch("statedPrecipChance", null, 20),
+            rejectionOf(draft(headline = "Clear.", statedPrecipChance = WeatherSummaryDraft.UNSTATED)),
+        )
+        assertEquals(
+            SummaryRejection.ClaimMismatch("statedTemperature", null, 72),
+            rejectionOf(draft(headline = "Clear.", statedTemperature = WeatherSummaryDraft.UNSTATED)),
+        )
+    }
+
+    @Test
+    fun `a zero rain chance is a real value, not a missing one`() {
+        val dry = SummaryFacts.from(currentTemp = "72°F", precipChance = 0)
+        val draft = draft(headline = "Dry and clear.", statedPrecipChance = 0)
+
+        assertTrue(WeatherSummaryValidator.validate(draft, dry).isSuccess)
+    }
+
+    @Test
+    fun `an unreadable current temperature rejects rather than skipping the check`() {
+        // Some locales render a missing reading as an em dash. With no fact to
+        // compare against, a temperature claim cannot be trusted at all.
+        val unknown = SummaryFacts.from(currentTemp = "—", precipChance = 20)
+
+        assertEquals(
+            SummaryRejection.ClaimMismatch("statedTemperature", 72, null),
+            rejectionOf(draft(headline = "Mild and clear."), unknown),
+        )
+    }
+
+    @Test
     fun `one degree of rounding drift is tolerated`() {
         // Display temperatures are already rounded, so a model repeating what
         // it read can land a degree away without being wrong.
-        val draft = WeatherSummaryDraft(
-            headline = "Around 73 right now.",
-            statedTemperature = 71,
-            statedPrecipChance = 20,
-        )
-
-        assertEquals("Around 73 right now.", WeatherSummaryValidator.validate(draft, facts).getOrThrow())
-    }
-
-    @Test
-    fun `percentages and UV must match exactly`() {
-        val humidityOff = WeatherSummaryDraft(
-            headline = "Humidity is sitting at 56%.",
-            statedTemperature = 72,
-            statedPrecipChance = 20,
-        )
-
-        assertEquals(SummaryRejection.UnsupportedNumber(56), rejectionOf(humidityOff))
-    }
-
-    @Test
-    fun `every supported forecast number may appear in the prose`() {
-        val draft = WeatherSummaryDraft(
-            headline = "72 now, 78 high, 61 low.",
-            detail = "Humidity 55, wind 9, UV 6, rain 20.",
-            statedTemperature = 72,
-            statedPrecipChance = 20,
-        )
-
-        assertTrue(WeatherSummaryValidator.validate(draft, facts).isSuccess)
+        assertTrue(WeatherSummaryValidator.validate(draft(statedTemperature = 71), facts).isSuccess)
+        assertTrue(WeatherSummaryValidator.validate(draft(statedTemperature = 73), facts).isSuccess)
+        assertTrue(WeatherSummaryValidator.validate(draft(statedTemperature = 74), facts).isFailure)
     }
 
     @Test
     fun `a blank headline is rejected`() {
-        val draft = WeatherSummaryDraft(
-            headline = "   ",
-            detail = "It is 72 out.",
-            statedTemperature = 72,
-            statedPrecipChance = 20,
+        assertEquals(
+            SummaryRejection.BlankHeadline,
+            rejectionOf(draft(headline = "   ", detail = "It is mild out.")),
         )
-
-        assertEquals(SummaryRejection.BlankHeadline, rejectionOf(draft))
     }
 
     @Test
     fun `a runaway summary is rejected`() {
-        val draft = WeatherSummaryDraft(
-            headline = "It is 72 out. ".repeat(30),
-            statedTemperature = 72,
-            statedPrecipChance = 20,
+        assertEquals(
+            SummaryRejection.TooLong,
+            rejectionOf(draft(headline = "It is mild out. ".repeat(30))),
         )
-
-        assertEquals(SummaryRejection.TooLong, rejectionOf(draft))
     }
 
-    @Test
-    fun `an unparseable temperature string does not block validation`() {
-        // Some locales format a missing reading as an em dash; the validator
-        // must still accept prose that quotes the numbers it does have.
-        val partial = SummaryFacts.from("—", "78°F", "61°F", 55, "9 mph", 20, 6.4)
-        val draft = WeatherSummaryDraft(
-            headline = "High of 78 today.",
-            statedTemperature = 0,
-            statedPrecipChance = 20,
-        )
+    private fun draft(
+        headline: String = "Mild and clear right now.",
+        detail: String = "",
+        statedTemperature: Int = 72,
+        statedPrecipChance: Int = 20,
+    ) = WeatherSummaryDraft(
+        headline = headline,
+        detail = detail,
+        statedTemperature = statedTemperature,
+        statedPrecipChance = statedPrecipChance,
+    )
 
-        assertTrue(WeatherSummaryValidator.validate(draft, partial).isSuccess)
-    }
-
-    private fun rejectionOf(draft: WeatherSummaryDraft): SummaryRejection {
-        val error = WeatherSummaryValidator.validate(draft, facts).exceptionOrNull()
+    private fun rejectionOf(
+        draft: WeatherSummaryDraft,
+        against: SummaryFacts = facts,
+    ): SummaryRejection {
+        val error = WeatherSummaryValidator.validate(draft, against).exceptionOrNull()
         return (error as SummaryRejectedException).reason
     }
 }

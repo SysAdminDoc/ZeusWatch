@@ -144,6 +144,11 @@ data class SourceConfig(
     val alerts: WeatherSourceProvider = WeatherSourceProvider.NWS,
     val alertsFallback: WeatherSourceProvider? = null,
     val airQuality: WeatherSourceProvider = WeatherSourceProvider.OPEN_METEO,
+    /**
+     * Open-Meteo needs no key and covers the globe, so it is the default
+     * safety net when a chosen AQI source has no key or no local reading.
+     */
+    val airQualityFallback: WeatherSourceProvider? = WeatherSourceProvider.OPEN_METEO,
     val minutely: WeatherSourceProvider = WeatherSourceProvider.OPEN_METEO,
 ) {
     /**

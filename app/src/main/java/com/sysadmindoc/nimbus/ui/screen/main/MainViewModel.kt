@@ -151,6 +151,7 @@ class MainViewModel @Inject constructor(
                     handleForecastEvolutionSettingChange(prior, settings)
                     handleProviderAgreementSettingChange(prior, settings)
                     handlePwsObservationSettingChange(prior, settings)
+                    handleConfidenceBandSettingChange(prior, settings)
                 }
                 // Derived data (summary, golden hour, driving/health alerts)
                 // bakes units and thresholds in at compute time - recompute it
@@ -190,6 +191,35 @@ class MainViewModel @Inject constructor(
             old.healthAlertsEnabled != new.healthAlertsEnabled ||
             old.migraineAlerts != new.migraineAlerts ||
             old.migrainePressureThreshold != new.migrainePressureThreshold
+
+    /**
+     * Confidence bands are drawn by one specific ensemble and the legend names
+     * it, so switching model has to refetch. Without this the user would sit
+     * looking at an ICON band labelled WeatherNext 2 until the next full load.
+     */
+    private fun handleConfidenceBandSettingChange(old: NimbusSettings, new: NimbusSettings) {
+        val wasEnabled = old.showConfidenceBands
+        val isEnabled = new.showConfidenceBands
+        val modelChanged = old.ensembleModel != new.ensembleModel
+        when {
+            isEnabled && (!wasEnabled || modelChanged) -> {
+                val lat = activeLatitude ?: return
+                val lon = activeLongitude ?: return
+                val requestId = weatherRequestCounter.get()
+                viewModelScope.launch {
+                    weatherLoadCoordinator.fetchConfidenceBands(
+                        lat = lat,
+                        lon = lon,
+                        model = new.ensembleModel,
+                        requestId = requestId,
+                        updateState = ::updateUiState,
+                        isLatestRequest = ::isLatestWeatherRequest,
+                    )
+                }
+            }
+            wasEnabled && !isEnabled -> _uiState.update { it.copy(confidenceBands = null) }
+        }
+    }
 
     private fun handleForecastEvolutionSettingChange(old: NimbusSettings, new: NimbusSettings) {
         val wasEnabled = old.isCardEnabled(CardType.FORECAST_EVOLUTION)

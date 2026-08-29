@@ -28,6 +28,11 @@ interface PirateWeatherApi {
      * yields the EU CAQI and `ca` the Canadian AQHI, so the forecast call's
      * `si` cannot also serve US EPA AQI. Everything but `currently` is
      * excluded because only the current index is consumed.
+     *
+     * `version=2` is required, not optional: `airQualityIndex` is one of the
+     * fields the docs list as present only when `version>1`. Without it the
+     * reply parses fine and the index is simply absent, so the mistake looks
+     * like "this location has no air quality data".
      */
     @GET("forecast/{apiKey}/{lat},{lon}")
     suspend fun getAirQuality(
@@ -35,6 +40,7 @@ interface PirateWeatherApi {
         @Path("lat") latitude: Double,
         @Path("lon") longitude: Double,
         @Query("units") units: String = "us",
+        @Query("version") version: Int = AIR_QUALITY_API_VERSION,
         @Query("exclude") exclude: String = AIR_QUALITY_EXCLUDE,
         @Query("include") include: String = "airqualitydetails",
     ): PirateWeatherResponse
@@ -43,12 +49,17 @@ interface PirateWeatherApi {
         const val BASE_URL = "https://api.pirateweather.net/"
 
         /**
-         * The adapter reads `currently`, `hourly` and `daily`. Nothing consumes
-         * Pirate Weather alerts (NWS is the US alert source), so excluding
-         * them and the minutely block trims the reply the app never looks at.
+         * The forecast adapter reads `currently`, `hourly` and `daily` only.
+         *
+         * Alerts are excluded here because this endpoint feeds the forecast
+         * adapter; `PirateWeatherAlertAdapter` is a separate caller that
+         * passes its own `exclude` and is unaffected.
          */
         const val FORECAST_EXCLUDE = "minutely,alerts"
 
         const val AIR_QUALITY_EXCLUDE = "minutely,hourly,daily,alerts"
+
+        /** airQualityIndex is a version>1 field. */
+        const val AIR_QUALITY_API_VERSION = 2
     }
 }

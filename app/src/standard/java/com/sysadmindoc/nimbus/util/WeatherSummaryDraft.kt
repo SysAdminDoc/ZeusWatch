@@ -6,43 +6,54 @@ import com.google.mlkit.genai.schema.annotations.Guide
 /**
  * The JSON shape Gemini Nano must return for a weather summary.
  *
- * A free-text model will happily invent a plausible temperature or rain chance
- * that the forecast never contained. Forcing a schema gives us the model's own
- * numeric claims in machine-readable form, so [WeatherSummaryValidator] can
- * check them against the forecast before any of it reaches the screen.
+ * The prose fields must contain no digits at all. Checking numbers *inside*
+ * the prose against the forecast cannot work: "it is a warm 78 out right now"
+ * quotes a real forecast value (today's high) in the wrong role, and no
+ * scanner can tell which fact a loose number was meant to describe. So the
+ * model is not allowed to write numbers, and the numeric claims it does make
+ * come back in named fields where each can be checked against the fact it
+ * names. The card already shows the figures elsewhere.
  */
 @Generable(
-    description = "A short weather summary that uses only the numbers supplied in the prompt.",
+    description = "A short weather summary in words only, with the numbers reported separately.",
 )
-internal data class WeatherSummaryDraft(
-    @Guide(description = "One friendly sentence about the weather right now.")
+// Public, not internal: the KSP schema compiler emits a public
+// GenerableProvider for this class, and a public declaration cannot expose an
+// internal type argument.
+data class WeatherSummaryDraft(
+    @Guide(
+        description = "One friendly sentence about the weather right now. " +
+            "Describe it in words only. Never write a digit.",
+    )
     val headline: String = "",
-    @Guide(description = "One more short sentence about what to expect. May be empty.")
+    @Guide(
+        description = "One more short sentence about what to expect, in words only. " +
+            "Never write a digit. May be empty.",
+    )
     val detail: String = "",
     @Guide(
-        description = "The current temperature you referred to, as a whole number, " +
-            "in the same unit the prompt used.",
+        description = "The current temperature from the request, as a whole number, " +
+            "in the same unit the request used.",
         minimum = -150.0,
         maximum = 200.0,
     )
-    val statedTemperature: Int = 0,
+    val statedTemperature: Int = UNSTATED,
     @Guide(
-        description = "The chance of rain you referred to, as a whole percentage.",
+        description = "The chance of rain from the request, as a whole percentage.",
         minimum = 0.0,
         maximum = 100.0,
     )
-    val statedPrecipChance: Int = 0,
-    @Guide(
-        description = "Short risk words that apply, such as heat, cold, wind, uv or rain.",
-        maxItems = 3,
-    )
-    val riskFlags: List<String> = emptyList(),
-    @Guide(
-        description = "How confident this summary is.",
-        enumValues = ["high", "medium", "low"],
-    )
-    val confidence: String = "",
-)
+    val statedPrecipChance: Int = UNSTATED,
+) {
+    companion object {
+        /**
+         * Sentinel for "the model did not fill this in". Zero is a legitimate
+         * rain chance and a legitimate temperature, so it cannot double as
+         * "missing" — that is exactly how an unchecked claim slips through.
+         */
+        const val UNSTATED = Int.MIN_VALUE
+    }
+}
 
 /**
  * The forecast numbers the model was given, parsed back out of the display
@@ -50,36 +61,18 @@ internal data class WeatherSummaryDraft(
  */
 internal data class SummaryFacts(
     val currentTemp: Int?,
-    val high: Int?,
-    val low: Int?,
-    val humidity: Int,
-    val windSpeed: Int?,
     val precipChance: Int,
-    val uvIndex: Int,
 ) {
     companion object {
         private val FIRST_INTEGER = Regex("-?\\d+")
 
-        /** First integer in a formatted value: "72°F" -> 72, "18 km/h NW" -> 18. */
+        /** First integer in a formatted value: "72°F" -> 72, "-5°C" -> -5. */
         internal fun firstInteger(text: String): Int? =
             FIRST_INTEGER.find(text)?.value?.toIntOrNull()
 
-        fun from(
-            currentTemp: String,
-            high: String,
-            low: String,
-            humidity: Int,
-            windSpeed: String,
-            precipChance: Int,
-            uvIndex: Double,
-        ): SummaryFacts = SummaryFacts(
+        fun from(currentTemp: String, precipChance: Int): SummaryFacts = SummaryFacts(
             currentTemp = firstInteger(currentTemp),
-            high = firstInteger(high),
-            low = firstInteger(low),
-            humidity = humidity,
-            windSpeed = firstInteger(windSpeed),
             precipChance = precipChance,
-            uvIndex = uvIndex.toInt(),
         )
     }
 }
@@ -88,31 +81,31 @@ internal data class SummaryFacts(
 internal sealed interface SummaryRejection {
     data object BlankHeadline : SummaryRejection
     data object TooLong : SummaryRejection
-    data class ClaimMismatch(val field: String, val stated: Int, val actual: Int?) : SummaryRejection
-    data class UnsupportedNumber(val value: Int) : SummaryRejection
+
+    /** The prose contained a digit, which it is never allowed to do. */
+    data class NumberInProse(val text: String) : SummaryRejection
+
+    /** A named claim disagreed with the forecast, or was left unfilled. */
+    data class ClaimMismatch(val field: String, val stated: Int?, val actual: Int?) : SummaryRejection
 }
 
 /**
- * Accepts a [WeatherSummaryDraft] only when every number in it traces back to
- * the forecast.
+ * Accepts a [WeatherSummaryDraft] only when its prose is number-free and every
+ * numeric claim it makes matches the forecast.
  *
- * Both the structured claims and every integer in the prose are checked. The
- * prose scan is the part that matters: a model can report `statedTemperature`
- * correctly and still write "a balmy 30 degrees" in the sentence, and that
- * sentence is what the user reads.
+ * A claim that disagrees is not merely a bad number to drop: it means the
+ * model misread the forecast it was handed, so its words are not trustworthy
+ * either and the whole draft is thrown away.
  */
 internal object WeatherSummaryValidator {
 
     /** Display temperatures are rounded, so a claim may sit one degree off. */
     private const val TEMPERATURE_TOLERANCE = 1
 
-    /** Wind speed is rounded the same way. */
-    private const val WIND_TOLERANCE = 1
-
     /** Two sentences. Anything longer means the model ignored the instruction. */
     private const val MAX_SUMMARY_CHARS = 240
 
-    private val INTEGERS = Regex("-?\\d+")
+    private val ANY_DIGIT = Regex("\\d")
 
     fun validate(draft: WeatherSummaryDraft, facts: SummaryFacts): Result<String> {
         val headline = draft.headline.trim()
@@ -122,43 +115,30 @@ internal object WeatherSummaryValidator {
             .filter { it.isNotBlank() }
             .joinToString(" ")
         if (summary.length > MAX_SUMMARY_CHARS) return reject(SummaryRejection.TooLong)
-
-        facts.currentTemp?.let { actual ->
-            if (!within(draft.statedTemperature, actual, TEMPERATURE_TOLERANCE)) {
-                return reject(
-                    SummaryRejection.ClaimMismatch("statedTemperature", draft.statedTemperature, actual),
-                )
-            }
+        if (ANY_DIGIT.containsMatchIn(summary)) {
+            return reject(SummaryRejection.NumberInProse(summary))
         }
+
+        // An unfilled claim is a failure, not a pass: leaving the field unset
+        // is the easiest way for a model to dodge the check entirely.
         if (draft.statedPrecipChance != facts.precipChance) {
             return reject(
                 SummaryRejection.ClaimMismatch(
-                    "statedPrecipChance",
-                    draft.statedPrecipChance,
-                    facts.precipChance,
+                    field = "statedPrecipChance",
+                    stated = draft.statedPrecipChance.takeIf { it != WeatherSummaryDraft.UNSTATED },
+                    actual = facts.precipChance,
                 ),
             )
         }
-
-        val supported = supportedNumbers(facts)
-        INTEGERS.findAll(summary).forEach { match ->
-            val value = match.value.toIntOrNull() ?: return@forEach
-            if (supported.none { (allowed, tolerance) -> within(value, allowed, tolerance) }) {
-                return reject(SummaryRejection.UnsupportedNumber(value))
-            }
+        val statedTemp = draft.statedTemperature.takeIf { it != WeatherSummaryDraft.UNSTATED }
+        if (statedTemp == null || facts.currentTemp == null ||
+            !within(statedTemp, facts.currentTemp, TEMPERATURE_TOLERANCE)
+        ) {
+            return reject(
+                SummaryRejection.ClaimMismatch("statedTemperature", statedTemp, facts.currentTemp),
+            )
         }
         return Result.success(summary)
-    }
-
-    /** Each forecast number paired with how far a claim may stray from it. */
-    private fun supportedNumbers(facts: SummaryFacts): List<Pair<Int, Int>> = buildList {
-        facts.currentTemp?.let { add(it to TEMPERATURE_TOLERANCE) }
-        facts.high?.let { add(it to TEMPERATURE_TOLERANCE) }
-        facts.low?.let { add(it to TEMPERATURE_TOLERANCE) }
-        facts.windSpeed?.let { add(it to WIND_TOLERANCE) }
-        add(facts.humidity to 0)
-        add(facts.precipChance to 0)
-        add(facts.uvIndex to 0)
     }
 
     private fun within(claim: Int, actual: Int, tolerance: Int): Boolean =
