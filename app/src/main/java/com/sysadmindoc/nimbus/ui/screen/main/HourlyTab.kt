@@ -123,6 +123,9 @@ fun HourlyTab(
                 hourly = hourly,
                 referenceTime = referenceTime,
                 confidenceBands = confidenceBands,
+                // Same window as the list below it: a graph that stops at 24
+                // hours above a 72-hour list reads as missing data.
+                hours = forecastHours,
                 modifier = Modifier.padding(bottom = 14.dp),
             )
         }
