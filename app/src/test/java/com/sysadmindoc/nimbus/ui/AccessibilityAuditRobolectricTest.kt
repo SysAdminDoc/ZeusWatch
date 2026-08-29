@@ -1,7 +1,11 @@
 package com.sysadmindoc.nimbus.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -20,12 +24,16 @@ import com.sysadmindoc.nimbus.testing.assertTextContrastMeetsMinimum
 import com.sysadmindoc.nimbus.testing.assertVisibleTouchTargetsMeetMinimum
 import com.sysadmindoc.nimbus.testing.setContentWithAccessibilityChecks
 import com.sysadmindoc.nimbus.ui.component.LocalUnitSettings
+import com.sysadmindoc.nimbus.ui.component.OnThisDayCard
+import com.sysadmindoc.nimbus.ui.component.ProviderAgreementCard
+import com.sysadmindoc.nimbus.ui.component.PwsObservationCard
 import com.sysadmindoc.nimbus.ui.screen.locations.LocationsContent
 import com.sysadmindoc.nimbus.ui.screen.locations.SearchState
 import com.sysadmindoc.nimbus.ui.screen.main.MainUiState
 import com.sysadmindoc.nimbus.ui.screen.main.TodayContent
 import com.sysadmindoc.nimbus.ui.screen.settings.SettingsContent
 import com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState
+import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import com.sysadmindoc.nimbus.ui.theme.WeatherThemeState
 import org.junit.Rule
@@ -170,6 +178,89 @@ class AccessibilityAuditRobolectricTest {
 
         composeTestRule.onNodeWithText("Locations").assertIsDisplayed()
         composeTestRule.assertVisibleTouchTargetsMeetMinimum()
+    }
+
+    @Test
+    fun pwsObservationCardPassesAccessibilityGate() {
+        auditCard { PwsObservationCard(observation = auditPwsObservation()) }
+    }
+
+    @Test
+    fun providerAgreementCardPassesAccessibilityGate() {
+        auditCard { ProviderAgreementCard(data = auditProviderAgreement()) }
+    }
+
+    @Test
+    fun onThisDayCardPassesAccessibilityGate() {
+        auditCard {
+            OnThisDayCard(
+                data = auditOnThisDay(),
+                forecastHighC = 26.7,
+                onDateSelected = {},
+            )
+        }
+    }
+
+    @Test
+    fun pwsObservationCardPassesAtOnePointEightFontScale() {
+        auditCard(fontScale = 1.8f) { PwsObservationCard(observation = auditPwsObservation()) }
+    }
+
+    @Test
+    fun providerAgreementCardPassesAtOnePointEightFontScale() {
+        auditCard(fontScale = 1.8f) { ProviderAgreementCard(data = auditProviderAgreement()) }
+    }
+
+    @Test
+    fun onThisDayCardPassesAtOnePointEightFontScale() {
+        auditCard(fontScale = 1.8f) {
+            OnThisDayCard(
+                data = auditOnThisDay(),
+                forecastHighC = 26.7,
+                onDateSelected = {},
+            )
+        }
+    }
+
+    /**
+     * Audits one card on its own.
+     *
+     * These three were added to the whole-screen fixture, but TodayContent
+     * renders through a LazyColumn, which never composes what is below the
+     * fold: none of their text reached the semantics tree, so the fixture
+     * addition audited nothing. Rendered alone they fit on screen, so their
+     * contrast is measured rather than skipped as uncapturable.
+     */
+    private fun auditCard(
+        fontScale: Float = 1f,
+        card: @Composable () -> Unit,
+    ) {
+        composeTestRule.setContentWithAccessibilityChecks {
+            NimbusTheme {
+                CompositionLocalProvider(
+                    LocalUnitSettings provides com.sysadmindoc.nimbus.data.repository.NimbusSettings(),
+                    LocalWeatherThemeState provides WeatherThemeState(
+                        weatherCode = WeatherCode.CLEAR_SKY,
+                        isDay = true,
+                    ),
+                ) {
+                    // The app background, not the default window grey: these
+                    // cards have translucent glass fills, so on a bare window
+                    // they composite to a mid-grey nothing in the app renders
+                    // and every header reads as a contrast failure.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(NimbusNavyDark),
+                    ) {
+                        WithFontScale(fontScale) { card() }
+                    }
+                }
+            }
+        }
+
+        composeTestRule.assertVisibleTouchTargetsMeetMinimum()
+        composeTestRule.assertTextContrastMeetsMinimum().assertMeasuredAtLeast(1.0)
     }
 
     private fun setMainWeatherAuditContent(fontScale: Float) {
