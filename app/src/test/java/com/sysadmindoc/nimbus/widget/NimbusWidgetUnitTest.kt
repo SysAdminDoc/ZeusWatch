@@ -21,7 +21,7 @@ import org.robolectric.annotation.Config
 
 /**
  * Device-free structural tests for all eight release Glance widgets using the
- * Glance 1.1.1 `runGlanceAppWidgetUnitTest` harness (NX-30). These compose each
+ * Glance `runGlanceAppWidgetUnitTest` harness (NX-30). These compose each
  * widget's content across canonical size modes and assert its cached, empty, and
  * freshness states plus the tap-to-open / tap-to-refresh action contract. They
  * make no pixel-rendering or click-execution claim — only node/semantics/action

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.drawable.Icon
 import androidx.wear.watchface.complications.data.ComplicationData
 import androidx.wear.watchface.complications.data.ComplicationType
+import androidx.wear.watchface.complications.data.NoDataComplicationData
 import androidx.wear.watchface.complications.data.SmallImage
 import androidx.wear.watchface.complications.data.SmallImageType
 import androidx.wear.watchface.complications.datasource.ComplicationRequest
@@ -47,7 +48,10 @@ class WeatherComplicationService : SuspendingComplicationDataSourceService() {
             syncedData = syncedData,
             syncedAtMs = syncedStore.lastSyncTimestamp(),
             fallbackData = fallbackData,
-        ) ?: return null
+            // Returning null here would mean "keep what you already have", so a
+            // watch upgrading from a build that showed invented coordinates
+            // would keep displaying that temperature forever. NoData clears it.
+        ) ?: return NoDataComplicationData()
 
         return WeatherComplicationDataFactory.currentWeatherData(
             type = request.complicationType,

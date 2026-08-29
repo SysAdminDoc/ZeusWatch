@@ -13,8 +13,8 @@ import java.util.Locale
  * The picker renders these before any real data exists, so the numbers are
  * invented — but the labels are not. Hours and weekdays are formatted from the
  * device clock through the same helpers the refresh worker uses, so a preview
- * reads in the viewer's language and time format instead of showing a frozen
- * English snapshot.
+ * reads in the viewer's language rather than a frozen English snapshot, and
+ * matches the hour format the real widget renders.
  */
 internal fun previewWeatherData(context: Context, now: LocalDateTime = LocalDateTime.now()): WidgetWeatherData {
     val nowLabel = context.getString(R.string.common_now)

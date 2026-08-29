@@ -66,7 +66,7 @@ class WeatherTileService : Material3TileService(
      * A tile with no location must say so. "No data" reads like a transient
      * outage and hides the fact that the watch needs permission or a phone sync.
      */
-    private fun emptyStateLabel(result: WearWeatherResult): String =
+    internal fun emptyStateLabel(result: WearWeatherResult): String =
         if (result is WearWeatherResult.NoLocation) {
             getString(R.string.wear_tile_no_location)
         } else {
