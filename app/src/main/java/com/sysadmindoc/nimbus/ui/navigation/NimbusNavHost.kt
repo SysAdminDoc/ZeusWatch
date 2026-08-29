@@ -309,7 +309,12 @@ fun NimbusNavHost(
         }
         composable(Routes.LOCATION_PICKER) {
             val locationsViewModel: LocationsViewModel = hiltViewModel()
+            val savedLocations by locationsViewModel.savedLocations.collectAsStateWithLifecycle()
+            val initialLocation = savedLocations.firstOrNull()
             MapLocationPickerScreen(
+                initialLatitude = initialLocation?.latitude,
+                initialLongitude = initialLocation?.longitude,
+                initialName = initialLocation?.name,
                 onLocationPicked = { lat, lon, name ->
                     locationsViewModel.addMapPickedLocation(lat, lon, name) { id ->
                         navController.navigate(Routes.mainWithLocation(id)) {
@@ -352,40 +357,25 @@ fun ZeusWatchBottomNav(
     modifier: Modifier = Modifier,
     visibleTabs: List<BottomTab> = BottomTab.entries,
 ) {
-    val dockShape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassBottom.copy(alpha = 1f),
-                        NimbusNavyDark,
-                    ),
-                ),
+            .background(NimbusNavSurface)
+            .border(
+                width = 1.dp,
+                color = NimbusCardBorder.copy(alpha = 0.72f),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(0.dp),
             )
             .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = 720.dp)
-                .shadow(18.dp, dockShape)
-                .clip(dockShape)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NimbusNavSurface.copy(alpha = 0.98f),
-                            NimbusGlassBottom.copy(alpha = 0.96f),
-                        ),
-                    ),
-                )
-                .border(1.dp, NimbusCardBorder, dockShape)
-                .selectableGroup()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                .selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             visibleTabs.forEach { tab ->
@@ -395,54 +385,32 @@ fun ZeusWatchBottomNav(
                 val tabClickLabel = stringResource(R.string.nav_show_tab, tabLabel)
                 val selectedLabel = stringResource(R.string.common_selected)
                 val notSelectedLabel = stringResource(R.string.common_not_selected)
-                val tabShape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
                 val indicatorWidth by animateDpAsState(
-                    targetValue = if (isSelected) 22.dp else 8.dp,
+                    targetValue = if (isSelected) 30.dp else 0.dp,
                     animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
                     label = "bottomNavIndicatorWidth",
                 )
                 val indicatorColor by animateColorAsState(
-                    targetValue = if (isSelected) Color.White.copy(alpha = 0.95f) else Color.Transparent,
+                    targetValue = if (isSelected) NimbusBlueAccent else Color.Transparent,
                     animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
                     label = "bottomNavIndicatorColor",
                 )
                 val iconColor by animateColorAsState(
-                    targetValue = if (isSelected) Color.White else NimbusTextTertiary,
+                    targetValue = if (isSelected) NimbusBlueAccent else NimbusTextTertiary,
                     animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing),
                     label = "bottomNavIconColor",
                 )
                 val labelColor by animateColorAsState(
-                    targetValue = if (isSelected) Color.White else NimbusTextTertiary,
+                    targetValue = if (isSelected) NimbusBlueAccent else NimbusTextTertiary,
                     animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing),
                     label = "bottomNavLabelColor",
-                )
-                val borderColor by animateColorAsState(
-                    targetValue = if (isSelected) NimbusBlueAccent.copy(alpha = 0.38f) else Color.Transparent,
-                    animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing),
-                    label = "bottomNavBorderColor",
-                )
-                val containerTop by animateColorAsState(
-                    targetValue = if (isSelected) NimbusBlueAccent.copy(alpha = 0.20f) else Color.White.copy(alpha = 0.03f),
-                    animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing),
-                    label = "bottomNavContainerTop",
-                )
-                val containerBottom by animateColorAsState(
-                    targetValue = if (isSelected) Color.White.copy(alpha = 0.08f) else Color.Transparent,
-                    animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing),
-                    label = "bottomNavContainerBottom",
                 )
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .height(56.dp)
-                        .clip(tabShape)
+                        .height(64.dp)
                         .background(
-                            Brush.verticalGradient(colors = listOf(containerTop, containerBottom)),
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = borderColor,
-                            shape = tabShape,
+                            if (isSelected) NimbusBlueAccent.copy(alpha = 0.05f) else Color.Transparent,
                         )
                         .selectable(
                             selected = isSelected,
@@ -459,25 +427,24 @@ fun ZeusWatchBottomNav(
                                 true
                             }
                         }
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                        .padding(horizontal = 6.dp, vertical = 5.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Box(
                         modifier = Modifier
-                            .height(3.dp)
+                            .height(2.dp)
                             .widthIn(min = indicatorWidth, max = indicatorWidth)
-                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
                             .background(indicatorColor),
                     )
-                    Spacer(modifier = Modifier.height(5.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Icon(
                         tab.icon,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(22.dp),
                         tint = iconColor,
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = tabLabel,
                         style = MaterialTheme.typography.labelSmall.copy(

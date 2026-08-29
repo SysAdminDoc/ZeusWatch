@@ -3,35 +3,35 @@ package com.sysadmindoc.nimbus.ui.theme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Premium atmospheric palette
-val NimbusNavyDark = Color(0xFF040814)
-val NimbusNavy = Color(0xFF0B1326)
-val NimbusNavyMid = Color(0xFF122344)
-val NimbusNavyLight = Color(0xFF254A79)
-val NimbusBlueAccent = Color(0xFF7AB8FF)
-val NimbusBlueAccentSoft = Color(0xFFB7D9FF)
+// Precision atmospheric palette
+val NimbusNavyDark = Color(0xFF01070D)
+val NimbusNavy = Color(0xFF07111B)
+val NimbusNavyMid = Color(0xFF0C1C2B)
+val NimbusNavyLight = Color(0xFF173A5C)
+val NimbusBlueAccent = Color(0xFF54A8FF)
+val NimbusBlueAccentSoft = Color(0xFFA9D3FF)
 
 // Surface colors
-val NimbusSurface = Color(0xFF0C1427)
-val NimbusSurfaceVariant = Color(0xFF13213A)
-val NimbusSurfaceElevated = Color(0xFF1A2D4F)
-val NimbusToolbarSurface = Color(0x99121C31)
-val NimbusNavSurface = Color(0xF00A1224)
+val NimbusSurface = Color(0xFF07121C)
+val NimbusSurfaceVariant = Color(0xFF0B1A27)
+val NimbusSurfaceElevated = Color(0xFF102538)
+val NimbusToolbarSurface = Color(0xE607111B)
+val NimbusNavSurface = Color(0xFA030B13)
 
 // Glass surfaces and highlights
-val NimbusCardBg = Color(0xCC11203A)
-val NimbusCardBgHover = Color(0xE0142745)
-val NimbusCardBorder = Color(0x2F7EA5D4)
-val NimbusGlassTop = Color(0xAA1A2B47)
-val NimbusGlassBottom = Color(0xE00A1427)
-val NimbusGlassHighlight = Color(0x246D9FD1)
-val NimbusHeroGlow = Color(0x3075A6D8)
-val NimbusHeroGlowSoft = Color(0x18194473)
+val NimbusCardBg = Color(0xB30A1723)
+val NimbusCardBgHover = Color(0xD90D2030)
+val NimbusCardBorder = Color(0x6630475B)
+val NimbusGlassTop = Color(0x9910202F)
+val NimbusGlassBottom = Color(0xE6030C15)
+val NimbusGlassHighlight = Color(0x335B8CB8)
+val NimbusHeroGlow = Color(0x3654A8FF)
+val NimbusHeroGlowSoft = Color(0x1F245B88)
 
 // Text
-val NimbusTextPrimary = Color(0xFFF7FAFF)
-val NimbusTextSecondary = Color(0xFFC6D4EA)
-val NimbusTextTertiary = Color(0xFF8B9AB3)
+val NimbusTextPrimary = Color(0xFFF4F7FB)
+val NimbusTextSecondary = Color(0xFFB7C3D4)
+val NimbusTextTertiary = Color(0xFF8798AD)
 
 // Accent colors for weather conditions
 val NimbusSunYellow = Color(0xFFFFD54F)
@@ -60,18 +60,18 @@ val NimbusSuccess = Color(0xFF66BB6A)
 // Background gradients
 val NimbusBackgroundGradient = Brush.verticalGradient(
     colors = listOf(
-        Color(0xFF050C18),
-        Color(0xFF0A1528),
-        Color(0xFF10213B),
-        Color(0xFF060D18),
+        Color(0xFF01070D),
+        Color(0xFF06131E),
+        Color(0xFF081925),
+        Color(0xFF020A11),
     )
 )
 
 val NimbusHeaderGradient = Brush.verticalGradient(
     colors = listOf(
-        Color(0xFF0E182B),
-        Color(0xFF18304F),
-        Color(0xFF12233E),
+        Color(0xFF07131F),
+        Color(0xFF0D2233),
+        Color(0xFF071724),
     )
 )
 

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -60,7 +61,6 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusFogGray
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
-import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
@@ -136,28 +136,30 @@ fun HourlyForecastStrip(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            Text(
-                text = headerSummary,
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-            )
+            if (activeTab != HourlyTrendTab.TEMPERATURE) {
+                Text(
+                    text = headerSummary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                )
+            }
 
-            if (precipSummary != null && selectedTab == HourlyTrendTab.PRECIPITATION.ordinal) {
+            if (precipSummary != null && activeTab == HourlyTrendTab.PRECIPITATION) {
                 Text(
                     text = precipSummary,
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusRainBlue,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 10.dp),
+                    modifier = Modifier.padding(top = 6.dp, bottom = 6.dp),
                 )
-            } else {
-                Spacer(modifier = Modifier.height(10.dp))
+            } else if (activeTab != HourlyTrendTab.TEMPERATURE) {
+                Spacer(modifier = Modifier.height(6.dp))
             }
 
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(0.dp),
+                horizontalArrangement = Arrangement.spacedBy(0.dp),
             ) {
                 itemsIndexed(
                     items = forecastHours,
@@ -236,6 +238,7 @@ private fun TrendTabChip(
         ),
         color = if (isSelected) NimbusBlueAccent else NimbusTextTertiary,
         modifier = Modifier
+            .widthIn(min = 48.dp)
             .heightIn(min = 48.dp) // a11y minimum touch target
             .clip(shape)
             .background(
@@ -269,42 +272,36 @@ private fun HourlyItemShell(
 ) {
     val s = LocalUnitSettings.current
     val context = LocalContext.current
-    val shape = RoundedCornerShape(10.dp)
+    val shape = RoundedCornerShape(0.dp)
     val cardBrush = if (highlighted) {
-        Brush.verticalGradient(
-            colors = listOf(
-                NimbusBlueAccent.copy(alpha = 0.28f),
-                NimbusGlassBottom,
-            ),
-        )
+        Brush.verticalGradient(listOf(NimbusBlueAccent.copy(alpha = 0.18f), Color.Transparent))
     } else {
-        Brush.verticalGradient(
-            colors = listOf(
-                NimbusGlassTop.copy(alpha = 0.75f),
-                NimbusGlassBottom,
-            ),
-        )
+        Brush.verticalGradient(listOf(Color.Transparent, NimbusGlassBottom.copy(alpha = 0.25f)))
     }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .width(82.dp)
+            .width(58.dp)
             .clip(shape)
             .background(cardBrush)
-            .border(1.dp, if (highlighted) NimbusBlueAccent.copy(alpha = 0.55f) else NimbusCardBorder, shape)
+            .border(
+                width = 0.5.dp,
+                color = if (highlighted) NimbusBlueAccent.copy(alpha = 0.7f) else NimbusCardBorder.copy(alpha = 0.72f),
+                shape = shape,
+            )
             .clickable(
                 onClick = onClick,
                 role = Role.Button,
             )
-            .padding(horizontal = 10.dp, vertical = 14.dp),
+            .padding(horizontal = 4.dp, vertical = 8.dp),
     ) {
         Text(
             text = WeatherFormatter.formatRelativeHourLabel(context, hour.time, referenceTime, s),
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
             color = if (highlighted) NimbusBlueAccent else NimbusTextSecondary,
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(5.dp))
         content()
     }
 }
@@ -324,29 +321,28 @@ private fun HourlyItemTemp(
             weatherCode = hour.weatherCode,
             isDay = hour.isDay,
             iconStyle = s.iconStyle,
-            modifier = Modifier.size(30.dp),
+            modifier = Modifier.size(24.dp),
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(5.dp))
         Text(
             text = WeatherFormatter.formatTemperature(hour.temperature, s),
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
         )
-        // Always render the feels-like line (blank when it's close to the
-        // actual temp) so every card is the same height — otherwise cards that
-        // show a feels-like value are taller than the ones that don't.
-        val feelsText = hour.feelsLike
-            ?.takeIf { kotlin.math.abs(it - hour.temperature) >= 3 }
-            ?.let { WeatherFormatter.formatTemperature(it, s) }
-            ?: " "
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = feelsText,
+            text = WeatherFormatter.formatWindSpeed(
+                hour.windSpeed ?: 0.0,
+                hour.windDirection ?: 0,
+                s,
+            ),
             style = MaterialTheme.typography.labelSmall,
             color = NimbusTextTertiary,
+            maxLines = 1,
         )
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "${hour.precipitationProbability}%",
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
             color = if (hour.precipitationProbability > 20) NimbusRainBlue else NimbusTextSecondary,
         )
     }

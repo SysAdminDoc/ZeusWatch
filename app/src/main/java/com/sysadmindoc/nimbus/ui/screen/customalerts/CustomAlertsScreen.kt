@@ -37,7 +37,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -100,6 +100,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
 import com.sysadmindoc.nimbus.util.convertForDisplay
 import com.sysadmindoc.nimbus.util.displayUnitLabel
 import com.sysadmindoc.nimbus.util.labelRes
@@ -168,28 +169,37 @@ fun CustomAlertsScreen(
             topBar = {
                 ScreenHeader(
                     title = stringResource(R.string.custom_alerts_title),
-                    subtitle = stringResource(R.string.custom_alerts_subtitle),
-                    eyebrow = stringResource(R.string.custom_alerts_eyebrow),
+                    subtitle = "",
                     onBack = onBack,
                     modifier = Modifier
                         .windowInsetsPadding(WindowInsets.safeDrawing)
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    actions = {
+                        if (editing == null) {
+                            Row(
+                                modifier = Modifier
+                                    .heightIn(min = 44.dp)
+                                    .clickable(onClick = startNewAlert, role = Role.Button)
+                                    .semantics { contentDescription = addCustomAlertDescription }
+                                    .padding(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Filled.Add,
+                                    contentDescription = null,
+                                    tint = NimbusBlueAccent,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Text(
+                                    text = stringResource(R.string.custom_alerts_add_rule),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = NimbusBlueAccent,
+                                )
+                            }
+                        }
+                    },
                 )
-            },
-            floatingActionButton = {
-                if (editing == null) {
-                    FloatingActionButton(
-                        onClick = startNewAlert,
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .navigationBarsPadding()
-                            .semantics { contentDescription = addCustomAlertDescription },
-                    ) {
-                        Icon(Icons.Filled.Add, contentDescription = null)
-                    }
-                }
             },
         ) { innerPadding ->
             if (state.rules.isEmpty()) {
@@ -299,21 +309,24 @@ private fun RuleList(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
-            start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp,
+            start = 16.dp, end = 16.dp, top = 8.dp, bottom = 40.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         item {
             CustomAlertsIntroCard(ruleCount = rules.size)
         }
         items(rules, key = { it.id }) { rule ->
-            RuleRow(
-                rule = rule,
-                settings = settings,
-                onToggle = { onToggle(rule) },
-                onEdit = { onEdit(rule) },
-                onDelete = { onDelete(rule) },
-            )
+            Column {
+                RuleRow(
+                    rule = rule,
+                    settings = settings,
+                    onToggle = { onToggle(rule) },
+                    onEdit = { onEdit(rule) },
+                    onDelete = { onDelete(rule) },
+                )
+                HorizontalDivider(color = NimbusCardBorder.copy(alpha = 0.72f))
+            }
         }
     }
 }
@@ -366,20 +379,6 @@ private fun RuleRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        if (rule.enabled) NimbusBlueAccent.copy(alpha = 0.10f) else NimbusGlassTop.copy(alpha = 0.52f),
-                        NimbusCardBg,
-                    ),
-                ),
-            )
-            .border(
-                1.dp,
-                if (rule.enabled) NimbusBlueAccent.copy(alpha = 0.22f) else NimbusCardBorder,
-                RoundedCornerShape(10.dp),
-            )
             .clickable(
                 onClick = onEdit,
                 role = Role.Button,
@@ -391,15 +390,6 @@ private fun RuleRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            AlertHintBadge(
-                text = if (rule.enabled) {
-                    stringResource(R.string.custom_alerts_status_active)
-                } else {
-                    stringResource(R.string.custom_alerts_status_paused)
-                },
-                tint = if (rule.enabled) NimbusBlueAccent else NimbusTextTertiary,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = ruleLabel,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
@@ -409,6 +399,15 @@ private fun RuleRow(
                 text = metricSummary,
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextTertiary,
+            )
+            Text(
+                text = if (rule.enabled) {
+                    stringResource(R.string.custom_alerts_status_active)
+                } else {
+                    stringResource(R.string.custom_alerts_status_paused)
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = if (rule.enabled) NimbusBlueAccent else NimbusWarning,
             )
         }
         Switch(
@@ -427,8 +426,6 @@ private fun RuleRow(
             modifier = Modifier
                 .padding(start = 6.dp)
                 .size(48.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(NimbusError.copy(alpha = 0.12f))
                 .clickable(
                     onClick = onDelete,
                     role = Role.Button,
@@ -904,50 +901,23 @@ private fun CustomAlertsIntroCard(
     ruleCount: Int,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.72f),
-                        NimbusCardBg,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(top = 4.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(NimbusBlueAccent.copy(alpha = 0.14f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Notifications,
-                contentDescription = null,
-                tint = NimbusBlueAccent,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Text(
-                text = stringResource(R.string.custom_alerts_rule_center),
-                style = MaterialTheme.typography.labelLarge,
-                color = NimbusTextPrimary,
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = pluralStringResource(R.plurals.custom_alerts_rule_count, ruleCount, ruleCount),
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-            )
-        }
+        Text(
+            text = stringResource(R.string.custom_alerts_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextSecondary,
+        )
+        Text(
+            text = pluralStringResource(R.plurals.custom_alerts_rule_count, ruleCount, ruleCount),
+            style = MaterialTheme.typography.labelMedium,
+            color = NimbusTextTertiary,
+        )
+        HorizontalDivider(color = NimbusCardBorder)
     }
 }
 

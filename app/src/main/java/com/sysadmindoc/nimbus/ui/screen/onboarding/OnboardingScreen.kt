@@ -3,6 +3,7 @@ package com.sysadmindoc.nimbus.ui.screen.onboarding
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -181,24 +183,23 @@ private fun OnboardingPanel(
 
 @Composable
 private fun OnboardingHeader(step: Int) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        NimbusStatusBadge(
-            text = stringResource(R.string.onboarding_progress, step + 1, ONBOARDING_STEP_COUNT),
-            tint = NimbusBlueAccent,
-            emphasized = true,
-        )
-        Text(
-            text = stringResource(R.string.onboarding_title),
-            style = MaterialTheme.typography.headlineLarge,
-            color = NimbusTextPrimary,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = stringResource(R.string.onboarding_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = NimbusTextSecondary,
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "ZeusWatch",
+                style = MaterialTheme.typography.titleLarge,
+                color = NimbusTextPrimary,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = stringResource(R.string.onboarding_progress, step + 1, ONBOARDING_STEP_COUNT),
+                style = MaterialTheme.typography.titleMedium,
+                color = NimbusTextSecondary,
+            )
+        }
         OnboardingProgress(step)
     }
 }
@@ -234,23 +235,11 @@ private fun OnboardingStepCard(
     onTempUnitSelected: (TempUnit) -> Unit,
     onStarterCardSetSelected: (StarterCardSet) -> Unit,
 ) {
-    val shape = RoundedCornerShape(12.dp)
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.88f),
-                        NimbusCardBg,
-                        NimbusGlassBottom,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, shape)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Crossfade(
             targetState = step,
@@ -271,17 +260,64 @@ private fun OnboardingStepCard(
 @Composable
 private fun LocationStep() {
     OnboardingStepTitle(
-        icon = Icons.Filled.LocationOn,
         title = stringResource(R.string.onboarding_location_title),
         message = stringResource(R.string.onboarding_location_body),
-        tint = NimbusWarning,
     )
-    InlineNoticeCard(
+    Image(
+        painter = painterResource(R.drawable.onboarding_location_illustration),
+        contentDescription = null,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 270.dp)
+            .padding(horizontal = 20.dp),
+    )
+    OnboardingLocationNotice(
         title = stringResource(R.string.onboarding_location_notice_title),
         message = stringResource(R.string.onboarding_location_notice_body),
-        icon = Icons.Filled.Check,
-        tint = NimbusSuccess,
     )
+}
+
+@Composable
+private fun OnboardingLocationNotice(
+    title: String,
+    message: String,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.LocationOn,
+            contentDescription = null,
+            tint = NimbusBlueAccent,
+            modifier = Modifier.size(24.dp),
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = NimbusTextPrimary,
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
+        }
+        Icon(
+            Icons.Filled.Check,
+            contentDescription = null,
+            tint = NimbusBlueAccent,
+            modifier = Modifier.size(20.dp),
+        )
+    }
 }
 
 @Composable
@@ -290,10 +326,8 @@ private fun UnitsStep(
     onSelected: (TempUnit) -> Unit,
 ) {
     OnboardingStepTitle(
-        icon = Icons.Filled.Straighten,
         title = stringResource(R.string.onboarding_units_title),
         message = stringResource(R.string.onboarding_units_body),
-        tint = NimbusBlueAccent,
     )
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -324,10 +358,8 @@ private fun CardSetStep(
     onSelected: (StarterCardSet) -> Unit,
 ) {
     OnboardingStepTitle(
-        icon = Icons.Filled.Dashboard,
         title = stringResource(R.string.onboarding_cards_title),
         message = stringResource(R.string.onboarding_cards_body),
-        tint = NimbusBlueAccent,
     )
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         StarterCardSet.entries.forEach { set ->
@@ -342,40 +374,22 @@ private fun CardSetStep(
 
 @Composable
 private fun OnboardingStepTitle(
-    icon: ImageVector,
     title: String,
     message: String,
-    tint: Color,
 ) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.Top,
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(52.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(tint.copy(alpha = 0.16f))
-                .border(1.dp, tint.copy(alpha = 0.24f), RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
-        }
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = NimbusTextPrimary,
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = NimbusTextSecondary,
-            )
-        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineLarge,
+            color = NimbusTextPrimary,
+        )
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyLarge,
+            color = NimbusTextSecondary,
+        )
     }
 }
 
@@ -477,28 +491,30 @@ private fun OnboardingActions(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        OutlinedButton(
-            onClick = onBack,
-            enabled = step > 0 && !isSaving,
-            modifier = Modifier
-                .weight(1f)
-                .heightIn(min = 50.dp),
-            shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(1.dp, NimbusCardBorder),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = NimbusTextPrimary,
-                disabledContentColor = NimbusTextTertiary.copy(alpha = 0.44f),
-            ),
-        ) {
-            Text(stringResource(R.string.common_back))
+        if (step > 0) {
+            OutlinedButton(
+                onClick = onBack,
+                enabled = !isSaving,
+                modifier = Modifier
+                    .weight(0.7f)
+                    .heightIn(min = 52.dp),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, NimbusCardBorder),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = NimbusTextPrimary,
+                    disabledContentColor = NimbusTextTertiary.copy(alpha = 0.44f),
+                ),
+            ) {
+                Text(stringResource(R.string.common_back))
+            }
         }
         Button(
             onClick = onNext,
             enabled = !isSaving,
             modifier = Modifier
                 .weight(1.3f)
-                .heightIn(min = 50.dp),
-            shape = RoundedCornerShape(10.dp),
+                .heightIn(min = 52.dp),
+            shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,

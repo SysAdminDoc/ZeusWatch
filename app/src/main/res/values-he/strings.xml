@@ -1545,4 +1545,6 @@
         <item quantity="many">%1$d custom alerts ready to watch the forecast.</item>
         <item quantity="other">%1$d custom alerts ready to watch the forecast.</item>
     </plurals>
+    <string name="custom_alerts_add_rule">הוספת כלל</string>
+    <string name="compare_swap_locations">החלפת מיקומים</string>
 </resources>

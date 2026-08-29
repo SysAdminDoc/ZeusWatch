@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -177,10 +178,9 @@ private fun CompareScrollableContent(
     ) {
         ScreenHeader(
             title = stringResource(R.string.compare_title),
-            subtitle = stringResource(R.string.compare_subtitle),
-            eyebrow = stringResource(R.string.compare_eyebrow),
+            subtitle = "",
             onBack = actions.onBack,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
         )
         CompareLocationControls(state, actions)
         Spacer(modifier = Modifier.height(16.dp))
@@ -195,12 +195,6 @@ private fun CompareLocationControls(
     actions: CompareScreenActions,
 ) {
     if (state.savedLocations.isEmpty()) return
-
-    CompareIntroCard(
-        readyCount = state.savedLocations.size,
-        modifier = Modifier.padding(horizontal = 16.dp),
-    )
-    Spacer(modifier = Modifier.height(12.dp))
     CompareSelectorCard(state, actions)
 }
 
@@ -209,26 +203,18 @@ private fun CompareSelectorCard(
     state: CompareUiState,
     actions: CompareScreenActions,
 ) {
-    Box(
+    Column(
         modifier = Modifier
             .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(NimbusGlassTop.copy(alpha = 0.78f), NimbusGlassBottom),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
-            .padding(horizontal = 18.dp, vertical = 18.dp),
+            .padding(top = 4.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                text = stringResource(R.string.compare_choose_two),
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-            )
-            CompareSelectorRow(state, actions)
-        }
+        Text(
+            text = stringResource(R.string.compare_choose_two),
+            style = MaterialTheme.typography.labelMedium,
+            color = NimbusTextSecondary,
+        )
+        CompareSelectorRow(state, actions)
     }
 }
 
@@ -237,6 +223,7 @@ private fun CompareSelectorRow(
     state: CompareUiState,
     actions: CompareScreenActions,
 ) {
+    val swapDescription = stringResource(R.string.compare_swap_locations)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -248,6 +235,29 @@ private fun CompareSelectorRow(
             onSelect = actions.onSelectLocation1,
             modifier = Modifier.weight(1f),
         )
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clickable(
+                    enabled = state.location1 != null && state.location2 != null,
+                    role = Role.Button,
+                    onClick = {
+                        val first = state.location1 ?: return@clickable
+                        val second = state.location2 ?: return@clickable
+                        actions.onSelectLocation1(second)
+                        actions.onSelectLocation2(first)
+                    },
+                )
+                .semantics { contentDescription = swapDescription },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.CompareArrows,
+                contentDescription = null,
+                tint = NimbusBlueAccent,
+                modifier = Modifier.size(18.dp),
+            )
+        }
         LocationSelector(
             label = stringResource(R.string.compare_against),
             selected = state.location2,
@@ -344,14 +354,10 @@ private fun ComparePartialWeather(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(NimbusGlassTop.copy(alpha = 0.82f), NimbusGlassBottom),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
-            .padding(horizontal = 16.dp, vertical = 18.dp),
+            .clip(RoundedCornerShape(8.dp))
+            .background(NimbusCardBg.copy(alpha = 0.32f))
+            .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -627,17 +633,10 @@ private fun LocationSelector(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 86.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NimbusGlassTop.copy(alpha = 0.72f),
-                            NimbusSurfaceVariant,
-                        ),
-                    ),
-                )
-                .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
+                .heightIn(min = 72.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(NimbusCardBg.copy(alpha = 0.42f))
+                .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
                 .clickable(
                     onClick = { expanded = true },
                     role = Role.Button,
@@ -738,21 +737,11 @@ private fun CompareRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = 16.dp)
             .semantics(mergeDescendants = true) {
                 contentDescription = "$label: $value1, $value2"
             }
-            .clip(RoundedCornerShape(10.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.48f),
-                        NimbusCardBg,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 4.dp),
     ) {
         Row(
             modifier = Modifier
@@ -791,6 +780,7 @@ private fun CompareRow(
                     .weight(1f)
             )
         }
+        HorizontalDivider(color = NimbusCardBorder.copy(alpha = 0.72f))
     }
 }
 
@@ -807,66 +797,11 @@ private fun CompareValueText(
             fontWeight = if (highlighted) FontWeight.SemiBold else FontWeight.Normal,
         ),
         color = color,
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (highlighted) NimbusBlueAccent.copy(alpha = 0.12f) else Color.Transparent)
-            .padding(horizontal = 8.dp, vertical = 10.dp),
+        modifier = modifier.padding(horizontal = 8.dp, vertical = 10.dp),
         textAlign = TextAlign.Center,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
     )
-}
-
-@Composable
-private fun CompareIntroCard(
-    readyCount: Int,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.74f),
-                        NimbusCardBg,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
-            .padding(horizontal = 18.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(NimbusBlueAccent.copy(alpha = 0.14f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.CompareArrows,
-                contentDescription = null,
-                tint = NimbusBlueAccent,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Text(
-                text = stringResource(R.string.compare_ready_title),
-                style = MaterialTheme.typography.labelLarge,
-                color = NimbusTextPrimary,
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = pluralStringResource(R.plurals.compare_ready_count, readyCount, readyCount),
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-            )
-        }
-    }
 }
 
 @Composable
@@ -903,18 +838,7 @@ private fun CompareSummaryCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusBlueAccent.copy(alpha = 0.12f),
-                        NimbusGlassTop.copy(alpha = 0.72f),
-                        NimbusGlassBottom,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusBlueAccent.copy(alpha = 0.24f), RoundedCornerShape(12.dp))
-            .padding(horizontal = 18.dp, vertical = 18.dp),
+            .padding(horizontal = 4.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(

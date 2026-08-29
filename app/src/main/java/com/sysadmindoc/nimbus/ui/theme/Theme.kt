@@ -77,12 +77,12 @@ internal fun weatherAdaptiveScheme(weatherCode: WeatherCode?, isDay: Boolean): C
         else -> NimbusBlueAccent
     }
 
-    val tertiaryColor = accentColor.copy(alpha = 0.7f)
+    val tertiaryColor = accentColor
     return NimbusDarkScheme.copy(
         primary = accentColor,
         onPrimary = accentOnColor(accentColor),
         tertiary = tertiaryColor,
-        onTertiary = accentOnColor(tertiaryColor.compositeOver(NimbusNavyDark)),
+        onTertiary = accentOnColor(tertiaryColor),
     )
 }
 

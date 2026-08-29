@@ -85,7 +85,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
@@ -164,10 +166,9 @@ internal fun SettingsContent(
         ) {
             ScreenHeader(
                 title = stringResource(R.string.settings_title),
-                subtitle = stringResource(R.string.settings_subtitle),
-                eyebrow = stringResource(R.string.settings_eyebrow),
+                subtitle = "",
                 onBack = onBack,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -177,14 +178,7 @@ internal fun SettingsContent(
                 onSelectedCategory = { selectedCategory = it },
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            SettingsOverviewCard(
-                selectedCategory = selectedCategory,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             SettingsCategoryContent(
                 selectedCategory = selectedCategory,
@@ -292,8 +286,7 @@ private fun SettingsCategoryContent(
 ) {
     when (selectedCategory) {
         SettingsCategory.APPEARANCE -> {
-            SettingsDisplaySection(settings, availableIconPacks, actions)
-            SettingsVisualEffectsSection(settings, actions)
+            SettingsAppearanceOverview(settings, availableIconPacks, actions)
         }
         SettingsCategory.FORECAST -> {
             SettingsHomeCardsSection(settings, actions)
@@ -329,16 +322,29 @@ private fun SettingsCategoryContent(
 }
 
 @Composable
-private fun SettingsDisplaySection(
+private fun SettingsAppearanceOverview(
     settings: NimbusSettings,
     availableIconPacks: List<IconPack>,
     actions: SettingsActions,
 ) {
     SettingSection(
-        title = stringResource(R.string.settings_display_title),
-        description = stringResource(R.string.settings_display_desc),
+        title = stringResource(R.string.settings_theme_mode),
+        description = stringResource(settings.themeMode.labelRes),
+        initiallyExpanded = false,
     ) {
-        Text(stringResource(R.string.settings_radar_provider), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+        ThemeMode.entries.forEach { mode ->
+            SettingRadio(
+                label = stringResource(mode.labelRes),
+                selected = settings.themeMode == mode,
+                onClick = { actions.onThemeMode(mode) },
+            )
+        }
+    }
+    SettingSection(
+        title = stringResource(R.string.settings_radar_provider),
+        description = stringResource(settings.radarProvider.labelRes),
+        initiallyExpanded = false,
+    ) {
         RadarProvider.entries.forEach { provider ->
             SettingRadio(
                 label = stringResource(provider.labelRes),
@@ -347,97 +353,84 @@ private fun SettingsDisplaySection(
                 onClick = { actions.onRadarProvider(provider) },
             )
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(stringResource(R.string.settings_radar_hint), style = MaterialTheme.typography.labelSmall, color = NimbusTextTertiary, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
-        SettingsIconStyleControls(settings, availableIconPacks, actions)
-        SettingsThemeAndSummaryControls(settings, actions)
     }
-}
-
-@Composable
-private fun SettingsIconStyleControls(
-    settings: NimbusSettings,
-    availableIconPacks: List<IconPack>,
-    actions: SettingsActions,
-) {
-    Spacer(modifier = Modifier.height(8.dp))
-    Text(stringResource(R.string.settings_icon_style), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
-    IconStyle.entries.forEach { style ->
-        SettingRadio(
-            label = stringResource(style.labelRes),
-            selected = settings.iconStyle == style,
-            onClick = { actions.onIconStyle(style) },
-        )
-    }
-    if (settings.iconStyle == IconStyle.CUSTOM) {
-        IconPackSelector(
-            packs = availableIconPacks,
-            selectedPackId = settings.customIconPackId,
-            onPackSelected = actions.onCustomIconPackId,
-        )
-    }
-}
-
-@Composable
-private fun SettingsThemeAndSummaryControls(
-    settings: NimbusSettings,
-    actions: SettingsActions,
-) {
-    Spacer(modifier = Modifier.height(4.dp))
-    Text(stringResource(R.string.settings_theme_mode), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
-    ThemeMode.entries.forEach { mode ->
-        SettingRadio(
-            label = stringResource(mode.labelRes),
-            selected = settings.themeMode == mode,
-            onClick = { actions.onThemeMode(mode) },
-        )
-    }
-    Spacer(modifier = Modifier.height(4.dp))
-    Text(stringResource(R.string.settings_summary_style), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
-    SummaryStyle.entries.forEach { style ->
-        SettingRadio(
-            label = stringResource(style.labelRes),
-            selected = settings.summaryStyle == style,
-            onClick = { actions.onSummaryStyle(style) },
-        )
-    }
-    if (settings.summaryStyle == SummaryStyle.CUSTOM_TEMPLATE) {
-        Spacer(modifier = Modifier.height(8.dp))
-        val templateLabel = stringResource(R.string.settings_custom_template_label)
-        Text(
-            templateLabel,
-            style = MaterialTheme.typography.bodySmall,
-            color = NimbusTextSecondary,
-            modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
-        )
-        var templateText by rememberSaveable(settings.customSummaryTemplate) {
-            mutableStateOf(settings.customSummaryTemplate)
+    SettingSection(
+        title = stringResource(R.string.settings_icon_style),
+        description = stringResource(settings.iconStyle.labelRes),
+        initiallyExpanded = false,
+    ) {
+        IconStyle.entries.forEach { style ->
+            SettingRadio(
+                label = stringResource(style.labelRes),
+                selected = settings.iconStyle == style,
+                onClick = { actions.onIconStyle(style) },
+            )
         }
-        BasicTextField(
-            value = templateText,
-            onValueChange = { raw ->
-                val next = raw.take(MAX_CUSTOM_SUMMARY_TEMPLATE_CHARS)
-                templateText = next
-                actions.onCustomSummaryTemplate(next)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 100.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                .border(1.dp, NimbusTextSecondary.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                .semantics { contentDescription = templateLabel }
-                .padding(12.dp),
-            textStyle = MaterialTheme.typography.bodySmall.copy(color = NimbusTextPrimary),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            stringResource(R.string.settings_custom_template_help),
-            style = MaterialTheme.typography.labelSmall,
-            color = NimbusTextSecondary.copy(alpha = 0.7f),
-            modifier = Modifier.padding(start = 4.dp),
+        if (settings.iconStyle == IconStyle.CUSTOM) {
+            IconPackSelector(
+                packs = availableIconPacks,
+                selectedPackId = settings.customIconPackId,
+                onPackSelected = actions.onCustomIconPackId,
+            )
+        }
+    }
+    SettingSection(
+        title = stringResource(R.string.settings_summary_style),
+        description = stringResource(settings.summaryStyle.labelRes),
+        initiallyExpanded = false,
+    ) {
+        SummaryStyle.entries.forEach { style ->
+            SettingRadio(
+                label = stringResource(style.labelRes),
+                selected = settings.summaryStyle == style,
+                onClick = { actions.onSummaryStyle(style) },
+            )
+        }
+        if (settings.summaryStyle == SummaryStyle.CUSTOM_TEMPLATE) {
+            Spacer(modifier = Modifier.height(8.dp))
+            val templateLabel = stringResource(R.string.settings_custom_template_label)
+            var templateText by rememberSaveable(settings.customSummaryTemplate) {
+                mutableStateOf(settings.customSummaryTemplate)
+            }
+            BasicTextField(
+                value = templateText,
+                onValueChange = { raw ->
+                    val next = raw.take(MAX_CUSTOM_SUMMARY_TEMPLATE_CHARS)
+                    templateText = next
+                    actions.onCustomSummaryTemplate(next)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 100.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                    .border(1.dp, NimbusTextSecondary.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                    .semantics { contentDescription = templateLabel }
+                    .padding(12.dp),
+                textStyle = MaterialTheme.typography.bodySmall.copy(color = NimbusTextPrimary),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+            )
+            Text(
+                stringResource(R.string.settings_custom_template_help),
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextSecondary.copy(alpha = 0.7f),
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+            )
+        }
+    }
+    SettingSection(
+        title = stringResource(R.string.settings_visual_effects_title),
+        description = stringResource(
+            if (settings.particlesEnabled) R.string.common_on else R.string.common_off,
+        ),
+        initiallyExpanded = false,
+    ) {
+        SettingToggle(
+            stringResource(R.string.settings_weather_particles),
+            stringResource(R.string.settings_weather_particles_desc),
+            settings.particlesEnabled,
+            actions.onParticlesEnabled,
         )
     }
 }
@@ -822,6 +815,7 @@ private fun SettingsHealthSection(
     settings: NimbusSettings,
     actions: SettingsActions,
 ) {
+    val locale = LocalConfiguration.current.locales[0]
     SettingSection(
         title = stringResource(R.string.settings_health_title),
         description = stringResource(R.string.settings_health_desc),
@@ -833,7 +827,7 @@ private fun SettingsHealthSection(
             SettingRadio(
                 label = stringResource(
                     R.string.settings_pressure_threshold_option,
-                    String.format(Locale.getDefault(), "%.1f", threshold),
+                    String.format(locale, "%.1f", threshold),
                 ),
                 sublabel = pressureThresholdSublabel(threshold),
                 selected = settings.migrainePressureThreshold == threshold,
@@ -863,19 +857,6 @@ private fun SettingsAccessibilitySection(
     ) {
         SettingToggle(stringResource(R.string.settings_haptic_alerts), stringResource(R.string.settings_haptic_alerts_desc), settings.hapticFeedbackForAlerts, actions.onHapticFeedbackForAlerts)
         SettingToggle(stringResource(R.string.settings_accessibility_layout), stringResource(R.string.settings_accessibility_layout_desc), settings.accessibilityLayout, actions.onAccessibilityLayout)
-    }
-}
-
-@Composable
-private fun SettingsVisualEffectsSection(
-    settings: NimbusSettings,
-    actions: SettingsActions,
-) {
-    SettingSection(
-        title = stringResource(R.string.settings_visual_effects_title),
-        description = stringResource(R.string.settings_visual_effects_desc),
-    ) {
-        SettingToggle(stringResource(R.string.settings_weather_particles), stringResource(R.string.settings_weather_particles_desc), settings.particlesEnabled, actions.onParticlesEnabled)
     }
 }
 
@@ -1505,59 +1486,6 @@ private fun SettingsWidgetTroubleshootSection() {
 }
 
 @Composable
-private fun SettingsOverviewCard(
-    selectedCategory: SettingsCategory,
-    modifier: Modifier = Modifier,
-) {
-    val selectedLabel = stringResource(selectedCategory.labelRes)
-    val selectedSummary = stringResource(selectedCategory.summaryRes)
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.78f),
-                        NimbusCardBg,
-                        NimbusGlassBottom,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
-            .padding(horizontal = 18.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(9.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(NimbusBlueAccent),
-            )
-            Text(
-                text = stringResource(R.string.settings_focused_area),
-                style = MaterialTheme.typography.labelMedium,
-                color = NimbusTextTertiary,
-            )
-        }
-        Text(
-            text = selectedLabel,
-            style = MaterialTheme.typography.headlineSmall,
-            color = NimbusTextPrimary,
-        )
-        Text(
-            text = stringResource(R.string.settings_overview_summary, selectedSummary),
-            style = MaterialTheme.typography.bodyMedium,
-            color = NimbusTextSecondary,
-        )
-    }
-}
-
-@Composable
 private fun SettingsCategoryPicker(
     selectedCategory: SettingsCategory,
     onSelectedCategory: (SettingsCategory) -> Unit,
@@ -1567,10 +1495,9 @@ private fun SettingsCategoryPicker(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 8.dp)
             .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         SettingsCategory.entries.forEach { category ->
             val isSelected = category == selectedCategory
@@ -1578,30 +1505,8 @@ private fun SettingsCategoryPicker(
             val categorySummary = stringResource(category.summaryRes)
             Column(
                 modifier = Modifier
-                    .width(148.dp)
-                    .heightIn(min = 80.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            colors = if (isSelected) {
-                                listOf(
-                                    NimbusBlueAccent.copy(alpha = 0.18f),
-                                    NimbusGlassTop.copy(alpha = 0.70f),
-                                    NimbusGlassBottom,
-                                )
-                            } else {
-                                listOf(
-                                    NimbusGlassTop.copy(alpha = 0.48f),
-                                    NimbusCardBg,
-                                )
-                            },
-                        ),
-                    )
-                    .border(
-                        1.dp,
-                        if (isSelected) NimbusBlueAccent.copy(alpha = 0.44f) else NimbusCardBorder,
-                        RoundedCornerShape(10.dp),
-                    )
+                    .weight(1f)
+                    .heightIn(min = 58.dp)
                     .selectable(
                         selected = isSelected,
                         onClick = { onSelectedCategory(category) },
@@ -1611,31 +1516,22 @@ private fun SettingsCategoryPicker(
                         contentDescription = "$categoryLabel, $categorySummary"
                         stateDescription = if (isSelected) selectedLabel else notSelectedLabel
                     }
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(if (isSelected) 8.dp else 7.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(
-                                if (isSelected) NimbusBlueAccent else NimbusTextTertiary.copy(alpha = 0.45f),
-                            ),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = categoryLabel,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (isSelected) NimbusTextPrimary else NimbusTextSecondary,
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = categorySummary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isSelected) NimbusTextSecondary else NimbusTextTertiary,
-                    maxLines = 2,
+                    text = categoryLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (isSelected) NimbusBlueAccent else NimbusTextSecondary,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(if (isSelected) NimbusBlueAccent else Color.Transparent),
                 )
             }
         }
@@ -1661,22 +1557,11 @@ private fun SettingSection(
 
     Column(
         modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .padding(horizontal = 16.dp, vertical = 4.dp)
             .animateContentSize(
                 animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
             )
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.65f),
-                        NimbusCardBg,
-                        NimbusGlassBottom,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(12.dp))
-            .padding(horizontal = 18.dp, vertical = 18.dp),
+            .padding(horizontal = 4.dp, vertical = 8.dp),
     ) {
         Row(
             modifier = Modifier
@@ -1695,7 +1580,7 @@ private fun SettingSection(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     color = NimbusTextPrimary,
                 )
                 if (description != null) {
@@ -1707,24 +1592,12 @@ private fun SettingSection(
                     )
                 }
             }
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(NimbusBlueAccent.copy(alpha = if (expanded) 0.18f else 0.10f))
-                    .border(
-                        1.dp,
-                        NimbusBlueAccent.copy(alpha = if (expanded) 0.28f else 0.16f),
-                        RoundedCornerShape(8.dp),
-                    )
-                    .padding(6.dp),
-            ) {
-                Icon(
-                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = NimbusBlueAccent,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
+            Icon(
+                imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                contentDescription = null,
+                tint = NimbusBlueAccent,
+                modifier = Modifier.size(22.dp),
+            )
         }
         if (expanded) {
             Column(

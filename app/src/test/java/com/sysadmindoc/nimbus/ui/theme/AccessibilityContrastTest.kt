@@ -55,8 +55,7 @@ class AccessibilityContrastTest {
         }
 
         schemes.flatMap { (name, scheme) ->
-            // Adaptive tertiary is translucent, so judge it as rendered over the
-            // app background — same as the card-background cases above.
+            // Judge the tertiary role against its rendered app background.
             val tertiaryBackground = scheme.tertiary.compositeOver(NimbusNavyDark)
             listOf(
                 ContrastPair("[$name] onPrimary on primary", scheme.onPrimary, scheme.primary, WCAG_AA_TEXT),

@@ -40,7 +40,17 @@ enum class CardType(val label: String, val defaultEnabled: Boolean = true) {
     CLIMATE_OUTLOOK("Climate Outlook", false),
 }
 
-val DEFAULT_CARD_ORDER: List<CardType> = CardType.entries.toList()
+private val PRECISION_DEFAULT_CARDS = listOf(
+    CardType.HOURLY_FORECAST,
+    CardType.WEATHER_SUMMARY,
+    CardType.NOWCAST,
+    CardType.RADAR_PREVIEW,
+    CardType.DAILY_FORECAST,
+    CardType.TEMPERATURE_GRAPH,
+)
+
+val DEFAULT_CARD_ORDER: List<CardType> = PRECISION_DEFAULT_CARDS +
+    CardType.entries.filterNot { it in PRECISION_DEFAULT_CARDS }
 val DEFAULT_DISABLED_CARDS: Set<String> = CardType.entries
     .filterNot { it.defaultEnabled }
     .map { it.name }

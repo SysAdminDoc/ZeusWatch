@@ -44,7 +44,7 @@ class SettingsScreenTest {
         assertCategoryDisplayed("Forecast")
         assertCategoryDisplayed("Alerts")
         assertCategoryDisplayed("Advanced")
-        composeTestRule.onNodeWithText("Display").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Theme Mode").assertIsDisplayed()
         composeTestRule.onNodeWithText("Visual Effects").performScrollTo().assertIsDisplayed()
     }
 
@@ -147,6 +147,7 @@ class SettingsScreenTest {
             }
         }
 
+        composeTestRule.onNode(hasText("Visual Effects") and hasClickAction()).performScrollTo().performClick()
         composeTestRule.onNodeWithText("Weather Particles").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("Rain, snow, and sun ray animations").performScrollTo().assertIsDisplayed()
     }
@@ -165,6 +166,7 @@ class SettingsScreenTest {
             }
         }
 
+        composeTestRule.onNode(hasText("Visual Effects") and hasClickAction()).performScrollTo().performClick()
         composeTestRule.onNodeWithText("Weather Particles").performScrollTo().performClick()
         assertEquals(false, toggledValue)
     }

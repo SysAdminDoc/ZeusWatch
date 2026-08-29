@@ -38,13 +38,13 @@ fun ComposeContentTestRule.assertVisibleTouchTargetsMeetMinimum(
     val failures = onAllNodes(hasClickAction(), useUnmergedTree = false)
         .fetchSemanticsNodes(atLeastOneRootRequired = false)
         .filter { node ->
-            val bounds = node.boundsInRoot
-            bounds.width > 0f && bounds.height > 0f &&
-                (bounds.width < minPx || bounds.height < minPx)
+            val size = node.size
+            size.width > 0 && size.height > 0 &&
+                (size.width < minPx || size.height < minPx)
         }
         .map { node ->
-            val bounds = node.boundsInRoot
-            "${node.accessibilityLabel()} ${bounds.width.toInt()}x${bounds.height.toInt()}px"
+            val size = node.size
+            "${node.accessibilityLabel()} ${size.width}x${size.height}px"
         }
 
     if (failures.isNotEmpty()) {

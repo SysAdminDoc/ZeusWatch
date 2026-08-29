@@ -1,6 +1,6 @@
 # ZeusWatch
 
-![Version](https://img.shields.io/badge/version-1.28.0-blue)
+![Version](https://img.shields.io/badge/version-1.29.0-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Android%208.0+-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white)
@@ -116,7 +116,7 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 | **Alert Deduplication** | Tracks seen alert IDs so the same warning is never re-notified |
 | **Multi-Location Alerts** | Monitors all saved locations by default, not just current GPS |
 | **Progress Nowcast Notifications** | Android 16+ nowcast alerts use ProgressStyle segments for dry/light/steady/heavy rain timelines, with BigText fallback on older devices |
-| **Driving Condition Alerts** | Black ice, fog, low visibility, hydroplaning, high wind, snow/ice — derived from forecast data |
+| **Driving Condition Alerts** | Black ice, fog, low visibility, hydroplaning, high wind, and snow or ice derived from forecast data |
 | **Route Weather Planner** | Enter/share endpoints or import a bounded GPX 1.1 route/track through Android's document picker; samples follow cumulative geometry, preserve partial results, and clearly label assumed-speed estimates as non-navigation guidance |
 | **Health Alerts** | Migraine triggers (pressure/temp swings, configurable threshold), respiratory (humidity extremes), arthritis (temp swing) |
 | **Haptic Feedback** | Severity-appropriate vibration patterns when alerts display |
@@ -368,7 +368,7 @@ Community reports use an anonymous append-only Firestore model: users can read r
 | Flavor | Description |
 |--------|-------------|
 | `standard` | Includes Google Play Services for FusedLocationProvider + Gemini Nano through ML Kit GenAI Prompt |
-| `freenet` | F-Droid compatible — no proprietary dependencies (uses Android LocationManager) |
+| `freenet` | F-Droid compatible with no proprietary dependencies (uses Android LocationManager) |
 
 ```bash
 # Standard (Google Play)
@@ -510,26 +510,26 @@ Third-party icon packs are discoverable via:
 ## Testing
 
 ```bash
-# Unit tests — formatters, models, repositories, ViewModels
+# Unit tests for formatters, models, repositories, and ViewModels
 ./gradlew testStandardDebugUnitTest
 
-# Public provider contract checks — live or cached schema/availability smoke
+# Public provider contract checks using live or cached schema and availability smoke tests
 py -3 tools/check_provider_contracts.py
 
-# Release provenance manifest — after signed APKs and SHA256SUMS.txt exist
+# Release provenance manifest after signed APKs and SHA256SUMS.txt exist
 py -3 tools/generate_release_provenance.py
 
-# Instrumented Compose UI tests — screen rendering, interactions
+# Instrumented Compose UI tests for screen rendering and interactions
 ./gradlew connectedStandardDebugAndroidTest
 
-# Accessibility release gate - WCAG contrast, touch targets, Compose checks
+# Accessibility release gate for WCAG contrast, touch targets, and Compose checks
 ./gradlew accessibilityGate
 
-# Startup performance gate - release startup Macrobenchmark p95 <1200 ms
+# Startup performance gate with release startup Macrobenchmark p95 <1200 ms
 # Use a stable physical target for release acceptance; emulator results are advisory
 ./gradlew startupGate
 
-# Baseline profile collection - use a stable physical benchmark target
+# Baseline profile collection using a stable physical benchmark target
 ./gradlew :app:generateStandardReleaseBaselineProfile
 
 # Firestore community-report rules tests
@@ -564,8 +564,8 @@ Issues and PRs welcome. Please:
 - Unit settings flow via `CompositionLocalProvider(LocalUnitSettings provides ...)`. Standalone screens (Radar, Compare) read from their ViewModel's `prefs.settings` flow.
 - Card rendering is driven by `CardType` enum + `LazyColumn items()` in the main-screen content renderer. Add new cards by extending `CardType` and adding a render branch.
 - Weather-adaptive theming reads from `LocalWeatherThemeState` CompositionLocal.
-- Multi-source forecasts use `WeatherSourceManager` with Hilt `WeatherSourceAdapter` map bindings — add new sources by implementing an adapter and registry binding.
-- Alert sources use `AlertSourceAdapter` interface — auto-detected by country via Geocoder.
+- Multi-source forecasts use `WeatherSourceManager` with Hilt `WeatherSourceAdapter` map bindings. Add new sources by implementing an adapter and registry binding.
+- Alert sources use the `AlertSourceAdapter` interface and are detected by country through Geocoder.
 - Current roadmap and research notes are maintained locally in `ROADMAP.md` and
   `RESEARCH.md`. Historical research lives in `docs/research-archive.md`.
 
@@ -612,7 +612,7 @@ ZeusWatch collects **zero user data**. No analytics, no tracking, no telemetry, 
 
 - **No accounts required.** The app works fully offline after the first forecast fetch.
 - **Foreground-only location.** The manifest declares fine/coarse location only; ZeusWatch never requests background location, and widgets/workers reuse the last foreground fix.
-- **No network requests except weather data.** All API calls go directly to the configured weather services (Open-Meteo, RainViewer, etc.) — no intermediary servers.
+- **No network requests except weather data.** All API calls go directly to the configured weather services such as Open-Meteo and RainViewer. There are no intermediary servers.
 - **Community reports** (`standard` flavor only) use anonymous Firebase Auth with no personal identifiers, round coordinates to two decimal degrees, disappear after two hours, and use asynchronous Firestore TTL deletion. The `freenet` flavor has zero Firebase or Google dependency.
 - **API keys/tokens** (optional, user-provided) are encrypted on-device via Android Keystore + Tink AEAD and never leave the device.
 - **Cloud backup excluded.** Preferences, widget data, encrypted keys, and databases are excluded from Android cloud backup and device-to-device transfer via `data_extraction_rules.xml`.

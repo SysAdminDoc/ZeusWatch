@@ -79,7 +79,7 @@ fun GlassActionButton(
     highlighted: Boolean = false,
     enabled: Boolean = true,
 ) {
-    val shape = RoundedCornerShape(10.dp)
+    val shape = RoundedCornerShape(8.dp)
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val focused by interactionSource.collectIsFocusedAsState()
@@ -89,7 +89,7 @@ fun GlassActionButton(
             focused -> NimbusBlueAccent.copy(alpha = 0.72f)
             highlighted -> NimbusBlueAccent.copy(alpha = 0.52f)
             pressed -> NimbusBlueAccent.copy(alpha = 0.36f)
-            else -> NimbusCardBorder
+            else -> Color.Transparent
         },
         animationSpec = tween(durationMillis = 160, easing = FastOutSlowInEasing),
         label = "glassActionBorder",
@@ -106,36 +106,6 @@ fun GlassActionButton(
     Box(
         modifier = modifier
             .size(48.dp)
-            .graphicsLayer {
-                scaleX = if (enabled && pressed) 0.97f else 1f
-                scaleY = if (enabled && pressed) 0.97f else 1f
-            }
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    colors = if (!enabled) {
-                        listOf(
-                            NimbusGlassTop.copy(alpha = 0.38f),
-                            NimbusGlassBottom.copy(alpha = 0.66f),
-                        )
-                    } else if (highlighted || pressed || focused) {
-                        listOf(
-                            NimbusBlueAccent.copy(alpha = if (pressed) 0.24f else 0.18f),
-                            NimbusGlassBottom,
-                        )
-                    } else {
-                        listOf(
-                            NimbusGlassTop.copy(alpha = 0.78f),
-                            NimbusGlassBottom,
-                        )
-                    },
-                ),
-            )
-            .border(
-                width = 1.dp,
-                color = borderColor,
-                shape = shape,
-            )
             .semantics {
                 this.contentDescription = contentDescription
             }
@@ -148,12 +118,35 @@ fun GlassActionButton(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(20.dp),
-        )
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .graphicsLayer {
+                    scaleX = if (enabled && pressed) 0.97f else 1f
+                    scaleY = if (enabled && pressed) 0.97f else 1f
+                }
+                .clip(shape)
+                .background(
+                    when {
+                        !enabled -> NimbusGlassBottom.copy(alpha = 0.58f)
+                        highlighted || pressed || focused -> NimbusBlueAccent.copy(alpha = 0.16f)
+                        else -> Color.Transparent
+                    },
+                )
+                .border(
+                    width = 1.dp,
+                    color = borderColor,
+                    shape = shape,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
 }
 
@@ -168,7 +161,7 @@ fun ScreenHeader(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onBack != null) {
@@ -181,7 +174,7 @@ fun ScreenHeader(
 
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             if (!eyebrow.isNullOrBlank()) {
                 Text(
@@ -192,18 +185,20 @@ fun ScreenHeader(
             }
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineMedium,
                 color = NimbusTextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = NimbusTextSecondary,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
+            if (subtitle.isNotBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
 
         Row(

@@ -101,15 +101,20 @@ fun ReportSubmitSheet(
         dragHandle = {
             Box(
                 modifier = Modifier
-                    .padding(vertical = 10.dp)
-                    .width(40.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color.White.copy(alpha = 0.16f))
+                    .size(48.dp)
                     .clearAndSetSemantics {
                         contentDescription = bottomSheetHandleDescription
                     },
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color.White.copy(alpha = 0.16f)),
+                )
+            }
         },
     ) {
         Column(

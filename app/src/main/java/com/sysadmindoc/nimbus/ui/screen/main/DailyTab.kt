@@ -19,6 +19,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -88,25 +89,20 @@ fun DailyTab(
             .fillMaxSize()
             .background(NimbusBackgroundGradient)
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         item {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Text(
                 stringResource(R.string.forecast_daily_days_title, daily.size),
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineMedium,
                 color = NimbusTextPrimary,
             )
             Text(
                 locationName,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(NimbusCardBg)
-                    .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.padding(top = 4.dp),
             )
             Spacer(modifier = Modifier.height(12.dp))
         }
@@ -138,36 +134,25 @@ private fun DailyDetailRow(
 ) {
     val s = com.sysadmindoc.nimbus.ui.component.LocalUnitSettings.current
     val context = LocalContext.current
-    val shape = RoundedCornerShape(12.dp)
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        NimbusGlassTop.copy(alpha = 0.52f),
-                        NimbusCardBg,
-                        NimbusGlassBottom,
-                    ),
-                ),
-            )
-            .border(1.dp, NimbusCardBorder, shape)
             .clickable(
                 onClick = onClick,
                 role = Role.Button,
             )
-            .padding(14.dp),
+            .padding(horizontal = 6.dp, vertical = 12.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.width(100.dp)) {
+            Column(modifier = Modifier.width(96.dp)) {
                 Text(
                     dayLabel,
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                     color = NimbusTextPrimary,
+                    maxLines = 1,
                 )
                 Text(
                     dateLabel,
@@ -179,20 +164,24 @@ private fun DailyDetailRow(
             WeatherIcon(
                 weatherCode = day.weatherCode,
                 isDay = true,
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(32.dp),
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     day.conditionDescription(context),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelMedium,
                     color = NimbusTextSecondary,
+                    maxLines = 2,
                 )
             }
 
-            Column(horizontalAlignment = Alignment.End) {
+            Column(
+                modifier = Modifier.width(74.dp),
+                horizontalAlignment = Alignment.End,
+            ) {
                 Text(
                     stringResource(
                         R.string.forecast_high_abbrev,
@@ -216,33 +205,28 @@ private fun DailyDetailRow(
         Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.End),
         ) {
             if (day.precipitationProbability > 0) {
-                DetailChip(stringResource(R.string.forecast_detail_rain), "${day.precipitationProbability}%")
+                DailyDetailValue(stringResource(R.string.forecast_detail_rain), "${day.precipitationProbability}%")
             }
             day.windSpeedMax?.let {
-                DetailChip(stringResource(R.string.forecast_detail_wind), WeatherFormatter.formatWindSpeed(it, s))
+                DailyDetailValue(stringResource(R.string.forecast_detail_wind), WeatherFormatter.formatWindSpeed(it, s))
             }
             day.uvIndexMax?.let {
-                DetailChip(stringResource(R.string.forecast_tab_uv), stringResource(WeatherFormatter.uvDescriptionRes(it)))
+                DailyDetailValue(stringResource(R.string.forecast_tab_uv), WeatherFormatter.formatUvIndex(it))
             }
         }
+        Spacer(modifier = Modifier.height(10.dp))
+        HorizontalDivider(color = NimbusCardBorder.copy(alpha = 0.66f))
     }
 }
 
 @Composable
-private fun DetailChip(label: String, value: String) {
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(NimbusCardBg)
-            .border(1.dp, NimbusCardBorder, RoundedCornerShape(8.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+private fun DailyDetailValue(label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            label,
+            "$label ",
             style = MaterialTheme.typography.labelSmall,
             color = NimbusTextTertiary,
         )

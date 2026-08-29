@@ -1576,4 +1576,6 @@
         <item quantity="many">%1$d alertas personalizadas listas para vigilar el pronóstico.</item>
         <item quantity="other">%1$d alertas personalizadas listas para vigilar el pronóstico.</item>
     </plurals>
+    <string name="custom_alerts_add_rule">Añadir regla</string>
+    <string name="compare_swap_locations">Intercambiar ubicaciones</string>
 </resources>
