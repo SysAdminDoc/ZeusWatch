@@ -1579,4 +1579,16 @@
     <string name="settings_skin_type_v">النوع V: نادرًا جدًا ما يحترق ويسمرّ بعمق</string>
     <string name="settings_skin_type_vi">النوع VI: لا يحترق أبدًا</string>
     <string name="uv_safe_exposure_for_skin_type">نحو %1$d دقيقة في الشمس دون واقٍ (%2$s)</string>
+    <string name="custom_alert_metric_pollen_grass">حبوب لقاح الأعشاب</string>
+    <string name="custom_alert_metric_pollen_grass_summary">أعلى مستوى لحبوب لقاح الأعشاب اليوم</string>
+    <string name="custom_alert_metric_pollen_birch">حبوب لقاح البتولا</string>
+    <string name="custom_alert_metric_pollen_birch_summary">أعلى مستوى لحبوب لقاح البتولا اليوم</string>
+    <string name="custom_alert_metric_pollen_ragweed">حبوب لقاح الأمبروسيا</string>
+    <string name="custom_alert_metric_pollen_ragweed_summary">أعلى مستوى لحبوب لقاح الأمبروسيا اليوم</string>
+    <string name="custom_alert_metric_pollen_olive">حبوب لقاح الزيتون</string>
+    <string name="custom_alert_metric_pollen_olive_summary">أعلى مستوى لحبوب لقاح الزيتون اليوم</string>
+    <string name="custom_alert_metric_pollen_alder">حبوب لقاح الجار</string>
+    <string name="custom_alert_metric_pollen_alder_summary">أعلى مستوى لحبوب لقاح الجار اليوم</string>
+    <string name="custom_alert_metric_pollen_mugwort">حبوب لقاح الشيح</string>
+    <string name="custom_alert_metric_pollen_mugwort_summary">أعلى مستوى لحبوب لقاح الشيح اليوم</string>
 </resources>

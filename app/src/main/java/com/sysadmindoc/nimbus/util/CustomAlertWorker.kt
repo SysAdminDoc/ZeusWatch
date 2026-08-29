@@ -59,7 +59,7 @@ class CustomAlertWorker @AssistedInject constructor(
         // whose only enabled rules are AQI thresholds, asymmetric with the
         // weather-failure retry above. Weather rules still evaluate this run;
         // the per-(rule,threshold,date) dedupe store makes the retry safe.
-        val airQualityResult = if (rules.any { it.enabled && it.metric == CustomAlertMetric.AQI_NOW }) {
+        val airQualityResult = if (rules.any { it.enabled && it.metric.requiresAirQuality }) {
             airQualityRepository.getAirQuality(loc.latitude, loc.longitude)
         } else null
         val aqiFetchFailed = airQualityResult?.isFailure == true

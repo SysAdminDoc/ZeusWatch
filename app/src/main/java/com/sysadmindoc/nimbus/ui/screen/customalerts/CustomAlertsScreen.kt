@@ -457,7 +457,8 @@ private fun formatThreshold(rule: CustomAlertRule, settings: NimbusSettings): St
             // convention (the editor accepts comma decimals). Stored values
             // stay canonical doubles — locale-invariant.
             String.format(Locale.getDefault(), "%.1f", display)
-        com.sysadmindoc.nimbus.data.model.CustomAlertUnit.AQI ->
+        com.sysadmindoc.nimbus.data.model.CustomAlertUnit.AQI,
+        com.sysadmindoc.nimbus.data.model.CustomAlertUnit.POLLEN ->
             kotlin.math.round(display).toInt().toString()
     }
     return "$text$label"
@@ -718,6 +719,14 @@ private fun metricAllowsNegativeThreshold(metric: CustomAlertMetric): Boolean = 
     CustomAlertMetric.SNOWFALL_SUM_NEXT_24H,
     CustomAlertMetric.PRESSURE_NOW,
     CustomAlertMetric.AQI_NOW,
+    // A negative grain count is not a thing; allowing one would make every
+    // "above" rule fire permanently.
+    CustomAlertMetric.POLLEN_GRASS_PEAK_TODAY,
+    CustomAlertMetric.POLLEN_BIRCH_PEAK_TODAY,
+    CustomAlertMetric.POLLEN_RAGWEED_PEAK_TODAY,
+    CustomAlertMetric.POLLEN_OLIVE_PEAK_TODAY,
+    CustomAlertMetric.POLLEN_ALDER_PEAK_TODAY,
+    CustomAlertMetric.POLLEN_MUGWORT_PEAK_TODAY,
     -> false
 }
 
@@ -954,7 +963,8 @@ private fun formatThresholdInput(
             // Default locale so the pre-filled value matches what comma-decimal
             // locales type; parseThresholdInput normalizes either separator.
             String.format(Locale.getDefault(), "%.1f", displayValue)
-        com.sysadmindoc.nimbus.data.model.CustomAlertUnit.AQI ->
+        com.sysadmindoc.nimbus.data.model.CustomAlertUnit.AQI,
+        com.sysadmindoc.nimbus.data.model.CustomAlertUnit.POLLEN ->
             kotlin.math.round(displayValue).toInt().toString()
     }
 }

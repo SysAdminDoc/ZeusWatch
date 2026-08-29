@@ -150,6 +150,14 @@ internal fun defaultThresholdCanonical(metric: CustomAlertMetric): Double = when
     CustomAlertMetric.SNOWFALL_SUM_NEXT_24H -> 5.0
     CustomAlertMetric.PRESSURE_NOW -> 1000.0    // hPa — storm threshold
     CustomAlertMetric.AQI_NOW -> 100.0          // US EPA "Unhealthy for Sensitive Groups"
+    // Grains/m3 at the low end of each type's "high" band, so a default rule
+    // fires on a day an allergy sufferer would actually notice.
+    CustomAlertMetric.POLLEN_GRASS_PEAK_TODAY -> 20.0
+    CustomAlertMetric.POLLEN_BIRCH_PEAK_TODAY -> 50.0
+    CustomAlertMetric.POLLEN_RAGWEED_PEAK_TODAY -> 20.0
+    CustomAlertMetric.POLLEN_OLIVE_PEAK_TODAY -> 50.0
+    CustomAlertMetric.POLLEN_ALDER_PEAK_TODAY -> 50.0
+    CustomAlertMetric.POLLEN_MUGWORT_PEAK_TODAY -> 20.0
 }
 
 internal fun defaultOperator(metric: CustomAlertMetric): CustomAlertOperator = when (metric) {
