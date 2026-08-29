@@ -233,7 +233,7 @@ When providers publish localized condition or alert text, matching user-locale s
 | **Notifications** | Alert notifications, persistent weather notification (default on), nowcasting alerts with Android 16 progress timelines, driving alerts, health alerts |
 | **Alert Severity** | Extreme only / Severe+ / Moderate+ / All |
 | **Alert Source** | Auto-detect / NWS / MeteoAlarm / JMA / Environment Canada / All, plus Hong Kong Observatory and BMKG through Data Sources |
-| **Data Toggles** | Snowfall, CAPE, sunshine duration, golden hour, Beaufort colors, outdoor score, yesterday comparison |
+| **Data Display** | Beaufort colors, yesterday comparison, forecast accuracy, confidence bands, and 48/72-hour range |
 | **Health** | Migraine alerts with configurable pressure threshold (3.0/5.0/7.0/10.0 hPa/3h) |
 | **Haptics** | Vibration feedback for weather alerts |
 | **Weather Particles** | Rain, snow, and sun ray animations on/off |

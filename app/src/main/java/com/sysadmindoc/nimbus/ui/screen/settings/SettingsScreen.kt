@@ -204,12 +204,7 @@ fun SettingsScreen(
                     viewModel.setHealthAlertsEnabled(false)
                 }
             },
-            onShowSnowfall = viewModel::setShowSnowfall,
-            onShowCape = viewModel::setShowCape,
-            onShowSunshineDuration = viewModel::setShowSunshineDuration,
-            onShowGoldenHour = viewModel::setShowGoldenHour,
             onShowBeaufortColors = viewModel::setShowBeaufortColors,
-            onShowOutdoorScore = viewModel::setShowOutdoorScore,
             onShowYesterdayComparison = viewModel::setShowYesterdayComparison,
             onShowForecastAccuracy = viewModel::setShowForecastAccuracy,
             onShowConfidenceBands = viewModel::setShowConfidenceBands,

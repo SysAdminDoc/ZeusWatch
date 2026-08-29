@@ -96,7 +96,7 @@ class SettingsTransferTest {
     @Test
     fun `old backups without the new toggle fields import with current defaults`() {
         // Simulates a schema-1 backup exported before the fields existed.
-        val legacyJson = """{"settings":{"tempUnit":"CELSIUS"}}"""
+        val legacyJson = """{"schemaVersion":1,"settings":{"tempUnit":"CELSIUS"}}"""
 
         val backup = json.decodeFromString(SettingsBackup.serializer(), legacyJson)
         val restored = backup.settings.toSettings()
@@ -106,6 +106,40 @@ class SettingsTransferTest {
         assertFalse(restored.showForecastAccuracy)
         assertFalse(restored.showConfidenceBands)
         assertFalse(restored.openMeteoFlatBuffersEnabled)
+    }
+
+    @Test
+    fun `schema one card toggles migrate into card visibility`() {
+        val legacyJson = """
+            {
+              "schemaVersion": 1,
+              "settings": {
+                "disabledCards": ["SNOWFALL", "SEVERE_WEATHER", "GOLDEN_HOUR"],
+                "showSnowfall": true,
+                "showCape": false,
+                "showGoldenHour": true
+              }
+            }
+        """.trimIndent()
+
+        val restored = json.decodeFromString(SettingsBackup.serializer(), legacyJson).settings.toSettings()
+
+        assertFalse(CardType.SNOWFALL.name in restored.disabledCards)
+        assertTrue(CardType.SEVERE_WEATHER.name in restored.disabledCards)
+        assertFalse(CardType.GOLDEN_HOUR.name in restored.disabledCards)
+    }
+
+    @Test
+    fun `schema two backups mirror card visibility into legacy fields`() {
+        val settings = NimbusSettings(
+            disabledCards = DEFAULT_DISABLED_CARDS - CardType.SNOWFALL.name + CardType.OUTDOOR_SCORE.name,
+        )
+
+        val backup = settings.toBackup()
+
+        assertTrue(backup.showSnowfall)
+        assertFalse(backup.showOutdoorScore)
+        assertEquals(settings.disabledCards, backup.toSettings().disabledCards)
     }
 
     @Test
