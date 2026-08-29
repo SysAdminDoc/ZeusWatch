@@ -937,9 +937,6 @@
     <string name="locations_remove_recent_cd">Remove %1$s from recent searches</string>
     <string name="locations_clear_recent_title">Clear recent searches?</string>
     <string name="locations_clear_recent_message">This removes your recent search history from this device. Your saved places are not affected.</string>
-    <string name="locations_remove_title">Remove %1$s?</string>
-    <string name="locations_remove_message">This removes %1$s from saved places. Widgets, alerts, and shortcuts that used it may need a new location.</string>
-    <string name="locations_remove_action">Remove</string>
 
     <!-- Compare -->
     <string name="compare_preparing_title">Preparing comparison</string>
@@ -1646,4 +1643,5 @@
     <string name="licenses_open_link">Open project page</string>
     <string name="radar_attribution_lightning">Lightning: Blitzortung.org contributors • informational only, not for protection of life or property • strikes may be delayed or missing</string>
     <string name="pws_lightning_informational">(informational only)</string>
+    <string name="locations_removed">Location removed</string>
 </resources>

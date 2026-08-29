@@ -54,6 +54,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -61,6 +65,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
@@ -105,6 +110,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.displayNameRes
+import kotlinx.coroutines.launch
 
 @Composable
 fun LocationsScreen(
@@ -118,8 +124,31 @@ fun LocationsScreen(
     val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
     val locationTemps by viewModel.locationTemps.collectAsStateWithLifecycle()
     val locationConditions by viewModel.locationConditions.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val removedMessage = stringResource(R.string.locations_removed)
+    val undoLabel = stringResource(R.string.common_undo)
+
+    // Immediate delete with undo, matching Custom Alerts. Each removal gets its
+    // own coroutine and captured entity, so a second delete while the first
+    // snackbar is up dismisses that one and still restores the right row.
+    val removeWithUndo: (Long) -> Unit = { id ->
+        scope.launch {
+            val removed = viewModel.removeLocationReturningEntity(id) ?: return@launch
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = snackbarHostState.showSnackbar(
+                message = removedMessage,
+                actionLabel = undoLabel,
+                duration = SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.restoreLocation(removed)
+            }
+        }
+    }
 
     LocationsContent(
+        snackbarHostState = snackbarHostState,
         saved = saved,
         search = search,
         recentSearches = recentSearches,
@@ -134,7 +163,7 @@ fun LocationsScreen(
                 onLocationSelected(locationId)
             }
         },
-        onRemoveLocation = { viewModel.removeLocation(it) },
+        onRemoveLocation = removeWithUndo,
         onRemoveRecentSearch = { viewModel.removeRecentSearch(it) },
         onClearRecentSearches = { viewModel.clearRecentSearches() },
         onMoveLocation = { from, to -> viewModel.moveLocation(from, to) },
@@ -152,6 +181,7 @@ fun LocationsScreen(
 @Composable
 internal fun LocationsContent(
     saved: List<SavedLocationEntity>,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     search: SearchState,
     recentSearches: List<GeocodingResult> = emptyList(),
     locationTemps: Map<Long, Double> = emptyMap(),
@@ -171,6 +201,7 @@ internal fun LocationsContent(
     onNavigateToMapPicker: () -> Unit = {},
 ) {
     PredictiveBackScaffold(onBack = onBack) {
+        Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -241,8 +272,81 @@ internal fun LocationsContent(
                 onAlertSourceSelected = onAlertSourceSelected,
             )
         }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(16.dp),
+        )
+        }
     }
 }
+
+private fun LazyListScope.locationDiscoveryItems(
+    currentLocation: SavedLocationEntity?,
+    recentSearches: List<GeocodingResult>,
+    onLocationSelected: (Long) -> Unit,
+    onAddLocation: (GeocodingResult) -> Unit,
+    onRemoveRecentSearch: (GeocodingResult) -> Unit = {},
+    onClearRecentSearches: () -> Unit = {},
+) {
+    if (currentLocation != null) {
+        item(key = "current_location_quick_action") {
+            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                Text(
+                    stringResource(R.string.locations_quick_start),
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = NimbusTextTertiary,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                CurrentLocationQuickAction(
+                    location = currentLocation,
+                    onClick = { onLocationSelected(currentLocation.id) },
+                )
+            }
+        }
+    }
+
+    if (recentSearches.isNotEmpty()) {
+        item(key = "recent_searches_header") {
+            val clearRecentContentDescription = stringResource(R.string.locations_clear_recent_action_cd)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.locations_recent_searches),
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = NimbusTextTertiary,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = stringResource(R.string.locations_clear_recent_action),
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = NimbusBlueAccent,
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(onClick = onClearRecentSearches, role = Role.Button)
+                        .semantics { contentDescription = clearRecentContentDescription }
+                        .padding(horizontal = 8.dp, vertical = 14.dp),
+                )
+            }
+        }
+        items(recentSearches, key = { "recent_${it.id}" }) { result ->
+            SearchResultItem(
+                result = result,
+                onAdd = { onAddLocation(result) },
+                onRemove = { onRemoveRecentSearch(result) },
+            )
+        }
+        item(key = "recent_searches_spacer") { Spacer(modifier = Modifier.height(12.dp)) }
+    }
+}
+
 
 @Composable
 private fun LocationsList(
@@ -266,7 +370,6 @@ private fun LocationsList(
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
     var dragList by remember(saved) { mutableStateOf(saved) }
     var itemHeightsPx by remember(saved) { mutableStateOf<Map<Long, Int>>(emptyMap()) }
-    var pendingRemoval by remember { mutableStateOf<SavedLocationEntity?>(null) }
     val displayList = if (draggedIndex >= 0) dragList else saved
     val fallbackItemHeightPx = with(LocalDensity.current) { 62.dp.toPx() }
     val visibleSearchResults = filterDuplicateSearchResults(search.results, saved)
@@ -335,7 +438,7 @@ private fun LocationsList(
                     isDay = condition?.second ?: true,
                     onClick = { onLocationSelected(loc.id) },
                     onRemove = {
-                        if (!loc.isCurrentLocation) pendingRemoval = loc
+                        if (!loc.isCurrentLocation) onRemoveLocation(loc.id)
                     },
                     onForecastSourceSelected = { provider ->
                         onForecastSourceSelected(loc.id, provider)
@@ -419,34 +522,18 @@ private fun LocationsList(
     }
 
     LocationsConfirmationDialogs(
-        pendingRemoval = pendingRemoval,
         showClearRecentDialog = showClearRecentDialog,
-        onPendingRemovalChange = { pendingRemoval = it },
         onShowClearRecentChange = { showClearRecentDialog = it },
-        onRemoveLocation = onRemoveLocation,
         onClearRecentSearches = onClearRecentSearches,
     )
 }
 
 @Composable
 private fun LocationsConfirmationDialogs(
-    pendingRemoval: SavedLocationEntity?,
     showClearRecentDialog: Boolean,
-    onPendingRemovalChange: (SavedLocationEntity?) -> Unit,
     onShowClearRecentChange: (Boolean) -> Unit,
-    onRemoveLocation: (Long) -> Unit,
     onClearRecentSearches: () -> Unit,
 ) {
-    pendingRemoval?.let { location ->
-        ConfirmRemoveLocationDialog(
-            location = location,
-            onDismiss = { onPendingRemovalChange(null) },
-            onConfirm = {
-                onRemoveLocation(location.id)
-                onPendingRemovalChange(null)
-            },
-        )
-    }
     if (showClearRecentDialog) {
         ConfirmClearRecentSearchesDialog(
             onDismiss = { onShowClearRecentChange(false) },
@@ -496,117 +583,6 @@ private fun ConfirmClearRecentSearchesDialog(
             }
         },
     )
-}
-
-@Composable
-private fun ConfirmRemoveLocationDialog(
-    location: SavedLocationEntity,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    val locationName = if (location.isCurrentLocation) {
-        stringResource(R.string.common_my_location)
-    } else {
-        location.name
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(12.dp),
-        containerColor = NimbusCardBg,
-        titleContentColor = NimbusTextPrimary,
-        textContentColor = NimbusTextSecondary,
-        title = {
-            Text(
-                text = stringResource(R.string.locations_remove_title, locationName),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            )
-        },
-        text = {
-            Text(
-                text = stringResource(R.string.locations_remove_message, locationName),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(
-                    text = stringResource(R.string.locations_remove_action),
-                    color = NimbusError,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
-    )
-}
-
-private fun LazyListScope.locationDiscoveryItems(
-    currentLocation: SavedLocationEntity?,
-    recentSearches: List<GeocodingResult>,
-    onLocationSelected: (Long) -> Unit,
-    onAddLocation: (GeocodingResult) -> Unit,
-    onRemoveRecentSearch: (GeocodingResult) -> Unit = {},
-    onClearRecentSearches: () -> Unit = {},
-) {
-    if (currentLocation != null) {
-        item(key = "current_location_quick_action") {
-            Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                Text(
-                    stringResource(R.string.locations_quick_start),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = NimbusTextTertiary,
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                CurrentLocationQuickAction(
-                    location = currentLocation,
-                    onClick = { onLocationSelected(currentLocation.id) },
-                )
-            }
-        }
-    }
-
-    if (recentSearches.isNotEmpty()) {
-        item(key = "recent_searches_header") {
-            val clearRecentContentDescription = stringResource(R.string.locations_clear_recent_action_cd)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(R.string.locations_recent_searches),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = NimbusTextTertiary,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = stringResource(R.string.locations_clear_recent_action),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = NimbusBlueAccent,
-                    modifier = Modifier
-                        .heightIn(min = 48.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable(onClick = onClearRecentSearches, role = Role.Button)
-                        .semantics { contentDescription = clearRecentContentDescription }
-                        .padding(horizontal = 8.dp, vertical = 14.dp),
-                )
-            }
-        }
-        items(recentSearches, key = { "recent_${it.id}" }) { result ->
-            SearchResultItem(
-                result = result,
-                onAdd = { onAddLocation(result) },
-                onRemove = { onRemoveRecentSearch(result) },
-            )
-        }
-        item(key = "recent_searches_spacer") { Spacer(modifier = Modifier.height(12.dp)) }
-    }
 }
 
 @Composable

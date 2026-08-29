@@ -909,9 +909,6 @@
     <string name="locations_remove_recent_cd">إزالة %1$s من عمليات البحث الأخيرة</string>
     <string name="locations_clear_recent_title">مسح عمليات البحث الأخيرة؟</string>
     <string name="locations_clear_recent_message">يؤدي هذا إلى إزالة سجل عمليات البحث الأخيرة من هذا الجهاز. لن تتأثر أماكنك المحفوظة.</string>
-    <string name="locations_remove_title">Remove %1$s?</string>
-    <string name="locations_remove_message">This removes %1$s from saved places. Widgets, alerts, and shortcuts that used it may need a new location.</string>
-    <string name="locations_remove_action">Remove</string>
     <string name="compare_preparing_title">Preparing comparison</string>
     <string name="compare_preparing_message">Loading your saved places and the latest forecast context.</string>
     <string name="compare_unavailable_title">Comparison unavailable</string>
@@ -1604,4 +1601,5 @@
     <string name="licenses_open_link">فتح صفحة المشروع</string>
     <string name="radar_attribution_lightning">البرق: مساهمو Blitzortung.org • للاطلاع فقط، وليس لحماية الأرواح أو الممتلكات • قد تتأخر الصواعق أو لا تظهر</string>
     <string name="pws_lightning_informational">(للاطلاع فقط)</string>
+    <string name="locations_removed">تمت إزالة الموقع</string>
 </resources>

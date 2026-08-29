@@ -173,10 +173,27 @@ class LocationsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Deletes [id] and returns the row that was removed, so the caller can put
+     * it back byte-for-byte.
+     *
+     * The whole entity is captured rather than just the id: restoring has to
+     * bring back the original `sortOrder` and the per-location forecast and
+     * alert source overrides, none of which the caller could reconstruct.
+     */
+    suspend fun removeLocationReturningEntity(id: Long): SavedLocationEntity? {
+        val removed = locationRepository.getAll().firstOrNull { it.id == id }
+        locationRepository.removeLocation(id)
+        return removed
+    }
+
     fun removeLocation(id: Long) {
-        viewModelScope.launch {
-            locationRepository.removeLocation(id)
-        }
+        viewModelScope.launch { locationRepository.removeLocation(id) }
+    }
+
+    /** Puts a removed location back at its original position. */
+    fun restoreLocation(location: SavedLocationEntity) {
+        viewModelScope.launch { locationRepository.restoreAll(listOf(location)) }
     }
 
     fun moveLocation(fromIndex: Int, toIndex: Int) {

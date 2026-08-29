@@ -3,6 +3,7 @@ package com.sysadmindoc.nimbus.ui.screen.locations
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -198,7 +199,11 @@ class LocationsScreenRobolectricTest {
     }
 
     @Test
-    fun locationsScreen_removeLocation_requiresConfirmation() {
+    fun locationsScreen_removeLocation_deletesImmediately() {
+        // This test previously asserted a confirmation dialog. That was the
+        // correct assertion for the old flow, but the flow itself was the
+        // inconsistency: Custom Alerts deletes immediately with undo, and the
+        // house rule is action plus undo rather than a modal question.
         var removedId: Long? = null
 
         composeTestRule.setContentWithAccessibilityChecks {
@@ -214,11 +219,30 @@ class LocationsScreenRobolectricTest {
 
         composeTestRule.onNodeWithContentDescription("Remove New York").performClick()
 
-        composeTestRule.onNodeWithText("Remove New York?").assertIsDisplayed()
-        assertEquals(null, removedId)
-
-        composeTestRule.onNodeWithText("Remove").performClick()
-
         assertEquals(2L, removedId)
+        composeTestRule.onNodeWithText("Remove New York?").assertDoesNotExist()
+    }
+
+    @Test
+    fun locationsScreen_currentLocationCannotBeRemoved() {
+        var removedId: Long? = null
+
+        composeTestRule.setContentWithAccessibilityChecks {
+            NimbusTheme {
+                LocationsContent(
+                    saved = savedLocations,
+                    search = SearchState(),
+                    onBack = {},
+                    onRemoveLocation = { removedId = it },
+                )
+            }
+        }
+
+        // Deleting straight away makes this guard load-bearing: there is no
+        // dialog left to change your mind in.
+        composeTestRule.onAllNodesWithContentDescription("Remove My Location")
+            .fetchSemanticsNodes()
+            .let { assertEquals(0, it.size) }
+        assertEquals(null, removedId)
     }
 }
