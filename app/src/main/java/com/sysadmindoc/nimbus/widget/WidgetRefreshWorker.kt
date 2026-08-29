@@ -92,9 +92,8 @@ class WidgetRefreshWorker @AssistedInject constructor(
             // No network work — but don't let the watch and the persistent
             // notification silently starve: push the cached data we have.
             // This path still pushes cached data to the watch and to
-            // Gadgetbridge, so those two surfaces really did deliver and are
-            // recorded inside pushCachedDataOnly. Only the widget refresh was
-            // deferred.
+            // Gadgetbridge; those two record their own outcomes inside.
+            // Only the widget refresh was deferred.
             pushCachedDataOnly(settings, lastLoc)
             // Deferred, not delivered: the widgets are showing whatever they
             // had, and saying "last succeeded now" would hide exactly the
@@ -253,10 +252,18 @@ class WidgetRefreshWorker @AssistedInject constructor(
         } ?: return
 
         try {
-            wearSyncManager.syncWeather(cached)
+            // Recorded here too: this path really does deliver to the watch,
+            // so leaving it out made the watch row look stale on exactly the
+            // runs where it had just been updated.
+            recordWearOutcome(wearSyncManager.syncWeather(cached))
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (e: Exception) {
+            deliveryHealth.recordFailure(
+                DeliverySurface.WEAR_SYNC,
+                e.deliveryFailureReason(),
+                System.currentTimeMillis(),
+            )
             Log.w(TAG, "Wear sync failed: ${e.failureClass()}")
         }
         if (settings.persistentWeatherNotif) {
@@ -268,6 +275,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
         }
         if (settings.gadgetbridgeBroadcastEnabled) {
             gadgetbridgeWeatherBroadcaster.broadcast(primary = cached)
+            deliveryHealth.recordSuccess(DeliverySurface.GADGETBRIDGE, System.currentTimeMillis())
         }
     }
 
