@@ -28,10 +28,25 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import com.sysadmindoc.nimbus.ui.theme.WeatherThemeState
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.time.LocalDate
 import java.time.LocalDateTime
 
-class AccessibilityAuditTest {
+/**
+ * Ported from the instrumented suite, which fails tree-wide with "No compose
+ * hierarchies found" on the local device harness. Robolectric runs the same
+ * assertions on the JVM so the accessibility gate has something that runs.
+ *
+ * Explicit qualifiers matter: without them Robolectric gives the window no
+ * size and every assertIsDisplayed fails on a node it can otherwise find.
+ */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [34], application = android.app.Application::class, qualifiers = "w411dp-h891dp")
+class AccessibilityAuditRobolectricTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()

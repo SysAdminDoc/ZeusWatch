@@ -15,8 +15,23 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
-class ReportSubmitSheetTest {
+/**
+ * Ported from the instrumented suite, which fails tree-wide with "No compose
+ * hierarchies found" on the local device harness. Robolectric runs the same
+ * assertions on the JVM so the accessibility gate has something that actually
+ * executes.
+ */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+// Without explicit qualifiers Robolectric gives the window no size, so
+// every assertIsDisplayed fails on a node it can otherwise find.
+@Config(sdk = [34], application = android.app.Application::class, qualifiers = "w411dp-h891dp")
+class ReportSubmitSheetRobolectricTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
