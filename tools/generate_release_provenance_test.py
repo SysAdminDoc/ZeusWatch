@@ -22,11 +22,71 @@ SPEC.loader.exec_module(provenance)
 CERT_DIGEST = "FB:03:10:AA:52:0F:6C:C6:EB:DA:04:61:71:9E:A9:22:40:EA:2B:4A:A1:D0:15:79:A9:D1:8A:F5:A9:5F:A7:CD"
 
 
+class ReleaseAssetNamingTests(unittest.TestCase):
+    """The naming contract exists because published asset names drifted across
+    three different shapes between v1.24.1 and v1.29.0, which silently breaks
+    the filename filters Obtainium and IzzyOnDroid users configure once."""
+
+    def test_contracted_names_are_accepted(self) -> None:
+        names = [
+            "ZeusWatch-v1.29.1-standard-arm64-v8a.apk",
+            "ZeusWatch-v1.29.1-standard-armeabi-v7a.apk",
+            "ZeusWatch-v1.29.1-standard-universal.apk",
+            "ZeusWatch-v1.29.1-freenet-arm64-v8a.apk",
+            "ZeusWatch-v1.29.1-wear.apk",
+        ]
+        self.assertEqual(
+            [],
+            provenance.validate_asset_names([Path(name) for name in names], "1.29.1"),
+        )
+
+    def test_every_historical_naming_variant_is_rejected(self) -> None:
+        for name in (
+            "app-standard-arm64-v8a-release.apk",          # raw AGP output
+            "ZeusWatch-freenet-arm64-v8a-v1.24.1.apk",     # v1.24.1 shape
+            "ZeusWatch-Wear-v1.29.0.apk",                  # v1.29.0 wear shape
+            "ZeusWatch-v1.29.1-standard-x86_64.apk",       # abi the app does not ship
+        ):
+            with self.subTest(name=name):
+                self.assertTrue(provenance.validate_asset_names([Path(name)], "1.29.1"))
+
+    def test_a_stale_version_in_the_name_is_rejected(self) -> None:
+        # A leftover APK from the previous release is the easiest thing to
+        # upload by accident, and its hash would not match SHA256SUMS either.
+        problems = provenance.validate_asset_names(
+            [Path("ZeusWatch-v1.29.0-standard-universal.apk")], "1.29.1"
+        )
+
+        self.assertEqual(1, len(problems))
+        self.assertIn("carries version 1.29.0", problems[0])
+
+    def test_build_provenance_refuses_a_misnamed_apk(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            apk = root / "app-standard-arm64-v8a-release.apk"
+            apk.write_bytes(b"fake-apk")
+            sha256sums = root / "SHA256SUMS.txt"
+            sha256sums.write_text(f"{provenance.hash_file(apk)}  {apk.name}\n", encoding="utf-8")
+
+            with self.assertRaises(ValueError) as caught:
+                provenance.build_provenance(
+                    apks=[apk],
+                    sha256sums=sha256sums,
+                    version="1.29.1",
+                    apksigner=root / "apksigner.bat",
+                    root=root,
+                    runner=fake_runner,
+                    env={"ANDROID_HOME": str(root / "sdk")},
+                )
+
+            self.assertIn("naming contract", str(caught.exception))
+
+
 class ReleaseProvenanceTests(unittest.TestCase):
     def test_build_provenance_records_artifact_hashes_and_cert_digest(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            apk = root / "ZeusWatch-standard-v1.25.0.apk"
+            apk = root / "ZeusWatch-v1.25.0-standard-arm64-v8a.apk"
             apk.write_bytes(b"fake-apk")
             digest = provenance.hash_file(apk)
             sha256sums = root / "SHA256SUMS.txt"
@@ -55,7 +115,7 @@ class ReleaseProvenanceTests(unittest.TestCase):
     def test_build_provenance_rejects_checksum_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            apk = root / "bad.apk"
+            apk = root / "ZeusWatch-v1.25.0-freenet-universal.apk"
             apk.write_bytes(b"actual")
             sha256sums = root / "SHA256SUMS.txt"
             sha256sums.write_text(f"{'0' * 64}  {apk.name}\n", encoding="utf-8")

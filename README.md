@@ -58,6 +58,21 @@ Most current Android phones should use the standard `arm64-v8a` build. Every rel
 
 Get the signed APKs and checksum file from [GitHub Releases](https://github.com/SysAdminDoc/ZeusWatch/releases/latest).
 
+Asset names follow a fixed pattern, so a filter you set once keeps working:
+
+```text
+ZeusWatch-v{version}-{standard|freenet}-{arm64-v8a|armeabi-v7a|universal}.apk
+ZeusWatch-v{version}-wear.apk
+```
+
+Every release carries all seven APKs plus `SHA256SUMS.txt`, the provenance
+JSON, and `oss_notices.json`. For Obtainium, add the repository and set the
+APK filter regex to the build you want, for example:
+
+```text
+^ZeusWatch-v[0-9.]+-standard-arm64-v8a\.apk$
+```
+
 ## Build from source
 
 ```bash
@@ -68,7 +83,7 @@ cd ZeusWatch
 
 Install the APK from `app/build/outputs/apk/standard/debug/` or open in Android Studio and run directly.
 
-**Requirements:** Android Studio with AGP 9.2 support, JDK 17+, Android SDK 37.0
+**Requirements:** Android Studio with AGP 9.3 support, JDK 17+, Android SDK 37.0
 
 ### Verify Downloads
 
@@ -83,9 +98,9 @@ For every release, verify the checksum file and APK signatures locally:
 ```bash
 cat ZeusWatch-vX.Y.Z-provenance.json
 sha256sum -c SHA256SUMS.txt
-apksigner verify --verbose --print-certs ZeusWatch-standard-arm64-v8a-vX.Y.Z.apk
-apksigner verify --verbose --print-certs ZeusWatch-freenet-arm64-v8a-vX.Y.Z.apk
-apksigner verify --verbose --print-certs ZeusWatch-wear-vX.Y.Z.apk
+apksigner verify --verbose --print-certs ZeusWatch-vX.Y.Z-standard-arm64-v8a.apk
+apksigner verify --verbose --print-certs ZeusWatch-vX.Y.Z-freenet-arm64-v8a.apk
+apksigner verify --verbose --print-certs ZeusWatch-vX.Y.Z-wear.apk
 ```
 
 The provenance JSON records the source commit, clean-tree state, toolchain versions, APK hashes, signing certificate SHA-256, and local verification commands used for the release.
