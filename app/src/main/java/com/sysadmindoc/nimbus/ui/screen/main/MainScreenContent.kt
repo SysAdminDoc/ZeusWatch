@@ -1597,7 +1597,11 @@ private fun RenderDetailCard(
         CardType.ACTIVITY_INDEX -> {
             val indices = context.state.activityIndices
             if (indices.isNotEmpty()) {
-                ActivityIndexCard(indices = indices, modifier = modifier)
+                ActivityIndexCard(
+                    indices = indices,
+                    windows = context.state.activityWindows,
+                    modifier = modifier,
+                )
             }
         }
         CardType.SOLAR -> SolarIrradianceCard(

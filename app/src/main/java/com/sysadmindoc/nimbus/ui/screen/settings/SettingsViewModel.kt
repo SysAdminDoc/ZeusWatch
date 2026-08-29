@@ -51,6 +51,10 @@ class SettingsViewModel @Inject constructor(
     val settings = prefs.settings
     val providerHealth = providerHealthRepository.snapshot
     val deliveryHealth = deliveryHealthRepository.snapshot
+    val activityThresholds = prefs.activityThresholds
+
+    fun setActivityThresholds(thresholds: com.sysadmindoc.nimbus.util.ActivityThresholds) =
+        viewModelScope.launch { prefs.setActivityThresholds(thresholds) }
 
     private val _deliveryNextRuns = MutableStateFlow<Map<DeliverySurface, Long>>(emptyMap())
 

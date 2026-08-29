@@ -12,6 +12,8 @@ import com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.util.ActivityThresholds
+import com.sysadmindoc.nimbus.util.ActivityWindow
 import com.sysadmindoc.nimbus.util.ClothingSuggestion
 import com.sysadmindoc.nimbus.util.DrivingAlert
 import com.sysadmindoc.nimbus.util.HealthAlert
@@ -118,6 +120,7 @@ class MainViewModel @Inject constructor(
     init {
         Log.d(TAG, "init: overrideLocationId=$overrideLocationId")
         observeSettings()
+        observeActivityThresholds()
         observeSavedLocations()
         observeLastLocation()
         observeLastSeenVersionCode()
@@ -134,6 +137,14 @@ class MainViewModel @Inject constructor(
     }
 
     // Settings
+
+    private fun observeActivityThresholds() {
+        viewModelScope.launch {
+            prefs.activityThresholds.collect { thresholds ->
+                _uiState.update { it.copy(activityThresholds = thresholds) }
+            }
+        }
+    }
 
     private fun observeSettings() {
         viewModelScope.launch {
@@ -892,6 +903,12 @@ data class MainUiState(
     val airQualityFetchFailed: Boolean = false,
     val astronomy: AstronomyData? = null,
     val settings: NimbusSettings = NimbusSettings(),
+    /**
+     * The comfort thresholds the activity windows are judged against. In UI
+     * state rather than read by the coordinator, which has no preferences of
+     * its own, and so that changing a threshold recomputes the windows.
+     */
+    val activityThresholds: ActivityThresholds = ActivityThresholds(),
     val savedLocations: ImmutableList<SavedLocationEntity> = persistentListOf(),
     val currentPage: Int = 0,
     val lastLocationName: String? = null,
@@ -915,6 +932,7 @@ data class MainUiState(
     val timeTravelStatus: TimeTravelStatus = TimeTravelStatus.IDLE,
     val auroraKpData: AuroraKpData? = null,
     val activityIndices: ImmutableList<ActivityIndex> = persistentListOf(),
+    val activityWindows: ImmutableList<ActivityWindow> = persistentListOf(),
     val marineData: MarineData? = null,
     val floodData: FloodData? = null,
     val forecastEvolution: ForecastEvolutionData? = null,
@@ -961,6 +979,7 @@ private fun MainUiState.clearLocationScopedData(): MainUiState = copy(
     timeTravelStatus = TimeTravelStatus.IDLE,
     auroraKpData = null,
     activityIndices = persistentListOf(),
+    activityWindows = persistentListOf(),
     marineData = null,
     floodData = null,
     forecastEvolution = null,

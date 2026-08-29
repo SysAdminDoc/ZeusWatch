@@ -1622,4 +1622,24 @@
     <string name="delivery_failure_no_receiver">אין מאזין</string>
     <string name="delivery_failure_battery_restricted">מוגבל על ידי חוסך הסוללה</string>
     <string name="delivery_failure_unknown">לא ידוע</string>
+    <string name="activity_window_range">הכי טוב מהשעה %1$s עד %2$s</string>
+    <string name="activity_window_none">אין זמן מתאים בעשרים וארבע השעות הקרובות</string>
+    <string name="activity_window_limited_by">מוגבל על ידי %1$s</string>
+    <string name="activity_window_low_confidence">מבוסס על נתונים חלקיים</string>
+    <string name="activity_factor_temperature">הטמפרטורה</string>
+    <string name="activity_factor_rain">הגשם</string>
+    <string name="activity_factor_wind">הרוח</string>
+    <string name="activity_factor_uv">קרינת UV</string>
+    <string name="activity_factor_humidity">הלחות</string>
+    <string name="activity_factor_cloud">העננות</string>
+    <string name="activity_factor_air_quality">איכות האוויר</string>
+    <string name="settings_activity_thresholds_title">נוחות לפעילויות</string>
+    <string name="settings_activity_thresholds_desc">מה נחשב זמן טוב לצאת. משמש לשורת הזמן המומלץ בכרטיס הפעילויות.</string>
+    <string name="settings_activity_thresholds_reset">איפוס לברירת המחדל</string>
+    <string name="settings_activity_min_temp">נוח מ-</string>
+    <string name="settings_activity_max_temp">נוח עד</string>
+    <string name="settings_activity_max_precip">סיכוי לגשם עד %1$d%%</string>
+    <string name="settings_activity_max_wind">רוח עד</string>
+    <string name="settings_activity_max_uv">UV עד %1$s</string>
+    <string name="settings_activity_max_aqi">מדד איכות אוויר עד %1$d</string>
 </resources>

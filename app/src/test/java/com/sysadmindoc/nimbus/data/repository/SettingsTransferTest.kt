@@ -48,6 +48,42 @@ class SettingsTransferTest {
     }
 
     @Test
+    fun `settings backup round-trips the activity thresholds`() {
+        val thresholds = com.sysadmindoc.nimbus.util.ActivityThresholds(
+            minComfortableTempC = 4.0,
+            maxComfortableTempC = 33.0,
+            maxPrecipitationChance = 45,
+            maxWindKmh = 32.0,
+            maxUvIndex = 8.0,
+            maxAqi = 120,
+        )
+        val backup = SettingsBackup(
+            settings = NimbusSettings().toBackup(),
+            activityThresholds = thresholds,
+        )
+
+        val restored = json.decodeFromString(
+            SettingsBackup.serializer(),
+            json.encodeToString(SettingsBackup.serializer(), backup),
+        )
+
+        assertEquals(thresholds, restored.activityThresholds)
+    }
+
+    @Test
+    fun `a backup written before activity windows still imports`() {
+        // The whole file must not fail over one object that did not exist yet.
+        val older = json.encodeToString(
+            SettingsBackup.serializer(),
+            SettingsBackup(settings = NimbusSettings().toBackup()),
+        ).replace(Regex(""","activityThresholds":\{[^}]*\}"""), "")
+
+        val restored = json.decodeFromString(SettingsBackup.serializer(), older)
+
+        assertEquals(com.sysadmindoc.nimbus.util.ActivityThresholds(), restored.activityThresholds)
+    }
+
+    @Test
     fun `settings backup round-trips status bar temperature toggle`() {
         val backup = NimbusSettings(statusBarTemperature = true).toBackup()
         val encoded = json.encodeToString(SettingsBackup(settings = backup))
@@ -447,6 +483,12 @@ class SettingsTransferTest {
         )
         every { prefs.settings } returns flowOf(NimbusSettings(tempUnit = TempUnit.CELSIUS))
         every { prefs.customAlertRules } returns flowOf(emptyList())
+        // The snapshot now includes the activity thresholds, so the rollback
+        // restores those too; a relaxed mock returns an empty flow for this,
+        // and first() on an empty flow throws before restoreAll is reached.
+        every { prefs.activityThresholds } returns flowOf(
+            com.sysadmindoc.nimbus.util.ActivityThresholds(),
+        )
         every { prefs.lastLocation } returns flowOf(null)
         coEvery { locationRepository.getAll() } returns listOf(originalLocation)
         coEvery { locationRepository.replaceAll(any()) } throws IllegalStateException("replace failed")

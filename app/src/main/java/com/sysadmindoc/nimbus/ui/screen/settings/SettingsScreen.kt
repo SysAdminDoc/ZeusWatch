@@ -95,6 +95,7 @@ import com.sysadmindoc.nimbus.ui.component.InlineNoticeCard
 import com.sysadmindoc.nimbus.ui.component.PredictiveBackScaffold
 import com.sysadmindoc.nimbus.ui.component.ScreenHeader
 import com.sysadmindoc.nimbus.ui.theme.*
+import com.sysadmindoc.nimbus.util.ActivityThresholds
 import com.sysadmindoc.nimbus.util.displayNameRes
 import com.sysadmindoc.nimbus.util.labelRes
 import com.sysadmindoc.nimbus.util.summaryRes
@@ -116,6 +117,8 @@ fun SettingsScreen(
     val providerHealth by viewModel.providerHealth.collectAsStateWithLifecycle(initialValue = ProviderHealthSnapshot())
     val deliveryHealth by viewModel.deliveryHealth.collectAsStateWithLifecycle(initialValue = DeliveryHealthSnapshot())
     val deliveryNextRuns by viewModel.deliveryNextRuns.collectAsStateWithLifecycle()
+    val activityThresholds by viewModel.activityThresholds
+        .collectAsStateWithLifecycle(initialValue = ActivityThresholds())
     // WorkManager's schedule is not a flow this screen observes, so it is
     // read when the screen appears rather than left blank until a run.
     LaunchedEffect(Unit) { viewModel.refreshDeliverySchedule() }
@@ -153,6 +156,7 @@ fun SettingsScreen(
         providerHealth = providerHealth,
         deliveryHealth = deliveryHealth,
         deliveryNextRuns = deliveryNextRuns,
+        activityThresholds = activityThresholds,
         transferStatus = transferStatus,
         transferInProgress = transferInProgress,
         pendingImportPreview = pendingImportPreview,
@@ -251,6 +255,7 @@ fun SettingsScreen(
                 exportDeliveryDiagnosticsLauncher.launch("zeuswatch-delivery-health.txt")
             },
             onRunDeliveryNow = viewModel::runDeliveryNow,
+            onActivityThresholds = viewModel::setActivityThresholds,
             onConfirmSettingsImport = viewModel::confirmPendingImport,
             onCancelSettingsImport = viewModel::cancelPendingImport,
             onClearTransferStatus = viewModel::clearTransferStatus,

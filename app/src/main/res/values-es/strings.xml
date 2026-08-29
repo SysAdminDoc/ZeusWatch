@@ -1653,4 +1653,24 @@
     <string name="delivery_failure_no_receiver">nadie escuchando</string>
     <string name="delivery_failure_battery_restricted">restringido por el ahorro de bateria</string>
     <string name="delivery_failure_unknown">desconocido</string>
+    <string name="activity_window_range">Mejor de %1$s a %2$s</string>
+    <string name="activity_window_none">No hay un buen momento en las proximas 24 horas</string>
+    <string name="activity_window_limited_by">Limitado por %1$s</string>
+    <string name="activity_window_low_confidence">Basado en datos parciales</string>
+    <string name="activity_factor_temperature">la temperatura</string>
+    <string name="activity_factor_rain">la lluvia</string>
+    <string name="activity_factor_wind">el viento</string>
+    <string name="activity_factor_uv">el UV</string>
+    <string name="activity_factor_humidity">la humedad</string>
+    <string name="activity_factor_cloud">la nubosidad</string>
+    <string name="activity_factor_air_quality">la calidad del aire</string>
+    <string name="settings_activity_thresholds_title">Comodidad para actividades</string>
+    <string name="settings_activity_thresholds_desc">Que cuenta como un buen momento para salir. Se usa en la linea del mejor momento de la tarjeta de actividades.</string>
+    <string name="settings_activity_thresholds_reset">Restablecer valores</string>
+    <string name="settings_activity_min_temp">Comodo desde</string>
+    <string name="settings_activity_max_temp">Comodo hasta</string>
+    <string name="settings_activity_max_precip">Probabilidad de lluvia hasta %1$d%%</string>
+    <string name="settings_activity_max_wind">Viento hasta</string>
+    <string name="settings_activity_max_uv">UV hasta %1$s</string>
+    <string name="settings_activity_max_aqi">Indice de calidad del aire hasta %1$d</string>
 </resources>

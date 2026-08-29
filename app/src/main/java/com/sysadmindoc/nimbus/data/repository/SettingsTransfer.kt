@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.data.repository
 
 import com.sysadmindoc.nimbus.data.model.CustomAlertRule
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
+import com.sysadmindoc.nimbus.util.ActivityThresholds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
@@ -35,6 +36,7 @@ class SettingsTransferManager @Inject constructor(
     suspend fun exportJson(): String {
         val settings = prefs.settings.first()
         val customAlerts = prefs.customAlertRules.first()
+        val activityThresholds = prefs.activityThresholds.first()
         val savedLocations = locationRepository.getAll()
         val lastLocation = prefs.lastLocation.first()
         val backup = SettingsBackup(
@@ -42,6 +44,7 @@ class SettingsTransferManager @Inject constructor(
             customAlerts = customAlerts,
             savedLocations = savedLocations.map { it.toBackup() },
             lastLocation = lastLocation?.toBackup(),
+            activityThresholds = activityThresholds,
         )
         return settingsTransferJson.encodeToString(SettingsBackup.serializer(), backup)
     }
@@ -67,6 +70,7 @@ class SettingsTransferManager @Inject constructor(
     private suspend fun currentSnapshot(): SettingsImportSnapshot = SettingsImportSnapshot(
         settings = prefs.settings.first(),
         customAlerts = prefs.customAlertRules.first(),
+        activityThresholds = prefs.activityThresholds.first(),
         savedLocations = locationRepository.getAll(),
         lastLocation = prefs.lastLocation.first(),
     )
@@ -74,6 +78,7 @@ class SettingsTransferManager @Inject constructor(
     private suspend fun restoreSnapshot(snapshot: SettingsImportSnapshot) {
         prefs.applyImportedSettings(snapshot.settings)
         prefs.setCustomAlertRules(snapshot.customAlerts)
+        prefs.setActivityThresholds(snapshot.activityThresholds)
         prefs.applyImportedLastLocation(snapshot.lastLocation)
         locationRepository.restoreAll(snapshot.savedLocations)
     }
@@ -81,6 +86,9 @@ class SettingsTransferManager @Inject constructor(
     private suspend fun applyImportPlan(plan: SettingsImportPlan): SettingsTransferResult {
         prefs.applyImportedSettings(plan.settings)
         prefs.setCustomAlertRules(plan.backup.customAlerts)
+        // Sanitized on the way in by setActivityThresholds, so a hand-edited
+        // file cannot import a band nothing ever satisfies.
+        prefs.setActivityThresholds(plan.backup.activityThresholds)
         prefs.applyImportedLastLocation(plan.backup.lastLocation?.toSavedLocationOrNull())
         locationRepository.replaceAll(plan.importedLocations)
         return SettingsTransferResult(
@@ -118,6 +126,7 @@ enum class SettingsImportWarning {
 private data class SettingsImportSnapshot(
     val settings: NimbusSettings,
     val customAlerts: List<CustomAlertRule>,
+    val activityThresholds: ActivityThresholds,
     val savedLocations: List<SavedLocationEntity>,
     val lastLocation: SavedLocation?,
 )
@@ -137,6 +146,10 @@ data class SettingsBackup(
     val customAlerts: List<CustomAlertRule> = emptyList(),
     val savedLocations: List<SettingsBackupLocation> = emptyList(),
     val lastLocation: SettingsBackupLastLocation? = null,
+    // Defaulted so a backup written before activity windows existed
+    // still imports, rather than failing the whole file over one
+    // missing object.
+    val activityThresholds: ActivityThresholds = ActivityThresholds(),
 )
 
 @Serializable

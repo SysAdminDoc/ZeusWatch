@@ -81,6 +81,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
 )
 
 private val customAlertRulesKey = stringPreferencesKey("custom_alert_rules")
+private val activityThresholdsKey = stringPreferencesKey("activity_thresholds")
 private val owmApiKeyPreferenceKey = stringPreferencesKey("owm_api_key")
 private val pirateWeatherApiKeyPreferenceKey = stringPreferencesKey("pirate_weather_api_key")
 private val tempestAccessTokenPreferenceKey = stringPreferencesKey("tempest_access_token")
@@ -453,6 +454,42 @@ class UserPreferences @Inject constructor(
         return runCatching {
             preferencesJson.decodeFromString(customAlertListSerializer, raw)
         }.getOrDefault(emptyList())
+    }
+
+    /**
+     * What the person using the app finds comfortable, for the activity
+     * windows. Sanitized on the way out as well as in: a hand-edited or
+     * older settings file can hold a band nothing ever satisfies, and the
+     * card would then report no good window all week with no explanation.
+     */
+    val activityThresholds: Flow<com.sysadmindoc.nimbus.util.ActivityThresholds> =
+        store.data
+            .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+            .map { prefs -> decodeActivityThresholds(prefs[activityThresholdsKey]) }
+
+    suspend fun setActivityThresholds(thresholds: com.sysadmindoc.nimbus.util.ActivityThresholds) {
+        val sanitized = com.sysadmindoc.nimbus.util.ActivityThresholds.sanitize(thresholds)
+        val serialized = preferencesJson.encodeToString(
+            com.sysadmindoc.nimbus.util.ActivityThresholds.serializer(),
+            sanitized,
+        )
+        store.edit { it[activityThresholdsKey] = serialized }
+    }
+
+    private fun decodeActivityThresholds(
+        raw: String?,
+    ): com.sysadmindoc.nimbus.util.ActivityThresholds {
+        val decoded = raw
+            ?.let {
+                runCatching {
+                    preferencesJson.decodeFromString(
+                        com.sysadmindoc.nimbus.util.ActivityThresholds.serializer(),
+                        it,
+                    )
+                }.getOrNull()
+            }
+            ?: com.sysadmindoc.nimbus.util.ActivityThresholds()
+        return com.sysadmindoc.nimbus.util.ActivityThresholds.sanitize(decoded)
     }
 
     val customAlertRules: Flow<List<com.sysadmindoc.nimbus.data.model.CustomAlertRule>> =
