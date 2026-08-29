@@ -94,6 +94,29 @@ class SettingsTransferTest {
     }
 
     @Test
+    fun `settings backup round-trips the confidence band ensemble model`() {
+        val backup = NimbusSettings(
+            showConfidenceBands = true,
+            ensembleModel = EnsembleModel.WEATHERNEXT_2,
+        ).toBackup()
+        val encoded = json.encodeToString(SettingsBackup(settings = backup))
+
+        assertTrue(encoded.contains("\"ensembleModel\":\"WEATHERNEXT_2\""))
+        assertEquals(EnsembleModel.WEATHERNEXT_2, backup.toSettings().ensembleModel)
+    }
+
+    @Test
+    fun `an unknown ensemble model in a backup falls back to ICON`() {
+        // A backup written by a newer build can name a model this one has never
+        // heard of; that must not take the whole import down.
+        val futureJson = """{"schemaVersion":2,"settings":{"ensembleModel":"GRAPHCAST_9"}}"""
+
+        val backup = json.decodeFromString(SettingsBackup.serializer(), futureJson)
+
+        assertEquals(EnsembleModel.ICON, backup.settings.toSettings().ensembleModel)
+    }
+
+    @Test
     fun `old backups without the new toggle fields import with current defaults`() {
         // Simulates a schema-1 backup exported before the fields existed.
         val legacyJson = """{"schemaVersion":1,"settings":{"tempUnit":"CELSIUS"}}"""
@@ -106,6 +129,7 @@ class SettingsTransferTest {
         assertFalse(restored.showForecastAccuracy)
         assertFalse(restored.showConfidenceBands)
         assertFalse(restored.openMeteoFlatBuffersEnabled)
+        assertEquals(EnsembleModel.ICON, restored.ensembleModel)
     }
 
     @Test

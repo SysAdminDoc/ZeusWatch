@@ -119,6 +119,7 @@ import com.sysadmindoc.nimbus.ui.theme.*
 import com.sysadmindoc.nimbus.util.displayNameRes
 import com.sysadmindoc.nimbus.util.labelRes
 import com.sysadmindoc.nimbus.util.summaryRes
+import com.sysadmindoc.nimbus.util.summaryRes
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -233,6 +234,7 @@ internal data class SettingsActions(
     val onShowYesterdayComparison: (Boolean) -> Unit = {},
     val onShowForecastAccuracy: (Boolean) -> Unit = {},
     val onShowConfidenceBands: (Boolean) -> Unit = {},
+    val onEnsembleModel: (EnsembleModel) -> Unit = {},
     val onHourlyForecastHours: (Int) -> Unit = {},
     val onMigraineAlerts: (Boolean) -> Unit = {},
     val onMigrainePressureThreshold: (Double) -> Unit = {},
@@ -787,6 +789,22 @@ private fun SettingsDataDisplaySection(
         SettingToggle(stringResource(R.string.settings_yesterday_comparison), stringResource(R.string.settings_yesterday_comparison_desc), settings.showYesterdayComparison, actions.onShowYesterdayComparison)
         SettingToggle(stringResource(R.string.settings_show_forecast_accuracy), stringResource(R.string.settings_show_forecast_accuracy_desc), settings.showForecastAccuracy, actions.onShowForecastAccuracy)
         SettingToggle(stringResource(R.string.settings_show_confidence_bands), stringResource(R.string.settings_show_confidence_bands_desc), settings.showConfidenceBands, actions.onShowConfidenceBands)
+        if (settings.showConfidenceBands) {
+            Text(
+                stringResource(R.string.settings_ensemble_model),
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+                modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp),
+            )
+            EnsembleModel.entries.forEach { model ->
+                SettingRadio(
+                    label = stringResource(model.labelRes),
+                    sublabel = stringResource(model.summaryRes),
+                    selected = settings.ensembleModel == model,
+                    onClick = { actions.onEnsembleModel(model) },
+                )
+            }
+        }
         SettingToggle(stringResource(R.string.settings_beaufort_colors), checked = settings.showBeaufortColors, onCheckedChange = actions.onShowBeaufortColors)
         Text(stringResource(R.string.settings_hourly_range), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp))
         listOf(48, 72).forEach { hours ->

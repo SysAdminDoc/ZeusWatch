@@ -4,6 +4,7 @@ import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
+import com.sysadmindoc.nimbus.data.repository.EnsembleModel
 import com.sysadmindoc.nimbus.data.repository.ConfidenceBandEntry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -18,6 +19,7 @@ class ForecastUncertaintyExplainerTest {
     fun summarizeHourly_classifiesAverageSpread() {
         val hourly = (0 until 3).map { hour(offset = it) }
         val bands = ConfidenceBandData(
+            model = EnsembleModel.ICON,
             entries = listOf(
                 band(0, lower = 9.0, upper = 10.0),
                 band(1, lower = 10.0, upper = 11.0),
@@ -36,6 +38,7 @@ class ForecastUncertaintyExplainerTest {
     fun detailForHour_returnsP10P90RangeForSelectedHour() {
         val hour = hour(offset = 2)
         val bands = ConfidenceBandData(
+            model = EnsembleModel.ICON,
             entries = listOf(
                 band(1, lower = 10.0, upper = 13.0),
                 band(2, lower = 11.0, upper = 17.0),
@@ -55,6 +58,7 @@ class ForecastUncertaintyExplainerTest {
     fun detailForDay_averagesHourlyRangesWithinDate() {
         val day = daily(baseTime.toLocalDate())
         val bands = ConfidenceBandData(
+            model = EnsembleModel.ICON,
             entries = listOf(
                 band(0, lower = 8.0, upper = 10.0),
                 band(1, lower = 9.0, upper = 12.0),
@@ -75,6 +79,7 @@ class ForecastUncertaintyExplainerTest {
     fun invalidConfidenceRange_isIgnored() {
         val hourly = listOf(hour(offset = 0), hour(offset = 1))
         val bands = ConfidenceBandData(
+            model = EnsembleModel.ICON,
             entries = listOf(
                 band(0, lower = 12.0, upper = 10.0),
                 band(1, lower = 13.0, upper = 11.0),

@@ -1603,4 +1603,12 @@
     <string name="widget_preview_location">Seattle</string>
     <string name="widget_preview_location_second">Austin</string>
     <string name="widget_preview_location_third">Denver</string>
+    <string name="settings_ensemble_model">Confidence band model</string>
+    <string name="settings_ensemble_icon">ICON</string>
+    <string name="settings_ensemble_icon_summary">German weather service physics ensemble, global down to 2 km. The steadiest all-round choice.</string>
+    <string name="settings_ensemble_weathernext2">WeatherNext 2</string>
+    <string name="settings_ensemble_weathernext2_summary">Google DeepMind AI ensemble. The most members and the longest range.</string>
+    <string name="settings_ensemble_aifs">AIFS-ENS</string>
+    <string name="settings_ensemble_aifs_summary">ECMWF AI ensemble at 0.25 degrees. Sharper detail, though AI ensembles tend to under-cover extremes.</string>
+    <string name="temperature_graph_band_source">Spread from %1$s</string>
 </resources>

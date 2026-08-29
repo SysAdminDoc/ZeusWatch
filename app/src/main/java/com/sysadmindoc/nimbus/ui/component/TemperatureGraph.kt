@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.util.labelRes
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
@@ -196,14 +197,19 @@ fun TemperatureGraph(
                 ) { }
             }
             if (uncertaintySummary != null && uncertaintyText != null) {
-                ForecastUncertaintyLegend(summaryText = uncertaintyText)
+                ForecastUncertaintyLegend(
+                    summaryText = uncertaintyText,
+                    // Ensembles disagree most at the extremes, so the band is
+                    // only interpretable once you know which one drew it.
+                    modelName = confidenceBands?.model?.let { stringResource(it.labelRes) },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ForecastUncertaintyLegend(summaryText: String) {
+private fun ForecastUncertaintyLegend(summaryText: String, modelName: String?) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -232,6 +238,13 @@ private fun ForecastUncertaintyLegend(summaryText: String) {
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextSecondary,
             )
+            if (modelName != null) {
+                Text(
+                    text = stringResource(R.string.temperature_graph_band_source, modelName),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NimbusTextSecondary,
+                )
+            }
             Text(
                 text = stringResource(R.string.temperature_graph_uncertainty_explainer),
                 style = MaterialTheme.typography.labelSmall,

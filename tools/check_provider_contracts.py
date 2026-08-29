@@ -116,6 +116,14 @@ class CheckResult:
         }
 
 
+# Mirrors EnsembleModel in UserPreferences.kt.
+ENSEMBLE_MODELS = (
+    ("icon", "ICON", "icon_seamless"),
+    ("weathernext2", "WeatherNext 2", "google_weathernext2_ensemble"),
+    ("aifs", "AIFS-ENS", "ecmwf_aifs025_ensemble"),
+)
+
+
 def provider_checks() -> list[ContractCheck]:
     today = datetime.now(timezone.utc).date()
     bright_sky_start = (today - timedelta(days=1)).isoformat()
@@ -291,6 +299,32 @@ def provider_checks() -> list[ContractCheck]:
             data_types=("FORECAST",),
             coverage=f"New York, US ({NYC_LATITUDE},{NYC_LONGITUDE})",
             schema_assertion="current, hourly, and daily forecast blocks are present",
+        ),
+        *(
+            ContractCheck(
+                key=f"open-meteo-ensemble-{key}",
+                name=f"Open-Meteo ensemble ({label})",
+                url="https://ensemble-api.open-meteo.com/v1/ensemble?"
+                + urlencode(
+                    {
+                        "latitude": NYC_LATITUDE,
+                        "longitude": NYC_LONGITUDE,
+                        "hourly": "temperature_2m",
+                        "models": model_id,
+                        "forecast_days": "1",
+                        "timezone": "UTC",
+                    }
+                ),
+                docs_url="https://open-meteo.com/en/docs/ensemble-api",
+                validator=validate_open_meteo_ensemble,
+                providers=("OPEN_METEO",),
+                data_types=("FORECAST",),
+                coverage=f"New York, US ({NYC_LATITUDE},{NYC_LONGITUDE})",
+                schema_assertion="hourly time series with at least three ensemble members",
+            )
+            # Each selectable confidence-band model is checked separately: a
+            # renamed identifier only breaks the model that uses it.
+            for key, label, model_id in ENSEMBLE_MODELS
         ),
         ContractCheck(
             key="open-meteo-air-quality",
@@ -671,6 +705,25 @@ def validate_open_meteo_air_quality(data: Any) -> ValidationResult:
     if errors:
         return ValidationResult(False, "; ".join(errors))
     return ValidationResult(True, "current AQI and hourly AQI series present")
+
+
+def validate_open_meteo_ensemble(data: Any) -> ValidationResult:
+    """Confidence bands need at least three members to take a p10/p90 from."""
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a JSON object")
+    hourly = data.get("hourly")
+    if not _has_non_empty_time_series(hourly):
+        return ValidationResult(False, "hourly.time missing or empty")
+    members = [
+        key
+        for key, value in hourly.items()
+        if key.startswith("temperature_2m_member") and isinstance(value, list) and value
+    ]
+    if len(members) < 3:
+        return ValidationResult(
+            False, f"expected at least 3 temperature_2m_member series, found {len(members)}"
+        )
+    return ValidationResult(True, f"{len(members)} ensemble members present")
 
 
 def validate_open_meteo_minutely(data: Any) -> ValidationResult:

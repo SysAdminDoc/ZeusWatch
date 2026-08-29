@@ -177,6 +177,7 @@ data class SettingsBackupPreferences(
     val showYesterdayComparison: Boolean = true,
     val showForecastAccuracy: Boolean = false,
     val showConfidenceBands: Boolean = false,
+    val ensembleModel: String = EnsembleModel.ICON.name,
     val showCompareChartOverlay: Boolean = true,
     val hourlyForecastHours: Int = 72,
     val migrainePressureThreshold: Double = 5.0,
@@ -386,6 +387,7 @@ fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPrefere
     showYesterdayComparison = showYesterdayComparison,
     showForecastAccuracy = showForecastAccuracy,
     showConfidenceBands = showConfidenceBands,
+    ensembleModel = ensembleModel.name,
     showCompareChartOverlay = showCompareChartOverlay,
     hourlyForecastHours = hourlyForecastHours,
     migrainePressureThreshold = migrainePressureThreshold,
@@ -447,6 +449,7 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
     showYesterdayComparison = showYesterdayComparison,
     showForecastAccuracy = showForecastAccuracy,
     showConfidenceBands = showConfidenceBands,
+    ensembleModel = enumOrDefault(ensembleModel, EnsembleModel.ICON),
     showCompareChartOverlay = showCompareChartOverlay,
     hourlyForecastHours = hourlyForecastHours.coerceIn(24, 72),
     migrainePressureThreshold = migrainePressureThreshold.coerceIn(1.0, 20.0),
@@ -565,6 +568,7 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setShowYesterdayComparison(settings.showYesterdayComparison)
     setShowForecastAccuracy(settings.showForecastAccuracy)
     setShowConfidenceBands(settings.showConfidenceBands)
+    setEnsembleModel(settings.ensembleModel)
     setShowCompareChartOverlay(settings.showCompareChartOverlay)
     setHourlyForecastHours(settings.hourlyForecastHours)
     setMigrainePressureThreshold(settings.migrainePressureThreshold)
