@@ -154,10 +154,22 @@ def build_notices(
         # per artifact, and it is standard-only only if freenet has no
         # version of it at all.
         key = f"{group}:{name}"
-        in_freenet = any(m.rsplit(":", 1)[0] == key for m in runtime["freenet"])
+        freenet_versions = [
+            m.rsplit(":", 1)[1] for m in runtime["freenet"] if m.rsplit(":", 1)[0] == key
+        ]
+        in_freenet = bool(freenet_versions)
+        # When the two flavors disagree, name the version the Play build
+        # ships. Iterating a sorted set let the lexicographically greatest
+        # version win, which is arbitrary: for a shared artifact it could
+        # name the freenet version on a notices screen the standard APK is
+        # the one showing.
+        standard_versions = [
+            m.rsplit(":", 1)[1] for m in runtime["standard"] if m.rsplit(":", 1)[0] == key
+        ]
+        resolved_version = (standard_versions or freenet_versions or [version])[0]
         seen[key] = {
             "name": key,
-            "version": version,
+            "version": resolved_version,
             "license": entry["license"],
             "url": entry["url"],
             # Derived from the classpaths themselves rather than a hand list,

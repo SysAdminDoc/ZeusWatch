@@ -92,6 +92,32 @@ class NoticesGeneratorTests(unittest.TestCase):
         rows = [entry for entry in document["dependencies"] if entry["name"] == "com.google.guava:guava"]
         self.assertEqual(1, len(rows))
         self.assertFalse(rows[0]["standardOnly"])
+        # And it names the version the Play build ships. Iterating a sorted
+        # set used to let the lexicographically greatest string win, which
+        # could put the freenet version on the standard APK's own screen.
+        self.assertEqual("33.0.0-android", rows[0]["version"])
+
+    def test_the_standard_version_wins_even_when_it_sorts_lower(self) -> None:
+        # The ordering that hid the arbitrariness: here the freenet version is
+        # the greater string, so "last writer over a sorted set" picks it.
+        document, _ = self.build(
+            {
+                "standard": {"com.google.guava:guava:32.0.1-android"},
+                "freenet": {"com.google.guava:guava:32.1.3-jre"},
+            }
+        )
+
+        self.assertEqual("32.0.1-android", self.by_name(document)["com.google.guava:guava"]["version"])
+
+    def test_a_freenet_only_artifact_keeps_its_own_version(self) -> None:
+        document, _ = self.build(
+            {
+                "standard": set(),
+                "freenet": {"com.google.guava:guava:32.1.3-jre"},
+            }
+        )
+
+        self.assertEqual("32.1.3-jre", self.by_name(document)["com.google.guava:guava"]["version"])
 
     def test_an_unmapped_group_is_a_problem_rather_than_a_missing_notice(self) -> None:
         # Dropping the entry would ship an unattributed dependency, which is

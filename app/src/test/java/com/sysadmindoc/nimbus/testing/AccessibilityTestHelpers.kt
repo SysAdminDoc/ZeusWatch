@@ -79,14 +79,18 @@ fun ComposeContentTestRule.assertClickablesAreLabelled() {
  */
 fun ComposeContentTestRule.assertTextContrastMeetsMinimum(
     minimumRatio: Double = 3.0,
-) {
+): ContrastCoverage {
     waitForIdle()
     val matcher = SemanticsMatcher.keyIsDefined(SemanticsProperties.Text)
     val textNodes = onAllNodes(matcher, useUnmergedTree = true)
         .fetchSemanticsNodes(atLeastOneRootRequired = false)
-    if (textNodes.isEmpty()) return
+    if (textNodes.isEmpty()) return ContrastCoverage()
 
     val failures = mutableListOf<String>()
+    var measured = 0
+    val skippedScrolling = mutableListOf<String>()
+    val skippedNotCaptured = mutableListOf<String>()
+    val skippedNothingDrawn = mutableListOf<String>()
 
     textNodes.forEachIndexed { index, node ->
         if (!node.isVisible()) return@forEachIndexed
@@ -96,16 +100,27 @@ fun ComposeContentTestRule.assertTextContrastMeetsMinimum(
         // the sample reads the card background against itself. Verified with
         // an independent read of the captured frame. Those nodes cannot be
         // measured this way, and guessing at them would fail correct screens.
-        if (node.hasHorizontallyScrollableAncestor()) return@forEachIndexed
+        if (node.hasHorizontallyScrollableAncestor()) {
+            skippedScrolling += node.describe()
+            return@forEachIndexed
+        }
         // Each node is captured on its own rather than cropped out of a
         // capture of the root. The root bitmap and the semantics coordinate
         // space do not share an origin once window insets are involved: on the
         // main screen every crop landed about 22px above the glyphs, which
         // measured the card background against itself and reported readable
         // white text as a 1.4:1 failure.
+        // A node below the fold of a scrolling list is laid out but never
+        // rasterised, and capturing it throws. That is not a pass: it is a
+        // node nobody looked at, so it is counted and reported rather than
+        // dropped. The whole Daily Forecast card went through here unseen.
         val pixels = runCatching {
             onAllNodes(matcher, useUnmergedTree = true)[index].captureToImage().toPixelMap()
-        }.getOrNull() ?: return@forEachIndexed
+        }.getOrNull()
+        if (pixels == null) {
+            skippedNotCaptured += node.describe()
+            return@forEachIndexed
+        }
 
         val counts = mutableMapOf<Long, Int>()
         for (y in 0 until pixels.height) {
@@ -121,7 +136,10 @@ fun ComposeContentTestRule.assertTextContrastMeetsMinimum(
         // A single colour means nothing was drawn in the region: the node is
         // clipped or the glyphs landed elsewhere. There is no contrast to
         // measure, and inventing a 1:1 reading would fail correct screens.
-        if (counts.size < 2) return@forEachIndexed
+        if (counts.size < 2) {
+            skippedNothingDrawn += node.describe()
+            return@forEachIndexed
+        }
 
         val background = Color(counts.maxByOrNull { it.value }!!.key.toULong())
         val backgroundLuminance = background.relativeLuminance()
@@ -131,7 +149,12 @@ fun ComposeContentTestRule.assertTextContrastMeetsMinimum(
             .filter { it.value >= 2 }
             .map { Color(it.key.toULong()) }
             .maxByOrNull { kotlin.math.abs(it.relativeLuminance() - backgroundLuminance) }
-            ?: return@forEachIndexed
+            ?: run {
+                skippedNothingDrawn += node.describe()
+                return@forEachIndexed
+            }
+
+        measured++
 
         val ratio = contrastRatio(foreground.relativeLuminance(), backgroundLuminance)
         if (ratio < minimumRatio) {
@@ -152,6 +175,58 @@ fun ComposeContentTestRule.assertTextContrastMeetsMinimum(
         fail(
             "Text below ${"%.1f".format(minimumRatio)}:1 contrast against its own background: " +
                 failures.joinToString(),
+        )
+    }
+
+    return ContrastCoverage(
+        total = textNodes.size,
+        measured = measured,
+        skippedScrolling = skippedScrolling,
+        skippedNotCaptured = skippedNotCaptured,
+        skippedNothingDrawn = skippedNothingDrawn,
+    )
+}
+
+/**
+ * How much of a screen's text the contrast check actually looked at.
+ *
+ * Returned rather than swallowed because the first version dropped every
+ * unmeasurable node in silence, and a screen where 37 of 100 nodes could not be
+ * captured passed exactly like a screen with no problems. A caller that wants
+ * the gate to mean something asserts on this.
+ */
+data class ContrastCoverage(
+    val total: Int = 0,
+    val measured: Int = 0,
+    val skippedScrolling: List<String> = emptyList(),
+    val skippedNotCaptured: List<String> = emptyList(),
+    val skippedNothingDrawn: List<String> = emptyList(),
+) {
+    val skipped: Int get() = total - measured
+
+    override fun toString(): String =
+        "measured $measured of $total" +
+            " (scrolling ${skippedScrolling.size}," +
+            " not captured ${skippedNotCaptured.size}," +
+            " nothing drawn ${skippedNothingDrawn.size})"
+}
+
+/**
+ * Fails when the contrast check could not look at [minimumFraction] of the
+ * text on screen.
+ *
+ * The point is that a fixture cannot quietly stop covering anything: if a card
+ * moves below the fold and its text stops being rasterised, this says so
+ * instead of continuing to pass.
+ */
+fun ContrastCoverage.assertMeasuredAtLeast(minimumFraction: Double) {
+    if (total == 0) return
+    val fraction = measured.toDouble() / total
+    if (fraction < minimumFraction) {
+        fail(
+            "Contrast check only $this. Unmeasured: " +
+                (skippedNotCaptured + skippedNothingDrawn + skippedScrolling)
+                    .take(12).joinToString(),
         )
     }
 }
@@ -179,6 +254,8 @@ fun ComposeContentTestRule.assertVisibleTouchTargetsMeetMinimum(
 }
 
 private fun SemanticsNode.isVisible(): Boolean = size.width > 0 && size.height > 0
+
+private fun SemanticsNode.describe(): String = announcedLabel()?.let { "'$it'" } ?: "node#$id"
 
 private fun SemanticsNode.hasHorizontallyScrollableAncestor(): Boolean {
     var current: SemanticsNode? = this

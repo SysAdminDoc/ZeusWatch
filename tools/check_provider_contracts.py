@@ -904,31 +904,71 @@ def validate_eccc_cap_index(data: Any) -> ValidationResult:
     return ValidationResult(True, "current-day ECCC CAP index reachable")
 
 
+def _local_name(tag: str) -> str:
+    """Element name without its namespace, the way the adapter matches."""
+    return tag.rsplit("}", 1)[-1]
+
+
+def _find_child(element: Any, name: str) -> Any:
+    for child in element:
+        if _local_name(child.tag) == name:
+            return child
+    return None
+
+
+def _find_children(element: Any, name: str) -> list:
+    return [child for child in element if _local_name(child.tag) == name]
+
+
 def validate_bmkg_nowcast_feed(data: Any) -> ValidationResult:
     """The RSS index BmkgAlertAdapter walks to reach each CAP alert.
 
-    The adapter reads <item><link> and resolves it against the site root, so an
-    empty feed is a valid quiet day but a feed whose items carry no link is a
-    contract break: every alert would be dropped with no error.
+    Held to what the adapter can actually consume, not to what merely parses:
+
+    * It reads every item's <link> with mapNotNull, so an item without one is
+      dropped with no error. One good link among ten is nine lost warnings,
+      which is why every item must carry one rather than just some item.
+    * Its DocumentBuilderFactory sets disallow-doctype-decl, so a feed with a
+      DOCTYPE makes parse throw and getAlerts returns a failure.
+    * It is namespace-aware and matches on local names, so a default-namespaced
+      RSS is fine and must not be reported as broken here.
     """
     if not isinstance(data, str):
         return ValidationResult(False, "expected an RSS document")
+    text = data.strip()
+    if "<!DOCTYPE" in text[:2048].upper():
+        return ValidationResult(False, "feed declares a DOCTYPE, which the adapter refuses to parse")
     try:
-        document = ElementTree.fromstring(data.strip())
+        document = ElementTree.fromstring(text)
     except ElementTree.ParseError as error:
         return ValidationResult(False, f"feed is not well-formed XML: {error}")
-    channel = document.find("channel")
+    channel = _find_child(document, "channel")
     if channel is None:
         return ValidationResult(False, "RSS channel element missing")
-    items = channel.findall("item")
+    items = _find_children(channel, "item")
     if not items:
         # Indonesia genuinely has no active nowcast warnings some days.
         return ValidationResult(True, "no active BMKG nowcast warnings")
-    linked = [item.findtext("link") for item in items]
-    if not any(_non_empty_string(link) for link in linked):
-        return ValidationResult(False, "no item carries a link to a CAP alert")
-    if not any((link or "").endswith(".xml") for link in linked):
-        return ValidationResult(False, "item links do not point at CAP XML documents")
+
+    linkless = 0
+    non_cap = 0
+    for item in items:
+        link = _find_child(item, "link")
+        href = (link.text or "").strip() if link is not None else ""
+        if not href:
+            linkless += 1
+        elif not href.endswith(".xml"):
+            non_cap += 1
+    if linkless:
+        return ValidationResult(
+            False,
+            f"{linkless} of {len(items)} items carry no link; the adapter drops those warnings",
+        )
+    if non_cap:
+        return ValidationResult(
+            False,
+            f"{non_cap} of {len(items)} item links do not point at CAP XML documents",
+        )
     return ValidationResult(True, f"{len(items)} BMKG nowcast warning(s) with CAP links")
 
 
