@@ -4,8 +4,10 @@ import android.util.Log
 import com.google.mlkit.genai.common.DownloadStatus
 import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.prompt.GenerateContentRequest
+import com.google.mlkit.genai.prompt.GenerateTypedContentRequest
 import com.google.mlkit.genai.prompt.Generation
 import com.google.mlkit.genai.prompt.GenerativeModel
+import com.google.mlkit.genai.prompt.SystemInstruction
 import com.google.mlkit.genai.prompt.TextPart
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
@@ -54,6 +56,11 @@ class GeminiNanoSummaryEngine @Inject constructor() : SummaryEngine {
         val generativeModel = model ?: return null
         if (!ensureModelReady(generativeModel)) return null
 
+        // Structured output is what makes the summary checkable. Without it the
+        // model returns prose whose numbers cannot be traced back to the
+        // forecast, so the caller's template summary is the safer answer.
+        if (!supportsStructuredOutput(generativeModel)) return null
+
         val prompt = buildPrompt(
             currentTemp = currentTemp,
             condition = condition,
@@ -64,28 +71,68 @@ class GeminiNanoSummaryEngine @Inject constructor() : SummaryEngine {
             precipChance = precipChance,
             uvIndex = uvIndex,
         )
+        val facts = SummaryFacts.from(
+            currentTemp = currentTemp,
+            high = high,
+            low = low,
+            humidity = humidity,
+            windSpeed = windSpeed,
+            precipChance = precipChance,
+            uvIndex = uvIndex,
+        )
 
         return try {
-            val request = GenerateContentRequest.Builder(TextPart(prompt)).apply {
-                temperature = 0.7f
+            val contentRequest = GenerateContentRequest.Builder(
+                SystemInstruction(SYSTEM_INSTRUCTION),
+                TextPart(prompt),
+            ).apply {
+                // Lower than the old 0.7: the model is filling a schema from
+                // supplied numbers, not writing freely, and every invented
+                // number costs a rejection and a fallback.
+                temperature = 0.3f
                 topK = 16
-                maxOutputTokens = 128
+                maxOutputTokens = 192
             }.build()
-            val response = generativeModel.generateContent(request)
-            val text = response.candidates.firstOrNull()?.text?.trim()
-            if (text.isNullOrBlank()) {
-                Log.w(TAG, "Gemini Nano returned empty response")
-                null
-            } else {
-                Log.d(TAG, "AI summary generated (${text.length} chars)")
-                text
+            val request = GenerateTypedContentRequest
+                .Builder(contentRequest, WeatherSummaryDraft::class)
+                .build()
+            val draft = generativeModel.generateContent(request)
+                .candidates
+                .firstOrNull()
+                ?.response
+            if (draft == null) {
+                Log.w(TAG, "Gemini Nano returned no typed candidate")
+                return null
             }
+            WeatherSummaryValidator.validate(draft, facts).fold(
+                onSuccess = { summary ->
+                    Log.d(TAG, "AI summary accepted (${summary.length} chars)")
+                    summary
+                },
+                onFailure = { rejection ->
+                    // Falling back to the template beats showing a number the
+                    // forecast never contained.
+                    Log.w(TAG, "AI summary rejected: ${rejection.message}")
+                    null
+                },
+            )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "AI summary generation failed: ${e.message}", e)
             null
         }
     }
+
+    private suspend fun supportsStructuredOutput(generativeModel: GenerativeModel): Boolean =
+        try {
+            generativeModel.isStructuredOutputFeatureAvailable().also {
+                if (!it) Log.d(TAG, "Structured output unavailable; using the template summary")
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "Structured output capability check failed: ${e.message}", e)
+            false
+        }
 
     override fun isAvailable(): Boolean = available && !closed
 
@@ -152,6 +199,16 @@ class GeminiNanoSummaryEngine @Inject constructor() : SummaryEngine {
     }
 
     companion object {
+        /**
+         * Keeps the model inside the numbers it was handed. Every invented
+         * figure costs a validator rejection and a fall back to the template,
+         * so the instruction is worth more than a longer prompt.
+         */
+        internal const val SYSTEM_INSTRUCTION =
+            "You write short weather summaries. Use only the numbers given in the request. " +
+                "Never estimate, round differently, or introduce any other figure. " +
+                "Repeat the current temperature and rain chance you used in the numeric fields."
+
         /**
          * Build the Gemini Nano prompt from weather context. Extracted as an
          * internal helper so the prompt shape is unit-testable without mocking
