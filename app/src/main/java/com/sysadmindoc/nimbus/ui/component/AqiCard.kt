@@ -78,12 +78,17 @@ fun AqiCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    stringResource(R.string.aqi_eu_value, data.europeanAqi),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = NimbusTextTertiary,
-                )
+                // Not every source reports a European index. Printing the
+                // absent value would read as "EU AQI 0" — perfect air — beside
+                // a US index that may say Unhealthy.
+                if (data.europeanAqi > 0) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        stringResource(R.string.aqi_eu_value, data.europeanAqi),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NimbusTextTertiary,
+                    )
+                }
             }
         }
 

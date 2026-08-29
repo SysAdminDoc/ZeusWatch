@@ -746,6 +746,63 @@ class WeatherSourceManagerTest {
         assertTrue(result.isFailure)
     }
 
+    @Test
+    fun getAirQualityFallsBackToOpenMeteoWhenTheChosenSourceFails() = runTest {
+        every { prefs.settings } returns flowOf(
+            defaultSettings.copy(
+                sourceConfig = defaultSettings.sourceConfig.copy(
+                    airQuality = WeatherSourceProvider.PIRATE_WEATHER,
+                    airQualityFallback = WeatherSourceProvider.OPEN_METEO,
+                ),
+            ),
+        )
+        val aqiData = mockk<AirQualityData>()
+        coEvery { pirateWeatherAqiAdapter.getAirQuality(any(), any()) } returns
+            Result.failure(IllegalStateException("Pirate Weather API key not configured"))
+        coEvery { aqiAdapter.getAirQuality(any(), any()) } returns Result.success(aqiData)
+
+        val result = manager.getAirQuality(40.0, -74.0)
+
+        // A key-required source with no key must degrade to the keyless
+        // default, not switch the air quality card off.
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) { aqiAdapter.getAirQuality(40.0, -74.0) }
+    }
+
+    @Test
+    fun getAirQualityKeepsThePrimaryFailureWhenTheFallbackAlsoFails() = runTest {
+        every { prefs.settings } returns flowOf(
+            defaultSettings.copy(
+                sourceConfig = defaultSettings.sourceConfig.copy(
+                    airQuality = WeatherSourceProvider.PIRATE_WEATHER,
+                    airQualityFallback = WeatherSourceProvider.OPEN_METEO,
+                ),
+            ),
+        )
+        coEvery { pirateWeatherAqiAdapter.getAirQuality(any(), any()) } returns
+            Result.failure(IllegalStateException("primary failed"))
+        coEvery { aqiAdapter.getAirQuality(any(), any()) } returns
+            Result.failure(IllegalStateException("fallback failed"))
+
+        val result = manager.getAirQuality(40.0, -74.0)
+
+        assertTrue(result.isFailure)
+        assertEquals("primary failed", result.exceptionOrNull()?.message)
+    }
+
+    @Test
+    fun getAirQualityDoesNotRetryTheSameProviderAsItsOwnFallback() = runTest {
+        coEvery { aqiAdapter.getAirQuality(any(), any()) } returns
+            Result.failure(IllegalStateException("AQI error"))
+
+        val result = manager.getAirQuality(40.0, -74.0)
+
+        // Default config has Open-Meteo as both primary and fallback; retrying
+        // it would double every failed request for nothing.
+        assertTrue(result.isFailure)
+        coVerify(exactly = 1) { aqiAdapter.getAirQuality(40.0, -74.0) }
+    }
+
     // ── Minutely Tests ──
 
     @Test

@@ -221,6 +221,11 @@ dependencies {
 
     // Gemini Nano on-device AI (standard flavor only — requires ML Kit GenAI + AICore)
     "standardImplementation"(libs.mlkit.genai.prompt)
+    // Generates the GenerableProvider that ML Kit looks up by ServiceLoader
+    // for each @Generable class. Without it every GenerateTypedContentRequest
+    // throws "not a registered @Generable type" at runtime, which the engine
+    // would swallow into a silent template fallback on every summary.
+    "kspStandard"(libs.mlkit.genai.schema.compiler)
 
     // Animations
     implementation(libs.lottie.compose)

@@ -916,7 +916,7 @@ class WeatherLoadCoordinator @Inject constructor(
         }
     }
 
-    private suspend fun fetchConfidenceBands(
+    suspend fun fetchConfidenceBands(
         lat: Double,
         lon: Double,
         model: EnsembleModel,

@@ -60,6 +60,10 @@ class GeminiNanoSummaryEngine @Inject constructor() : SummaryEngine {
         // model returns prose whose numbers cannot be traced back to the
         // forecast, so the caller's template summary is the safer answer.
         if (!supportsStructuredOutput(generativeModel)) return null
+        // The system instruction is what keeps digits out of the prose. A
+        // device that ignores it would return exactly the free text this
+        // feature exists to stop, so fall back rather than trust it.
+        if (!supportsSystemPrompt(generativeModel)) return null
 
         val prompt = buildPrompt(
             currentTemp = currentTemp,
@@ -71,15 +75,7 @@ class GeminiNanoSummaryEngine @Inject constructor() : SummaryEngine {
             precipChance = precipChance,
             uvIndex = uvIndex,
         )
-        val facts = SummaryFacts.from(
-            currentTemp = currentTemp,
-            high = high,
-            low = low,
-            humidity = humidity,
-            windSpeed = windSpeed,
-            precipChance = precipChance,
-            uvIndex = uvIndex,
-        )
+        val facts = SummaryFacts.from(currentTemp = currentTemp, precipChance = precipChance)
 
         return try {
             val contentRequest = GenerateContentRequest.Builder(
@@ -124,13 +120,17 @@ class GeminiNanoSummaryEngine @Inject constructor() : SummaryEngine {
     }
 
     private suspend fun supportsStructuredOutput(generativeModel: GenerativeModel): Boolean =
+        capability("Structured output") { generativeModel.isStructuredOutputFeatureAvailable() }
+
+    private suspend fun supportsSystemPrompt(generativeModel: GenerativeModel): Boolean =
+        capability("System prompt") { generativeModel.isSystemPromptAvailable() }
+
+    private suspend fun capability(name: String, check: suspend () -> Boolean): Boolean =
         try {
-            generativeModel.isStructuredOutputFeatureAvailable().also {
-                if (!it) Log.d(TAG, "Structured output unavailable; using the template summary")
-            }
+            check().also { if (!it) Log.d(TAG, "$name unavailable; using the template summary") }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.w(TAG, "Structured output capability check failed: ${e.message}", e)
+            Log.w(TAG, "$name capability check failed: ${e.message}", e)
             false
         }
 
@@ -205,9 +205,10 @@ class GeminiNanoSummaryEngine @Inject constructor() : SummaryEngine {
          * so the instruction is worth more than a longer prompt.
          */
         internal const val SYSTEM_INSTRUCTION =
-            "You write short weather summaries. Use only the numbers given in the request. " +
-                "Never estimate, round differently, or introduce any other figure. " +
-                "Repeat the current temperature and rain chance you used in the numeric fields."
+            "You write short weather summaries. Describe the weather in words only: " +
+                "never write a digit or a number word in the headline or detail. " +
+                "Put the current temperature and the rain chance from the request into " +
+                "the numeric fields exactly as given, without rounding or estimating."
 
         /**
          * Build the Gemini Nano prompt from weather context. Extracted as an
