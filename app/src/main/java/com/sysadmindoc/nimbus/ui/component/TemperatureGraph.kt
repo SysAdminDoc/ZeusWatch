@@ -85,10 +85,16 @@ fun TemperatureGraph(
     normalHigh: Double? = null,
     normalLow: Double? = null,
     confidenceBands: ConfidenceBandData? = null,
+    /**
+     * How many hours the graph spans. The Today card stays at 24; the Hourly
+     * tab passes the user's configured range so the graph covers the same
+     * window as the list beneath it instead of stopping a third of the way in.
+     */
+    hours: Int = DEFAULT_GRAPH_HOURS,
 ) {
     val s = LocalUnitSettings.current
     val context = LocalContext.current
-    val data = remember(hourly) { hourly.take(24) }
+    val data = remember(hourly, hours) { hourly.take(hours) }
     if (data.size < 2) return
 
     val textMeasurer = rememberTextMeasurer()
@@ -182,6 +188,7 @@ fun TemperatureGraph(
                                 drawTemperatureCurve(paths, metrics)
                                 drawFeelsLikeOverlay(data, metrics, isRtl)
                                 drawHighLowMarkers(data, points, textMeasurer, labelStyle, s, metrics.width)
+                                drawDayBoundaries(data, points, textMeasurer, labelStyle, metrics, isRtl)
                                 drawTimeLabels(data, points, referenceTime, s, textMeasurer, labelStyle, metrics, context)
                                 drawInspectionOverlay(
                                     data = data,
@@ -598,7 +605,14 @@ private fun DrawScope.drawTimeLabels(
     metrics: TemperatureGraphMetrics,
     context: Context,
 ) {
-    for (index in data.indices step 6) {
+    // Wider windows pack more points into the same canvas, so thin the labels
+    // out or they overlap into an unreadable smear at 72 hours.
+    val stride = when {
+        data.size > 48 -> 12
+        data.size > 24 -> 9
+        else -> 6
+    }
+    for (index in data.indices step stride) {
         if (index < points.size) {
             val label = WeatherFormatter.formatRelativeHourLabel(context, data[index].time, referenceTime, settings)
             val measured = textMeasurer.measure(label, labelStyle)
@@ -610,6 +624,45 @@ private fun DrawScope.drawTimeLabels(
                 ),
             )
         }
+    }
+}
+
+/**
+ * A faint rule and weekday label wherever the date changes.
+ *
+ * At 48 or 72 hours the x-axis labels alone give no sense of which day a
+ * point belongs to, which is the whole reason for looking that far out.
+ */
+private fun DrawScope.drawDayBoundaries(
+    data: List<HourlyConditions>,
+    points: List<Offset>,
+    textMeasurer: TextMeasurer,
+    labelStyle: TextStyle,
+    metrics: TemperatureGraphMetrics,
+    isRtl: Boolean,
+) {
+    if (data.size <= DEFAULT_GRAPH_HOURS) return
+    for (index in 1 until minOf(data.size, points.size)) {
+        if (data[index].time.toLocalDate() == data[index - 1].time.toLocalDate()) continue
+        val x = points[index].x
+        drawLine(
+            color = NimbusTextTertiary.copy(alpha = 0.35f),
+            start = Offset(x, 0f),
+            end = Offset(x, metrics.baselineY),
+            strokeWidth = 1f,
+        )
+        val label = data[index].time.dayOfWeek.getDisplayName(
+            java.time.format.TextStyle.SHORT,
+            java.util.Locale.getDefault(),
+        )
+        val measured = textMeasurer.measure(label, labelStyle)
+        drawText(
+            measured,
+            topLeft = Offset(
+                centeredCanvasLabelLeft(x, measured.size.width.toFloat(), metrics.width),
+                2f,
+            ),
+        )
     }
 }
 
@@ -721,3 +774,6 @@ private fun ForecastUncertaintyLevel.descriptionRes(): Int = when (this) {
     ForecastUncertaintyLevel.MEDIUM -> R.string.temperature_graph_uncertainty_medium
     ForecastUncertaintyLevel.HIGH -> R.string.temperature_graph_uncertainty_high
 }
+
+/** The Today card's window, and the historical default for every caller. */
+private const val DEFAULT_GRAPH_HOURS = 24
