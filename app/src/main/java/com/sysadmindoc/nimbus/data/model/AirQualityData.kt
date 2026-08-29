@@ -18,6 +18,15 @@ data class AirQualityData(
     val sulphurDioxide: Double,
     val carbonMonoxide: Double,
     val pollen: PollenData,
+    /**
+     * Today's forecast peak per pollen type, from the hourly series.
+     *
+     * Distinct from [pollen], which is the reading for the current hour.
+     * Pollen peaks around midday, so an alert worker running at 07:00 and
+     * reading the current hour would silently never fire on a day that peaks
+     * at three times the threshold.
+     */
+    val pollenPeakToday: PollenData = PollenData(),
     val hourlyAqi: List<HourlyAqi> = emptyList(),
     val dailyAqi: List<DailyAqi> = emptyList(),
 )
@@ -92,7 +101,7 @@ data class PollenData(
 ) {
     val hasData: Boolean
         get() = listOf(alder, birch, grass, mugwort, olive, ragweed, moldSpores)
-            .any { it != PollenReading.NONE }
+            .any { it.hasReading }
 
     val overallLevel: PollenLevel
         get() = listOf(alder, birch, grass, mugwort, olive, ragweed, moldSpores)
@@ -104,19 +113,29 @@ data class PollenReading(
     val concentration: Double,
     val level: PollenLevel,
     val name: String = "",
+    /**
+     * Whether the provider reported anything for this pollen at all.
+     *
+     * A concentration of 0.0 is ambiguous on its own: it means both "no grains
+     * in the air" and "this location has no pollen model". They have to be
+     * told apart, or a "below N grains" alert fires every day everywhere the
+     * data does not exist.
+     */
+    val hasReading: Boolean = false,
 ) {
     companion object {
         val NONE = PollenReading(0.0, PollenLevel.NONE)
 
         fun fromConcentration(value: Double?, name: String, thresholds: PollenThresholds): PollenReading {
-            if (value == null || value <= 0) return PollenReading(0.0, PollenLevel.NONE, name)
+            if (value == null) return PollenReading(0.0, PollenLevel.NONE, name, hasReading = false)
+            if (value <= 0) return PollenReading(0.0, PollenLevel.NONE, name, hasReading = true)
             val level = when {
                 value < thresholds.low -> PollenLevel.LOW
                 value < thresholds.moderate -> PollenLevel.MODERATE
                 value < thresholds.high -> PollenLevel.HIGH
                 else -> PollenLevel.VERY_HIGH
             }
-            return PollenReading(value, level, name)
+            return PollenReading(value, level, name, hasReading = true)
         }
     }
 }

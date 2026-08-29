@@ -309,16 +309,46 @@ class WeatherSourceManager @Inject constructor(
         val fallback = config.airQualityFallback
 
         val result = withRetry { getAirQualityFrom(primary, latitude, longitude) }
-        recordHealthResult(WeatherDataType.AIR_QUALITY, primary, result)
-        if (result.isSuccess || fallback == null || fallback == primary) return result
+        if (result.isSuccess) {
+            providerHealthRepository.recordSuccess(
+                type = WeatherDataType.AIR_QUALITY,
+                provider = primary,
+                cacheAgeMinutes = null,
+            )
+            return result
+        }
+        providerHealthRepository.recordFailure(
+            type = WeatherDataType.AIR_QUALITY,
+            provider = primary,
+            exception = result.exceptionOrNull(),
+            clearActiveFallback = fallback == null || fallback == primary,
+        )
+        if (fallback == null || fallback == primary) return result
 
         // A key-required source with no key, or one that simply has no reading
         // for this location, should degrade to the keyless default rather than
         // switching the air quality card off.
         Log.w(TAG, "Primary AQI source ${primary.displayName} failed, trying fallback", result.exceptionOrNull())
         val fallbackResult = withRetry { getAirQualityFrom(fallback, latitude, longitude) }
-        recordHealthResult(WeatherDataType.AIR_QUALITY, fallback, fallbackResult)
-        return if (fallbackResult.isSuccess) fallbackResult else result
+        if (fallbackResult.isSuccess) {
+            // Mirrors the forecast path: a silent substitution is worse than a
+            // visible one, so Settings shows which source is actually serving.
+            providerHealthRepository.recordSuccess(
+                type = WeatherDataType.AIR_QUALITY,
+                provider = fallback,
+                cacheAgeMinutes = null,
+                activeFallback = true,
+                fallbackFromProvider = primary,
+            )
+            return fallbackResult
+        }
+        providerHealthRepository.recordFailure(
+            type = WeatherDataType.AIR_QUALITY,
+            provider = fallback,
+            exception = fallbackResult.exceptionOrNull(),
+            clearActiveFallback = true,
+        )
+        return result
     }
 
     private suspend fun getAirQualityFrom(
@@ -517,17 +547,6 @@ class OpenMeteoAifsForecastAdapter @Inject constructor(
         longitude: Double,
         locationName: String? = null,
     ): Result<WeatherData> = weatherRepository.get().getAifsWeatherDirect(latitude, longitude, locationName)
-}
-
-@Singleton
-class OpenMeteoGraphCastForecastAdapter @Inject constructor(
-    private val weatherRepository: dagger.Lazy<WeatherRepository>,
-) {
-    suspend fun getWeather(
-        latitude: Double,
-        longitude: Double,
-        locationName: String? = null,
-    ): Result<WeatherData> = weatherRepository.get().getGraphCastWeatherDirect(latitude, longitude, locationName)
 }
 
 @Singleton

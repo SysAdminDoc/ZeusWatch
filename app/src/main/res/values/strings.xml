@@ -1634,7 +1634,6 @@
     <string name="custom_alert_metric_pollen_mugwort">Mugwort pollen</string>
     <string name="custom_alert_metric_pollen_mugwort_summary">Peak mugwort pollen count today</string>
     <string name="weather_source_open_meteo_aifs">Open-Meteo + ECMWF AIFS (AI)</string>
-    <string name="weather_source_open_meteo_graphcast">Open-Meteo + GFS GraphCast (AI)</string>
     <string name="settings_licenses">Open-source notices</string>
     <string name="settings_licenses_desc">Libraries and weather data sources this app builds on</string>
     <string name="settings_licenses_cd">Open-source notices. Opens the licence list.</string>

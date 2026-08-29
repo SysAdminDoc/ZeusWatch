@@ -78,10 +78,10 @@ fun AqiCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = NimbusTextSecondary,
                 )
-                // Not every source reports a European index. Printing the
-                // absent value would read as "EU AQI 0" — perfect air — beside
-                // a US index that may say Unhealthy.
-                if (data.europeanAqi > 0) {
+                // Not every source reports a European index. -1 is the "not
+                // reported" sentinel; 0 is a real value on that scale (Good),
+                // so it must still render.
+                if (data.europeanAqi >= 0) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         stringResource(R.string.aqi_eu_value, data.europeanAqi),

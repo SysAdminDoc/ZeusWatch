@@ -121,16 +121,9 @@ AI_FORECAST_MODELS = (
     (
         "aifs",
         "ECMWF AIFS (AI)",
-        "ecmwf_aifs025",
+        "ecmwf_aifs025_single",
         "OPEN_METEO_AIFS",
         "https://open-meteo.com/en/docs/ecmwf-api",
-    ),
-    (
-        "graphcast",
-        "GFS GraphCast (AI)",
-        "gfs_graphcast025",
-        "OPEN_METEO_GRAPHCAST",
-        "https://open-meteo.com/en/docs/gfs-api",
     ),
 )
 
@@ -787,7 +780,9 @@ def validate_open_meteo_air_quality(data: Any) -> ValidationResult:
 
 def validate_open_meteo_model_hourly(data: Any) -> ValidationResult:
     """AI models expose a reduced variable set, so only the hourly temperature
-    series is asserted: anything more would fail for a reason the app tolerates."""
+    series is asserted. NON-NULL values are counted, not list length: a model
+    id can resolve, return HTTP 200 and hand back a full-length array of nulls,
+    which deserializes cleanly and renders as 0 degrees."""
     if not isinstance(data, dict):
         return ValidationResult(False, "expected a JSON object")
     hourly = data.get("hourly")
@@ -796,7 +791,13 @@ def validate_open_meteo_model_hourly(data: Any) -> ValidationResult:
     temps = hourly.get("temperature_2m")
     if not isinstance(temps, list) or not temps:
         return ValidationResult(False, "hourly.temperature_2m missing or empty")
-    return ValidationResult(True, f"{len(temps)} hourly temperature values present")
+    populated = sum(1 for value in temps if isinstance(value, (int, float)))
+    if populated * 2 < len(temps):
+        return ValidationResult(
+            False,
+            f"only {populated} of {len(temps)} hourly temperatures are populated",
+        )
+    return ValidationResult(True, f"{populated}/{len(temps)} hourly temperatures populated")
 
 
 def validate_open_meteo_ensemble(data: Any) -> ValidationResult:

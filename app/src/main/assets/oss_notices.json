@@ -606,11 +606,6 @@
     },
     {
       "license": "CC-BY-4.0",
-      "name": "NCEP GFS GraphCast via Open-Meteo",
-      "url": "https://open-meteo.com/en/license"
-    },
-    {
-      "license": "CC-BY-4.0",
       "name": "Open-Meteo",
       "url": "https://open-meteo.com/en/license"
     },

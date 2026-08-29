@@ -230,9 +230,10 @@ class GeminiNanoSummaryEngine @Inject constructor() : SummaryEngine {
             append("Write a brief, friendly 1-2 sentence weather summary for: ")
             append("Currently $currentTemp, $condition. ")
             append("High $high, low $low. ")
-            if (precipChance > 0) {
-                append("${precipChance}% chance of rain. ")
-            }
+            // Always stated, including zero: the validator compares the
+            // model's rain-chance field against this number exactly, and a
+            // model that was never told it can only guess.
+            append("${precipChance}% chance of rain. ")
             append("Wind $windSpeed. ")
             append("UV index ${uvIndex.toInt()}. ")
             append("Humidity $humidity%.")

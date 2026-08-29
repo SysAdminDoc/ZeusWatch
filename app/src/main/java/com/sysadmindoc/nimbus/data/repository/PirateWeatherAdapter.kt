@@ -241,7 +241,8 @@ class PirateWeatherAqiAdapter @Inject constructor(
             usAqi = usAqi,
             // Pirate Weather returns one index per request. Reporting the EPA
             // value as a European AQI too would be a fabricated conversion.
-            europeanAqi = 0,
+            // -1 means "not reported"; 0 is a real European AQI (Good).
+            europeanAqi = -1,
             aqiLevel = AqiLevel.fromAqi(usAqi),
             pm25 = current.pm25 ?: 0.0,
             pm10 = current.pm10 ?: 0.0,

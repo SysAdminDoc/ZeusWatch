@@ -163,7 +163,6 @@ internal val WeatherSourceProvider.displayNameRes: Int
         WeatherSourceProvider.OPEN_METEO_UKMO -> R.string.weather_source_open_meteo_ukmo
         WeatherSourceProvider.OPEN_METEO_DMI -> R.string.weather_source_open_meteo_dmi
         WeatherSourceProvider.OPEN_METEO_AIFS -> R.string.weather_source_open_meteo_aifs
-        WeatherSourceProvider.OPEN_METEO_GRAPHCAST -> R.string.weather_source_open_meteo_graphcast
         WeatherSourceProvider.OPEN_METEO_METEO_FRANCE -> R.string.weather_source_open_meteo_meteo_france
         WeatherSourceProvider.FMI -> R.string.weather_source_fmi
         WeatherSourceProvider.NWS -> R.string.weather_source_nws

@@ -10,6 +10,8 @@ import com.sysadmindoc.nimbus.data.model.HourlyAqi
 import com.sysadmindoc.nimbus.data.model.MoonPhase
 import com.sysadmindoc.nimbus.data.model.PollenData
 import com.sysadmindoc.nimbus.data.model.PollenReading
+import com.sysadmindoc.nimbus.data.model.PollenLevel
+import com.sysadmindoc.nimbus.data.model.PollenThresholds
 import com.sysadmindoc.nimbus.data.model.PollenThresholdsDb
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +38,8 @@ class AirQualityRepository @Inject constructor(
                     ?: return@withContext Result.failure(Exception("No air quality data"))
 
                 val usAqi = current.usAqi ?: 0
-                val euAqi = current.europeanAqi ?: 0
+                // -1, not 0: zero is a real European AQI value (Good).
+                val euAqi = current.europeanAqi ?: -1
 
                 val pollenFromCurrent = PollenData(
                     alder = PollenReading.fromConcentration(current.alderPollen, "Alder", PollenThresholdsDb.ALDER),
@@ -115,6 +118,8 @@ class AirQualityRepository @Inject constructor(
                     sulphurDioxide = current.sulphurDioxide ?: 0.0,
                     carbonMonoxide = current.carbonMonoxide ?: 0.0,
                     pollen = pollen,
+                    pollenPeakToday = response.hourly?.let { peakPollenForDate(it, now.toLocalDate()) }
+                        ?: PollenData(),
                     hourlyAqi = hourlyAqi,
                     dailyAqi = dailyAqi,
                 ))
@@ -206,6 +211,41 @@ class AirQualityRepository @Inject constructor(
      * Extract pollen readings from hourly data for the current hour.
      * Open-Meteo may return null pollen in `current` but provide it in `hourly`.
      */
+    /**
+     * The highest concentration each pollen type reaches on [date].
+     *
+     * Peak rather than current hour because that is what a threshold alert is
+     * about: someone with a grass allergy wants to know before the midday
+     * peak, not at 07:00 when the count is still low.
+     */
+    internal fun peakPollenForDate(hourly: AqHourly, date: java.time.LocalDate): PollenData {
+        val indices = hourly.time.indices.filter { i ->
+            val parsed = try {
+                LocalDateTime.parse(hourly.time[i], DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            } catch (ignored: DateTimeParseException) {
+                null
+            }
+            parsed?.toLocalDate() == date
+        }
+        if (indices.isEmpty()) return PollenData()
+
+        fun peak(series: List<Double?>?, name: String, thresholds: PollenThresholds): PollenReading {
+            val values = indices.mapNotNull { series?.getOrNull(it) }
+            // No value at all for the day means no coverage, not zero grains.
+            if (values.isEmpty()) return PollenReading(0.0, PollenLevel.NONE, name)
+            return PollenReading.fromConcentration(values.max(), name, thresholds)
+        }
+
+        return PollenData(
+            alder = peak(hourly.alderPollen, "Alder", PollenThresholdsDb.ALDER),
+            birch = peak(hourly.birchPollen, "Birch", PollenThresholdsDb.BIRCH),
+            grass = peak(hourly.grassPollen, "Grass", PollenThresholdsDb.GRASS),
+            mugwort = peak(hourly.mugwortPollen, "Mugwort", PollenThresholdsDb.MUGWORT),
+            olive = peak(hourly.olivePollen, "Olive", PollenThresholdsDb.OLIVE),
+            ragweed = peak(hourly.ragweedPollen, "Ragweed", PollenThresholdsDb.RAGWEED),
+        )
+    }
+
     private fun extractCurrentHourPollen(hourly: AqHourly, now: LocalDateTime): PollenData {
         val currentIndex = hourly.time.indexOfFirst { timeStr ->
             try {

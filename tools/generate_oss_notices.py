@@ -46,7 +46,6 @@ PROVIDER_ATTRIBUTION = {
     "OPEN_METEO_UKMO": ("UK Met Office via Open-Meteo", "CC-BY-4.0", "https://open-meteo.com/en/license"),
     "OPEN_METEO_DMI": ("Danish Meteorological Institute via Open-Meteo", "CC-BY-4.0", "https://open-meteo.com/en/license"),
     "OPEN_METEO_AIFS": ("ECMWF AIFS via Open-Meteo", "CC-BY-4.0", "https://open-meteo.com/en/license"),
-    "OPEN_METEO_GRAPHCAST": ("NCEP GFS GraphCast via Open-Meteo", "CC-BY-4.0", "https://open-meteo.com/en/license"),
     "OPEN_METEO_METEO_FRANCE": ("Meteo-France via Open-Meteo", "CC-BY-4.0", "https://open-meteo.com/en/license"),
     "FMI": ("Finnish Meteorological Institute", "CC-BY-4.0", "https://en.ilmatieteenlaitos.fi/open-data"),
     "NWS": ("US National Weather Service", "Public domain", "https://www.weather.gov/disclaimer"),

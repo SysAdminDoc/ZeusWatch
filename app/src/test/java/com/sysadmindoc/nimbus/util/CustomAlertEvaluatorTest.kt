@@ -10,8 +10,8 @@ import com.sysadmindoc.nimbus.data.model.CustomAlertUnit
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.PollenData
-import com.sysadmindoc.nimbus.data.model.PollenLevel
 import com.sysadmindoc.nimbus.data.model.PollenReading
+import com.sysadmindoc.nimbus.data.model.PollenThresholdsDb
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import org.junit.Assert.assertEquals
@@ -58,10 +58,7 @@ class CustomAlertEvaluatorTest {
     @Test
     fun `a ragweed rule fires on the peak count for that pollen only`() {
         val rule = pollenRule(CustomAlertMetric.POLLEN_RAGWEED_PEAK_TODAY, threshold = 20.0)
-        val airQuality = airQualityWith(
-            ragweed = PollenReading(45.0, PollenLevel.HIGH),
-            grass = PollenReading(2.0, PollenLevel.LOW),
-        )
+        val airQuality = airQualityWith(ragweed = 45.0, grass = 2.0)
 
         val triggered = evaluateCustomAlertRules(listOf(rule), weather(), airQuality)
 
@@ -72,10 +69,7 @@ class CustomAlertEvaluatorTest {
     @Test
     fun `a rule for one pollen ignores a spike in another`() {
         val rule = pollenRule(CustomAlertMetric.POLLEN_GRASS_PEAK_TODAY, threshold = 20.0)
-        val airQuality = airQualityWith(
-            ragweed = PollenReading(200.0, PollenLevel.VERY_HIGH),
-            grass = PollenReading(3.0, PollenLevel.LOW),
-        )
+        val airQuality = airQualityWith(ragweed = 200.0, grass = 3.0)
 
         // An allergy is to a specific pollen; a birch spike is no reason to
         // wake a grass-sensitive user.
@@ -97,6 +91,23 @@ class CustomAlertEvaluatorTest {
         val airQuality = airQualityWith()
 
         assertTrue(evaluateCustomAlertRules(listOf(above, below), weather(), airQuality).isEmpty())
+    }
+
+    @Test
+    fun `a real zero reading is honoured, unlike absent data`() {
+        val below = pollenRule(
+            CustomAlertMetric.POLLEN_GRASS_PEAK_TODAY,
+            threshold = 5.0,
+            operator = CustomAlertOperator.LESS_THAN,
+        )
+
+        // Zero grains reported is a real measurement and must fire a
+        // below-threshold rule; no reading at all must not.
+        val reported = evaluateCustomAlertRules(listOf(below), weather(), airQualityWith(grass = 0.0))
+        val absent = evaluateCustomAlertRules(listOf(below), weather(), airQualityWith())
+
+        assertEquals(1, reported.size)
+        assertTrue(absent.isEmpty())
     }
 
     @Test
@@ -130,13 +141,19 @@ class CustomAlertEvaluatorTest {
         enabled = true,
     )
 
+    /**
+     * Builds readings through [PollenReading.fromConcentration] exactly as
+     * AirQualityRepository does. Hand-constructing PollenReading.NONE instead
+     * is what let a dead no-data guard ship: the repository's readings carry a
+     * name and never equalled the nameless sentinel.
+     */
     private fun airQualityWith(
-        grass: PollenReading = PollenReading.NONE,
-        birch: PollenReading = PollenReading.NONE,
-        ragweed: PollenReading = PollenReading.NONE,
-        olive: PollenReading = PollenReading.NONE,
-        alder: PollenReading = PollenReading.NONE,
-        mugwort: PollenReading = PollenReading.NONE,
+        grass: Double? = null,
+        birch: Double? = null,
+        ragweed: Double? = null,
+        olive: Double? = null,
+        alder: Double? = null,
+        mugwort: Double? = null,
     ) = AirQualityData(
         usAqi = 40,
         europeanAqi = 30,
@@ -147,13 +164,14 @@ class CustomAlertEvaluatorTest {
         nitrogenDioxide = 10.0,
         sulphurDioxide = 1.0,
         carbonMonoxide = 100.0,
-        pollen = PollenData(
-            alder = alder,
-            birch = birch,
-            grass = grass,
-            mugwort = mugwort,
-            olive = olive,
-            ragweed = ragweed,
+        pollen = PollenData(),
+        pollenPeakToday = PollenData(
+            alder = PollenReading.fromConcentration(alder, "Alder", PollenThresholdsDb.ALDER),
+            birch = PollenReading.fromConcentration(birch, "Birch", PollenThresholdsDb.BIRCH),
+            grass = PollenReading.fromConcentration(grass, "Grass", PollenThresholdsDb.GRASS),
+            mugwort = PollenReading.fromConcentration(mugwort, "Mugwort", PollenThresholdsDb.MUGWORT),
+            olive = PollenReading.fromConcentration(olive, "Olive", PollenThresholdsDb.OLIVE),
+            ragweed = PollenReading.fromConcentration(ragweed, "Ragweed", PollenThresholdsDb.RAGWEED),
         ),
     )
 
