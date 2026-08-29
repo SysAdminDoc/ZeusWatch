@@ -15,6 +15,7 @@ import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
 import com.sysadmindoc.nimbus.data.repository.EnsembleModel
 import com.sysadmindoc.nimbus.data.repository.ConfidenceBandEntry
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.testing.setContentWithAccessibilityChecks
 import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import org.junit.Rule
@@ -72,7 +73,7 @@ class ForecastDetailSheetRobolectricTest {
             ),
         )
 
-        composeTestRule.setContent {
+        composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
                 CompositionLocalProvider(LocalUnitSettings provides NimbusSettings(tempUnit = TempUnit.CELSIUS)) {
                     Box(Modifier.width(320.dp)) {

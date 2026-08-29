@@ -14,6 +14,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.fail
 
+/**
+ * Renders [content] and runs the Accessibility Test Framework checks.
+ *
+ * Known limitation: under Robolectric the ATF checks report nothing. A tree
+ * with an unlabelled 10dp clickable and 1.02:1 text contrast passes here,
+ * while [assertVisibleTouchTargetsMeetMinimum] in this same file correctly
+ * fails it. So the touch-target and semantics assertions are real; the ATF
+ * contrast and labelling checks are not, and need a working on-device
+ * harness to mean anything. Tracked in ROADMAP.md.
+ */
 fun ComposeContentTestRule.setContentWithAccessibilityChecks(
     content: @Composable () -> Unit,
 ) {

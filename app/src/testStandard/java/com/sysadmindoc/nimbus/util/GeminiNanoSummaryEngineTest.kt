@@ -54,12 +54,17 @@ class GeminiNanoSummaryEngineTest {
     }
 
     @Test
-    fun `buildPrompt omits the rain phrase when precipChance is zero`() {
+    fun `buildPrompt always states the rain chance, including zero`() {
+        // This test previously asserted the opposite, for prompt brevity. That
+        // became wrong when the validator started rejecting a draft whose
+        // stated rain chance does not match the forecast exactly: on a dry day
+        // the model was never told the number, so it could only guess, and
+        // every summary was either rejected or vacuously accepted.
         val prompt = GeminiNanoSummaryEngine.buildPrompt(
             currentTemp = "72°F", condition = "Clear", high = "80°F", low = "65°F",
             humidity = 50, windSpeed = "5 mph", precipChance = 0, uvIndex = 4.0,
         )
-        assertFalse("rain phrase should not appear when precipChance is zero", prompt.contains("chance of rain"))
+        assertTrue("dry days must still state the rain chance", prompt.contains("0% chance of rain."))
     }
 
     @Test

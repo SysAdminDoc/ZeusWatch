@@ -25,7 +25,6 @@ class WeatherSourceManagerTest {
     private lateinit var openMeteoUkmoAdapter: OpenMeteoUkmoForecastAdapter
     private lateinit var openMeteoDmiAdapter: OpenMeteoDmiForecastAdapter
     private lateinit var openMeteoAifsAdapter: OpenMeteoAifsForecastAdapter
-    private lateinit var openMeteoGraphCastAdapter: OpenMeteoGraphCastForecastAdapter
     private lateinit var openMeteoMeteoFranceAdapter: OpenMeteoMeteoFranceForecastAdapter
     private lateinit var fmiForecastAdapter: FmiForecastAdapter
     private lateinit var openMeteoMinutelyAdapter: OpenMeteoMinutelyAdapter
@@ -100,7 +99,6 @@ class WeatherSourceManagerTest {
         openMeteoUkmoAdapter = mockk()
         openMeteoDmiAdapter = mockk()
         openMeteoAifsAdapter = mockk()
-        openMeteoGraphCastAdapter = mockk()
         openMeteoMeteoFranceAdapter = mockk()
         fmiForecastAdapter = mockk()
         openMeteoMinutelyAdapter = mockk()
@@ -149,9 +147,6 @@ class WeatherSourceManagerTest {
         ),
         WeatherSourceProvider.OPEN_METEO_AIFS to WeatherSourceAdapterModule.provideOpenMeteoAifsAdapter(
             openMeteoAifsAdapter,
-        ),
-        WeatherSourceProvider.OPEN_METEO_GRAPHCAST to WeatherSourceAdapterModule.provideOpenMeteoGraphCastAdapter(
-            openMeteoGraphCastAdapter,
         ),
         WeatherSourceProvider.OPEN_METEO_DMI to WeatherSourceAdapterModule.provideOpenMeteoDmiAdapter(
             openMeteoDmiAdapter,
@@ -390,12 +385,12 @@ class WeatherSourceManagerTest {
         every { prefs.settings } returns flowOf(
             defaultSettings.copy(
                 sourceConfig = defaultSettings.sourceConfig.copy(
-                    forecast = WeatherSourceProvider.OPEN_METEO_GRAPHCAST,
+                    forecast = WeatherSourceProvider.OPEN_METEO_AIFS,
                     forecastFallback = WeatherSourceProvider.OPEN_METEO,
                 ),
             ),
         )
-        coEvery { openMeteoGraphCastAdapter.getWeather(any(), any(), any()) } returns
+        coEvery { openMeteoAifsAdapter.getWeather(any(), any(), any()) } returns
             Result.failure(IllegalStateException("AI model unavailable"))
         coEvery { openMeteoAdapter.getWeather(any(), any(), any()) } returns
             Result.success(testWeatherData)

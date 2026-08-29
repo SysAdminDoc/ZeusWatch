@@ -1592,7 +1592,6 @@
     <string name="custom_alert_metric_pollen_mugwort">حبوب لقاح الشيح</string>
     <string name="custom_alert_metric_pollen_mugwort_summary">أعلى مستوى لحبوب لقاح الشيح اليوم</string>
     <string name="weather_source_open_meteo_aifs">Open-Meteo + ECMWF AIFS (ذكاء اصطناعي)</string>
-    <string name="weather_source_open_meteo_graphcast">Open-Meteo + GFS GraphCast (ذكاء اصطناعي)</string>
     <string name="settings_licenses">إشعارات المصدر المفتوح</string>
     <string name="settings_licenses_desc">المكتبات ومصادر بيانات الطقس التي يعتمد عليها التطبيق</string>
     <string name="settings_licenses_cd">إشعارات المصدر المفتوح. يفتح قائمة التراخيص.</string>

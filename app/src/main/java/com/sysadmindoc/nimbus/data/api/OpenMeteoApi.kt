@@ -150,25 +150,6 @@ interface OpenMeteoApi {
     ): OpenMeteoResponse
 
     /**
-     * NCEP GFS GraphCast 0.25 machine-learning model.
-     * Docs: https://open-meteo.com/en/docs/gfs-api
-     */
-    @GET("forecast")
-    suspend fun getGraphCastForecast(
-        @Query("latitude") latitude: Double,
-        @Query("longitude") longitude: Double,
-        @Query("models") models: String = GRAPHCAST_MODEL,
-        @Query("hourly") hourly: String = BOM_HOURLY_PARAMS,
-        @Query("daily") daily: String = BOM_DAILY_PARAMS,
-        @Query("temperature_unit") temperatureUnit: String = "celsius",
-        @Query("wind_speed_unit") windSpeedUnit: String = "kmh",
-        @Query("precipitation_unit") precipitationUnit: String = "mm",
-        @Query("timezone") timezone: String = "auto",
-        @Query("forecast_days") forecastDays: Int = 10,
-        @Query("forecast_hours") forecastHours: Int = 48,
-    ): OpenMeteoResponse
-
-    /**
      * Open-Meteo Meteo-France ARPEGE/AROME model proxy.
      * Docs: https://open-meteo.com/en/docs/meteofrance-api
      *
@@ -238,9 +219,14 @@ interface OpenMeteoApi {
             "wind_direction_10m_dominant,precipitation_hours" +
             ",snowfall_sum,sunshine_duration,wind_gusts_10m_max"
 
-        /** Verified against the live forecast API on 2026-08-29. */
-        const val AIFS_MODEL = "ecmwf_aifs025"
-        const val GRAPHCAST_MODEL = "gfs_graphcast025"
+        /**
+         * Verified to return NON-NULL values on the live forecast API.
+         *
+         * `ecmwf_aifs025` resolves and returns HTTP 200 with a full-length
+         * hourly array of nulls, which deserializes cleanly and renders as 0
+         * degrees. Only the `_single` variant carries data on this endpoint.
+         */
+        const val AIFS_MODEL = "ecmwf_aifs025_single"
 
         const val BOM_HOURLY_PARAMS = "temperature_2m,relative_humidity_2m,apparent_temperature," +
             "precipitation,precipitation_probability,weather_code,cloud_cover,visibility," +

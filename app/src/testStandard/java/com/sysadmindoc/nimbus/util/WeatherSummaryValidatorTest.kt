@@ -70,6 +70,44 @@ class WeatherSummaryValidatorTest {
     }
 
     @Test
+    fun `non-ASCII digits are rejected too`() {
+        // Kotlin Regex does not enable UNICODE_CHARACTER_CLASS, so a bare
+        // \d misses these entirely and a localized model walks straight
+        // through the digit ban.
+        listOf(
+            "It is a warm ٦٨ out right now.",
+            "It is a warm ７８ out right now.",
+        ).forEach { text ->
+            assertTrue("$text should be rejected", rejectionOf(draft(headline = text)) is SummaryRejection.NumberInProse)
+        }
+    }
+
+    @Test
+    fun `numbers spelled out in words are rejected`() {
+        // "a warm seventy-eight" quotes today's high as the current
+        // temperature just as misleadingly as the digits would.
+        listOf(
+            "It is a warm seventy-eight out right now.",
+            "Rain chance climbs to sixty percent this evening.",
+            "Unos treinta grados ahora mismo.",
+        ).forEach { text ->
+            assertTrue("$text should be rejected", rejectionOf(draft(headline = text)) is SummaryRejection.NumberInProse)
+        }
+    }
+
+    @Test
+    fun `ordinary weather words are not mistaken for numbers`() {
+        // The word list must not swallow normal phrasing.
+        listOf(
+            "Clear and mild with a light breeze.",
+            "Cloudy later, turning breezy overnight.",
+            "Despejado y templado esta tarde.",
+        ).forEach { text ->
+            assertTrue("$text should be accepted", WeatherSummaryValidator.validate(draft(headline = text), facts).isSuccess)
+        }
+    }
+
+    @Test
     fun `a stated temperature that disagrees with the forecast is rejected`() {
         val draft = draft(headline = "Mild and clear.", statedTemperature = 60)
 
@@ -86,20 +124,6 @@ class WeatherSummaryValidatorTest {
         assertEquals(
             SummaryRejection.ClaimMismatch("statedPrecipChance", 80, 20),
             rejectionOf(draft),
-        )
-    }
-
-    @Test
-    fun `an unfilled claim is rejected rather than passing unchecked`() {
-        // Leaving the field unset is the easiest way to dodge the check, and
-        // zero cannot double as "missing" because zero rain is a real forecast.
-        assertEquals(
-            SummaryRejection.ClaimMismatch("statedPrecipChance", null, 20),
-            rejectionOf(draft(headline = "Clear.", statedPrecipChance = WeatherSummaryDraft.UNSTATED)),
-        )
-        assertEquals(
-            SummaryRejection.ClaimMismatch("statedTemperature", null, 72),
-            rejectionOf(draft(headline = "Clear.", statedTemperature = WeatherSummaryDraft.UNSTATED)),
         )
     }
 

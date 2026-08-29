@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.util
 
 import android.content.Context
+import android.util.Log
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CustomAlertMetric
 import com.sysadmindoc.nimbus.data.model.CustomAlertOperator
@@ -18,13 +19,19 @@ import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.data.repository.WindUnit
 import java.util.Locale
 
+private const val TAG = "CustomAlertEvaluator"
+
 /**
- * The concentration this reading actually reports, or null when the location
- * has no pollen coverage at all. [PollenReading.NONE] is the "no data"
- * sentinel, so it must not read as a genuine zero.
+ * The concentration this reading actually reports, or null when the provider
+ * reported nothing for this pollen.
+ *
+ * Comparing against a `PollenReading.NONE` constant does not work: readings
+ * built by the repository carry a `name`, so they never equal the nameless
+ * sentinel, and every "below N" rule fired daily where the data is absent.
+ * `hasReading` is the flag the repository sets from the raw null.
  */
 private fun PollenReading.reportedConcentration(): Double? =
-    if (this == PollenReading.NONE) null else concentration
+    if (hasReading) concentration else null
 
 /** A custom-rule evaluation hit, ready to surface as a notification. */
 data class TriggeredCustomAlert(
@@ -56,7 +63,12 @@ internal fun evaluateCustomAlertRules(
     for (rule in rules) {
         if (!rule.enabled) continue
         val observed = observeMetric(rule.metric, today, tonight, next12h, next24h, data, airQuality)
-            ?: continue
+        if (observed == null) {
+            // A rule that never fires is indistinguishable from a threshold
+            // that is never met unless the skip says so.
+            Log.d(TAG, "Skipping ${rule.metric.name}: no value in this data")
+            continue
+        }
 
         val triggers = when (rule.operator) {
             CustomAlertOperator.GREATER_THAN -> observed > rule.thresholdCanonical
@@ -233,13 +245,14 @@ private fun observeMetric(
                 if (next24h.any { it.snowfall != null }) next24h.sumOf { (it.snowfall ?: 0.0) * 10.0 } else null
             CustomAlertMetric.PRESSURE_NOW -> data.current.pressure.takeIf { it > 0.0 }
             CustomAlertMetric.AQI_NOW -> airQuality?.usAqi?.toDouble()?.takeIf { it > 0.0 }
-            // NONE is the sentinel for "this location has no pollen coverage",
-            // not "zero grains". Treating it as 0.0 would fire every
-            // LESS_THAN pollen rule daily everywhere the data is missing.
-            CustomAlertMetric.POLLEN_GRASS_PEAK_TODAY -> airQuality?.pollen?.grass?.reportedConcentration()
-            CustomAlertMetric.POLLEN_BIRCH_PEAK_TODAY -> airQuality?.pollen?.birch?.reportedConcentration()
-            CustomAlertMetric.POLLEN_RAGWEED_PEAK_TODAY -> airQuality?.pollen?.ragweed?.reportedConcentration()
-            CustomAlertMetric.POLLEN_OLIVE_PEAK_TODAY -> airQuality?.pollen?.olive?.reportedConcentration()
-            CustomAlertMetric.POLLEN_ALDER_PEAK_TODAY -> airQuality?.pollen?.alder?.reportedConcentration()
-            CustomAlertMetric.POLLEN_MUGWORT_PEAK_TODAY -> airQuality?.pollen?.mugwort?.reportedConcentration()
+            // Today's peak, not the current hour: the metric is named
+            // PEAK_TODAY and pollen peaks around midday, so a worker running
+            // at 07:00 would never fire on a day that peaks at three times
+            // the threshold.
+            CustomAlertMetric.POLLEN_GRASS_PEAK_TODAY -> airQuality?.pollenPeakToday?.grass?.reportedConcentration()
+            CustomAlertMetric.POLLEN_BIRCH_PEAK_TODAY -> airQuality?.pollenPeakToday?.birch?.reportedConcentration()
+            CustomAlertMetric.POLLEN_RAGWEED_PEAK_TODAY -> airQuality?.pollenPeakToday?.ragweed?.reportedConcentration()
+            CustomAlertMetric.POLLEN_OLIVE_PEAK_TODAY -> airQuality?.pollenPeakToday?.olive?.reportedConcentration()
+            CustomAlertMetric.POLLEN_ALDER_PEAK_TODAY -> airQuality?.pollenPeakToday?.alder?.reportedConcentration()
+            CustomAlertMetric.POLLEN_MUGWORT_PEAK_TODAY -> airQuality?.pollenPeakToday?.mugwort?.reportedConcentration()
         }
