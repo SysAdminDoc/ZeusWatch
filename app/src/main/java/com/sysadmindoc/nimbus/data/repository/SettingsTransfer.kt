@@ -178,6 +178,7 @@ data class SettingsBackupPreferences(
     val showForecastAccuracy: Boolean = false,
     val showConfidenceBands: Boolean = false,
     val ensembleModel: String = EnsembleModel.ICON.name,
+    val skinType: String = SkinType.NOT_SET.name,
     val showCompareChartOverlay: Boolean = true,
     val hourlyForecastHours: Int = 72,
     val migrainePressureThreshold: Double = 5.0,
@@ -388,6 +389,7 @@ fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPrefere
     showForecastAccuracy = showForecastAccuracy,
     showConfidenceBands = showConfidenceBands,
     ensembleModel = ensembleModel.name,
+    skinType = skinType.name,
     showCompareChartOverlay = showCompareChartOverlay,
     hourlyForecastHours = hourlyForecastHours,
     migrainePressureThreshold = migrainePressureThreshold,
@@ -450,6 +452,7 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
     showForecastAccuracy = showForecastAccuracy,
     showConfidenceBands = showConfidenceBands,
     ensembleModel = enumOrDefault(ensembleModel, EnsembleModel.ICON),
+    skinType = enumOrDefault(skinType, SkinType.NOT_SET),
     showCompareChartOverlay = showCompareChartOverlay,
     hourlyForecastHours = hourlyForecastHours.coerceIn(24, 72),
     migrainePressureThreshold = migrainePressureThreshold.coerceIn(1.0, 20.0),
@@ -569,6 +572,7 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setShowForecastAccuracy(settings.showForecastAccuracy)
     setShowConfidenceBands(settings.showConfidenceBands)
     setEnsembleModel(settings.ensembleModel)
+    setSkinType(settings.skinType)
     setShowCompareChartOverlay(settings.showCompareChartOverlay)
     setHourlyForecastHours(settings.hourlyForecastHours)
     setMigrainePressureThreshold(settings.migrainePressureThreshold)

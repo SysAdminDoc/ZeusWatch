@@ -209,6 +209,7 @@ fun SettingsScreen(
             onShowForecastAccuracy = viewModel::setShowForecastAccuracy,
             onShowConfidenceBands = viewModel::setShowConfidenceBands,
             onEnsembleModel = viewModel::setEnsembleModel,
+            onSkinType = viewModel::setSkinType,
             onHourlyForecastHours = viewModel::setHourlyForecastHours,
             onMigraineAlerts = viewModel::setMigraineAlerts,
             onMigrainePressureThreshold = viewModel::setMigrainePressureThreshold,

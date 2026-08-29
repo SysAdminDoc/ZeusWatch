@@ -9,6 +9,7 @@ import com.sysadmindoc.nimbus.data.repository.IconStyle
 import com.sysadmindoc.nimbus.data.repository.PrecipUnit
 import com.sysadmindoc.nimbus.data.repository.PressureUnit
 import com.sysadmindoc.nimbus.data.repository.RadarProvider
+import com.sysadmindoc.nimbus.data.repository.SkinType
 import com.sysadmindoc.nimbus.data.repository.SummaryStyle
 import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.data.repository.ThemeMode
@@ -80,6 +81,18 @@ internal val AlertSourcePreference.labelRes: Int
         AlertSourcePreference.JMA_ONLY -> R.string.settings_alert_source_jma
         AlertSourcePreference.ECCC_ONLY -> R.string.settings_alert_source_eccc
         AlertSourcePreference.ALL_SOURCES -> R.string.settings_alert_source_all
+    }
+
+@get:StringRes
+internal val SkinType.labelRes: Int
+    get() = when (this) {
+        SkinType.NOT_SET -> R.string.settings_skin_type_not_set
+        SkinType.TYPE_I -> R.string.settings_skin_type_i
+        SkinType.TYPE_II -> R.string.settings_skin_type_ii
+        SkinType.TYPE_III -> R.string.settings_skin_type_iii
+        SkinType.TYPE_IV -> R.string.settings_skin_type_iv
+        SkinType.TYPE_V -> R.string.settings_skin_type_v
+        SkinType.TYPE_VI -> R.string.settings_skin_type_vi
     }
 
 @get:StringRes

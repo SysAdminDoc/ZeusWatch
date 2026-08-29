@@ -106,6 +106,24 @@ class SettingsTransferTest {
     }
 
     @Test
+    fun `settings backup round-trips the UV skin type`() {
+        val backup = NimbusSettings(skinType = SkinType.TYPE_IV).toBackup()
+        val encoded = json.encodeToString(SettingsBackup(settings = backup))
+
+        assertTrue(encoded.contains("\"skinType\":\"TYPE_IV\""))
+        assertEquals(SkinType.TYPE_IV, backup.toSettings().skinType)
+    }
+
+    @Test
+    fun `an unknown skin type in a backup falls back to not set`() {
+        val futureJson = """{"schemaVersion":2,"settings":{"skinType":"TYPE_VII"}}"""
+
+        val backup = json.decodeFromString(SettingsBackup.serializer(), futureJson)
+
+        assertEquals(SkinType.NOT_SET, backup.settings.toSettings().skinType)
+    }
+
+    @Test
     fun `an unknown ensemble model in a backup falls back to ICON`() {
         // A backup written by a newer build can name a model this one has never
         // heard of; that must not take the whole import down.

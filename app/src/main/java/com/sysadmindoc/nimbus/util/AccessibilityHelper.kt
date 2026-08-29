@@ -83,8 +83,7 @@ object AccessibilityHelper {
                 append("Peaks at ${WeatherFormatter.formatRelativeHourLabel(peakTime, referenceTime, s)} ")
                 append("with UV ${peakUv.toInt()}. ")
             }
-            if (uvIndex >= 1) {
-                val safeMinutes = (200.0 / (uvIndex * 3.0)).toInt().coerceIn(5, 120)
+            UvExposureCalculator.safeMinutes(uvIndex, s.skinType)?.let { safeMinutes ->
                 append("Estimated safe sun exposure without SPF: $safeMinutes minutes.")
             }
         }.trim()

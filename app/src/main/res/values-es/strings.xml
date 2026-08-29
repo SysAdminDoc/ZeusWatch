@@ -1590,4 +1590,14 @@
     <string name="settings_ensemble_aifs">AIFS-ENS</string>
     <string name="settings_ensemble_aifs_summary">Conjunto de IA del ECMWF a 0,25 grados. Más detalle, aunque los conjuntos de IA suelen subestimar los extremos.</string>
     <string name="temperature_graph_band_source">Dispersión de %1$s</string>
+    <string name="settings_skin_type">Tipo de piel</string>
+    <string name="settings_skin_type_desc">Solo se usa para estimar el tiempo seguro al sol en la tarjeta UV. Si no lo eliges, verás la estimación más prudente.</string>
+    <string name="settings_skin_type_not_set">Sin definir</string>
+    <string name="settings_skin_type_i">Tipo I: siempre se quema, nunca se broncea</string>
+    <string name="settings_skin_type_ii">Tipo II: se quema con facilidad, se broncea poco</string>
+    <string name="settings_skin_type_iii">Tipo III: a veces se quema, se broncea poco a poco</string>
+    <string name="settings_skin_type_iv">Tipo IV: rara vez se quema, se broncea con facilidad</string>
+    <string name="settings_skin_type_v">Tipo V: casi nunca se quema, se broncea mucho</string>
+    <string name="settings_skin_type_vi">Tipo VI: nunca se quema</string>
+    <string name="uv_safe_exposure_for_skin_type">Unos %1$d min al sol sin protección (%2$s)</string>
 </resources>
