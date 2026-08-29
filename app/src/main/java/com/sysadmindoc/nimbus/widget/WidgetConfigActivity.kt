@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.widget
 
 import android.appwidget.AppWidgetManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -119,15 +120,7 @@ class WidgetConfigActivity : ComponentActivity() {
 
     private fun confirmWidget(locationId: Long?) {
         lifecycleScope.launch {
-            if (locationId == null) {
-                // Reconfiguring back to "Follow app location": purge the
-                // per-widget keyed data left over from a previous pinned
-                // city, otherwise WidgetDataProvider.load(appWidgetId) keeps
-                // serving the stale city forever (refreshes only write the
-                // global default for follow-app widgets).
-                WidgetDataProvider.remove(this@WidgetConfigActivity, appWidgetId)
-            }
-            WidgetLocationPrefs.setLocationId(this@WidgetConfigActivity, appWidgetId, locationId)
+            applyWidgetLocationSelection(this@WidgetConfigActivity, appWidgetId, locationId)
             WidgetRefreshWorker.schedule(this@WidgetConfigActivity)
             WidgetRefreshWorker.enqueueImmediate(this@WidgetConfigActivity)
 
@@ -136,6 +129,27 @@ class WidgetConfigActivity : ComponentActivity() {
             finish()
         }
     }
+}
+
+/**
+ * Records a widget's location choice, purging stale per-widget data first.
+ *
+ * Split out of the activity so it can be tested without WorkManager and the
+ * activity result glue. Reconfiguring back to "Follow app location" must drop
+ * the per-widget keyed data left over from a previous pinned city: refreshes
+ * only write the global default for follow-app widgets, so
+ * `WidgetDataProvider.load(appWidgetId)` would keep serving the old city
+ * forever.
+ */
+internal suspend fun applyWidgetLocationSelection(
+    context: Context,
+    appWidgetId: Int,
+    locationId: Long?,
+) {
+    if (locationId == null) {
+        WidgetDataProvider.remove(context, appWidgetId)
+    }
+    WidgetLocationPrefs.setLocationId(context, appWidgetId, locationId)
 }
 
 @Composable
