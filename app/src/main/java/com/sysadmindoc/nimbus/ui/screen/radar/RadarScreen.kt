@@ -531,6 +531,12 @@ private fun BoxScope.RadarNativeContent(
     )
     if (isRadarMode) {
         RadarPlaybackAndStatus(state, actions)
+    }
+    // Outside the isRadarMode branch: the Lightning layer draws strikes with no
+    // radar frames, and that is the one surface where the informational-only
+    // qualifier matters most. Gating it on isRadarMode meant the dedicated
+    // lightning view carried no attribution at all.
+    if (isRadarMode || showLightning) {
         RadarAttribution(
             provider = state.settings.radarProvider,
             source = state.radarState.frameSet?.source,

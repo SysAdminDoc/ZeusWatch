@@ -101,6 +101,75 @@ class AccessibilityAuditRobolectricTest {
         composeTestRule.assertVisibleTouchTargetsMeetMinimum()
     }
 
+    @Test
+    fun settingsScreenPassesAccessibilityGateAtOnePointEightFontScale() =
+        auditSettings(fontScale = 1.8f)
+
+    @Test
+    fun locationsScreenPassesAccessibilityGateAtOnePointEightFontScale() =
+        auditLocations(fontScale = 1.8f)
+
+    @Test
+    fun licensesScreenPassesAccessibilityGate() {
+        // Added with the open-source notices screen; its rows are the smallest
+        // tappable targets in the app. The view model is built here rather than
+        // inside the composable: lint rejects that, and a recomposition would
+        // otherwise rebuild it and reload the asset.
+        val viewModel = com.sysadmindoc.nimbus.ui.screen.licenses.LicensesViewModel(
+            com.sysadmindoc.nimbus.data.repository.OssNoticesRepository(
+                androidx.test.core.app.ApplicationProvider.getApplicationContext(),
+            ),
+        )
+
+        composeTestRule.setContentWithAccessibilityChecks {
+            NimbusTheme {
+                com.sysadmindoc.nimbus.ui.screen.licenses.LicensesScreen(
+                    onBack = {},
+                    viewModel = viewModel,
+                )
+            }
+        }
+
+        composeTestRule.assertVisibleTouchTargetsMeetMinimum()
+    }
+
+    private fun auditSettings(fontScale: Float) {
+        composeTestRule.setContentWithAccessibilityChecks {
+            NimbusTheme {
+                WithFontScale(fontScale) {
+                    SettingsContent(
+                        settings = com.sysadmindoc.nimbus.data.repository.NimbusSettings(),
+                        onBack = {},
+                    )
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithText("Settings").assertIsDisplayed()
+        composeTestRule.assertVisibleTouchTargetsMeetMinimum()
+    }
+
+    private fun auditLocations(fontScale: Float) {
+        composeTestRule.setContentWithAccessibilityChecks {
+            NimbusTheme {
+                WithFontScale(fontScale) {
+                    LocationsContent(
+                        saved = auditSavedLocations(),
+                        search = SearchState(
+                            query = "San",
+                            results = auditSearchResults(),
+                            isSearching = false,
+                        ),
+                        onBack = {},
+                    )
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithText("Locations").assertIsDisplayed()
+        composeTestRule.assertVisibleTouchTargetsMeetMinimum()
+    }
+
     private fun setMainWeatherAuditContent(fontScale: Float) {
         composeTestRule.setContentWithAccessibilityChecks {
             NimbusTheme {
@@ -141,6 +210,11 @@ private fun MainWeatherAuditContent() {
             state = MainUiState(
                 isLoading = false,
                 weatherData = weatherData,
+                // The three newest cards were absent from this fixture, so
+                // their touch targets and semantics were never audited.
+                pwsObservation = auditPwsObservation(),
+                providerAgreement = auditProviderAgreement(),
+                onThisDay = auditOnThisDay(),
             ),
         )
     }
@@ -241,4 +315,57 @@ private fun auditSearchResults(): List<GeocodingResult> = listOf(
         country = "United States",
         admin1 = "Southern California",
     ),
+)
+
+private fun auditPwsObservation() = com.sysadmindoc.nimbus.data.repository.PwsObservation(
+    observedAt = java.time.LocalDateTime.of(2026, 5, 17, 9, 0),
+    temperatureC = 18.0,
+    humidityPercent = 55,
+    windSpeedKmh = 12.0,
+    windGustKmh = 20.0,
+    windDirectionDegrees = 220,
+    pressureHpa = 1012.0,
+    uvIndex = 4.0,
+    rainLastMinuteMm = 0.2,
+    precipitationType = com.sysadmindoc.nimbus.data.repository.TempestPrecipitationType.RAIN,
+    lightningStrikeCount = 3,
+    lightningStrikeAverageDistanceKm = 8.0,
+    reportIntervalMinutes = 1,
+)
+
+private fun auditProviderAgreement() = com.sysadmindoc.nimbus.data.repository.ProviderAgreementData(
+    agreement = com.sysadmindoc.nimbus.data.repository.ProviderAgreementLevel.MODERATE,
+    providers = listOf(
+        com.sysadmindoc.nimbus.data.repository.ProviderAgreementSnapshot(
+            provider = com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider.OPEN_METEO,
+            displayName = "Open-Meteo",
+            averageTemperatureC = 18.0,
+            precipitationTotalMm = 1.2,
+            hourCount = 24,
+        ),
+        com.sysadmindoc.nimbus.data.repository.ProviderAgreementSnapshot(
+            provider = com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider.MET_NORWAY,
+            displayName = "MET Norway",
+            averageTemperatureC = 19.4,
+            precipitationTotalMm = 2.6,
+            hourCount = 24,
+        ),
+    ),
+    temperatureSpreadC = 1.4,
+    precipitationSpreadMm = 1.4,
+)
+
+private fun auditOnThisDay() = com.sysadmindoc.nimbus.data.model.OnThisDayData(
+    priorYears = (1..5).map { offset ->
+        com.sysadmindoc.nimbus.data.model.PriorYearEntry(
+            year = 2025 - offset,
+            highC = 20.0 + offset,
+            lowC = 8.0 + offset,
+            precipMm = offset.toDouble(),
+        )
+    },
+    averageHighC = 23.0,
+    averageLowC = 11.0,
+    recordHighC = 25.0,
+    recordLowC = 9.0,
 )

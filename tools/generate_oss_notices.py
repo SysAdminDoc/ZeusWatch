@@ -22,21 +22,13 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-CATALOG = REPO_ROOT / "gradle" / "libs.versions.toml"
+RUNTIME_DEPENDENCIES = REPO_ROOT / "build" / "reports" / "runtime-dependencies.json"
 LICENSE_MAP = REPO_ROOT / "config" / "oss-licenses.json"
 OUTPUT = REPO_ROOT / "app" / "src" / "main" / "assets" / "oss_notices.json"
 PROVIDER_SOURCE = (
     REPO_ROOT / "app" / "src" / "main" / "java" / "com" / "sysadmindoc" /
     "nimbus" / "data" / "repository" / "WeatherSource.kt"
 )
-
-LIBRARY_LINE = re.compile(
-    r'^(?P<alias>[A-Za-z0-9_.-]+)\s*=\s*\{\s*group\s*=\s*"(?P<group>[^"]+)"\s*,'
-    r'\s*name\s*=\s*"(?P<name>[^"]+)"'
-)
-VERSION_REF = re.compile(r'version\.ref\s*=\s*"(?P<ref>[^"]+)"')
-VERSION_LITERAL = re.compile(r'version\s*=\s*"(?P<literal>[^"]+)"')
-VERSION_LINE = re.compile(r'^(?P<key>[A-Za-z0-9_.-]+)\s*=\s*"(?P<value>[^"]+)"\s*$')
 
 # Attribution the provider's terms require, beyond naming the source.
 PROVIDER_ATTRIBUTION = {
@@ -101,52 +93,21 @@ EXTRA_NOTICES = [
 ]
 
 
-def parse_versions(text: str) -> dict[str, str]:
-    versions: dict[str, str] = {}
-    in_versions = False
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("["):
-            in_versions = stripped == "[versions]"
-            continue
-        if not in_versions or not stripped or stripped.startswith("#"):
-            continue
-        match = VERSION_LINE.match(stripped)
-        if match:
-            versions[match.group("key")] = match.group("value")
-    return versions
+def read_runtime_modules() -> dict[str, set[str]]:
+    """Resolved runtime modules per shipped variant, as `group:name:version`.
 
-
-def parse_libraries(text: str, versions: dict[str, str]) -> list[dict[str, str]]:
-    libraries = []
-    in_libraries = False
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("["):
-            in_libraries = stripped == "[libraries]"
-            continue
-        if not in_libraries or not stripped or stripped.startswith("#"):
-            continue
-        match = LIBRARY_LINE.match(stripped)
-        if not match:
-            continue
-        ref = VERSION_REF.search(stripped)
-        literal = VERSION_LITERAL.search(stripped)
-        if ref:
-            version = versions.get(ref.group("ref"), "unknown")
-        elif literal:
-            version = literal.group("literal")
-        else:
-            # Platform-managed (BOM) artifacts carry no version of their own.
-            version = "managed"
-        libraries.append(
-            {
-                "group": match.group("group"),
-                "name": match.group("name"),
-                "version": version,
-            }
+    Produced by the Gradle `exportRuntimeDependencies` task. The version
+    catalog is not a usable source here: dependencies declared as string
+    literals never appear in it, BOM-managed artifacts carry no version, and
+    test-only entries do appear.
+    """
+    if not RUNTIME_DEPENDENCIES.is_file():
+        raise SystemExit(
+            f"{RUNTIME_DEPENDENCIES.relative_to(REPO_ROOT)} is missing. "
+            "Run: gradlew exportRuntimeDependencies"
         )
-    return libraries
+    raw = json.loads(RUNTIME_DEPENDENCIES.read_text(encoding="utf-8"))
+    return {variant: set(modules) for variant, modules in raw.items()}
 
 
 def parse_providers(text: str) -> list[str]:
@@ -158,29 +119,39 @@ def parse_providers(text: str) -> list[str]:
 
 
 def build_notices() -> tuple[dict, list[str]]:
-    catalog_text = CATALOG.read_text(encoding="utf-8")
-    versions = parse_versions(catalog_text)
-    libraries = parse_libraries(catalog_text, versions)
+    runtime = read_runtime_modules()
+    # The phone app is what ships the notices screen, so the asset describes
+    # the phone's two flavors. Wear resolves its own 173 modules and has no
+    # screen to show them on; that gap is tracked in ROADMAP.md rather than
+    # papered over by listing wear-only artifacts here as if the phone
+    # shipped them.
+    shipped = runtime["standard"] | runtime["freenet"]
 
     license_data = json.loads(LICENSE_MAP.read_text(encoding="utf-8"))
     groups = license_data["groups"]
-    standard_only = set(license_data["standardOnlyGroups"])
 
     problems: list[str] = []
     seen: dict[str, dict] = {}
-    for library in libraries:
-        group = library["group"]
+    for module in sorted(shipped):
+        group, name, version = module.rsplit(":", 2)
         entry = groups.get(group)
         if entry is None:
-            problems.append(f"No licence mapped for group '{group}' (artifact {library['name']})")
+            problems.append(f"No licence mapped for group '{group}' (module {module})")
             continue
-        key = f"{group}:{library['name']}"
+        # Two flavors can resolve different versions of the same artifact
+        # (guava lands on -android for one and -jre for the other); one row
+        # per artifact, and it is standard-only only if freenet has no
+        # version of it at all.
+        key = f"{group}:{name}"
+        in_freenet = any(m.rsplit(":", 1)[0] == key for m in runtime["freenet"])
         seen[key] = {
             "name": key,
-            "version": library["version"],
+            "version": version,
             "license": entry["license"],
             "url": entry["url"],
-            "standardOnly": group in standard_only,
+            # Derived from the classpaths themselves rather than a hand list,
+            # so it cannot drift from what each flavor really ships.
+            "standardOnly": not in_freenet,
         }
 
     dependencies = sorted(seen.values(), key=lambda item: item["name"])

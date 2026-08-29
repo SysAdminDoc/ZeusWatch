@@ -109,17 +109,26 @@ def check_lightning_disclaimer():
     system. The wording is a licence obligation, so it is checked rather than
     trusted to survive a translation pass or a string cleanup."""
     issues = []
-    required = ("informational", "not for protection of life or property")
-    for label, path in (
-        ("values", REPO_ROOT / "app/src/main/res/values/strings.xml"),
-    ):
+    # Every locale, not just English: a translation pass that drops the
+    # qualifier leaves those users with an unqualified strike overlay, which
+    # is exactly what Blitzortung's terms forbid.
+    required_by_locale = {
+        "values": ("informational", "not for protection of life or property"),
+        "values-es": ("informativo", "no sirve para proteger vidas ni bienes"),
+        "values-ar": ("للاطلاع فقط", "وليس لحماية الأرواح أو الممتلكات"),
+        "values-he": ("למידע בלבד", "לא להגנה על חיים או רכוש"),
+    }
+    for label, required in required_by_locale.items():
+        path = REPO_ROOT / "app/src/main/res" / label / "strings.xml"
+        for key in ("radar_attribution_lightning", "pws_lightning_informational"):
+            if parse_string_value(path, key) is None:
+                issues.append(f"{label}/strings.xml: missing {key}")
         value = parse_string_value(path, "radar_attribution_lightning")
         if value is None:
-            issues.append(f"{label}/strings.xml: missing radar_attribution_lightning")
             continue
         lowered = value.lower()
         for phrase in required:
-            if phrase not in lowered:
+            if phrase.lower() not in lowered:
                 issues.append(
                     f"{label}/strings.xml: radar_attribution_lightning must say '{phrase}'"
                 )

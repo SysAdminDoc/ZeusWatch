@@ -228,7 +228,7 @@ class LocationsViewModelTest {
 
     @Test
     fun `removeLocation calls repository`() = runTest {
-        coEvery { locationRepository.removeLocation(any()) } just Runs
+        coEvery { locationRepository.removeLocation(any()) } returns null
 
         viewModel = createViewModel()
         viewModel.removeLocation(2L)

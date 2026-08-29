@@ -238,11 +238,16 @@ class LocationsScreenRobolectricTest {
             }
         }
 
-        // Deleting straight away makes this guard load-bearing: there is no
-        // dialog left to change your mind in.
-        composeTestRule.onAllNodesWithContentDescription("Remove My Location")
+        // The current-location row in this fixture is named Denver, so this
+        // asserts the absence of ITS remove control, not of a label the screen
+        // could never emit. A saved row's control must still be there, or the
+        // assertion would pass on a screen that rendered nothing at all.
+        composeTestRule.onAllNodesWithContentDescription("Remove Denver")
             .fetchSemanticsNodes()
-            .let { assertEquals(0, it.size) }
+            .let { assertEquals("current location must have no remove control", 0, it.size) }
+        composeTestRule.onAllNodesWithContentDescription("Remove New York")
+            .fetchSemanticsNodes()
+            .let { assertEquals("saved rows must keep their remove control", 1, it.size) }
         assertEquals(null, removedId)
     }
 }

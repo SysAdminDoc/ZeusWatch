@@ -27,11 +27,10 @@ DEFAULT_APK_PATTERNS = (
 RELEASE_VERIFICATION_COMMANDS = (
     r".\gradlew.bat clean assembleStandardRelease assembleFreenetRelease :wear:assembleRelease",
     r"py -3 tools\check_provider_contracts.py",
-    r"Get-FileHash .\app\build\outputs\apk\standard\release\*.apk, .\app\build\outputs\apk\freenet\release\*.apk, .\wear\build\outputs\apk\release\*.apk -Algorithm SHA256",
-    r"apksigner verify --verbose --print-certs .\app\build\outputs\apk\standard\release\*.apk",
-    r"apksigner verify --verbose --print-certs .\app\build\outputs\apk\freenet\release\*.apk",
-    r"apksigner verify --verbose --print-certs .\wear\build\outputs\apk\release\*.apk",
-    r"py -3 tools\check_apk_alignment.py .\app\build\outputs\apk\standard\release\*.apk .\app\build\outputs\apk\freenet\release\*.apk .\wear\build\outputs\apk\release\*.apk",
+    r"py -3 tools\stage_release_assets.py",
+    r"Get-FileHash .\build\release-assets\*.apk -Algorithm SHA256",
+    r"apksigner verify --verbose --print-certs .\build\release-assets\*.apk",
+    r"py -3 tools\check_apk_alignment.py .\build\release-assets\*.apk",
     r"sha256sum -c SHA256SUMS.txt",
     r"py -3 tools\generate_release_provenance.py",
 )

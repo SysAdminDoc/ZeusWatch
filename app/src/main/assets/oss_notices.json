@@ -2,6 +2,13 @@
   "dependencies": [
     {
       "license": "Apache-2.0",
+      "name": "androidx.activity:activity",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.9.3"
+    },
+    {
+      "license": "Apache-2.0",
       "name": "androidx.activity:activity-compose",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/androidx",
@@ -9,108 +16,374 @@
     },
     {
       "license": "Apache-2.0",
-      "name": "androidx.arch.core:core-testing",
+      "name": "androidx.activity:activity-ktx",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.9.3"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.annotation:annotation",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.10.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.annotation:annotation-experimental",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.5.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.annotation:annotation-jvm",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.10.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.appcompat:appcompat",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.7.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.appcompat:appcompat-resources",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.7.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.arch.core:core-common",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/androidx",
       "version": "2.2.0"
     },
     {
       "license": "Apache-2.0",
-      "name": "androidx.benchmark:benchmark-macro-junit4",
+      "name": "androidx.arch.core:core-runtime",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/androidx",
-      "version": "1.5.0-alpha07"
+      "version": "2.2.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.autofill:autofill",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.browser:browser",
+      "standardOnly": true,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.4.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.collection:collection",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.5.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.collection:collection-jvm",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.5.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.collection:collection-ktx",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.5.0"
     },
     {
       "license": "Apache-2.0",
       "name": "androidx.compose.animation:animation",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/compose",
-      "version": "managed"
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.animation:animation-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.animation:animation-core",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.animation:animation-core-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
     },
     {
       "license": "Apache-2.0",
       "name": "androidx.compose.foundation:foundation",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/compose",
-      "version": "managed"
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.foundation:foundation-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.foundation:foundation-layout",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.foundation:foundation-layout-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
     },
     {
       "license": "Apache-2.0",
       "name": "androidx.compose.material3:material3",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/compose",
-      "version": "managed"
+      "version": "1.4.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.material3:material3-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.4.0"
     },
     {
       "license": "Apache-2.0",
       "name": "androidx.compose.material3:material3-window-size-class",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/compose",
-      "version": "1.3.2"
+      "version": "1.4.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.material3:material3-window-size-class-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.4.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.material:material-icons-core",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.7.8"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.material:material-icons-core-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.7.8"
     },
     {
       "license": "Apache-2.0",
       "name": "androidx.compose.material:material-icons-extended",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/compose",
-      "version": "managed"
+      "version": "1.7.8"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.material:material-icons-extended-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.7.8"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.material:material-ripple",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.material:material-ripple-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
     },
     {
       "license": "Apache-2.0",
       "name": "androidx.compose.runtime:runtime",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/compose",
-      "version": "managed"
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.runtime:runtime-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.runtime:runtime-annotation",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.runtime:runtime-annotation-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.runtime:runtime-retain",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.runtime:runtime-retain-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.runtime:runtime-saveable",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.runtime:runtime-saveable-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
     },
     {
       "license": "Apache-2.0",
       "name": "androidx.compose.ui:ui",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/compose",
-      "version": "managed"
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.ui:ui-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.ui:ui-geometry",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.ui:ui-geometry-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
     },
     {
       "license": "Apache-2.0",
       "name": "androidx.compose.ui:ui-graphics",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/compose",
-      "version": "managed"
+      "version": "1.12.0"
     },
     {
       "license": "Apache-2.0",
-      "name": "androidx.compose.ui:ui-test-junit4",
+      "name": "androidx.compose.ui:ui-graphics-android",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/compose",
-      "version": "managed"
+      "version": "1.12.0"
     },
     {
       "license": "Apache-2.0",
-      "name": "androidx.compose.ui:ui-test-junit4-accessibility",
+      "name": "androidx.compose.ui:ui-text",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/compose",
-      "version": "managed"
+      "version": "1.12.0"
     },
     {
       "license": "Apache-2.0",
-      "name": "androidx.compose.ui:ui-test-manifest",
+      "name": "androidx.compose.ui:ui-text-android",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/compose",
-      "version": "managed"
-    },
-    {
-      "license": "Apache-2.0",
-      "name": "androidx.compose.ui:ui-tooling",
-      "standardOnly": false,
-      "url": "https://developer.android.com/jetpack/compose",
-      "version": "managed"
+      "version": "1.12.0"
     },
     {
       "license": "Apache-2.0",
       "name": "androidx.compose.ui:ui-tooling-preview",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/compose",
-      "version": "managed"
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.ui:ui-tooling-preview-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.ui:ui-unit",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.ui:ui-unit-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.ui:ui-util",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.compose.ui:ui-util-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/compose",
+      "version": "1.12.0"
     },
     {
       "license": "Apache-2.0",
@@ -121,10 +394,122 @@
     },
     {
       "license": "Apache-2.0",
+      "name": "androidx.concurrent:concurrent-futures",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.1.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.concurrent:concurrent-futures-ktx",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.1.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.core:core",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.19.0"
+    },
+    {
+      "license": "Apache-2.0",
       "name": "androidx.core:core-ktx",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/androidx",
-      "version": "1.15.0"
+      "version": "1.19.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.core:core-remoteviews",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.1.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.core:core-viewtree",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.credentials:credentials",
+      "standardOnly": true,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.2.0-rc01"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.credentials:credentials-play-services-auth",
+      "standardOnly": true,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.2.0-rc01"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.cursoradapter:cursoradapter",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.customview:customview",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.customview:customview-poolingcontainer",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.datastore:datastore",
+      "standardOnly": false,
+      "url": "https://developer.android.com/topic/libraries/architecture/datastore",
+      "version": "1.2.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.datastore:datastore-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/topic/libraries/architecture/datastore",
+      "version": "1.2.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.datastore:datastore-core",
+      "standardOnly": false,
+      "url": "https://developer.android.com/topic/libraries/architecture/datastore",
+      "version": "1.2.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.datastore:datastore-core-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/topic/libraries/architecture/datastore",
+      "version": "1.2.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.datastore:datastore-core-okio",
+      "standardOnly": false,
+      "url": "https://developer.android.com/topic/libraries/architecture/datastore",
+      "version": "1.2.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.datastore:datastore-core-okio-jvm",
+      "standardOnly": false,
+      "url": "https://developer.android.com/topic/libraries/architecture/datastore",
+      "version": "1.2.1"
     },
     {
       "license": "Apache-2.0",
@@ -135,6 +520,83 @@
     },
     {
       "license": "Apache-2.0",
+      "name": "androidx.datastore:datastore-preferences-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/topic/libraries/architecture/datastore",
+      "version": "1.2.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.datastore:datastore-preferences-core",
+      "standardOnly": false,
+      "url": "https://developer.android.com/topic/libraries/architecture/datastore",
+      "version": "1.2.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.datastore:datastore-preferences-core-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/topic/libraries/architecture/datastore",
+      "version": "1.2.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.datastore:datastore-preferences-external-protobuf",
+      "standardOnly": false,
+      "url": "https://developer.android.com/topic/libraries/architecture/datastore",
+      "version": "1.2.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.datastore:datastore-preferences-proto",
+      "standardOnly": false,
+      "url": "https://developer.android.com/topic/libraries/architecture/datastore",
+      "version": "1.2.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.drawerlayout:drawerlayout",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.emoji2:emoji2",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.4.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.emoji2:emoji2-views-helper",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.4.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.exifinterface:exifinterface",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.4.2"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.fragment:fragment",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.8.9"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.glance:glance",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/glance",
+      "version": "1.2.0"
+    },
+    {
+      "license": "Apache-2.0",
       "name": "androidx.glance:glance-appwidget",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/androidx/releases/glance",
@@ -142,7 +604,14 @@
     },
     {
       "license": "Apache-2.0",
-      "name": "androidx.glance:glance-appwidget-testing",
+      "name": "androidx.glance:glance-appwidget-external-protobuf",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/glance",
+      "version": "1.2.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.glance:glance-appwidget-proto",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/androidx/releases/glance",
       "version": "1.2.0"
@@ -156,14 +625,28 @@
     },
     {
       "license": "Apache-2.0",
-      "name": "androidx.glance:glance-testing",
+      "name": "androidx.graphics:graphics-path",
       "standardOnly": false,
-      "url": "https://developer.android.com/jetpack/androidx/releases/glance",
-      "version": "1.2.0"
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.0.1"
     },
     {
       "license": "Apache-2.0",
-      "name": "androidx.hilt:hilt-compiler",
+      "name": "androidx.hilt:hilt-common",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/hilt",
+      "version": "1.3.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.hilt:hilt-lifecycle-viewmodel",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/hilt",
+      "version": "1.3.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.hilt:hilt-lifecycle-viewmodel-compose",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/androidx/releases/hilt",
       "version": "1.3.0"
@@ -184,24 +667,213 @@
     },
     {
       "license": "Apache-2.0",
+      "name": "androidx.interpolator:interpolator",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-common",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-common-java8",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-common-jvm",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-livedata",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-livedata-core",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-livedata-core-ktx",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-process",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-runtime",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-runtime-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
       "name": "androidx.lifecycle:lifecycle-runtime-compose",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
-      "version": "2.8.7"
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-runtime-compose-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-runtime-ktx",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-runtime-ktx-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-service",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-viewmodel",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-viewmodel-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
     },
     {
       "license": "Apache-2.0",
       "name": "androidx.lifecycle:lifecycle-viewmodel-compose",
       "standardOnly": false,
       "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
-      "version": "2.8.7"
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-viewmodel-compose-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-viewmodel-ktx",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-viewmodel-savedstate",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.lifecycle:lifecycle-viewmodel-savedstate-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "version": "2.9.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.loader:loader",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.localbroadcastmanager:localbroadcastmanager",
+      "standardOnly": true,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.navigation:navigation-common",
+      "standardOnly": false,
+      "url": "https://developer.android.com/guide/navigation",
+      "version": "2.9.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.navigation:navigation-common-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/guide/navigation",
+      "version": "2.9.0"
     },
     {
       "license": "Apache-2.0",
       "name": "androidx.navigation:navigation-compose",
       "standardOnly": false,
       "url": "https://developer.android.com/guide/navigation",
-      "version": "2.8.9"
+      "version": "2.9.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.navigation:navigation-compose-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/guide/navigation",
+      "version": "2.9.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.navigation:navigation-runtime",
+      "standardOnly": false,
+      "url": "https://developer.android.com/guide/navigation",
+      "version": "2.9.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.navigation:navigation-runtime-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/guide/navigation",
+      "version": "2.9.0"
     },
     {
       "license": "Apache-2.0",
@@ -212,7 +884,21 @@
     },
     {
       "license": "Apache-2.0",
-      "name": "androidx.room:room-compiler",
+      "name": "androidx.resourceinspection:resourceinspection-annotation",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.0.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.room:room-common",
+      "standardOnly": false,
+      "url": "https://developer.android.com/training/data-storage/room",
+      "version": "2.8.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.room:room-common-jvm",
       "standardOnly": false,
       "url": "https://developer.android.com/training/data-storage/room",
       "version": "2.8.4"
@@ -233,24 +919,122 @@
     },
     {
       "license": "Apache-2.0",
-      "name": "androidx.test.espresso:espresso-core",
+      "name": "androidx.room:room-runtime-android",
       "standardOnly": false,
-      "url": "https://developer.android.com/training/testing/espresso",
-      "version": "3.7.0"
+      "url": "https://developer.android.com/training/data-storage/room",
+      "version": "2.8.4"
     },
     {
       "license": "Apache-2.0",
-      "name": "androidx.test.ext:junit",
+      "name": "androidx.savedstate:savedstate",
       "standardOnly": false,
-      "url": "https://developer.android.com/jetpack/androidx/releases/test",
-      "version": "1.2.1"
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.4.0"
     },
     {
       "license": "Apache-2.0",
-      "name": "androidx.test.uiautomator:uiautomator",
+      "name": "androidx.savedstate:savedstate-android",
       "standardOnly": false,
-      "url": "https://developer.android.com/training/testing/other-components/ui-automator",
-      "version": "2.4.0"
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.4.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.savedstate:savedstate-compose",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.4.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.savedstate:savedstate-compose-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.4.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.savedstate:savedstate-ktx",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.4.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.sqlite:sqlite",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "2.6.2"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.sqlite:sqlite-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "2.6.2"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.sqlite:sqlite-framework",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "2.6.2"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.sqlite:sqlite-framework-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "2.6.2"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.startup:startup-runtime",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.2.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.tracing:tracing",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.2.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.tracing:tracing-ktx",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.2.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.vectordrawable:vectordrawable",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.1.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.vectordrawable:vectordrawable-animated",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.1.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.versionedparcelable:versionedparcelable",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.1.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.viewpager:viewpager",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx",
+      "version": "1.0.0"
     },
     {
       "license": "Apache-2.0",
@@ -261,17 +1045,31 @@
     },
     {
       "license": "Apache-2.0",
-      "name": "androidx.work:work-runtime-ktx",
+      "name": "androidx.window:window-core",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/window",
+      "version": "1.5.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.window:window-core-android",
+      "standardOnly": false,
+      "url": "https://developer.android.com/jetpack/androidx/releases/window",
+      "version": "1.5.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "androidx.work:work-runtime",
       "standardOnly": false,
       "url": "https://developer.android.com/topic/libraries/architecture/workmanager",
       "version": "2.11.2"
     },
     {
       "license": "Apache-2.0",
-      "name": "app.cash.turbine:turbine",
+      "name": "androidx.work:work-runtime-ktx",
       "standardOnly": false,
-      "url": "https://github.com/cashapp/turbine",
-      "version": "1.2.0"
+      "url": "https://developer.android.com/topic/libraries/architecture/workmanager",
+      "version": "2.11.2"
     },
     {
       "license": "Apache-2.0",
@@ -296,6 +1094,13 @@
     },
     {
       "license": "Apache-2.0",
+      "name": "com.airbnb.android:lottie",
+      "standardOnly": false,
+      "url": "https://github.com/airbnb/lottie-android",
+      "version": "6.7.1"
+    },
+    {
+      "license": "Apache-2.0",
       "name": "com.airbnb.android:lottie-compose",
       "standardOnly": false,
       "url": "https://github.com/airbnb/lottie-android",
@@ -303,10 +1108,73 @@
     },
     {
       "license": "Apache-2.0",
-      "name": "com.android.tools:desugar_jdk_libs",
+      "name": "com.google.accompanist:accompanist-drawablepainter",
       "standardOnly": false,
-      "url": "https://developer.android.com/studio/write/java8-support",
-      "version": "2.1.5"
+      "url": "https://github.com/google/accompanist",
+      "version": "0.37.3"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.android.datatransport:transport-api",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "2.2.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.android.datatransport:transport-backend-cct",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "2.3.3"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.android.datatransport:transport-runtime",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "2.2.6"
+    },
+    {
+      "license": "Android Software Development Kit License",
+      "name": "com.google.android.gms:play-services-auth",
+      "standardOnly": true,
+      "url": "https://developers.google.com/android/guides/setup",
+      "version": "20.7.0"
+    },
+    {
+      "license": "Android Software Development Kit License",
+      "name": "com.google.android.gms:play-services-auth-api-phone",
+      "standardOnly": true,
+      "url": "https://developers.google.com/android/guides/setup",
+      "version": "18.0.2"
+    },
+    {
+      "license": "Android Software Development Kit License",
+      "name": "com.google.android.gms:play-services-auth-base",
+      "standardOnly": true,
+      "url": "https://developers.google.com/android/guides/setup",
+      "version": "18.0.4"
+    },
+    {
+      "license": "Android Software Development Kit License",
+      "name": "com.google.android.gms:play-services-base",
+      "standardOnly": true,
+      "url": "https://developers.google.com/android/guides/setup",
+      "version": "18.9.0"
+    },
+    {
+      "license": "Android Software Development Kit License",
+      "name": "com.google.android.gms:play-services-basement",
+      "standardOnly": true,
+      "url": "https://developers.google.com/android/guides/setup",
+      "version": "18.9.0"
+    },
+    {
+      "license": "Android Software Development Kit License",
+      "name": "com.google.android.gms:play-services-fido",
+      "standardOnly": true,
+      "url": "https://developers.google.com/android/guides/setup",
+      "version": "20.1.0"
     },
     {
       "license": "Android Software Development Kit License",
@@ -317,10 +1185,87 @@
     },
     {
       "license": "Android Software Development Kit License",
+      "name": "com.google.android.gms:play-services-tasks",
+      "standardOnly": true,
+      "url": "https://developers.google.com/android/guides/setup",
+      "version": "18.4.0"
+    },
+    {
+      "license": "Android Software Development Kit License",
       "name": "com.google.android.gms:play-services-wearable",
       "standardOnly": true,
       "url": "https://developers.google.com/android/guides/setup",
       "version": "20.0.1"
+    },
+    {
+      "license": "Android Software Development Kit License",
+      "name": "com.google.android.libraries.identity.googleid:googleid",
+      "standardOnly": true,
+      "url": "https://developers.google.com/identity",
+      "version": "1.1.0"
+    },
+    {
+      "license": "Android Software Development Kit License",
+      "name": "com.google.android.play:core-common",
+      "standardOnly": true,
+      "url": "https://developer.android.com/guide/playcore",
+      "version": "2.0.4"
+    },
+    {
+      "license": "Android Software Development Kit License",
+      "name": "com.google.android.play:integrity",
+      "standardOnly": true,
+      "url": "https://developer.android.com/guide/playcore",
+      "version": "1.4.0"
+    },
+    {
+      "license": "Android Software Development Kit License",
+      "name": "com.google.android.recaptcha:recaptcha",
+      "standardOnly": true,
+      "url": "https://cloud.google.com/recaptcha",
+      "version": "18.6.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.android:annotations",
+      "standardOnly": true,
+      "url": "https://developers.google.com/android",
+      "version": "4.1.1.4"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.auto.service:auto-service",
+      "standardOnly": false,
+      "url": "https://github.com/google/auto/tree/main/service",
+      "version": "1.1.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.auto.service:auto-service-annotations",
+      "standardOnly": false,
+      "url": "https://github.com/google/auto/tree/main/service",
+      "version": "1.1.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.auto:auto-common",
+      "standardOnly": false,
+      "url": "https://github.com/google/auto",
+      "version": "1.2.1"
+    },
+    {
+      "license": "LGPL-2.1",
+      "name": "com.google.code.findbugs:jsr305",
+      "standardOnly": false,
+      "url": "https://github.com/findbugsproject/findbugs",
+      "version": "3.0.2"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.code.gson:gson",
+      "standardOnly": false,
+      "url": "https://github.com/google/gson",
+      "version": "2.13.2"
     },
     {
       "license": "Apache-2.0",
@@ -331,6 +1276,20 @@
     },
     {
       "license": "Apache-2.0",
+      "name": "com.google.dagger:dagger",
+      "standardOnly": false,
+      "url": "https://dagger.dev/hilt/",
+      "version": "2.60.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.dagger:dagger-lint-aar",
+      "standardOnly": false,
+      "url": "https://dagger.dev/hilt/",
+      "version": "2.60.1"
+    },
+    {
+      "license": "Apache-2.0",
       "name": "com.google.dagger:hilt-android",
       "standardOnly": false,
       "url": "https://dagger.dev/hilt/",
@@ -338,14 +1297,7 @@
     },
     {
       "license": "Apache-2.0",
-      "name": "com.google.dagger:hilt-android-testing",
-      "standardOnly": false,
-      "url": "https://dagger.dev/hilt/",
-      "version": "2.60.1"
-    },
-    {
-      "license": "Apache-2.0",
-      "name": "com.google.dagger:hilt-compiler",
+      "name": "com.google.dagger:hilt-core",
       "standardOnly": false,
       "url": "https://dagger.dev/hilt/",
       "version": "2.60.1"
@@ -355,7 +1307,154 @@
       "name": "com.google.errorprone:error_prone_annotations",
       "standardOnly": false,
       "url": "https://github.com/google/error-prone",
-      "version": "2.50.0"
+      "version": "2.41.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:firebase-annotations",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "17.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:firebase-appcheck",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "19.4.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:firebase-appcheck-interop",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "17.1.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:firebase-appcheck-playintegrity",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "19.4.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:firebase-auth",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "24.2.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:firebase-auth-interop",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "20.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:firebase-bom",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "34.18.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:firebase-common",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "22.2.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:firebase-components",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "19.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:firebase-database-collection",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "18.0.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:firebase-encoders",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "17.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:firebase-encoders-json",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "17.1.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:firebase-firestore",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "26.6.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.firebase:protolite-well-known-types",
+      "standardOnly": true,
+      "url": "https://firebase.google.com/terms",
+      "version": "18.0.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.flatbuffers:flatbuffers-java",
+      "standardOnly": false,
+      "url": "https://github.com/google/flatbuffers",
+      "version": "23.5.26"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.guava:failureaccess",
+      "standardOnly": false,
+      "url": "https://github.com/google/guava",
+      "version": "1.0.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.guava:guava",
+      "standardOnly": false,
+      "url": "https://github.com/google/guava",
+      "version": "32.1.3-android"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.guava:listenablefuture",
+      "standardOnly": false,
+      "url": "https://github.com/google/guava",
+      "version": "9999.0-empty-to-avoid-conflict-with-guava"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.google.j2objc:j2objc-annotations",
+      "standardOnly": false,
+      "url": "https://github.com/google/j2objc",
+      "version": "2.8"
+    },
+    {
+      "license": "ML Kit Terms of Service",
+      "name": "com.google.mlkit:common",
+      "standardOnly": true,
+      "url": "https://developers.google.com/ml-kit/terms",
+      "version": "18.11.0"
+    },
+    {
+      "license": "ML Kit Terms of Service",
+      "name": "com.google.mlkit:genai-common",
+      "standardOnly": true,
+      "url": "https://developers.google.com/ml-kit/terms",
+      "version": "1.0.0-beta4"
     },
     {
       "license": "ML Kit Terms of Service",
@@ -366,10 +1465,24 @@
     },
     {
       "license": "ML Kit Terms of Service",
-      "name": "com.google.mlkit:genai-schema-compiler",
+      "name": "com.google.mlkit:genai-schema",
       "standardOnly": true,
       "url": "https://developers.google.com/ml-kit/terms",
       "version": "1.0.0-alpha1"
+    },
+    {
+      "license": "BSD-3-Clause",
+      "name": "com.google.protobuf:protobuf-javalite",
+      "standardOnly": true,
+      "url": "https://github.com/protocolbuffers/protobuf",
+      "version": "3.25.5"
+    },
+    {
+      "license": "BSD-3-Clause",
+      "name": "com.google.re2j:re2j",
+      "standardOnly": true,
+      "url": "https://github.com/google/re2j",
+      "version": "1.6"
     },
     {
       "license": "Apache-2.0",
@@ -377,6 +1490,20 @@
       "standardOnly": false,
       "url": "https://github.com/JakeWharton/retrofit2-kotlinx-serialization-converter",
       "version": "1.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.jakewharton.timber:timber",
+      "standardOnly": false,
+      "url": "https://github.com/JakeWharton/timber",
+      "version": "5.0.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.kieronquinn.smartspacer:sdk-core",
+      "standardOnly": false,
+      "url": "https://github.com/KieronQuinn/Smartspacer",
+      "version": "1.1.2"
     },
     {
       "license": "Apache-2.0",
@@ -401,6 +1528,13 @@
     },
     {
       "license": "Apache-2.0",
+      "name": "com.patrykandpatrick.vico:compose-android",
+      "standardOnly": false,
+      "url": "https://github.com/patrykandpatrick/vico",
+      "version": "3.3.1"
+    },
+    {
+      "license": "Apache-2.0",
       "name": "com.squareup.okhttp3:logging-interceptor",
       "standardOnly": false,
       "url": "https://square.github.io/okhttp/",
@@ -415,6 +1549,27 @@
     },
     {
       "license": "Apache-2.0",
+      "name": "com.squareup.okhttp3:okhttp-android",
+      "standardOnly": false,
+      "url": "https://square.github.io/okhttp/",
+      "version": "5.5.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.squareup.okio:okio",
+      "standardOnly": false,
+      "url": "https://square.github.io/okio/",
+      "version": "3.18.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "com.squareup.okio:okio-jvm",
+      "standardOnly": false,
+      "url": "https://square.github.io/okio/",
+      "version": "3.18.1"
+    },
+    {
+      "license": "Apache-2.0",
       "name": "com.squareup.retrofit2:retrofit",
       "standardOnly": false,
       "url": "https://square.github.io/retrofit/",
@@ -422,7 +1577,70 @@
     },
     {
       "license": "Apache-2.0",
+      "name": "io.coil-kt.coil3:coil",
+      "standardOnly": false,
+      "url": "https://github.com/coil-kt/coil",
+      "version": "3.6.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.coil-kt.coil3:coil-android",
+      "standardOnly": false,
+      "url": "https://github.com/coil-kt/coil",
+      "version": "3.6.0"
+    },
+    {
+      "license": "Apache-2.0",
       "name": "io.coil-kt.coil3:coil-compose",
+      "standardOnly": false,
+      "url": "https://github.com/coil-kt/coil",
+      "version": "3.6.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.coil-kt.coil3:coil-compose-android",
+      "standardOnly": false,
+      "url": "https://github.com/coil-kt/coil",
+      "version": "3.6.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.coil-kt.coil3:coil-compose-core",
+      "standardOnly": false,
+      "url": "https://github.com/coil-kt/coil",
+      "version": "3.6.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.coil-kt.coil3:coil-compose-core-android",
+      "standardOnly": false,
+      "url": "https://github.com/coil-kt/coil",
+      "version": "3.6.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.coil-kt.coil3:coil-core",
+      "standardOnly": false,
+      "url": "https://github.com/coil-kt/coil",
+      "version": "3.6.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.coil-kt.coil3:coil-core-android",
+      "standardOnly": false,
+      "url": "https://github.com/coil-kt/coil",
+      "version": "3.6.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.coil-kt.coil3:coil-network-core",
+      "standardOnly": false,
+      "url": "https://github.com/coil-kt/coil",
+      "version": "3.6.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.coil-kt.coil3:coil-network-core-android",
       "standardOnly": false,
       "url": "https://github.com/coil-kt/coil",
       "version": "3.6.0"
@@ -436,24 +1654,339 @@
     },
     {
       "license": "Apache-2.0",
-      "name": "io.mockk:mockk",
+      "name": "io.coil-kt.coil3:coil-network-okhttp-android",
       "standardOnly": false,
-      "url": "https://mockk.io/",
-      "version": "1.13.13"
+      "url": "https://github.com/coil-kt/coil",
+      "version": "3.6.0"
     },
     {
       "license": "Apache-2.0",
-      "name": "io.mockk:mockk-android",
-      "standardOnly": false,
-      "url": "https://mockk.io/",
-      "version": "1.13.13"
+      "name": "io.grpc:grpc-android",
+      "standardOnly": true,
+      "url": "https://github.com/grpc/grpc-java",
+      "version": "1.62.2"
     },
     {
-      "license": "EPL-1.0",
-      "name": "junit:junit",
+      "license": "Apache-2.0",
+      "name": "io.grpc:grpc-api",
+      "standardOnly": true,
+      "url": "https://github.com/grpc/grpc-java",
+      "version": "1.62.2"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.grpc:grpc-context",
+      "standardOnly": true,
+      "url": "https://github.com/grpc/grpc-java",
+      "version": "1.62.2"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.grpc:grpc-core",
+      "standardOnly": true,
+      "url": "https://github.com/grpc/grpc-java",
+      "version": "1.62.2"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.grpc:grpc-okhttp",
+      "standardOnly": true,
+      "url": "https://github.com/grpc/grpc-java",
+      "version": "1.62.2"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.grpc:grpc-protobuf-lite",
+      "standardOnly": true,
+      "url": "https://github.com/grpc/grpc-java",
+      "version": "1.62.2"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.grpc:grpc-stub",
+      "standardOnly": true,
+      "url": "https://github.com/grpc/grpc-java",
+      "version": "1.62.2"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.grpc:grpc-util",
+      "standardOnly": true,
+      "url": "https://github.com/grpc/grpc-java",
+      "version": "1.62.2"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "io.perfmark:perfmark-api",
+      "standardOnly": true,
+      "url": "https://github.com/perfmark/perfmark",
+      "version": "0.26.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "jakarta.inject:jakarta.inject-api",
       "standardOnly": false,
-      "url": "https://junit.org/junit4/",
-      "version": "4.13.2"
+      "url": "https://github.com/jakartaee/inject",
+      "version": "2.0.1"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "javax.inject:javax.inject",
+      "standardOnly": false,
+      "url": "https://github.com/javax-inject/javax-inject",
+      "version": "1"
+    },
+    {
+      "license": "MIT",
+      "name": "org.checkerframework:checker-qual",
+      "standardOnly": false,
+      "url": "https://checkerframework.org/",
+      "version": "3.37.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.codehaus.mojo:animal-sniffer-annotations",
+      "standardOnly": true,
+      "url": "https://www.mojohaus.org/animal-sniffer/",
+      "version": "1.23"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.androidx.lifecycle:lifecycle-common",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform-core",
+      "version": "2.9.6"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.androidx.lifecycle:lifecycle-runtime",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform-core",
+      "version": "2.9.6"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform-core",
+      "version": "2.9.6"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.androidx.savedstate:savedstate",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform-core",
+      "version": "1.3.6"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.androidx.savedstate:savedstate-compose",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform-core",
+      "version": "1.3.6"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.animation:animation",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.animation:animation-android",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.animation:animation-core",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.animation:animation-core-android",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.foundation:foundation",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.foundation:foundation-android",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.foundation:foundation-layout",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.foundation:foundation-layout-android",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.runtime:runtime",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.runtime:runtime-android",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.runtime:runtime-saveable",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.runtime:runtime-saveable-android",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.ui:ui",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.ui:ui-android",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.ui:ui-geometry",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.ui:ui-geometry-android",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.ui:ui-graphics",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.ui:ui-graphics-android",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.ui:ui-text",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.ui:ui-text-android",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.ui:ui-unit",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.ui:ui-unit-android",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.ui:ui-util",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.compose.ui:ui-util-android",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/compose-multiplatform",
+      "version": "1.12.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlin:kotlin-parcelize-runtime",
+      "standardOnly": false,
+      "url": "https://kotlinlang.org/",
+      "version": "2.4.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlin:kotlin-stdlib",
+      "standardOnly": false,
+      "url": "https://kotlinlang.org/",
+      "version": "2.4.10"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
+      "standardOnly": false,
+      "url": "https://kotlinlang.org/",
+      "version": "2.4.10"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlin:kotlin-stdlib-jdk7",
+      "standardOnly": false,
+      "url": "https://kotlinlang.org/",
+      "version": "1.8.10"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlin:kotlin-stdlib-jdk8",
+      "standardOnly": false,
+      "url": "https://kotlinlang.org/",
+      "version": "1.8.10"
     },
     {
       "license": "Apache-2.0",
@@ -464,17 +1997,80 @@
     },
     {
       "license": "Apache-2.0",
-      "name": "org.jetbrains.kotlinx:kotlinx-coroutines-android",
+      "name": "org.jetbrains.kotlinx:kotlinx-collections-immutable-jvm",
       "standardOnly": false,
       "url": "https://github.com/Kotlin/kotlinx.coroutines",
-      "version": "1.9.0"
+      "version": "0.3.8"
     },
     {
       "license": "Apache-2.0",
-      "name": "org.jetbrains.kotlinx:kotlinx-coroutines-test",
+      "name": "org.jetbrains.kotlinx:kotlinx-coroutines-android",
       "standardOnly": false,
       "url": "https://github.com/Kotlin/kotlinx.coroutines",
-      "version": "1.9.0"
+      "version": "1.11.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlinx:kotlinx-coroutines-bom",
+      "standardOnly": false,
+      "url": "https://github.com/Kotlin/kotlinx.coroutines",
+      "version": "1.11.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlinx:kotlinx-coroutines-core",
+      "standardOnly": false,
+      "url": "https://github.com/Kotlin/kotlinx.coroutines",
+      "version": "1.11.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm",
+      "standardOnly": false,
+      "url": "https://github.com/Kotlin/kotlinx.coroutines",
+      "version": "1.11.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlinx:kotlinx-coroutines-guava",
+      "standardOnly": true,
+      "url": "https://github.com/Kotlin/kotlinx.coroutines",
+      "version": "1.11.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlinx:kotlinx-coroutines-play-services",
+      "standardOnly": true,
+      "url": "https://github.com/Kotlin/kotlinx.coroutines",
+      "version": "1.11.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlinx:kotlinx-coroutines-reactive",
+      "standardOnly": true,
+      "url": "https://github.com/Kotlin/kotlinx.coroutines",
+      "version": "1.11.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlinx:kotlinx-serialization-bom",
+      "standardOnly": false,
+      "url": "https://github.com/Kotlin/kotlinx.coroutines",
+      "version": "1.7.3"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlinx:kotlinx-serialization-core",
+      "standardOnly": false,
+      "url": "https://github.com/Kotlin/kotlinx.coroutines",
+      "version": "1.7.3"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm",
+      "standardOnly": false,
+      "url": "https://github.com/Kotlin/kotlinx.coroutines",
+      "version": "1.7.3"
     },
     {
       "license": "Apache-2.0",
@@ -484,6 +2080,27 @@
       "version": "1.7.3"
     },
     {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains.kotlinx:kotlinx-serialization-json-jvm",
+      "standardOnly": false,
+      "url": "https://github.com/Kotlin/kotlinx.coroutines",
+      "version": "1.7.3"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jetbrains:annotations",
+      "standardOnly": false,
+      "url": "https://github.com/JetBrains/java-annotations",
+      "version": "23.0.0"
+    },
+    {
+      "license": "Apache-2.0",
+      "name": "org.jspecify:jspecify",
+      "standardOnly": false,
+      "url": "https://jspecify.dev/",
+      "version": "1.0.0"
+    },
+    {
       "license": "BSD-2-Clause",
       "name": "org.maplibre.gl:android-sdk",
       "standardOnly": false,
@@ -491,11 +2108,32 @@
       "version": "13.3.1"
     },
     {
-      "license": "MIT",
-      "name": "org.robolectric:robolectric",
+      "license": "BSD-2-Clause",
+      "name": "org.maplibre.gl:android-sdk-geojson",
       "standardOnly": false,
-      "url": "https://robolectric.org/",
-      "version": "4.15.1"
+      "url": "https://maplibre.org/",
+      "version": "6.0.1"
+    },
+    {
+      "license": "BSD-2-Clause",
+      "name": "org.maplibre.gl:android-sdk-turf",
+      "standardOnly": false,
+      "url": "https://maplibre.org/",
+      "version": "6.0.1"
+    },
+    {
+      "license": "BSD-2-Clause",
+      "name": "org.maplibre.gl:maplibre-android-gestures",
+      "standardOnly": false,
+      "url": "https://maplibre.org/",
+      "version": "0.0.4"
+    },
+    {
+      "license": "MIT-0",
+      "name": "org.reactivestreams:reactive-streams",
+      "standardOnly": true,
+      "url": "https://www.reactive-streams.org/",
+      "version": "1.0.3"
     },
     {
       "license": "Blitzortung Terms",

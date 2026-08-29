@@ -181,11 +181,8 @@ class LocationsViewModel @Inject constructor(
      * bring back the original `sortOrder` and the per-location forecast and
      * alert source overrides, none of which the caller could reconstruct.
      */
-    suspend fun removeLocationReturningEntity(id: Long): SavedLocationEntity? {
-        val removed = locationRepository.getAll().firstOrNull { it.id == id }
+    suspend fun removeLocationReturningEntity(id: Long): SavedLocationEntity? =
         locationRepository.removeLocation(id)
-        return removed
-    }
 
     fun removeLocation(id: Long) {
         viewModelScope.launch { locationRepository.removeLocation(id) }
@@ -193,7 +190,7 @@ class LocationsViewModel @Inject constructor(
 
     /** Puts a removed location back at its original position. */
     fun restoreLocation(location: SavedLocationEntity) {
-        viewModelScope.launch { locationRepository.restoreAll(listOf(location)) }
+        viewModelScope.launch { locationRepository.restoreLocation(location) }
     }
 
     fun moveLocation(fromIndex: Int, toIndex: Int) {
