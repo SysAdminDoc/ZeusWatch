@@ -10,6 +10,7 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.IconPack
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.repository.*
+import com.sysadmindoc.nimbus.data.repository.DeliverySurface
 import com.sysadmindoc.nimbus.util.AlertCheckWorker
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
 import com.sysadmindoc.nimbus.util.BackgroundWorkSync
@@ -157,6 +158,7 @@ class SettingsViewModel @Inject constructor(
             AlertCheckWorker.schedule(appContext)
         } else {
             AlertCheckWorker.cancel(appContext)
+            deliveryHealthRepository.forget(DeliverySurface.WEATHER_ALERTS)
             // Severe-scope only: nowcast/health/custom notifications live in the
             // ambient group and are governed by their own toggles.
             AlertNotificationHelper.dismissSevere(appContext)
@@ -202,6 +204,7 @@ class SettingsViewModel @Inject constructor(
             NowcastAlertWorker.schedule(appContext)
         } else {
             NowcastAlertWorker.cancel(appContext)
+            deliveryHealthRepository.forget(DeliverySurface.NOWCAST_ALERTS)
             AlertNotificationHelper.dismissNowcast(appContext)
         }
     }
@@ -212,6 +215,7 @@ class SettingsViewModel @Inject constructor(
             DailyBriefingWorker.schedule(appContext, settings.dailyBriefingMinutes)
         } else {
             DailyBriefingWorker.cancel(appContext)
+            deliveryHealthRepository.forget(DeliverySurface.DAILY_BRIEFING)
             WeatherNotificationHelper.dismissDailyBriefing(appContext)
         }
     }
@@ -229,6 +233,7 @@ class SettingsViewModel @Inject constructor(
             HealthAlertWorker.schedule(appContext)
         } else {
             HealthAlertWorker.cancel(appContext)
+            deliveryHealthRepository.forget(DeliverySurface.HEALTH_ALERTS)
             AlertNotificationHelper.dismissHealth(appContext)
         }
     }

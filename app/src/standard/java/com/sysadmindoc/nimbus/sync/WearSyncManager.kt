@@ -59,7 +59,7 @@ class WearSyncManager @Inject constructor(
         data: WeatherData,
         alerts: List<WeatherAlert>? = null,
         airQuality: AirQualityData? = null,
-    ): Unit = withContext(Dispatchers.IO) {
+    ): WearSyncOutcome = withContext(Dispatchers.IO) {
         try {
             val settings = prefs.settings.first()
             val request = PutDataMapRequest.create(PATH_WEATHER).apply {
@@ -150,6 +150,7 @@ class WearSyncManager @Inject constructor(
                 .await()
 
             Log.d(TAG, "Synced weather to watch: ${data.location.name} ${data.current.temperature}° (${alerts?.size ?: "unchanged"} alerts, AQI=${airQuality?.usAqi ?: "unchanged"})")
+            WearSyncOutcome.SYNCED
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             // Propagate cancellation so the caller's structured concurrency
             // sees the cancel — otherwise a fast `putDataItem().await()`
@@ -158,10 +159,15 @@ class WearSyncManager @Inject constructor(
             throw cancelled
         } catch (e: Exception) {
             // Non-fatal — watch falls back to its own API calls
+            // Still non-fatal for the refresh, but the outcome is returned
+            // rather than swallowed: the caller was recording a successful
+            // delivery for every one of these.
             if (e is ApiException && e.statusCode == CommonStatusCodes.API_NOT_CONNECTED) {
                 Log.d(TAG, "Wear OS sync unavailable on this device")
+                WearSyncOutcome.UNAVAILABLE
             } else {
                 Log.w(TAG, "Failed to sync weather to watch", e)
+                WearSyncOutcome.FAILED
             }
         }
     }

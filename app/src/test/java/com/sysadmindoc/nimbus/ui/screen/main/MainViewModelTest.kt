@@ -822,7 +822,8 @@ class MainViewModelTest {
         coEvery { weatherSourceManager.getAlerts(any(), any(), any(), any(), any()) } returns
             Result.failure(Exception("alerts endpoint down"))
         val syncedAlerts = mutableListOf<List<WeatherAlert>?>()
-        coEvery { wearSyncManager.syncWeather(any(), captureNullable(syncedAlerts), any()) } returns Unit
+        coEvery { wearSyncManager.syncWeather(any(), captureNullable(syncedAlerts), any()) } returns
+            com.sysadmindoc.nimbus.sync.WearSyncOutcome.SYNCED
 
         viewModel = createAndAdvance()
 
@@ -837,7 +838,8 @@ class MainViewModelTest {
     fun `successful empty alert fetch syncs an empty list so the watch clears alerts`() = runTest {
         stubLocationSuccess()
         val syncedAlerts = mutableListOf<List<WeatherAlert>?>()
-        coEvery { wearSyncManager.syncWeather(any(), captureNullable(syncedAlerts), any()) } returns Unit
+        coEvery { wearSyncManager.syncWeather(any(), captureNullable(syncedAlerts), any()) } returns
+            com.sysadmindoc.nimbus.sync.WearSyncOutcome.SYNCED
 
         viewModel = createAndAdvance()
 

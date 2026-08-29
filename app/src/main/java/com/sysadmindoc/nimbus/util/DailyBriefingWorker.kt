@@ -122,6 +122,15 @@ class DailyBriefingWorker @AssistedInject constructor(
         /** A one-off run of this worker, for the diagnostics panel's Run now. */
         fun oneTimeRequest(): OneTimeWorkRequest =
             OneTimeWorkRequestBuilder<DailyBriefingWorker>()
+                .setConstraints(
+                    // The same network constraint the periodic work carries.
+                    // Without it Run now fires offline, every provider call
+                    // fails, and the diagnostic action manufactures the
+                    // failure it exists to diagnose.
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                )
                 .build()
         private const val MAX_RETRY_ATTEMPTS = 3
         private const val PERIOD_HOURS = 24L
