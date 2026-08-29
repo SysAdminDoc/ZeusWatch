@@ -36,6 +36,8 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.data.repository.RadarProvider
+import com.sysadmindoc.nimbus.ui.screen.radar.RadarWebView
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
@@ -47,13 +49,16 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 
 /**
  * Tappable radar preview card on the main screen.
- * Shows a live radar tile from RainViewer overlaid on a dark basemap.
- * Falls back to a map icon placeholder while loading.
+ * Matches the selected radar provider. Web providers render their live view,
+ * while native providers show the latest available radar tile.
  * Tapping opens the full-screen radar.
  */
 @Composable
 fun RadarPreviewCard(
     onOpenRadar: () -> Unit,
+    provider: RadarProvider,
+    latitude: Double,
+    longitude: Double,
     modifier: Modifier = Modifier,
     radarTileUrl: String? = null,
     baseMapTileUrl: String? = null,
@@ -74,27 +79,38 @@ fun RadarPreviewCard(
                     ),
                 ),
             )
-            .border(1.dp, NimbusCardBorder, shape)
-            .clickable(onClick = onOpenRadar),
+            .border(1.dp, NimbusCardBorder, shape),
     ) {
         RadarPreviewMap(
+            onOpenRadar = onOpenRadar,
+            provider = provider,
+            latitude = latitude,
+            longitude = longitude,
             radarTileUrl = radarTileUrl,
             baseMapTileUrl = baseMapTileUrl,
             statusLabel = statusLabel,
             statusTint = statusTint,
         )
-        RadarPreviewFooter()
+        RadarPreviewFooter(
+            onOpenRadar = onOpenRadar,
+            provider = provider,
+        )
     }
 }
 
 @Composable
 private fun RadarPreviewMap(
+    onOpenRadar: () -> Unit,
+    provider: RadarProvider,
+    latitude: Double,
+    longitude: Double,
     radarTileUrl: String?,
     baseMapTileUrl: String?,
     statusLabel: String?,
     statusTint: Color?,
 ) {
-    val hasTileContent = baseMapTileUrl != null || radarTileUrl != null
+    val usesEmbeddedRadar = !provider.supportsNativePlayback
+    val hasRadarContent = usesEmbeddedRadar || baseMapTileUrl != null || radarTileUrl != null
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -102,32 +118,72 @@ private fun RadarPreviewMap(
             .clip(RoundedCornerShape(topStart = 11.dp, topEnd = 11.dp))
             .background(NimbusSurfaceVariant),
     ) {
-        RadarPreviewImages(
-            radarTileUrl = radarTileUrl,
-            baseMapTileUrl = baseMapTileUrl,
-        )
-        RadarPreviewGradient()
-        if (hasTileContent) {
-            RadarPreviewCaption(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+        if (usesEmbeddedRadar) {
+            RadarWebView(
+                provider = provider,
+                latitude = latitude,
+                longitude = longitude,
+                modifier = Modifier.fillMaxSize(),
+                zoom = 7,
+                interactive = false,
+                onPreviewClick = onOpenRadar,
             )
         } else {
-            RadarPreviewEmptyState(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(horizontal = 26.dp),
+            RadarPreviewImages(
+                radarTileUrl = radarTileUrl,
+                baseMapTileUrl = baseMapTileUrl,
             )
         }
-        RadarPreviewStatusBadge(
-            hasRadarTile = radarTileUrl != null,
-            statusLabel = statusLabel,
-            statusTint = statusTint,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(14.dp),
-        )
+        if (!usesEmbeddedRadar) {
+            RadarPreviewGradient()
+            if (baseMapTileUrl != null) {
+                Text(
+                    text = stringResource(R.string.radar_preview_map_attribution),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NimbusTextPrimary,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.58f),
+                            shape = RoundedCornerShape(4.dp),
+                        )
+                        .padding(horizontal = 6.dp, vertical = 3.dp),
+                )
+            }
+            if (hasRadarContent) {
+                RadarPreviewCaption(
+                    title = stringResource(R.string.radar_preview_title),
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                )
+            } else {
+                RadarPreviewEmptyState(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(horizontal = 26.dp),
+                )
+            }
+            RadarPreviewStatusBadge(
+                hasRadarTile = hasRadarContent,
+                statusLabel = statusLabel,
+                statusTint = statusTint,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(14.dp),
+            )
+        }
+        if (!usesEmbeddedRadar) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        onClickLabel = stringResource(R.string.radar_preview_open_cd),
+                        onClick = onOpenRadar,
+                    ),
+            )
+        }
     }
 }
 
@@ -228,10 +284,13 @@ private fun RadarPreviewStatusBadge(
 }
 
 @Composable
-private fun RadarPreviewCaption(modifier: Modifier = Modifier) {
+private fun RadarPreviewCaption(
+    title: String,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier = modifier) {
         Text(
-            text = stringResource(R.string.radar_preview_title),
+            text = title,
             style = MaterialTheme.typography.headlineSmall,
             color = NimbusTextPrimary,
         )
@@ -245,10 +304,17 @@ private fun RadarPreviewCaption(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun RadarPreviewFooter() {
+private fun RadarPreviewFooter(
+    onOpenRadar: () -> Unit,
+    provider: RadarProvider,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(
+                onClickLabel = stringResource(R.string.radar_preview_open_cd),
+                onClick = onOpenRadar,
+            )
             .padding(horizontal = 18.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -261,7 +327,11 @@ private fun RadarPreviewFooter() {
         Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.radar_preview_open_title),
+                text = if (provider.supportsNativePlayback) {
+                    stringResource(R.string.radar_preview_open_title)
+                } else {
+                    stringResource(R.string.radar_preview_open_provider, provider.label)
+                },
                 style = MaterialTheme.typography.titleSmall,
                 color = NimbusTextPrimary,
             )

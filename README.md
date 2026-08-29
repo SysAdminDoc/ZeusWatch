@@ -1,47 +1,74 @@
 # ZeusWatch
 
-![Version](https://img.shields.io/badge/version-1.29.0-blue)
+![Version](https://img.shields.io/badge/version-1.29.1-blue)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-green)
 ![Platform](https://img.shields.io/badge/platform-Android%208.0+-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white)
 ![Compose](https://img.shields.io/badge/Jetpack%20Compose-2026.06.01-4285F4?logo=jetpackcompose&logoColor=white)
 ![API](https://img.shields.io/badge/API-26+-brightgreen)
 
-> A free, open-source Android weather app with a premium dark UI, 37 customizable cards, animated Lottie icons, Gemini Nano AI summaries, multi-source forecasts, route weather planning, custom alert rules, and smart alerts. No API keys required for core forecasts. Powered by Open-Meteo, FMI, LibreWXR, RainViewer, Blitzortung, NWS, MeteoAlarm, JMA, MET Norway, Environment Canada, Hong Kong Observatory, BMKG, WMO SWIC, and optional WeatherFlow Tempest PWS observations.
+## A serious weather console for Android
 
-<img width="1536" height="1024" alt="design" src="https://github.com/user-attachments/assets/dce70ccc-af71-48d8-8000-0b2935f45996" />
+ZeusWatch turns your phone into a focused weather console. Read current conditions at a glance, inspect dense hourly and 16-day forecasts, follow live Windy radar, and set alerts for the weather that matters to you. Core forecasts are free, need no account or API key, and don't collect analytics.
 
-## Screenshots
+![A dark weather map with radar, cloud, and pressure data representing ZeusWatch](docs/screenshots/zeuswatch-hero-v1.29.1.png)
 
-| Today | Settings | Radar |
-|-------|----------|-------|
-| ![ZeusWatch Today screen with current conditions and forecast cards](docs/screenshots/phone-home.png) | ![ZeusWatch Settings screen with refined category cards](docs/screenshots/phone-settings.png) | ![ZeusWatch Radar screen with live map controls](docs/screenshots/phone-radar.png) |
+**[Download the latest release](https://github.com/SysAdminDoc/ZeusWatch/releases/latest)** · [Build from source](#build-from-source) · [Read the privacy policy](#privacy)
 
-## Quick Start
+## Why ZeusWatch
+
+| | |
+|---|---|
+| **Read faster** | A two-column conditions view, compact forecast tables, and clear risk cues put the useful numbers first. |
+| **Check the source** | Choose forecast, radar, and alert providers. Configure fallbacks and inspect local provider health when data looks wrong. |
+| **Make it yours** | Reorder 37 weather cards, choose units, tune notifications, and save different provider settings for each location. |
+| **Keep control** | Core use has no account, ads, analytics, or required API key. Cached forecasts remain visible when the network drops. |
+
+## Product tour
+
+| Today | Hourly | Radar |
+|:---:|:---:|:---:|
+| [![Today screen with current conditions and a compact hourly forecast](docs/screenshots/phone-home.png)](docs/screenshots/phone-home.png) | [![Hourly screen with a temperature chart and dense forecast rows](docs/screenshots/phone-hourly.png)](docs/screenshots/phone-hourly.png) | [![Windy radar screen with live precipitation playback](docs/screenshots/phone-radar.png)](docs/screenshots/phone-radar.png) |
+
+| Daily | Compare | Settings |
+|:---:|:---:|:---:|
+| [![Daily screen with a dense 16-day forecast](docs/screenshots/phone-daily.png)](docs/screenshots/phone-daily.png) | [![Compare screen showing two saved locations and provider trends](docs/screenshots/phone-compare.png)](docs/screenshots/phone-compare.png) | [![Settings screen with focused appearance controls](docs/screenshots/phone-settings.png)](docs/screenshots/phone-settings.png) |
+
+Each image is a current physical-device capture, not a design mockup.
+
+### Windy radar, right where you need it
+
+The Today tab carries a live Windy view, so a quick forecast check can turn into a storm check with one tap. Fresh installs use Windy throughout the app, and saved provider choices still stay yours.
+
+<p align="center">
+  <a href="docs/screenshots/phone-today-windy.png"><img src="docs/screenshots/phone-today-windy.png" width="360" alt="Today screen with a live Windy radar card"></a>
+</p>
+
+## Download
+
+Most current Android phones should use the standard `arm64-v8a` build. Every release also includes 32-bit, universal, Google-free, and Wear OS packages.
+
+| Build | Approximate size | Best for |
+|-------|------------------|----------|
+| `standard-arm64-v8a` | 22 MB | Most current Android phones |
+| `standard-armeabi-v7a` | 19 MB | Older 32-bit phones |
+| `standard-universal` | 58 MB | One APK covering both phone architectures |
+| `freenet-*` | 17 to 56 MB | F-Droid users and phones without Google Play Services |
+| `wear` | 6 MB | The Wear OS companion app |
+
+Get the signed APKs and checksum file from [GitHub Releases](https://github.com/SysAdminDoc/ZeusWatch/releases/latest).
+
+## Build from source
 
 ```bash
-git clone https://github.com/SysAdminDoc/zeuswatch.git
-cd zeuswatch
+git clone https://github.com/SysAdminDoc/ZeusWatch.git
+cd ZeusWatch
 ./gradlew assembleStandardDebug
 ```
 
 Install the APK from `app/build/outputs/apk/standard/debug/` or open in Android Studio and run directly.
 
 **Requirements:** Android Studio with AGP 9.2 support, JDK 17+, Android SDK 37.0
-
-### Download
-
-Releases publish per-ABI APKs to reduce download size:
-
-| APK | Size | Use when |
-|-----|------|----------|
-| `ZeusWatch-standard-arm64-v8a` | ~20 MB | Most modern phones (2017+) |
-| `ZeusWatch-standard-armeabi-v7a` | ~17 MB | Older 32-bit devices |
-| `ZeusWatch-standard-universal` | ~49 MB | Unsure which ABI you need |
-| `ZeusWatch-freenet-*` | Same variants | F-Droid compatible (no Google Play Services) |
-| `ZeusWatch-wear` | ~5 MB | Wear OS companion watch app |
-
-Download from [GitHub Releases](https://github.com/SysAdminDoc/zeuswatch/releases).
 
 ### Verify Downloads
 
@@ -128,9 +155,9 @@ The provenance JSON records the source commit, clean-tree state, toolchain versi
 
 | Feature | Description |
 |---------|-------------|
-| **Radar Providers** | User-selectable: Windy Radar WebView, LibreWXR Native MapLibre playback with nowcast tiles (max zoom 12, Viper HD), RainViewer Native MapLibre playback with past-radar tiles (max zoom 7, Universal Blue), NWS Radar (US), or NWS Radar Lite (US) |
+| **Radar Providers** | User-selectable: Windy Radar WebView (default), LibreWXR Native MapLibre playback with nowcast tiles (max zoom 12, Viper HD), RainViewer Native MapLibre playback with past-radar tiles (max zoom 7, Universal Blue), NWS Radar (US), or NWS Radar Lite (US) |
 | **Animated Radar Playback** | Play/pause, frame slider, recent-past labels, timestamp overlay, cached frame metadata fallback (native mode) |
-| **Radar Preview Card** | Recent selected native radar tile + CartoDB dark basemap on the Today tab |
+| **Radar Preview Card** | Live selected web radar on the Today tab; native choices use current tiles over a no-key OpenStreetMap base |
 | **Radar Tab** | Full-screen radar in the bottom nav with provider-aware rendering |
 | **Route Weather Overlay** | Radar includes a foreground route-weather estimator for straight-line corridors or imported GPX geometry, with sampled weather and risk timing |
 | **Map Layer Selector** | Overlay layers: Radar, Lightning, Satellite, Clouds |
@@ -190,7 +217,7 @@ When providers publish localized condition or alert text, matching user-locale s
 
 | Setting | Options |
 |---------|---------|
-| **Radar Provider** | Windy Radar / LibreWXR Native / RainViewer Native / NWS Radar (US) / NWS Radar Lite (US) |
+| **Radar Provider** | Windy Radar (default) / LibreWXR Native / RainViewer Native / NWS Radar (US) / NWS Radar Lite (US) |
 | **Icon Style** | Meteocons Animated (Lottie, default) / Material Icons / Custom Icon Packs |
 | **Theme Mode** | Static Dark / Weather Adaptive (accent colors shift: amber for sun, blue for rain, purple for storms) |
 | **Weather Summary** | AI-Generated (Gemini Nano, default) / Standard template |
@@ -325,7 +352,7 @@ All core APIs are free with no keys required:
 | [Open-Meteo Air Quality](https://open-meteo.com/en/docs/air-quality-api) | AQI, pollutants, pollen (6 species), 5-day daily forecast | 10,000/day |
 | [LibreWXR](https://librewxr.net/) | FOSS radar tile source with RainViewer-compatible metadata, Viper HD color scheme, max zoom 12, and nowcast frames | CC-BY-4.0 data |
 | [RainViewer](https://www.rainviewer.com/api/weather-maps-api.html) | Past radar tile images only (past 2h, max zoom 7, Universal Blue PNG; no nowcast/satellite) | Fair use |
-| [Windy.com](https://www.windy.com/) | Embedded interactive radar (WebView option) | Fair use |
+| [Windy.com](https://www.windy.com/) | Default embedded interactive radar | Fair use |
 | [NWS Alerts](https://www.weather.gov/documentation/services-web-api) | US severe weather alerts | Fair use |
 | [MeteoAlarm](https://www.meteoalarm.org/) | EU severe weather alerts (31 countries) | Fair use |
 | [JMA](https://www.jma.go.jp/) | Japan severe weather alerts | Fair use |

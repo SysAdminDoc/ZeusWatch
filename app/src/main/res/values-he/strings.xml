@@ -384,6 +384,7 @@
     <string name="radar_preview_title">מפת רדאר</string>
     <string name="radar_preview_subtitle">עקוב אחר תנועת המשקעים בתצוגה האינטראקטיבית המלאה.</string>
     <string name="radar_preview_open_title">פתח רדאר מלא</string>
+    <string name="radar_preview_open_provider">פתיחת %1$s</string>
     <string name="radar_preview_open_desc">Better for storm timing, rain coverage, and checking nearby cells.</string>
     <string name="radar_preview_open_cd">פתח רדאר</string>
     <string name="radar_layer_with_provider">%1$s layer • %2$s</string>

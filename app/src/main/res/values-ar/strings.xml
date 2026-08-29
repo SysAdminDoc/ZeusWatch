@@ -384,6 +384,7 @@
     <string name="radar_preview_title">خريطة الرادار</string>
     <string name="radar_preview_subtitle">تتبع حركة الهطول في العرض التفاعلي الكامل.</string>
     <string name="radar_preview_open_title">فتح الرادار الكامل</string>
+    <string name="radar_preview_open_provider">فتح %1$s</string>
     <string name="radar_preview_open_desc">Better for storm timing, rain coverage, and checking nearby cells.</string>
     <string name="radar_preview_open_cd">فتح الرادار</string>
     <string name="radar_layer_with_provider">%1$s layer • %2$s</string>

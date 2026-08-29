@@ -45,7 +45,7 @@ class RadarTileMathTest {
         )
         assert(urls.radarTileUrl.contains("/6/")) { "zoom should be 6" }
         assert(!urls.radarTileUrl.contains("{z}")) { "template not substituted" }
-        assert(urls.baseMapUrl.contains("basemaps.cartocdn.com"))
+        assert(urls.baseMapUrl.contains("tile.openstreetmap.org"))
     }
 
     @Test

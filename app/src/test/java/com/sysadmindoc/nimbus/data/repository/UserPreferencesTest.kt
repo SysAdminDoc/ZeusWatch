@@ -42,7 +42,7 @@ class UserPreferencesTest {
     fun defaultSettingsHaveCorrectDisplayDefaults() {
         val settings = NimbusSettings()
 
-        assertEquals(RadarProvider.NATIVE_MAPLIBRE, settings.radarProvider)
+        assertEquals(RadarProvider.WINDY_WEBVIEW, settings.radarProvider)
         assertEquals(IconStyle.METEOCONS, settings.iconStyle)
         assertEquals("", settings.customIconPackId)
         assertEquals(ThemeMode.STATIC_DARK, settings.themeMode)

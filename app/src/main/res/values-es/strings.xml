@@ -396,6 +396,7 @@
     <string name="radar_preview_title">Mapa de radar</string>
     <string name="radar_preview_subtitle">Sigue el movimiento de precipitación con la vista interactiva completa.</string>
     <string name="radar_preview_open_title">Abrir radar completo</string>
+    <string name="radar_preview_open_provider">Abrir %1$s</string>
     <string name="radar_preview_open_desc">Mejor para medir tormentas, cobertura de lluvia y celdas cercanas.</string>
     <string name="radar_preview_open_cd">Abrir radar</string>
     <string name="radar_layer_with_provider">Capa %1$s • %2$s</string>

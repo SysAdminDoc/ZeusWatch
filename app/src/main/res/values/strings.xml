@@ -400,8 +400,10 @@
     <string name="radar_preview_title">Radar Map</string>
     <string name="radar_preview_subtitle">Track precipitation movement with the full interactive view.</string>
     <string name="radar_preview_open_title">Open full radar</string>
+    <string name="radar_preview_open_provider">Open %1$s</string>
     <string name="radar_preview_open_desc">Better for storm timing, rain coverage, and checking nearby cells.</string>
     <string name="radar_preview_open_cd">Open radar</string>
+    <string name="radar_preview_map_attribution" translatable="false">© OpenStreetMap contributors</string>
     <string name="radar_layer_with_provider">%1$s layer • %2$s</string>
     <string name="radar_interactive_map">Interactive map</string>
     <string name="radar_loading_title">Loading radar</string>

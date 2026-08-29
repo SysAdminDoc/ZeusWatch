@@ -814,6 +814,19 @@ class WeatherLoadCoordinator @Inject constructor(
     ) {
         try {
             val radarProvider = currentState().settings.radarProvider
+            if (!radarProvider.supportsNativePlayback) {
+                if (isLatestRequest(requestId)) {
+                    updateState {
+                        it.copy(
+                            radarPreviewTileUrl = null,
+                            radarBaseMapUrl = null,
+                            radarPreviewUpdatedAt = LocalDateTime.now(),
+                            radarPreviewFetchFailed = false,
+                        )
+                    }
+                }
+                return
+            }
             radarRepository.getRadarFrames(radarProvider).fold(
                 onSuccess = { frameSet ->
                     val latestFrame = frameSet.past.lastOrNull()
