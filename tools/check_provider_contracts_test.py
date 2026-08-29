@@ -192,6 +192,30 @@ class ProviderContractTests(unittest.TestCase):
             self.assertIn("if-modified-since", seen_headers)
             self.assertEqual(json.loads(result.body.decode("utf-8")), {"ok": True})
 
+    def test_bmkg_feed_validator_rejects_feeds_the_adapter_cannot_use(self) -> None:
+        # BmkgAlertAdapter reaches every alert through <item><link>, so a feed
+        # that parses but carries no usable link drops all alerts silently.
+        failing = {
+            "no link": "<rss><channel><item><title>x</title></item></channel></rss>",
+            "not a CAP document": "<rss><channel><item><link>https://x/a.html</link></item></channel></rss>",
+            "no channel": "<rss></rss>",
+            "malformed": "<rss><channel>",
+        }
+        for label, feed in failing.items():
+            with self.subTest(label=label):
+                self.assertFalse(contracts.validate_bmkg_nowcast_feed(feed).ok)
+
+    def test_bmkg_feed_validator_accepts_a_quiet_day(self) -> None:
+        # Indonesia has no active nowcast warnings on plenty of days, and that
+        # is an empty alert list rather than a provider failure.
+        self.assertTrue(contracts.validate_bmkg_nowcast_feed("<rss><channel></channel></rss>").ok)
+        good = (
+            "<rss><channel><item>"
+            "<link>https://www.bmkg.go.id/alerts/nowcast/en/CSB1_alert.xml</link>"
+            "</item></channel></rss>"
+        )
+        self.assertTrue(contracts.validate_bmkg_nowcast_feed(good).ok)
+
     def test_selectable_provider_matrix_has_contract_coverage(self) -> None:
         selectable_pairs = _selectable_provider_pairs()
         contract_pairs = {

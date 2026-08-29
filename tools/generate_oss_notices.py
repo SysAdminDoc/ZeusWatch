@@ -118,8 +118,18 @@ def parse_providers(text: str) -> list[str]:
     return re.findall(r"^\s{4}([A-Z][A-Z0-9_]*)\(", body.group(1), re.MULTILINE)
 
 
-def build_notices() -> tuple[dict, list[str]]:
-    runtime = read_runtime_modules()
+def build_notices(
+    runtime: dict[str, set[str]] | None = None,
+    license_data: dict | None = None,
+    provider_text: str | None = None,
+) -> tuple[dict, list[str]]:
+    """The notices document plus every problem found building it.
+
+    The three inputs are arguments so the licence mapping and the standardOnly
+    derivation can be tested against fixtures; by default they are read from
+    the repository.
+    """
+    runtime = runtime if runtime is not None else read_runtime_modules()
     # The phone app is what ships the notices screen, so the asset describes
     # the phone's two flavors. Wear resolves its own 173 modules and has no
     # screen to show them on; that gap is tracked in ROADMAP.md rather than
@@ -127,7 +137,8 @@ def build_notices() -> tuple[dict, list[str]]:
     # shipped them.
     shipped = runtime["standard"] | runtime["freenet"]
 
-    license_data = json.loads(LICENSE_MAP.read_text(encoding="utf-8"))
+    if license_data is None:
+        license_data = json.loads(LICENSE_MAP.read_text(encoding="utf-8"))
     groups = license_data["groups"]
 
     problems: list[str] = []
@@ -157,7 +168,9 @@ def build_notices() -> tuple[dict, list[str]]:
     dependencies = sorted(seen.values(), key=lambda item: item["name"])
     dependencies.extend(sorted(EXTRA_NOTICES, key=lambda item: item["name"]))
 
-    provider_names = parse_providers(PROVIDER_SOURCE.read_text(encoding="utf-8"))
+    if provider_text is None:
+        provider_text = PROVIDER_SOURCE.read_text(encoding="utf-8")
+    provider_names = parse_providers(provider_text)
     providers = []
     for name in provider_names:
         attribution = PROVIDER_ATTRIBUTION.get(name)
