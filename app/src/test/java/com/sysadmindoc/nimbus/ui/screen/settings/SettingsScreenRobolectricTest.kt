@@ -22,8 +22,23 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
-class SettingsScreenTest {
+/**
+ * Ported from the instrumented suite, which fails tree-wide with "No compose
+ * hierarchies found" on the local device harness. Robolectric runs the same
+ * assertions on the JVM so the accessibility gate has something that runs.
+ *
+ * Explicit qualifiers matter: without them Robolectric gives the window no
+ * size and every assertIsDisplayed fails on a node it can otherwise find.
+ */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [34], application = android.app.Application::class, qualifiers = "w411dp-h891dp")
+class SettingsScreenRobolectricTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
@@ -247,11 +262,11 @@ class SettingsScreenTest {
     }
 }
 
-private fun SettingsScreenTest.assertCategoryDisplayed(label: String) {
+private fun SettingsScreenRobolectricTest.assertCategoryDisplayed(label: String) {
     composeTestRule.onNode(hasText(label) and hasClickAction()).performScrollTo().assertIsDisplayed()
 }
 
-private fun SettingsScreenTest.clickCategory(label: String) {
+private fun SettingsScreenRobolectricTest.clickCategory(label: String) {
     composeTestRule.onNode(hasText(label) and hasClickAction()).performScrollTo().performClick()
     composeTestRule.waitForIdle()
 }

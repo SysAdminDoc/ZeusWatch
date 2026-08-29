@@ -48,8 +48,12 @@ tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
 
 tasks.register("accessibilityGate") {
     group = "verification"
-    description = "Runs WCAG contrast unit tests and Compose accessibility checks on Android."
-    dependsOn(":app:testStandardDebugUnitTest", ":app:connectedStandardDebugAndroidTest")
+    description = "Runs WCAG contrast tests and Compose accessibility checks on the JVM."
+    // The Compose accessibility suite moved from androidTest to Robolectric:
+    // the local on-device harness fails tree-wide with "No compose hierarchies
+    // found", so the gate depended on a task that could never pass and was
+    // effectively off. It now runs where it actually executes.
+    dependsOn(":app:testStandardDebugUnitTest")
 }
 
 val docsGate = tasks.register<Exec>("docsGate") {

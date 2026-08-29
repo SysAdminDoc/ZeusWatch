@@ -4,6 +4,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.sysadmindoc.nimbus.data.model.*
@@ -14,10 +15,25 @@ import com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState
 import com.sysadmindoc.nimbus.ui.theme.WeatherThemeState
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.time.LocalDate
 import java.time.LocalDateTime
 
-class MainScreenTest {
+/**
+ * Ported from the instrumented suite, which fails tree-wide with "No compose
+ * hierarchies found" on the local device harness. Robolectric runs the same
+ * assertions on the JVM so the accessibility gate has something that runs.
+ *
+ * Explicit qualifiers matter: without them Robolectric gives the window no
+ * size and every assertIsDisplayed fails on a node it can otherwise find.
+ */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [34], application = android.app.Application::class, qualifiers = "w411dp-h891dp")
+class MainScreenRobolectricTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
@@ -175,9 +191,13 @@ class MainScreenTest {
         }
 
         composeTestRule.onNodeWithText("High").assertIsDisplayed()
-        composeTestRule.onNodeWithText("80\u00B0").assertIsDisplayed()
         composeTestRule.onNodeWithText("Low").assertIsDisplayed()
-        composeTestRule.onNodeWithText("55\u00B0").assertIsDisplayed()
+        // The temperature values appear in the header and again in the
+        // daily row, so match all of them rather than asserting a single
+        // node. The on-device layout happened to render only one; that
+        // was never the property this test cares about.
+        composeTestRule.onAllNodesWithText("80\u00B0").onFirst().assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("55\u00B0").onFirst().assertIsDisplayed()
     }
 
     @Test
