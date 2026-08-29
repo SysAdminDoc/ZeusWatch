@@ -20,6 +20,7 @@ import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.RadarFrameSet
 import com.sysadmindoc.nimbus.data.repository.RadarProvider
 import com.sysadmindoc.nimbus.data.repository.RadarRepository
+import com.sysadmindoc.nimbus.data.repository.SavedLocation
 import com.sysadmindoc.nimbus.data.repository.TimedTileUrl
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
@@ -464,10 +465,27 @@ class RadarViewModelTest {
         val viewModel = createViewModel()
 
         // Greenwich sits on the zero meridian; only exact (0,0) is the sentinel.
-        assertEquals(Pair(51.48, 0.0), viewModel.resolveLocation(51.48, 0.0))
-        assertEquals(Pair(0.0, 6.73), viewModel.resolveLocation(0.0, 6.73))
-        // The (0,0) sentinel with no saved location falls back to the US center.
-        assertEquals(Pair(39.8, -98.5), viewModel.resolveLocation(0.0, 0.0))
+        assertEquals(RadarLocation.Known(51.48, 0.0), viewModel.resolveLocation(51.48, 0.0))
+        assertEquals(RadarLocation.Known(0.0, 6.73), viewModel.resolveLocation(0.0, 6.73))
+    }
+
+    @Test
+    fun `resolveLocation reports unknown rather than inventing a place`() = runTest(scheduler) {
+        val viewModel = createViewModel()
+
+        // This used to answer the geographic centre of the United States,
+        // which put a user in Europe over Kansas with nothing to explain it.
+        assertEquals(RadarLocation.Unknown, viewModel.resolveLocation(0.0, 0.0))
+    }
+
+    @Test
+    fun `resolveLocation falls back to the last known location`() = runTest(scheduler) {
+        every { prefs.lastLocation } returns flowOf(
+            SavedLocation(latitude = 48.86, longitude = 2.35, name = "Paris"),
+        )
+        val viewModel = createViewModel()
+
+        assertEquals(RadarLocation.Known(48.86, 2.35), viewModel.resolveLocation(0.0, 0.0))
     }
 
     @Test

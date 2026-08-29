@@ -391,6 +391,8 @@
     <string name="radar_interactive_map">خريطة تفاعلية</string>
     <string name="radar_loading_title">جار تحميل الرادار</string>
     <string name="radar_loading_message">جار جلب أحدث إطارات الرادار لهذه المنطقة.</string>
+    <string name="radar_location_needed_title">اختر موقعا اولا</string>
+    <string name="radar_location_needed_message">لم يتضمن اختصار الرادار اي مكان، ولا توجد مواقع محفوظة للرجوع اليها. اختر موقعا وستفتح الخريطة عنده.</string>
     <string name="radar_unavailable_title">الرادار غير متاح</string>
     <string name="radar_unavailable_message">تعذر تحميل إطارات رادار RainViewer المدعومة الآن. حاول مرة أخرى أو غيّر مزود الرادار.</string>
     <plurals name="radar_alert_overlay_count">

@@ -247,16 +247,20 @@ class RadarViewModel @Inject constructor(
     }
 
     /**
-     * Resolves lat/lon for the radar map. If both are 0.0 (deep link shortcut),
-     * falls back to the last known location from user preferences.
-     * Returns Pair(lat, lon) with US center (39.8, -98.5) as ultimate fallback.
+     * Resolves where to centre the radar map.
+     *
+     * The (0,0) deep-link sentinel falls back to the last known location. When
+     * there is no saved location either, the answer is [RadarLocation.Unknown]
+     * rather than a coordinate: this used to return the geographic centre of
+     * the United States, so someone in Europe opening the shortcut before ever
+     * setting a location got a view of Kansas with nothing to explain it.
      */
-    suspend fun resolveLocation(lat: Double, lon: Double): Pair<Double, Double> {
+    suspend fun resolveLocation(lat: Double, lon: Double): RadarLocation {
         // Only the exact (0,0) pair is the deep-link sentinel — a legitimate
         // location on either zero meridian/equator must not be discarded.
-        if (!(lat == 0.0 && lon == 0.0)) return Pair(lat, lon)
+        if (!(lat == 0.0 && lon == 0.0)) return RadarLocation.Known(lat, lon)
         val saved = prefs.lastLocation.first()
-        return if (saved != null) Pair(saved.latitude, saved.longitude) else Pair(39.8, -98.5)
+        return saved?.let { RadarLocation.Known(it.latitude, it.longitude) } ?: RadarLocation.Unknown
     }
 
     /**
