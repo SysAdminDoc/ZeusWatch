@@ -43,6 +43,14 @@ enum class WeatherSourceProvider(
         displayName = "Open-Meteo + DMI HARMONIE",
         supportedTypes = setOf(WeatherDataType.FORECAST),
     ),
+    OPEN_METEO_AIFS(
+        displayName = "Open-Meteo + ECMWF AIFS (AI)",
+        supportedTypes = setOf(WeatherDataType.FORECAST),
+    ),
+    OPEN_METEO_GRAPHCAST(
+        displayName = "Open-Meteo + GFS GraphCast (AI)",
+        supportedTypes = setOf(WeatherDataType.FORECAST),
+    ),
     OPEN_METEO_METEO_FRANCE(
         displayName = "Open-Meteo + Meteo-France",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.MINUTELY),

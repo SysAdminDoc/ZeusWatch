@@ -1581,4 +1581,6 @@
     <string name="custom_alert_metric_pollen_alder_summary">שיא אבקת האלמון היום</string>
     <string name="custom_alert_metric_pollen_mugwort">אבקת לענה</string>
     <string name="custom_alert_metric_pollen_mugwort_summary">שיא אבקת הלענה היום</string>
+    <string name="weather_source_open_meteo_aifs">Open-Meteo + ECMWF AIFS (בינה מלאכותית)</string>
+    <string name="weather_source_open_meteo_graphcast">Open-Meteo + GFS GraphCast (בינה מלאכותית)</string>
 </resources>

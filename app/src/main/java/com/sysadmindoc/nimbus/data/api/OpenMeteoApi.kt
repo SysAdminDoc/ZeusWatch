@@ -127,6 +127,48 @@ interface OpenMeteoApi {
     ): OpenMeteoResponse
 
     /**
+     * ECMWF AIFS 0.25 machine-learning model.
+     * Docs: https://open-meteo.com/en/docs/ecmwf-api
+     *
+     * AI models emit a reduced variable set compared with the physics models,
+     * so a caller must treat missing hourly fields as normal rather than as a
+     * provider failure.
+     */
+    @GET("forecast")
+    suspend fun getAifsForecast(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("models") models: String = AIFS_MODEL,
+        @Query("hourly") hourly: String = BOM_HOURLY_PARAMS,
+        @Query("daily") daily: String = BOM_DAILY_PARAMS,
+        @Query("temperature_unit") temperatureUnit: String = "celsius",
+        @Query("wind_speed_unit") windSpeedUnit: String = "kmh",
+        @Query("precipitation_unit") precipitationUnit: String = "mm",
+        @Query("timezone") timezone: String = "auto",
+        @Query("forecast_days") forecastDays: Int = 10,
+        @Query("forecast_hours") forecastHours: Int = 48,
+    ): OpenMeteoResponse
+
+    /**
+     * NCEP GFS GraphCast 0.25 machine-learning model.
+     * Docs: https://open-meteo.com/en/docs/gfs-api
+     */
+    @GET("forecast")
+    suspend fun getGraphCastForecast(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("models") models: String = GRAPHCAST_MODEL,
+        @Query("hourly") hourly: String = BOM_HOURLY_PARAMS,
+        @Query("daily") daily: String = BOM_DAILY_PARAMS,
+        @Query("temperature_unit") temperatureUnit: String = "celsius",
+        @Query("wind_speed_unit") windSpeedUnit: String = "kmh",
+        @Query("precipitation_unit") precipitationUnit: String = "mm",
+        @Query("timezone") timezone: String = "auto",
+        @Query("forecast_days") forecastDays: Int = 10,
+        @Query("forecast_hours") forecastHours: Int = 48,
+    ): OpenMeteoResponse
+
+    /**
      * Open-Meteo Meteo-France ARPEGE/AROME model proxy.
      * Docs: https://open-meteo.com/en/docs/meteofrance-api
      *
@@ -195,6 +237,10 @@ interface OpenMeteoApi {
             "precipitation_sum,precipitation_probability_max,wind_speed_10m_max," +
             "wind_direction_10m_dominant,precipitation_hours" +
             ",snowfall_sum,sunshine_duration,wind_gusts_10m_max"
+
+        /** Verified against the live forecast API on 2026-08-29. */
+        const val AIFS_MODEL = "ecmwf_aifs025"
+        const val GRAPHCAST_MODEL = "gfs_graphcast025"
 
         const val BOM_HOURLY_PARAMS = "temperature_2m,relative_humidity_2m,apparent_temperature," +
             "precipitation,precipitation_probability,weather_code,cloud_cover,visibility," +

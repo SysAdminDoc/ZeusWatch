@@ -24,6 +24,8 @@ class WeatherSourceManagerTest {
     private lateinit var openMeteoKmaAdapter: OpenMeteoKmaForecastAdapter
     private lateinit var openMeteoUkmoAdapter: OpenMeteoUkmoForecastAdapter
     private lateinit var openMeteoDmiAdapter: OpenMeteoDmiForecastAdapter
+    private lateinit var openMeteoAifsAdapter: OpenMeteoAifsForecastAdapter
+    private lateinit var openMeteoGraphCastAdapter: OpenMeteoGraphCastForecastAdapter
     private lateinit var openMeteoMeteoFranceAdapter: OpenMeteoMeteoFranceForecastAdapter
     private lateinit var fmiForecastAdapter: FmiForecastAdapter
     private lateinit var openMeteoMinutelyAdapter: OpenMeteoMinutelyAdapter
@@ -97,6 +99,8 @@ class WeatherSourceManagerTest {
         openMeteoKmaAdapter = mockk()
         openMeteoUkmoAdapter = mockk()
         openMeteoDmiAdapter = mockk()
+        openMeteoAifsAdapter = mockk()
+        openMeteoGraphCastAdapter = mockk()
         openMeteoMeteoFranceAdapter = mockk()
         fmiForecastAdapter = mockk()
         openMeteoMinutelyAdapter = mockk()
@@ -142,6 +146,12 @@ class WeatherSourceManagerTest {
         ),
         WeatherSourceProvider.OPEN_METEO_UKMO to WeatherSourceAdapterModule.provideOpenMeteoUkmoAdapter(
             openMeteoUkmoAdapter,
+        ),
+        WeatherSourceProvider.OPEN_METEO_AIFS to WeatherSourceAdapterModule.provideOpenMeteoAifsAdapter(
+            openMeteoAifsAdapter,
+        ),
+        WeatherSourceProvider.OPEN_METEO_GRAPHCAST to WeatherSourceAdapterModule.provideOpenMeteoGraphCastAdapter(
+            openMeteoGraphCastAdapter,
         ),
         WeatherSourceProvider.OPEN_METEO_DMI to WeatherSourceAdapterModule.provideOpenMeteoDmiAdapter(
             openMeteoDmiAdapter,
@@ -355,6 +365,47 @@ class WeatherSourceManagerTest {
         coVerify(exactly = 1) {
             openMeteoBomAdapter.getWeather(-33.86, 151.21, "Sydney")
         }
+    }
+
+    @Test
+    fun getWeatherDelegatesAifsProviderToTheAifsAdapter() = runTest {
+        every { prefs.settings } returns flowOf(
+            defaultSettings.copy(
+                sourceConfig = defaultSettings.sourceConfig.copy(
+                    forecast = WeatherSourceProvider.OPEN_METEO_AIFS,
+                ),
+            ),
+        )
+        coEvery { openMeteoAifsAdapter.getWeather(any(), any(), any()) } returns
+            Result.success(testWeatherData)
+
+        val result = manager.getWeather(47.61, -122.33, "Seattle")
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) { openMeteoAifsAdapter.getWeather(47.61, -122.33, "Seattle") }
+    }
+
+    @Test
+    fun getWeatherFallsBackFromAnAiModelToThePhysicsModel() = runTest {
+        every { prefs.settings } returns flowOf(
+            defaultSettings.copy(
+                sourceConfig = defaultSettings.sourceConfig.copy(
+                    forecast = WeatherSourceProvider.OPEN_METEO_GRAPHCAST,
+                    forecastFallback = WeatherSourceProvider.OPEN_METEO,
+                ),
+            ),
+        )
+        coEvery { openMeteoGraphCastAdapter.getWeather(any(), any(), any()) } returns
+            Result.failure(IllegalStateException("AI model unavailable"))
+        coEvery { openMeteoAdapter.getWeather(any(), any(), any()) } returns
+            Result.success(testWeatherData)
+
+        val result = manager.getWeather(47.61, -122.33, "Seattle")
+
+        // AI models are experimental upstream, so falling back to the physics
+        // model matters more here than for the regional wrappers.
+        assertTrue(result.isSuccess)
+        assertTrue(result.getOrThrow().usedFallback)
     }
 
     @Test

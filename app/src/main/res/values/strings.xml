@@ -1633,4 +1633,6 @@
     <string name="custom_alert_metric_pollen_alder_summary">Peak alder pollen count today</string>
     <string name="custom_alert_metric_pollen_mugwort">Mugwort pollen</string>
     <string name="custom_alert_metric_pollen_mugwort_summary">Peak mugwort pollen count today</string>
+    <string name="weather_source_open_meteo_aifs">Open-Meteo + ECMWF AIFS (AI)</string>
+    <string name="weather_source_open_meteo_graphcast">Open-Meteo + GFS GraphCast (AI)</string>
 </resources>
