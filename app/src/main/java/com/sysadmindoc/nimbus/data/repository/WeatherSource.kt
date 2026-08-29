@@ -19,11 +19,22 @@ enum class WeatherSourceProvider(
     val displayName: String,
     val supportedTypes: Set<WeatherDataType>,
     val requiresApiKey: Boolean = false,
+    /**
+     * True when the provider answers for anywhere on Earth.
+     *
+     * Comparison and provider agreement need a second opinion that is valid at
+     * the user's location, and most of these providers are national services
+     * or regional models. Declaring it here keeps the fact next to the
+     * provider instead of in hand-written lists elsewhere, which is how ECMWF
+     * AIFS came to be missing from both surfaces.
+     */
+    val hasGlobalCoverage: Boolean = false,
     private val implementedTypes: Set<WeatherDataType> = supportedTypes,
 ) {
     OPEN_METEO(
         displayName = "Open-Meteo",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.AIR_QUALITY, WeatherDataType.MINUTELY),
+        hasGlobalCoverage = true,
     ),
     OPEN_METEO_BOM(
         displayName = "Open-Meteo + BOM ACCESS-G",
@@ -46,6 +57,7 @@ enum class WeatherSourceProvider(
     OPEN_METEO_AIFS(
         displayName = "Open-Meteo + ECMWF AIFS (AI)",
         supportedTypes = setOf(WeatherDataType.FORECAST),
+        hasGlobalCoverage = true,
     ),
     OPEN_METEO_METEO_FRANCE(
         displayName = "Open-Meteo + Meteo-France",
@@ -63,11 +75,13 @@ enum class WeatherSourceProvider(
         displayName = "OpenWeatherMap",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.ALERTS, WeatherDataType.AIR_QUALITY),
         requiresApiKey = true,
+        hasGlobalCoverage = true,
     ),
     PIRATE_WEATHER(
         displayName = "Pirate Weather",
         supportedTypes = setOf(WeatherDataType.FORECAST, WeatherDataType.AIR_QUALITY),
         requiresApiKey = true,
+        hasGlobalCoverage = true,
     ),
     BRIGHT_SKY(
         displayName = "Bright Sky (DWD)",
@@ -76,6 +90,7 @@ enum class WeatherSourceProvider(
     MET_NORWAY(
         displayName = "MET Norway",
         supportedTypes = setOf(WeatherDataType.FORECAST),
+        hasGlobalCoverage = true,
     ),
     ENVIRONMENT_CANADA(
         displayName = "Environment Canada",
@@ -115,6 +130,25 @@ enum class WeatherSourceProvider(
         /** Returns all implemented providers that support a given data type. */
         fun forType(type: WeatherDataType): List<WeatherSourceProvider> =
             entries.filter { it.isSelectableFor(type) }
+
+        /**
+         * Forecast sources to compare [primary] against, derived from the registry.
+         *
+         * Both the Compare overlay and provider agreement used to hold their
+         * own hand-written list of Open-Meteo and MET Norway, so a provider
+         * added to this enum never reached either surface. Regional services
+         * are excluded because a second opinion from a national forecaster is
+         * worthless outside its own country, and key-gated ones because the
+         * comparison has to work without the user having signed up anywhere.
+         */
+        fun forecastComparisonCandidates(
+            primary: WeatherSourceProvider,
+            limit: Int = 3,
+        ): List<WeatherSourceProvider> =
+            (listOf(primary) + entries.filter { it.hasGlobalCoverage && !it.requiresApiKey })
+                .filter { it.isSelectableFor(WeatherDataType.FORECAST) }
+                .distinct()
+                .take(limit)
 
         /** Returns the safe built-in default source for a given data type. */
         fun defaultFor(type: WeatherDataType): WeatherSourceProvider = when (type) {
