@@ -87,6 +87,10 @@ fun ComposeContentTestRule.assertTextContrastMeetsMinimum(
     if (textNodes.isEmpty()) return ContrastCoverage()
 
     val failures = mutableListOf<String>()
+    // Counts only what is actually on screen: a text node laid out at zero
+    // size is not text anybody could read, so letting it dilute the coverage
+    // figure would make a complete audit look incomplete.
+    var considered = 0
     var measured = 0
     val skippedScrolling = mutableListOf<String>()
     val skippedNotCaptured = mutableListOf<String>()
@@ -94,6 +98,7 @@ fun ComposeContentTestRule.assertTextContrastMeetsMinimum(
 
     textNodes.forEachIndexed { index, node ->
         if (!node.isVisible()) return@forEachIndexed
+        considered++
         // Inside a horizontally scrolling container the glyphs are painted at
         // a translation the semantics bounds do not carry: on the hourly card
         // the pixels for "70" sit about 24px below the node's own bounds, so
@@ -179,7 +184,7 @@ fun ComposeContentTestRule.assertTextContrastMeetsMinimum(
     }
 
     return ContrastCoverage(
-        total = textNodes.size,
+        total = considered,
         measured = measured,
         skippedScrolling = skippedScrolling,
         skippedNotCaptured = skippedNotCaptured,
