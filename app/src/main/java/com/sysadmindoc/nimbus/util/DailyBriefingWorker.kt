@@ -8,11 +8,17 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.sysadmindoc.nimbus.data.repository.DeliveryFailureReason
+import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
+import com.sysadmindoc.nimbus.data.repository.DeliverySurface
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
+import com.sysadmindoc.nimbus.data.repository.deliveryFailureReason
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -28,23 +34,38 @@ class DailyBriefingWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val weatherRepository: WeatherRepository,
     private val prefs: UserPreferences,
+    private val deliveryHealth: DeliveryHealthRepository,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
+        val startedAt = System.currentTimeMillis()
         val settings = prefs.settings.first()
         if (!settings.dailyBriefingEnabled) {
             Log.d(TAG, "Daily briefing disabled; skipping")
+            deliveryHealth.forget(DeliverySurface.DAILY_BRIEFING)
             return Result.success()
         }
+        deliveryHealth.recordAttempt(DeliverySurface.DAILY_BRIEFING, startedAt)
 
         val loc = prefs.backgroundAlertLocation.first() ?: prefs.lastLocation.first() ?: run {
             Log.d(TAG, "No background alert location; skipping")
+            deliveryHealth.recordFailure(
+                DeliverySurface.DAILY_BRIEFING,
+                DeliveryFailureReason.NO_LOCATION,
+                startedAt,
+            )
             return Result.success()
         }
 
         val weatherResult = weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
         val data = weatherResult.getOrNull() ?: run {
             Log.w(TAG, "Weather fetch failed", weatherResult.exceptionOrNull())
+            deliveryHealth.recordFailure(
+                DeliverySurface.DAILY_BRIEFING,
+                weatherResult.exceptionOrNull()?.deliveryFailureReason()
+                    ?: DeliveryFailureReason.FORECAST_UNAVAILABLE,
+                startedAt,
+            )
             return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
         }
 
@@ -52,6 +73,9 @@ class DailyBriefingWorker @AssistedInject constructor(
         val store = DailyBriefingStore(applicationContext)
         if (store.lastDeliveredDate() == referenceDate) {
             Log.d(TAG, "Already delivered daily briefing for $referenceDate")
+            // Already delivered today counts as working: the panel should not
+            // report a problem because the job ran twice.
+            deliveryHealth.recordSuccess(DeliverySurface.DAILY_BRIEFING, startedAt)
             return Result.success()
         }
 
@@ -70,12 +94,35 @@ class DailyBriefingWorker @AssistedInject constructor(
         )
         if (delivered) {
             store.record(referenceDate)
+            deliveryHealth.recordSuccess(DeliverySurface.DAILY_BRIEFING, startedAt)
+        } else {
+            // The notification was built but the system refused to post it,
+            // which is what a revoked notification permission looks like.
+            deliveryHealth.recordFailure(
+                DeliverySurface.DAILY_BRIEFING,
+                DeliveryFailureReason.PERMISSION_DENIED,
+                startedAt,
+            )
         }
         return Result.success()
     }
 
     companion object {
         private const val WORK_NAME = "nimbus_daily_briefing"
+
+        /**
+         * The unique periodic work this worker runs as.
+         *
+         * Public so the delivery diagnostics can ask WorkManager when it next
+         * runs and enqueue a manual run; the panel cannot report on a job whose
+         * name it does not know.
+         */
+        const val UNIQUE_WORK_NAME = "nimbus_daily_briefing"
+
+        /** A one-off run of this worker, for the diagnostics panel's Run now. */
+        fun oneTimeRequest(): OneTimeWorkRequest =
+            OneTimeWorkRequestBuilder<DailyBriefingWorker>()
+                .build()
         private const val MAX_RETRY_ATTEMPTS = 3
         private const val PERIOD_HOURS = 24L
         private const val FLEX_HOURS = 2L

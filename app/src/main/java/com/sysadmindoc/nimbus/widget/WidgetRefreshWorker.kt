@@ -12,6 +12,7 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
@@ -23,6 +24,9 @@ import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.data.repository.DeliveryFailureReason
+import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
+import com.sysadmindoc.nimbus.data.repository.DeliverySurface
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.SavedLocation
@@ -30,6 +34,7 @@ import com.sysadmindoc.nimbus.data.repository.SourceOverrides
 import com.sysadmindoc.nimbus.data.repository.TempUnit
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
+import com.sysadmindoc.nimbus.data.repository.deliveryFailureReason
 import com.sysadmindoc.nimbus.data.repository.sourceOverrides
 import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.util.BackgroundWorkSync
@@ -64,9 +69,12 @@ class WidgetRefreshWorker @AssistedInject constructor(
     private val locationRepository: LocationRepository,
     private val wearSyncManager: WearSyncManager,
     private val gadgetbridgeWeatherBroadcaster: GadgetbridgeWeatherBroadcaster,
+    private val deliveryHealth: DeliveryHealthRepository,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
+        val startedAt = System.currentTimeMillis()
+        deliveryHealth.recordAttempt(DeliverySurface.WIDGETS, startedAt)
         val settings = prefs.settings.first()
         val lastLoc = prefs.lastLocation.first()
         // Cross-check stored widget mappings against the launcher's live ids —
@@ -83,11 +91,24 @@ class WidgetRefreshWorker @AssistedInject constructor(
             // No network work — but don't let the watch and the persistent
             // notification silently starve: push the cached data we have.
             pushCachedDataOnly(settings, lastLoc)
+            // Deferred, not delivered: the widgets are showing whatever they
+            // had, and saying "last succeeded now" would hide exactly the
+            // battery restriction the user is trying to diagnose.
+            deliveryHealth.recordFailure(
+                DeliverySurface.WIDGETS,
+                DeliveryFailureReason.BATTERY_RESTRICTED,
+                startedAt,
+            )
             return Result.success()
         }
 
         if (lastLoc == null && widgetMappings.isEmpty() && savedCityLocationsForWidget(savedLocations).isEmpty()) {
             clearWidgetState(settings.persistentWeatherNotif)
+            deliveryHealth.recordFailure(
+                DeliverySurface.WIDGETS,
+                DeliveryFailureReason.NO_LOCATION,
+                startedAt,
+            )
             return Result.success()
         }
 
@@ -103,7 +124,17 @@ class WidgetRefreshWorker @AssistedInject constructor(
             broadcastToGadgetbridge(settings, state)
             renderAllWidgets()
 
-            state.toWorkResult()
+            val result = state.toWorkResult()
+            if (state.refreshedAnyLocation) {
+                deliveryHealth.recordSuccess(DeliverySurface.WIDGETS, startedAt)
+            } else {
+                deliveryHealth.recordFailure(
+                    DeliverySurface.WIDGETS,
+                    DeliveryFailureReason.FORECAST_UNAVAILABLE,
+                    startedAt,
+                )
+            }
+            result
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             // WorkManager cancels the worker via the coroutine's Job; re-throw
             // so cooperative cancellation runs the surrounding teardown rather
@@ -112,6 +143,11 @@ class WidgetRefreshWorker @AssistedInject constructor(
             throw cancelled
         } catch (e: Exception) {
             android.util.Log.w(TAG, "Widget refresh failed (attempt $runAttemptCount)", e)
+            deliveryHealth.recordFailure(
+                DeliverySurface.WIDGETS,
+                e.deliveryFailureReason(),
+                startedAt,
+            )
             if (runAttemptCount >= WIDGET_REFRESH_MAX_RUN_ATTEMPTS) Result.failure() else Result.retry()
         }
     }
@@ -252,9 +288,15 @@ class WidgetRefreshWorker @AssistedInject constructor(
         state.refreshedAnyLocation = true
         try {
             wearSyncManager.syncWeather(primaryWeather)
+            deliveryHealth.recordSuccess(DeliverySurface.WEAR_SYNC, System.currentTimeMillis())
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (e: Exception) {
+            deliveryHealth.recordFailure(
+                DeliverySurface.WEAR_SYNC,
+                e.deliveryFailureReason(),
+                System.currentTimeMillis(),
+            )
             Log.w(TAG, "Wear sync failed: ${e.failureClass()}")
         }
     }
@@ -453,9 +495,21 @@ class WidgetRefreshWorker @AssistedInject constructor(
         }
     }
 
-    private fun broadcastToGadgetbridge(settings: NimbusSettings, state: WidgetRefreshState) {
-        if (!settings.gadgetbridgeBroadcastEnabled) return
-        val primaryWeather = state.primaryWeather ?: return
+    private suspend fun broadcastToGadgetbridge(settings: NimbusSettings, state: WidgetRefreshState) {
+        if (!settings.gadgetbridgeBroadcastEnabled) {
+            // Stops reporting on a surface the user switched off, rather than
+            // leaving its last failure standing in the panel forever.
+            deliveryHealth.forget(DeliverySurface.GADGETBRIDGE)
+            return
+        }
+        val primaryWeather = state.primaryWeather ?: run {
+            deliveryHealth.recordFailure(
+                DeliverySurface.GADGETBRIDGE,
+                DeliveryFailureReason.FORECAST_UNAVAILABLE,
+                System.currentTimeMillis(),
+            )
+            return
+        }
         val secondary = state.weatherByLocationKey
             .values
             .filterNot { weather ->
@@ -463,6 +517,7 @@ class WidgetRefreshWorker @AssistedInject constructor(
                     weather.location.longitude == primaryWeather.location.longitude
             }
         gadgetbridgeWeatherBroadcaster.broadcast(primary = primaryWeather, secondary = secondary)
+        deliveryHealth.recordSuccess(DeliverySurface.GADGETBRIDGE, System.currentTimeMillis())
     }
 
     private fun buildWidgetData(
@@ -484,6 +539,27 @@ class WidgetRefreshWorker @AssistedInject constructor(
 
     companion object {
         private const val WORK_NAME = "nimbus_widget_refresh"
+
+        /**
+         * The unique periodic work this worker runs as.
+         *
+         * Public so the delivery diagnostics can ask WorkManager when it next
+         * runs and enqueue a manual run; the panel cannot report on a job whose
+         * name it does not know.
+         */
+        const val UNIQUE_WORK_NAME = "nimbus_widget_refresh"
+
+        /** A one-off run of this worker, for the diagnostics panel's Run now. */
+        fun oneTimeRequest(): OneTimeWorkRequest =
+            OneTimeWorkRequestBuilder<WidgetRefreshWorker>()
+                .setInputData(
+                    androidx.work.Data.Builder()
+                        // A manual run is user-initiated, so it must
+                        // not be skipped for battery.
+                        .putBoolean(KEY_FORCE_REFRESH, true)
+                        .build(),
+                )
+                .build()
         internal const val KEY_FORCE_REFRESH = "force"
 
         /** Nominal widget-refresh cadence; matches the periodic work interval. */

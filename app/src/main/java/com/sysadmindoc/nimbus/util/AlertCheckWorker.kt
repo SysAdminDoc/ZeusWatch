@@ -8,11 +8,16 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import com.sysadmindoc.nimbus.data.repository.DeliveryFailureReason
+import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
+import com.sysadmindoc.nimbus.data.repository.DeliverySurface
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.SourceOverrides
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
@@ -42,16 +47,20 @@ class AlertCheckWorker @AssistedInject constructor(
     private val weatherSourceManager: WeatherSourceManager,
     private val locationRepository: LocationRepository,
     private val prefs: UserPreferences,
+    private val deliveryHealth: DeliveryHealthRepository,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
+        val startedAt = System.currentTimeMillis()
         val settings = prefs.settings.first()
 
         // Respect user preference
         if (!settings.alertNotificationsEnabled) {
             Log.d(TAG, "Alert notifications disabled, skipping")
+            deliveryHealth.forget(DeliverySurface.WEATHER_ALERTS)
             return Result.success()
         }
+        deliveryHealth.recordAttempt(DeliverySurface.WEATHER_ALERTS, startedAt)
 
         val seenIds = prefs.getSeenAlertIds()
         val maxSortOrder = settings.alertMinSeverity.maxSortOrder
@@ -86,6 +95,11 @@ class AlertCheckWorker @AssistedInject constructor(
 
         if (locations.isEmpty()) {
             Log.d(TAG, "No locations to check")
+            deliveryHealth.recordFailure(
+                DeliverySurface.WEATHER_ALERTS,
+                DeliveryFailureReason.NO_LOCATION,
+                startedAt,
+            )
             return Result.success()
         }
 
@@ -148,6 +162,19 @@ class AlertCheckWorker @AssistedInject constructor(
         // WorkManager retry with the configured exponential backoff (bounded by
         // runAttemptCount) instead of waiting a full 15-minute period — a
         // transient outage must not delay or mask a severe-weather alert.
+        // "Untrustworthy" is the state where every provider was down, so the
+        // all-clear cannot be believed. That is the failure a user needs to see
+        // in the panel: alerts are the one surface where silence is dangerous.
+        if (anyUntrustworthy) {
+            deliveryHealth.recordFailure(
+                DeliverySurface.WEATHER_ALERTS,
+                DeliveryFailureReason.FORECAST_UNAVAILABLE,
+                startedAt,
+            )
+        } else {
+            deliveryHealth.recordSuccess(DeliverySurface.WEATHER_ALERTS, startedAt)
+        }
+
         return if (anyUntrustworthy && runAttemptCount < MAX_RETRY_ATTEMPTS) {
             Result.retry()
         } else {
@@ -161,6 +188,20 @@ class AlertCheckWorker @AssistedInject constructor(
 
     companion object {
         private const val WORK_NAME = "nimbus_alert_check"
+
+        /**
+         * The unique periodic work this worker runs as.
+         *
+         * Public so the delivery diagnostics can ask WorkManager when it next
+         * runs and enqueue a manual run; the panel cannot report on a job whose
+         * name it does not know.
+         */
+        const val UNIQUE_WORK_NAME = "nimbus_alert_check"
+
+        /** A one-off run of this worker, for the diagnostics panel's Run now. */
+        fun oneTimeRequest(): OneTimeWorkRequest =
+            OneTimeWorkRequestBuilder<AlertCheckWorker>()
+                .build()
         // Cap retries per run so a sustained outage can't spin the worker; after
         // this it falls through to the next periodic tick.
         private const val MAX_RETRY_ATTEMPTS = 3

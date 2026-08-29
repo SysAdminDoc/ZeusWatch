@@ -8,9 +8,14 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.sysadmindoc.nimbus.data.repository.DeliveryFailureReason
+import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
+import com.sysadmindoc.nimbus.data.repository.DeliverySurface
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import dagger.assisted.Assisted
@@ -47,27 +52,44 @@ class HealthAlertWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val weatherRepository: WeatherRepository,
     private val prefs: UserPreferences,
+    private val deliveryHealth: DeliveryHealthRepository,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
+        val startedAt = System.currentTimeMillis()
         val settings = prefs.settings.first()
         if (!settings.healthAlertsEnabled) {
             Log.d(TAG, "Health alerts disabled; skipping")
+            deliveryHealth.forget(DeliverySurface.HEALTH_ALERTS)
             return Result.success()
         }
+        deliveryHealth.recordAttempt(DeliverySurface.HEALTH_ALERTS, startedAt)
 
         val loc = prefs.backgroundAlertLocation.first() ?: run {
             Log.d(TAG, "No background alert location; skipping")
+            deliveryHealth.recordFailure(
+                DeliverySurface.HEALTH_ALERTS,
+                DeliveryFailureReason.NO_LOCATION,
+                startedAt,
+            )
             return Result.success()
         }
 
         val weatherResult = weatherRepository.getWeather(loc.latitude, loc.longitude, loc.name)
         val data = weatherResult.getOrNull() ?: run {
             Log.w(TAG, "Weather fetch failed", weatherResult.exceptionOrNull())
+            deliveryHealth.recordFailure(
+                DeliverySurface.HEALTH_ALERTS,
+                DeliveryFailureReason.FORECAST_UNAVAILABLE,
+                startedAt,
+            )
             // Retry transient failures with the configured backoff (bounded);
             // give up to the next hourly tick after that.
             return if (runAttemptCount < MAX_RETRY_ATTEMPTS) Result.retry() else Result.success()
         }
+        // Evaluated the data successfully. Whether it produces an alert is the
+        // weather's business, not a delivery failure.
+        deliveryHealth.recordSuccess(DeliverySurface.HEALTH_ALERTS, startedAt)
 
         val alerts = HealthAlertEvaluator.evaluate(
             hourly = data.hourly,
@@ -117,6 +139,20 @@ class HealthAlertWorker @AssistedInject constructor(
 
     companion object {
         private const val WORK_NAME = "nimbus_health_alert"
+
+        /**
+         * The unique periodic work this worker runs as.
+         *
+         * Public so the delivery diagnostics can ask WorkManager when it next
+         * runs and enqueue a manual run; the panel cannot report on a job whose
+         * name it does not know.
+         */
+        const val UNIQUE_WORK_NAME = "nimbus_health_alert"
+
+        /** A one-off run of this worker, for the diagnostics panel's Run now. */
+        fun oneTimeRequest(): OneTimeWorkRequest =
+            OneTimeWorkRequestBuilder<HealthAlertWorker>()
+                .build()
         private const val MAX_RETRY_ATTEMPTS = 3
 
         fun schedule(context: Context) {

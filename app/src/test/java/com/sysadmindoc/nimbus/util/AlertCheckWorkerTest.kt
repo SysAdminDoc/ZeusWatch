@@ -7,6 +7,7 @@ import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.repository.AlertFetchResult
+import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.SavedLocation
@@ -26,6 +27,10 @@ import org.junit.Before
 import org.junit.Test
 
 class AlertCheckWorkerTest {
+    // Relaxed: these tests are about what the worker delivers, not
+    // about the diagnostics recording, which has its own tests.
+    private val deliveryHealth: DeliveryHealthRepository = io.mockk.mockk(relaxed = true)
+
 
     private lateinit var context: Context
     private lateinit var params: WorkerParameters
@@ -63,7 +68,7 @@ class AlertCheckWorkerTest {
         coEvery { prefs.getSeenAlertIds() } returns emptySet()
         coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns AlertFetchResult(listOf(lowSeverityAlert), allAdaptersFailed = false, failedSources = emptyList())
 
-        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs, deliveryHealth)
         worker.doWork()
 
         coVerify(exactly = 0) { prefs.addSeenAlertIds(any()) }
@@ -86,7 +91,7 @@ class AlertCheckWorkerTest {
         coEvery { prefs.getSeenAlertIds() } returns emptySet()
         coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns AlertFetchResult(listOf(unknownAlert), allAdaptersFailed = false, failedSources = emptyList())
 
-        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs, deliveryHealth)
         worker.doWork()
 
         io.mockk.verify(exactly = 1) { AlertNotificationHelper.showAlertNotification(any(), any(), any()) }
@@ -122,7 +127,7 @@ class AlertCheckWorkerTest {
         )
         coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns AlertFetchResult(listOf(severeAlert), allAdaptersFailed = false, failedSources = emptyList())
 
-        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs, deliveryHealth)
         worker.doWork()
 
         io.mockk.verify(exactly = 1) { AlertNotificationHelper.showAlertNotification(any(), any(), any()) }
@@ -144,7 +149,7 @@ class AlertCheckWorkerTest {
         coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns AlertFetchResult(listOf(severeAlert), allAdaptersFailed = false, failedSources = emptyList())
         every { AlertNotificationHelper.showAlertNotification(any(), any(), any()) } returns false
 
-        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs, deliveryHealth)
         worker.doWork()
 
         coVerify(exactly = 0) { prefs.addSeenAlertIds(any()) }
@@ -186,7 +191,7 @@ class AlertCheckWorkerTest {
         )
         coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns AlertFetchResult(emptyList(), allAdaptersFailed = false, failedSources = emptyList())
 
-        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs, deliveryHealth)
         worker.doWork()
 
         coVerify(exactly = 2) { weatherSourceManager.getAlertsDetailed(any(), any(), any(), includeMeteredSources = false) }
@@ -223,7 +228,7 @@ class AlertCheckWorkerTest {
         coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns
             AlertFetchResult(emptyList(), allAdaptersFailed = true, failedSources = listOf("nws"))
 
-        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs, deliveryHealth)
         val result = worker.doWork()
 
         // A total outage must not be treated as "all clear" — it retries.
@@ -237,7 +242,7 @@ class AlertCheckWorkerTest {
         coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns
             AlertFetchResult(emptyList(), allAdaptersFailed = false, failedSources = listOf("meteoalarm"))
 
-        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs, deliveryHealth)
         val result = worker.doWork()
 
         assertEquals(ListenableWorker.Result.retry(), result)
@@ -252,7 +257,7 @@ class AlertCheckWorkerTest {
         coEvery { weatherSourceManager.getAlertsDetailed(any(), any(), any(), any()) } returns
             AlertFetchResult(listOf(severeAlert), allAdaptersFailed = false, failedSources = listOf("meteoalarm"))
 
-        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs)
+        val worker = AlertCheckWorker(context, params, weatherSourceManager, locationRepository, prefs, deliveryHealth)
         val result = worker.doWork()
 
         assertEquals(ListenableWorker.Result.success(), result)

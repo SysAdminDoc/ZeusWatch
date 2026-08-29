@@ -12,6 +12,7 @@ import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.AirQualityRepository
+import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.SavedLocation
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
@@ -36,6 +37,10 @@ import java.time.LocalDateTime
  * for any weather rules that already fired this run.
  */
 class CustomAlertWorkerLogicTest {
+    // Relaxed: these tests are about what the worker delivers, not
+    // about the diagnostics recording, which has its own tests.
+    private val deliveryHealth: DeliveryHealthRepository = io.mockk.mockk(relaxed = true)
+
 
     private lateinit var context: Context
     private lateinit var params: WorkerParameters
@@ -67,7 +72,7 @@ class CustomAlertWorkerLogicTest {
         } returns Result.success(weatherData())
     }
 
-    private fun worker() = CustomAlertWorker(context, params, weatherRepository, airQualityRepository, prefs)
+    private fun worker() = CustomAlertWorker(context, params, weatherRepository, airQualityRepository, prefs, deliveryHealth)
 
     @Test
     fun `AQI fetch failure with AQI rules enabled returns retry`() = runTest {

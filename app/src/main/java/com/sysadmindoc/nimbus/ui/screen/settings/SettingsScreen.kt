@@ -114,6 +114,11 @@ fun SettingsScreen(
 
     val availableIconPacks by viewModel.availableIconPacks.collectAsStateWithLifecycle()
     val providerHealth by viewModel.providerHealth.collectAsStateWithLifecycle(initialValue = ProviderHealthSnapshot())
+    val deliveryHealth by viewModel.deliveryHealth.collectAsStateWithLifecycle(initialValue = DeliveryHealthSnapshot())
+    val deliveryNextRuns by viewModel.deliveryNextRuns.collectAsStateWithLifecycle()
+    // WorkManager's schedule is not a flow this screen observes, so it is
+    // read when the screen appears rather than left blank until a run.
+    LaunchedEffect(Unit) { viewModel.refreshDeliverySchedule() }
     val locationOverrideProviders by viewModel.locationOverrideProviders.collectAsStateWithLifecycle(initialValue = emptySet())
     val transferStatus by viewModel.transferStatus.collectAsStateWithLifecycle()
     val transferInProgress by viewModel.transferInProgress.collectAsStateWithLifecycle()
@@ -133,6 +138,11 @@ fun SettingsScreen(
     ) { uri ->
         if (uri != null) viewModel.exportProviderDiagnostics(uri)
     }
+    val exportDeliveryDiagnosticsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        if (uri != null) viewModel.exportDeliveryDiagnostics(uri)
+    }
     SettingsContent(
         settings = settings,
         onBack = onBack,
@@ -141,6 +151,8 @@ fun SettingsScreen(
         notificationsPermissionGranted = notificationsPermissionGranted,
         availableIconPacks = availableIconPacks,
         providerHealth = providerHealth,
+        deliveryHealth = deliveryHealth,
+        deliveryNextRuns = deliveryNextRuns,
         transferStatus = transferStatus,
         transferInProgress = transferInProgress,
         pendingImportPreview = pendingImportPreview,
@@ -235,6 +247,10 @@ fun SettingsScreen(
             onExportSettings = { exportSettingsLauncher.launch("zeuswatch-settings.json") },
             onImportSettings = { importSettingsLauncher.launch(arrayOf("application/json", "text/*")) },
             onExportProviderDiagnostics = { exportDiagnosticsLauncher.launch("zeuswatch-source-health.txt") },
+            onExportDeliveryDiagnostics = {
+                exportDeliveryDiagnosticsLauncher.launch("zeuswatch-delivery-health.txt")
+            },
+            onRunDeliveryNow = viewModel::runDeliveryNow,
             onConfirmSettingsImport = viewModel::confirmPendingImport,
             onCancelSettingsImport = viewModel::cancelPendingImport,
             onClearTransferStatus = viewModel::clearTransferStatus,
