@@ -1,69 +1,25 @@
-ZeusWatch is a free, open-source Android weather app with a premium dark UI, 28 customizable home cards, animated Lottie weather icons, and on-device Gemini Nano summaries. No API keys required. No ads, no tracking, no paywalls.
+ZeusWatch is an open-source Android weather console for people who want to know where a forecast came from and whether other models agree. Core use needs no account, subscription, or API key. There are no ads or analytics.
 
-Core forecast and observation:
-- Current conditions with feels-like explanation, "warmer than yesterday" comparison, and sky-gradient header
-- 72-hour scrollable hourly strip with animated icons, wind arrows, precipitation chance, and feels-like overlays
-- 16-day expandable daily forecast with temperature range bars, rain hours, sunshine, snowfall, gusts, and UV max
-- Interactive temperature graph with drag-to-inspect, precipitation bars, and historical normals band
-- 60-minute rain nowcasting from Open-Meteo minutely_15 data
+SEE THE SECOND OPINION
 
-Cards and visualizations (28 total, each toggleable and reorderable):
-- Today's Details grid (humidity, wind+gusts, UV, pressure trend, visibility, dew point, sunrise/sunset, cloud cover, snow)
-- Air quality with EPA + European AQI scales, dominant pollutant, and 5-day daily AQI bars
-- 6-species pollen levels (alder, birch, grass, mugwort, olive, ragweed)
-- Moon phase with Conway's algorithm illumination, golden hour, sun arc
-- Outdoor activity score with factor breakdown
-- Wind compass with Beaufort coloring
-- Severe weather (CAPE), driving hazards, health alerts, clothing suggestions, pet safety, and more
+Compare two locations side by side. Inspect Open-Meteo, ECMWF AIFS, MET Norway, and other configured sources. Provider-agreement and confidence views show where temperature or rain predictions begin to diverge.
 
-Smart alerts and safety:
-- Severe weather alerts from NWS (US), MeteoAlarm (31 EU countries), JMA (Japan), and Environment Canada, auto-detected by country
-- Driving condition alerts: black ice, fog, hydroplaning, high wind, snow
-- Health triggers: migraine pressure drops, respiratory humidity extremes, arthritis temperature swings
-- Custom alert rules: define your own thresholds for highs, lows, gusts, 24h precipitation, and UV peaks
-- 4 notification channels (Extreme bypasses DND, Severe, Moderate, Minor)
+BUILD YOUR WEATHER DASHBOARD
 
-Radar and maps:
-- Native MapLibre radar with RainViewer global tiles and play/pause animation
-- Real-time global lightning strikes via Blitzortung WebSocket
-- Map layer selector (radar, lightning, satellite, clouds)
-- Optional Windy.com embedded radar
-- Community weather report pins
+Choose and reorder 37 cards. Follow up to 72 hours of hourly weather, scan a compact 16-day outlook, review warnings, and tune units or alert thresholds. Cached forecasts remain visible when the network drops.
 
-Multi-source forecast system:
-- 7 forecast/alert providers with primary + fallback per data type
-- Open-Meteo (default, no key), OpenWeatherMap, Pirate Weather, Bright Sky (DWD Germany), MET Norway (Nordic), Environment Canada
-- Configurable in Settings > Data Sources
+CHOOSE YOUR SOURCES
 
-Wear OS companion:
-- Native Wear OS app with current conditions, 12-hour hourly, 7-day daily, and alerts screens
-- Tile and complication services
-- Phone-to-watch DataLayer sync prefers cached data over redundant API calls
-- Graceful direct-API fallback when the phone is disconnected
+Select forecast, radar, air-quality, and alert providers independently. Radar choices include Windy, LibreWXR, RainViewer, and official NOAA/NWS views. Regional warning sources cover the United States, Europe, Canada, Japan, Hong Kong, Indonesia, and WMO-supported regions.
 
-Widgets (Jetpack Glance):
-- 4 sizes: Current (3x1), 3-Day (3x2), Forecast (4x3), Hourly Strip (4x1)
-- Per-widget location configuration
-- Tap-to-refresh freshness pill
-- Material You theming
+USE IT ACROSS ANDROID
 
-Other:
-- Compare two locations side by side
-- Drag-to-reorder saved locations with cached temperature previews
-- Share weather as formatted text or rendered dark-themed image
-- Persistent current-weather notification (toggleable)
-- Live weather wallpaper with rain/snow/storm particle effects over your existing wallpaper
-- TalkBack accessibility with merged-descendant semantics on every Canvas-heavy card
-- Tablet two-pane layout (weather + radar)
-- Multilingual: core surfaces translated to Spanish, more locales in flight
-- Custom icon pack support
-- F-Droid compatible `freenet` build flavor with zero proprietary dependencies
+The Wear OS companion includes forecasts, warnings, a tile, and complications. Eight home-screen widgets cover compact temperature views, hourly strips, daily forecasts, and saved cities. ZeusWatch also supports live wallpaper, Smartspacer, Gadgetbridge, shareable weather images, and read-only cached-data access for tools such as Tasker or KWGT.
 
-Data attribution:
-- Forecasts: Open-Meteo (CC BY 4.0), MET Norway (CC BY 4.0), Bright Sky / DWD, Environment Canada (Open Government Licence)
-- Radar: RainViewer
-- Alerts: National Weather Service, MeteoAlarm, JMA, Environment Canada
-- Lightning: Blitzortung
-- Icons: Meteocons by Bas Milius (MIT)
+PRIVATE BY DEFAULT
 
-Built with Kotlin 2.3.21, Jetpack Compose, Hilt, Retrofit, Room, MapLibre 13, Glance, WorkManager, Lottie, and Coil. Targets Android 8.0+ (API 26). Licensed LGPL-3.0.
+ZeusWatch uses foreground-only location and stores saved places on the device. Optional provider keys are encrypted locally. The Google-free freenet build removes Firebase and Google Play Services dependencies.
+
+Lightning data is informational and not for protection of life or property. Always follow official warnings and local emergency guidance.
+
+Android 8.0 or newer. Licensed LGPL-3.0.

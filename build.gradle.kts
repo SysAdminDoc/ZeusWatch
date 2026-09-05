@@ -1,4 +1,4 @@
-// Nimbus Weather v0.1.0 - Phase 1
+// ZeusWatch v1.29.3
 // Open-source Android weather app targeting TWC parity
 plugins {
     alias(libs.plugins.android.application) apply false
@@ -92,7 +92,10 @@ val docsGate = tasks.register<Exec>("docsGate") {
  * Play Services into freenetDebug. Resolving the classpath is the only way to
  * see that; a source-level check cannot.
  */
-val freenetPurityGate = tasks.register("freenetPurityGate") {
+val appProject = project(":app")
+val wearProject = project(":wear")
+
+val verifyAppFreenetPurity = appProject.tasks.register("verifyFreenetPurityForRoot") {
     group = "verification"
     description = "Fails when a proprietary artifact reaches any freenet configuration."
     val banned = listOf("com.google.firebase", "com.google.android.gms", "com.google.mlkit")
@@ -100,11 +103,10 @@ val freenetPurityGate = tasks.register("freenetPurityGate") {
         "freenetDebugRuntimeClasspath",
         "freenetReleaseRuntimeClasspath",
     )
-    val appProject = project(":app")
-    dependsOn(appProject.tasks.matching { it.name == "preBuild" })
+    dependsOn(tasks.matching { it.name == "preBuild" })
     doLast {
         val offenders = configurationNames.flatMap { name ->
-            val configuration = appProject.configurations.findByName(name)
+            val configuration = project.configurations.findByName(name)
                 ?: error("Configuration $name not found; the freenet flavor may have been renamed.")
             configuration.incoming.resolutionResult.allDependencies
                 .map { it.requested.displayName }
@@ -120,6 +122,12 @@ val freenetPurityGate = tasks.register("freenetPurityGate") {
     }
 }
 
+val freenetPurityGate = tasks.register("freenetPurityGate") {
+    group = "verification"
+    description = "Runs the freenet dependency check in the app module that owns those configurations."
+    dependsOn(verifyAppFreenetPurity)
+}
+
 /**
  * Dumps the resolved runtime classpath of each shipped variant.
  *
@@ -129,28 +137,78 @@ val freenetPurityGate = tasks.register("freenetPurityGate") {
  * carry no version, and test-only entries do appear. Only the resolved
  * runtime classpath knows what actually ships.
  */
+fun org.gradle.api.artifacts.Configuration.resolvedModuleCoordinates(): List<String> =
+    incoming.resolutionResult.allDependencies
+        .mapNotNull { (it as? org.gradle.api.artifacts.result.ResolvedDependencyResult)?.selected?.moduleVersion }
+        .filter { it.group.isNotBlank() }
+        .map { "${it.group}:${it.name}:${it.version}" }
+        .distinct()
+        .sorted()
+
+val appRuntimeDependenciesOutput = appProject.layout.buildDirectory.file("reports/runtime-dependencies.tsv")
+val exportAppRuntimeDependencies = appProject.tasks.register("exportRuntimeDependenciesForRoot") {
+    group = "verification"
+    description = "Resolves shipped phone dependencies inside the app project."
+    outputs.file(appRuntimeDependenciesOutput)
+    outputs.upToDateWhen { false }
+    val variants = linkedMapOf(
+        "standard" to "standardReleaseRuntimeClasspath",
+        "freenet" to "freenetReleaseRuntimeClasspath",
+    )
+    doLast {
+        val lines = variants.flatMap { (variant, configurationName) ->
+            val configuration = project.configurations.findByName(configurationName)
+                ?: error("Configuration $configurationName not found in ${project.path}")
+            configuration.resolvedModuleCoordinates().map { "$variant\t$it" }
+        }
+        val file = appRuntimeDependenciesOutput.get().asFile
+        file.parentFile.mkdirs()
+        file.writeText(lines.joinToString(separator = "\n", postfix = "\n"))
+    }
+}
+
+val wearRuntimeDependenciesOutput = wearProject.layout.buildDirectory.file("reports/runtime-dependencies.tsv")
+val exportWearRuntimeDependencies = wearProject.tasks.register("exportRuntimeDependenciesForRoot") {
+    group = "verification"
+    description = "Resolves shipped watch dependencies inside the wear project."
+    outputs.file(wearRuntimeDependenciesOutput)
+    outputs.upToDateWhen { false }
+    doLast {
+        val configurationName = "releaseRuntimeClasspath"
+        val configuration = project.configurations.findByName(configurationName)
+            ?: error("Configuration $configurationName not found in ${project.path}")
+        val lines = configuration.resolvedModuleCoordinates().map { "wear\t$it" }
+        val file = wearRuntimeDependenciesOutput.get().asFile
+        file.parentFile.mkdirs()
+        file.writeText(lines.joinToString(separator = "\n", postfix = "\n"))
+    }
+}
+
 val exportRuntimeDependencies = tasks.register("exportRuntimeDependencies") {
     group = "verification"
     description = "Writes the resolved runtime classpath of every shipped variant to JSON."
     val output = layout.buildDirectory.file("reports/runtime-dependencies.json")
+    dependsOn(exportAppRuntimeDependencies, exportWearRuntimeDependencies)
+    inputs.files(appRuntimeDependenciesOutput, wearRuntimeDependenciesOutput)
     outputs.file(output)
     outputs.upToDateWhen { false }
-    val variants = mapOf(
-        "standard" to (project(":app") to "standardReleaseRuntimeClasspath"),
-        "freenet" to (project(":app") to "freenetReleaseRuntimeClasspath"),
-        "wear" to (project(":wear") to "releaseRuntimeClasspath"),
-    )
     doLast {
-        val entries = variants.mapValues { (_, target) ->
-            val (targetProject, configurationName) = target
-            val configuration = targetProject.configurations.findByName(configurationName)
-                ?: error("Configuration $configurationName not found in ${targetProject.path}")
-            configuration.incoming.resolutionResult.allDependencies
-                .mapNotNull { (it as? org.gradle.api.artifacts.result.ResolvedDependencyResult)?.selected?.moduleVersion }
-                .filter { it.group.isNotBlank() }
-                .map { "${it.group}:${it.name}:${it.version}" }
-                .distinct()
-                .sorted()
+        val entries = linkedMapOf(
+            "standard" to mutableListOf<String>(),
+            "freenet" to mutableListOf(),
+            "wear" to mutableListOf(),
+        )
+        listOf(appRuntimeDependenciesOutput.get().asFile, wearRuntimeDependenciesOutput.get().asFile)
+            .flatMap { it.readLines() }
+            .filter { it.isNotBlank() }
+            .forEach { line ->
+                val (variant, coordinate) = line.split('\t', limit = 2)
+                entries.getValue(variant).add(coordinate)
+            }
+        entries.values.forEach { modules ->
+            val sorted = modules.distinct().sorted()
+            modules.clear()
+            modules.addAll(sorted)
         }
         val builder = StringBuilder("{").appendLine()
         entries.entries.forEachIndexed { variantIndex, (variant, modules) ->
