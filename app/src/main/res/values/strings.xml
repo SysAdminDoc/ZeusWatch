@@ -226,6 +226,10 @@
     <string name="alert_banner_list_cd">%1$s. Tap for details.</string>
     <string name="alert_banner_item_cd">%1$s: %2$s</string>
     <string name="alert_banner_icon_cd">Weather alert: %1$s</string>
+    <plurals name="alert_banner_show_more">
+        <item quantity="one">Show %1$d more warning</item>
+        <item quantity="other">Show %1$d more warnings</item>
+    </plurals>
     <string name="alert_extreme_takeover_title">Extreme weather alert</string>
     <string name="alert_extreme_takeover_instruction_title">Immediate guidance</string>
     <string name="alert_extreme_takeover_action">Open safety details</string>

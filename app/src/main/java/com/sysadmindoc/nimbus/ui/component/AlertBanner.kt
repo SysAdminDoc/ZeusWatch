@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,7 +28,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +39,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -55,6 +60,7 @@ import com.sysadmindoc.nimbus.util.labelRes
 import com.sysadmindoc.nimbus.util.parseAlertInstant
 import java.time.Duration
 import java.time.Instant
+import java.util.Locale
 
 /**
  * Alert banner displayed at the top of the main screen when active alerts exist.
@@ -93,6 +99,11 @@ fun AlertBanner(
     }
     val bannerContentDescription = resources.getString(R.string.alert_banner_list_cd, alertDescription)
 
+    val groups = remember(alerts) { groupAlertsForBanner(alerts) }
+    var showAll by rememberSaveable(alerts.size) { mutableStateOf(false) }
+    val hiddenCount = (groups.size - MAX_COLLAPSED_ALERT_GROUPS).coerceAtLeast(0)
+    val visibleGroups = if (showAll || hiddenCount == 0) groups else groups.take(MAX_COLLAPSED_ALERT_GROUPS)
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -102,17 +113,94 @@ fun AlertBanner(
             },
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        alerts.forEach { alert ->
-            AlertBannerItem(alert = alert, onClick = { onAlertClick(alert) })
+        visibleGroups.forEach { group ->
+            AlertBannerItem(
+                group = group,
+                onClick = { onAlertClick(group.primary) },
+            )
         }
+        if (hiddenCount > 0 && !showAll) {
+            AlertBannerMoreRow(
+                hiddenCount = hiddenCount,
+                onClick = { showAll = true },
+            )
+        }
+    }
+}
+
+/**
+ * A row of alerts that say the same thing about different places.
+ *
+ * A national feed answers one query with one alert per administrative area, so
+ * "Heavy Rain / Severe" arrives forty times with forty area strings. Collapsing
+ * on event plus severity turns that back into one row that names the areas,
+ * which is the shape a reader can actually use.
+ */
+internal data class AlertBannerGroup(
+    val primary: WeatherAlert,
+    val areas: List<String>,
+    val collapsedCount: Int,
+)
+
+/** How many groups the banner shows before it offers to expand. */
+internal const val MAX_COLLAPSED_ALERT_GROUPS = 5
+
+/**
+ * Collapse [alerts] on event plus severity, preserving the caller's order.
+ *
+ * The repository already sorts by severity then urgency, so the first alert in
+ * each group is the one worth leading with and the resulting group order is
+ * still severity-first.
+ */
+internal fun groupAlertsForBanner(alerts: List<WeatherAlert>): List<AlertBannerGroup> {
+    val grouped = LinkedHashMap<Pair<String, AlertSeverity>, MutableList<WeatherAlert>>()
+    alerts.forEach { alert ->
+        val key = alert.event.trim().lowercase(Locale.ROOT) to alert.severity
+        grouped.getOrPut(key) { mutableListOf() }.add(alert)
+    }
+    return grouped.values.map { members ->
+        AlertBannerGroup(
+            primary = members.first(),
+            areas = members
+                .map { it.areaDescription.trim() }
+                .filter { it.isNotEmpty() }
+                .distinct(),
+            collapsedCount = members.size,
+        )
+    }
+}
+
+@Composable
+private fun AlertBannerMoreRow(
+    hiddenCount: Int,
+    onClick: () -> Unit,
+) {
+    val label = pluralStringResource(R.plurals.alert_banner_show_more, hiddenCount, hiddenCount)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF111833))
+            .border(1.dp, NimbusTextTertiary.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick, role = Role.Button)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+            color = NimbusTextSecondary,
+        )
     }
 }
 
 @Composable
 private fun AlertBannerItem(
-    alert: WeatherAlert,
+    group: AlertBannerGroup,
     onClick: () -> Unit,
 ) {
+    val alert = group.primary
     val resources = LocalResources.current
     val shape = RoundedCornerShape(12.dp)
     val severityColor = alert.severity.color
@@ -219,12 +307,12 @@ private fun AlertBannerItem(
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                if (alert.areaDescription.isNotBlank()) {
+                if (group.areas.isNotEmpty()) {
                     Text(
-                        text = alert.areaDescription,
+                        text = group.areas.joinToString(", "),
                         style = MaterialTheme.typography.labelSmall,
                         color = NimbusTextTertiary,
-                        maxLines = 1,
+                        maxLines = if (group.collapsedCount > 1) 3 else 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }

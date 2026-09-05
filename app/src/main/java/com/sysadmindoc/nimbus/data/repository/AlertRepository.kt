@@ -9,6 +9,7 @@ import com.sysadmindoc.nimbus.data.api.AlertSourceAdapter
 import com.sysadmindoc.nimbus.data.api.MeteoAlarmAdapter
 import com.sysadmindoc.nimbus.data.api.WmoAlertAdapter
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import com.sysadmindoc.nimbus.util.isAlertExpired
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -237,10 +238,24 @@ class AlertRepository @Inject constructor(
         )
     }
 
-    /** Merge, dedup by ID, and sort by severity then urgency. */
+    /**
+     * Merge, drop expired, dedup by ID, and sort by severity then urgency.
+     *
+     * The expiry filter belongs here, not at a call site: every consumer of an
+     * alert list — the Today banner, the radar polygon layer, the widgets, the
+     * notification worker — wants the same answer, and only the worker used to
+     * ask for it. A country-wide feed such as WMO SWIC keeps items long past
+     * their `expires`, which is how the banner ended up rendering pages of
+     * warnings stamped "Expired" (issue #55).
+     *
+     * `isAlertExpired` fails open: a null or unparseable `expires` is treated as
+     * still active, so a provider that omits the field never has its alerts
+     * silently swallowed.
+     */
     private fun mergeAlerts(outcomes: List<AdapterOutcome>): List<WeatherAlert> =
         outcomes
             .flatMap { it.alerts }
+            .filterNot { isAlertExpired(it.expires) }
             .distinctBy { it.id }
             .sortedWith(
                 compareBy<WeatherAlert> { it.severity.sortOrder }

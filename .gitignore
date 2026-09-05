@@ -41,4 +41,5 @@ CONTINUATION_PROMPT.md
 SHA256SUMS.txt
 *-provenance.json
 hs_err_pid*.log
+replay_pid*.log
 tools/__pycache__/
