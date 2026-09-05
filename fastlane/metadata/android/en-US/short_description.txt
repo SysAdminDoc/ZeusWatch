@@ -1,1 +1,1 @@
-Open-source weather app: 37 cards, Wear OS, multi-source, no API keys needed.
+Compare forecasts and radar across 37 cards. Private, open source, no account.

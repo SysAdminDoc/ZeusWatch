@@ -1,0 +1,1 @@
+ZeusWatch has a new radar-and-lightning identity, a cleaner first-run illustration, and current screenshots from the signed release build. The project page and store listing now put forecast comparison, source visibility, private use, and the current 37-card experience first.
