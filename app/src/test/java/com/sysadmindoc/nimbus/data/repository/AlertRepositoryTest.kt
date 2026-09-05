@@ -37,6 +37,9 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.TimeZone
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -44,6 +47,15 @@ import java.util.TimeZone
 class AlertRepositoryTest {
 
     private val testDispatcher = UnconfinedTestDispatcher(TestCoroutineScheduler())
+
+    // Relative, not a literal date: the repository now drops expired alerts, so
+    // a fixture pinned to a fixed calendar date silently turns every mapping and
+    // sorting assertion in this file into an assertion about an empty list the
+    // moment that date passes.
+    private val activeExpiry: String =
+        OffsetDateTime.now(ZoneOffset.UTC).plusHours(2).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+    private val lapsedExpiry: String =
+        OffsetDateTime.now(ZoneOffset.UTC).minusHours(2).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
     private lateinit var api: NwsAlertApi
     private lateinit var repository: AlertRepository
@@ -90,6 +102,7 @@ class AlertRepositoryTest {
         event: String = "Tornado Warning",
         severity: String = "Extreme",
         urgency: String = "Immediate",
+        expires: String = activeExpiry,
     ) = NwsAlertFeature(
         id = id,
         properties = NwsAlertProperties(
@@ -103,7 +116,7 @@ class AlertRepositoryTest {
             senderName = "NWS Denver",
             areaDesc = "Denver Metro Area",
             effective = "2025-01-15T12:00:00",
-            expires = "2025-01-15T14:00:00",
+            expires = expires,
             response = "Shelter",
         ),
     )
@@ -682,6 +695,39 @@ class AlertRepositoryTest {
         assertFalse(result.allAdaptersFailed)
         assertTrue(result.failedSources.isEmpty())
         assertTrue(result.alerts.isEmpty())
+    }
+
+    @Test
+    fun `getAlerts drops alerts whose expiry has already passed`() = runTest {
+        // Issue #55: a country-wide feed keeps items long past their expiry and
+        // the banner drew every one of them, chip and all.
+        val active = (1..34).map { makeFeature(id = "active-$it", event = "Heavy Rain") }
+        val lapsed = (1..20).map {
+            makeFeature(id = "lapsed-$it", event = "Heavy Rain", expires = lapsedExpiry)
+        }
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns
+            NwsAlertResponse(features = lapsed + active)
+
+        val alerts = repository.getAlerts(39.7, -104.9).getOrThrow()
+
+        assertEquals(34, alerts.size)
+        assertTrue(alerts.none { it.id.contains("lapsed") })
+    }
+
+    @Test
+    fun `getAlerts keeps an alert with no parseable expiry`() = runTest {
+        // Fail open: a provider that omits or mangles the field must not have
+        // its alerts silently swallowed.
+        coEvery { api.getActiveAlerts(any(), any(), any()) } returns NwsAlertResponse(
+            features = listOf(
+                makeFeature(id = "no-expiry", expires = ""),
+                makeFeature(id = "junk-expiry", expires = "not a timestamp"),
+            ),
+        )
+
+        val alerts = repository.getAlerts(39.7, -104.9).getOrThrow()
+
+        assertEquals(2, alerts.size)
     }
 
     @Test
