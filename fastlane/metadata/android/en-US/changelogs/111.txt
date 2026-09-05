@@ -1,0 +1,8 @@
+Warnings no longer take over the whole screen. Where a national warning
+service publishes one warning per district, the app used to draw every one
+of them in a single column, expired ones included.
+
+Warnings that have already lapsed are now dropped everywhere in the app.
+Warnings that say the same thing about different places share one card that
+lists those places, and anything past the first five sits behind a
+"show more" row.
