@@ -134,6 +134,27 @@ class ProviderContractTests(unittest.TestCase):
             contracts.validate_pirate_weather({"currently": {}, "hourly": {}, "daily": {}}).ok
         )
 
+    def test_geosphere_validator_accepts_live_nested_warning_shape(self) -> None:
+        result = contracts.validate_geosphere_warnings(
+            {
+                "type": "Feature",
+                "properties": {
+                    "warnings": [
+                        {
+                            "type": "Warning",
+                            "properties": {
+                                "warnid": 4149,
+                                "warnstufeid": 1,
+                                "warntypid": 6,
+                            },
+                        }
+                    ]
+                },
+            }
+        )
+
+        self.assertTrue(result.ok)
+
     def test_validator_reports_missing_rainviewer_frames(self) -> None:
         result = contracts.validate_rainviewer_metadata({"generated": 1710000000, "host": "https://example.test"})
         self.assertFalse(result.ok)
