@@ -8,13 +8,13 @@
 
 <p align="center">Compare forecast models, understand risk, and keep control of your weather data.</p>
 
-![Version](https://img.shields.io/badge/version-1.29.3-1677FF)
+![Version](https://img.shields.io/badge/version-1.29.4-1677FF)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-2EA44F)
 ![Platform](https://img.shields.io/badge/platform-Android%208.0%2B-3DDC84?logo=android&logoColor=white)
 ![Wear OS](https://img.shields.io/badge/Wear%20OS-companion-00BFA5?logo=wearos&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white)
 
-[![ZeusWatch Today and Compare screens](docs/screenshots/zeuswatch-hero-v1.29.3.png)](docs/screenshots/zeuswatch-hero-v1.29.3.png)
+[![ZeusWatch Today and Compare screens](docs/screenshots/zeuswatch-hero.png)](docs/screenshots/zeuswatch-hero.png)
 
 Most weather apps turn uncertain model data into one confident answer. ZeusWatch lets you inspect the answer. Compare locations and providers, see when models disagree, and choose the sources you trust. Core use needs no account, subscription, or API key.
 
@@ -47,7 +47,7 @@ ZeusWatch is built for people who want more than a single temperature tile. It i
 
 Setup covers location and units first. You also choose how dense the dashboard should be. There is no forced account screen.
 
-These images come from the signed v1.29.3 release build with live weather data. They are product captures, not interface mockups.
+These images come from a signed release build with live weather data. They are product captures, not interface mockups.
 
 ## What makes it different
 
@@ -76,13 +76,13 @@ Most current Android phones should use the standard `arm64-v8a` APK.
 
 | Package | Use it for |
 |---|---|
-| [`ZeusWatch-v1.29.3-standard-arm64-v8a.apk`](https://github.com/SysAdminDoc/ZeusWatch/releases/latest/download/ZeusWatch-v1.29.3-standard-arm64-v8a.apk) | Current Android phones with Google Play Services |
-| `ZeusWatch-v1.29.3-standard-armeabi-v7a.apk` | Older 32-bit Android phones |
-| `ZeusWatch-v1.29.3-standard-universal.apk` | One standard APK for either phone architecture |
-| [`ZeusWatch-v1.29.3-freenet-arm64-v8a.apk`](https://github.com/SysAdminDoc/ZeusWatch/releases/latest/download/ZeusWatch-v1.29.3-freenet-arm64-v8a.apk) | Current phones without proprietary Google dependencies |
-| `ZeusWatch-v1.29.3-freenet-armeabi-v7a.apk` | Older 32-bit phones without Google dependencies |
-| `ZeusWatch-v1.29.3-freenet-universal.apk` | One Google-free APK for either phone architecture |
-| [`ZeusWatch-v1.29.3-wear.apk`](https://github.com/SysAdminDoc/ZeusWatch/releases/latest/download/ZeusWatch-v1.29.3-wear.apk) | Wear OS companion |
+| [`ZeusWatch-v1.29.4-standard-arm64-v8a.apk`](https://github.com/SysAdminDoc/ZeusWatch/releases/latest/download/ZeusWatch-v1.29.4-standard-arm64-v8a.apk) | Current Android phones with Google Play Services |
+| `ZeusWatch-v1.29.4-standard-armeabi-v7a.apk` | Older 32-bit Android phones |
+| `ZeusWatch-v1.29.4-standard-universal.apk` | One standard APK for either phone architecture |
+| [`ZeusWatch-v1.29.4-freenet-arm64-v8a.apk`](https://github.com/SysAdminDoc/ZeusWatch/releases/latest/download/ZeusWatch-v1.29.4-freenet-arm64-v8a.apk) | Current phones without proprietary Google dependencies |
+| `ZeusWatch-v1.29.4-freenet-armeabi-v7a.apk` | Older 32-bit phones without Google dependencies |
+| `ZeusWatch-v1.29.4-freenet-universal.apk` | One Google-free APK for either phone architecture |
+| [`ZeusWatch-v1.29.4-wear.apk`](https://github.com/SysAdminDoc/ZeusWatch/releases/latest/download/ZeusWatch-v1.29.4-wear.apk) | Wear OS companion |
 
 Every release includes all seven signed APKs, `SHA256SUMS.txt`, provenance data, and open-source notices. The complete set is on the [latest release page](https://github.com/SysAdminDoc/ZeusWatch/releases/latest).
 
@@ -106,9 +106,9 @@ Check hashes and signatures before installing:
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-apksigner verify --verbose --print-certs ZeusWatch-v1.29.3-standard-arm64-v8a.apk
-apksigner verify --verbose --print-certs ZeusWatch-v1.29.3-freenet-arm64-v8a.apk
-apksigner verify --verbose --print-certs ZeusWatch-v1.29.3-wear.apk
+apksigner verify --verbose --print-certs ZeusWatch-v1.29.4-standard-arm64-v8a.apk
+apksigner verify --verbose --print-certs ZeusWatch-v1.29.4-freenet-arm64-v8a.apk
+apksigner verify --verbose --print-certs ZeusWatch-v1.29.4-wear.apk
 ```
 
 The provenance file records the source commit, toolchain versions, APK hashes, certificate fingerprint, and local verification commands used for that release.
@@ -192,6 +192,7 @@ Optional features have clear boundaries:
 | Maps | MapLibre native radar plus provider WebViews where required |
 | Background work | WorkManager for forecasts, widgets, warnings, and companion sync |
 | Companion surfaces | Glance widgets, Wear OS tiles and complications, Smartspacer, and Gadgetbridge |
+| Brand archive | Approved master and twelve original logo directions under `assets/brand` |
 
 **Stack:** Gradle 9.5.0, Android Gradle Plugin 9.3.2, Kotlin 2.3.21, Jetpack Compose 2026.08.00, Hilt 2.60.1, Retrofit 3.0.0, OkHttp 5.5.0, Room 2.8.4, DataStore 1.2.1, MapLibre 13.3.1, Glance 1.2.0, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.6.0, Firebase Firestore 34.18.0.
 

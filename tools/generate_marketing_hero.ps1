@@ -12,7 +12,7 @@ if (-not (Get-Command magick -ErrorAction SilentlyContinue)) {
 
 $repoPath = (Resolve-Path -LiteralPath $RepoRoot).Path
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
-    $OutputPath = Join-Path $repoPath "docs\screenshots\zeuswatch-hero-v1.29.3.png"
+    $OutputPath = Join-Path $repoPath "docs\screenshots\zeuswatch-hero.png"
 }
 
 $homePath = Join-Path $repoPath "docs\screenshots\phone-home.png"
