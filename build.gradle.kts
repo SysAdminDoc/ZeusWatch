@@ -1,4 +1,4 @@
-// ZeusWatch v1.29.3
+// ZeusWatch v1.29.4
 // Open-source Android weather app targeting TWC parity
 plugins {
     alias(libs.plugins.android.application) apply false

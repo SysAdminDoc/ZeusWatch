@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "project": "ZeusWatch",
+  "selectedConcepts": [
+    "direction-01-selected-radar-lightning.png"
+  ],
+  "selectedMasters": [
+    "../zeuswatch-selected-master.png"
+  ],
+  "selectionRationale": "The approved direction combines radar range rings, a lightning bolt, and one warm alert point in a distinctive launcher mark. It stays readable at small sizes and matches the product's navy, blue, and amber palette.",
+  "guidance": "These files preserve the original visual exploration. Use selectedConcepts to identify the approved direction. Production assets elsewhere in the repository remain the files used by the product."
+}
