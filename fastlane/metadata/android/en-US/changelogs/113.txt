@@ -1,1 +1,1 @@
-This release preserves all twelve original ZeusWatch logo directions and the approved radar-and-lightning master in the public repository. The product interface and privacy model are unchanged.
+This release preserves all twelve original ZeusWatch logo directions and the approved radar-and-lightning master in the public repository. It also fixes GeoSphere Austria warning details and timing.

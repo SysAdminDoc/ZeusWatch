@@ -96,6 +96,20 @@ data class GeoSphereWarningLocationProperties(
 
 @Serializable
 data class GeoSphereWarningObject(
+    val properties: GeoSphereWarningDetails? = null,
+    val warnid: JsonElement? = null,
+    @SerialName("warnstufeid") val warningLevel: Int? = null,
+    @SerialName("warntypid") val warningType: Int? = null,
+    val begin: String? = null,
+    val end: String? = null,
+    val text: String? = null,
+    @SerialName("auswirkungen") val impacts: String? = null,
+    @SerialName("empfehlungen") val recommendations: String? = null,
+    @SerialName("meteotext") val meteorologistText: String? = null,
+)
+
+@Serializable
+data class GeoSphereWarningDetails(
     val warnid: JsonElement? = null,
     @SerialName("warnstufeid") val warningLevel: Int? = null,
     @SerialName("warntypid") val warningType: Int? = null,
@@ -177,27 +191,38 @@ class GeoSphereAustriaAlertAdapter @Inject constructor(
     }
 
     private fun GeoSphereWarningObject.toWeatherAlert(area: String): WeatherAlert? {
-        val event = warningType.toGeoSphereEvent()
-        val headline = text.firstNonBlankLine() ?: "$event warning"
+        val details = properties ?: GeoSphereWarningDetails(
+            warnid = warnid,
+            warningLevel = warningLevel,
+            warningType = warningType,
+            begin = begin,
+            end = end,
+            text = text,
+            impacts = impacts,
+            recommendations = recommendations,
+            meteorologistText = meteorologistText,
+        )
+        val event = details.warningType.toGeoSphereEvent()
+        val headline = details.text.firstNonBlankLine() ?: "$event warning"
         val description = listOfNotNull(
-            text?.trim()?.takeIf { it.isNotBlank() },
-            impacts?.trim()?.takeIf { it.isNotBlank() },
-            meteorologistText?.trim()?.takeIf { it.isNotBlank() },
+            details.text?.trim()?.takeIf { it.isNotBlank() },
+            details.impacts?.trim()?.takeIf { it.isNotBlank() },
+            details.meteorologistText?.trim()?.takeIf { it.isNotBlank() },
         ).distinct().joinToString("\n\n")
 
         return WeatherAlert(
-            id = warnid.toStableWarningId(event, begin),
+            id = details.warnid.toStableWarningId(event, details.begin),
             event = event,
             headline = headline,
             description = description,
-            instruction = recommendations?.trim()?.takeIf { it.isNotBlank() },
-            severity = warningLevel.toGeoSphereSeverity(),
-            urgency = begin.toGeoSphereUrgency(),
+            instruction = details.recommendations?.trim()?.takeIf { it.isNotBlank() },
+            severity = details.warningLevel.toGeoSphereSeverity(),
+            urgency = details.begin.toGeoSphereUrgency(),
             certainty = "Likely",
             senderName = "GeoSphere Austria",
             areaDescription = area,
-            effective = begin,
-            expires = end,
+            effective = details.begin,
+            expires = details.end,
             response = null,
             coversRequestedLocation = true,
         )
@@ -214,10 +239,12 @@ class GeoSphereAustriaAlertAdapter @Inject constructor(
  * 1-2 hours.
  */
 private val AUSTRIA_ZONE: ZoneId = ZoneId.of("Europe/Vienna")
+private val GEOSPHERE_LOCAL_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.uuuu HH:mm")
 
 private fun parseGeoSphereTimestamp(value: String): LocalDateTime? =
     runCatching { OffsetDateTime.parse(value).atZoneSameInstant(AUSTRIA_ZONE).toLocalDateTime() }
         .recoverCatching { LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME) }
+        .recoverCatching { LocalDateTime.parse(value, GEOSPHERE_LOCAL_TIME) }
         .getOrNull()
 
 private fun JsonElement?.toStableWarningId(

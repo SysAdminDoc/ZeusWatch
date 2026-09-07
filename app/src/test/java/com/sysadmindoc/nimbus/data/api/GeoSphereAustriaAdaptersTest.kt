@@ -6,14 +6,18 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+
+private val GEO_SPHERE_TEST_JSON = Json { ignoreUnknownKeys = true }
 
 class GeoSphereAustriaNowcastAdapterTest {
     private val api = mockk<GeoSphereAustriaDatasetApi>()
@@ -129,6 +133,50 @@ class GeoSphereAustriaAlertAdapterTest {
         assertEquals("Wien-Innere Stadt", alert.areaDescription)
         assertEquals("Avoid flooded underpasses.", alert.instruction)
         assertEquals(true, alert.coversRequestedLocation)
+    }
+
+    @Test
+    fun mapsNestedWarningPayloadReturnedByLiveApi() = runTest {
+        val begin = LocalDateTime.now(ZoneId.of("Europe/Vienna"))
+            .plusHours(2)
+            .format(DateTimeFormatter.ofPattern("dd.MM.uuuu HH:mm"))
+        val response = GEO_SPHERE_TEST_JSON.decodeFromString<GeoSphereWarningResponse>(
+            """
+            {
+              "type": "Feature",
+              "properties": {
+                "location": {
+                  "type": "Municipal",
+                  "properties": { "name": "Wien-Innere Stadt" }
+                },
+                "warnings": [
+                  {
+                    "type": "Warning",
+                    "properties": {
+                      "warnid": 4149,
+                      "warntypid": 6,
+                      "warnstufeid": 1,
+                      "begin": "$begin",
+                      "end": "09.09.2026 23:59",
+                      "text": "Enhanced heat stress can be expected."
+                    }
+                  }
+                ]
+              }
+            }
+            """.trimIndent(),
+        )
+        coEvery {
+            api.getWarningsForCoords(longitude = 16.3738, latitude = 48.2082, language = "en")
+        } returns response
+
+        val alert = adapter.getAlerts(48.2082, 16.3738).getOrThrow().single()
+
+        assertEquals("4149", alert.id)
+        assertEquals("Heat", alert.event)
+        assertEquals(AlertSeverity.MINOR, alert.severity)
+        assertEquals(AlertUrgency.EXPECTED, alert.urgency)
+        assertEquals("Enhanced heat stress can be expected.", alert.headline)
     }
 
     @Test

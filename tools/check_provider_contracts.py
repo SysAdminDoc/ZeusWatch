@@ -1054,8 +1054,11 @@ def validate_geosphere_warnings(data: Any) -> ValidationResult:
         first = warnings[0]
         if not isinstance(first, dict):
             return ValidationResult(False, "warning entries must be objects")
-        if "warnstufeid" not in first or "warntypid" not in first:
-            return ValidationResult(False, "warning entries must include warnstufeid and warntypid")
+        warning_properties = first.get("properties", first)
+        if not isinstance(warning_properties, dict):
+            return ValidationResult(False, "warning properties must be an object")
+        if "warnstufeid" not in warning_properties or "warntypid" not in warning_properties:
+            return ValidationResult(False, "warning properties must include warnstufeid and warntypid")
     return ValidationResult(True, f"{len(warnings)} GeoSphere point warnings")
 
 
