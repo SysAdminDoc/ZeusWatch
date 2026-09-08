@@ -1,0 +1,1 @@
+Crash reports now go to the project's public contact address.

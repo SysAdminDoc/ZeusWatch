@@ -8,7 +8,7 @@
 
 <p align="center">Compare forecast models, understand risk, and keep control of your weather data.</p>
 
-![Version](https://img.shields.io/badge/version-1.29.4-1677FF)
+![Version](https://img.shields.io/badge/version-1.29.5-1677FF)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-2EA44F)
 ![Platform](https://img.shields.io/badge/platform-Android%208.0%2B-3DDC84?logo=android&logoColor=white)
 ![Wear OS](https://img.shields.io/badge/Wear%20OS-companion-00BFA5?logo=wearos&logoColor=white)
@@ -76,13 +76,13 @@ Most current Android phones should use the standard `arm64-v8a` APK.
 
 | Package | Use it for |
 |---|---|
-| [`ZeusWatch-v1.29.4-standard-arm64-v8a.apk`](https://github.com/SysAdminDoc/ZeusWatch/releases/latest/download/ZeusWatch-v1.29.4-standard-arm64-v8a.apk) | Current Android phones with Google Play Services |
-| `ZeusWatch-v1.29.4-standard-armeabi-v7a.apk` | Older 32-bit Android phones |
-| `ZeusWatch-v1.29.4-standard-universal.apk` | One standard APK for either phone architecture |
-| [`ZeusWatch-v1.29.4-freenet-arm64-v8a.apk`](https://github.com/SysAdminDoc/ZeusWatch/releases/latest/download/ZeusWatch-v1.29.4-freenet-arm64-v8a.apk) | Current phones without proprietary Google dependencies |
-| `ZeusWatch-v1.29.4-freenet-armeabi-v7a.apk` | Older 32-bit phones without Google dependencies |
-| `ZeusWatch-v1.29.4-freenet-universal.apk` | One Google-free APK for either phone architecture |
-| [`ZeusWatch-v1.29.4-wear.apk`](https://github.com/SysAdminDoc/ZeusWatch/releases/latest/download/ZeusWatch-v1.29.4-wear.apk) | Wear OS companion |
+| [`ZeusWatch-v1.29.5-standard-arm64-v8a.apk`](https://github.com/SysAdminDoc/ZeusWatch/releases/latest/download/ZeusWatch-v1.29.5-standard-arm64-v8a.apk) | Current Android phones with Google Play Services |
+| `ZeusWatch-v1.29.5-standard-armeabi-v7a.apk` | Older 32-bit Android phones |
+| `ZeusWatch-v1.29.5-standard-universal.apk` | One standard APK for either phone architecture |
+| [`ZeusWatch-v1.29.5-freenet-arm64-v8a.apk`](https://github.com/SysAdminDoc/ZeusWatch/releases/latest/download/ZeusWatch-v1.29.5-freenet-arm64-v8a.apk) | Current phones without proprietary Google dependencies |
+| `ZeusWatch-v1.29.5-freenet-armeabi-v7a.apk` | Older 32-bit phones without Google dependencies |
+| `ZeusWatch-v1.29.5-freenet-universal.apk` | One Google-free APK for either phone architecture |
+| [`ZeusWatch-v1.29.5-wear.apk`](https://github.com/SysAdminDoc/ZeusWatch/releases/latest/download/ZeusWatch-v1.29.5-wear.apk) | Wear OS companion |
 
 Every release includes all seven signed APKs, `SHA256SUMS.txt`, provenance data, and open-source notices. The complete set is on the [latest release page](https://github.com/SysAdminDoc/ZeusWatch/releases/latest).
 
@@ -106,9 +106,9 @@ Check hashes and signatures before installing:
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-apksigner verify --verbose --print-certs ZeusWatch-v1.29.4-standard-arm64-v8a.apk
-apksigner verify --verbose --print-certs ZeusWatch-v1.29.4-freenet-arm64-v8a.apk
-apksigner verify --verbose --print-certs ZeusWatch-v1.29.4-wear.apk
+apksigner verify --verbose --print-certs ZeusWatch-v1.29.5-standard-arm64-v8a.apk
+apksigner verify --verbose --print-certs ZeusWatch-v1.29.5-freenet-arm64-v8a.apk
+apksigner verify --verbose --print-certs ZeusWatch-v1.29.5-wear.apk
 ```
 
 The provenance file records the source commit, toolchain versions, APK hashes, certificate fingerprint, and local verification commands used for that release.
