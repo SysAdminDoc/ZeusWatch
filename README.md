@@ -14,6 +14,16 @@
 ![Wear OS](https://img.shields.io/badge/Wear%20OS-companion-00BFA5?logo=wearos&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.3.21-7F52FF?logo=kotlin&logoColor=white)
 
+<p align="center">
+  <a href="https://ko-fi.com/X8K126YVER">
+    <img height="42" src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" alt="Buy me a coffee on Ko-fi" />
+  </a>
+</p>
+
+<p align="center">
+  <sub><em>If ZeusWatch helps you make sense of the forecast, a coffee helps me keep its weather sources and app current.</em></sub>
+</p>
+
 [![ZeusWatch Today and Compare screens](docs/screenshots/zeuswatch-hero.png)](docs/screenshots/zeuswatch-hero.png)
 
 Most weather apps turn uncertain model data into one confident answer. ZeusWatch lets you inspect the answer. Compare locations and providers, see when models disagree, and choose the sources you trust. Core use needs no account, subscription, or API key.
