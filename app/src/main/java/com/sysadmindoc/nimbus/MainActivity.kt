@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -83,8 +84,19 @@ class MainActivity : ComponentActivity() {
             val weatherThemeState by WeatherThemeBus.state.collectAsStateWithLifecycle()
 
             CompositionLocalProvider(LocalWeatherThemeState provides weatherThemeState) {
+                val isLightTheme = settings.themeMode == ThemeMode.STATIC_LIGHT
+                // The XML theme stays dark (no DayNight reparent: no startup
+                // flash for dark users); status/nav icon appearance follows the
+                // chosen Compose theme instead.
+                SideEffect {
+                    WindowCompat.getInsetsController(window, window.decorView).apply {
+                        isAppearanceLightStatusBars = isLightTheme
+                        isAppearanceLightNavigationBars = isLightTheme
+                    }
+                }
                 NimbusTheme(
                     useWeatherAdaptive = settings.themeMode == ThemeMode.WEATHER_ADAPTIVE,
+                    isLightTheme = isLightTheme,
                 ) {
                     CompositionLocalProvider(
                         LocalAdaptiveLayout provides adaptiveInfo,

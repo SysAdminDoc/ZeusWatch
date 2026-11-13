@@ -145,6 +145,7 @@ internal val ThemeMode.labelRes: Int
     get() = when (this) {
         ThemeMode.STATIC_DARK -> R.string.settings_theme_static_dark
         ThemeMode.WEATHER_ADAPTIVE -> R.string.settings_theme_weather_adaptive
+        ThemeMode.STATIC_LIGHT -> R.string.settings_theme_light
     }
 
 @get:StringRes

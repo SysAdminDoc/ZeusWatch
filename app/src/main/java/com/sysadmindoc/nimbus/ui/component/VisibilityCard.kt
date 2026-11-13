@@ -143,6 +143,7 @@ private data class VisibilityTier(
     val color: Color,
 )
 
+@Composable
 private fun visibilityTier(km: Double): VisibilityTier = when {
     km < 1.0 -> VisibilityTier(R.string.visibility_tier_very_poor, NimbusWarning)
     km < 4.0 -> VisibilityTier(R.string.visibility_tier_poor, NimbusUvHigh)
@@ -172,6 +173,7 @@ private fun VisibilityScaleBar(
         NimbusBlueAccent,       // 20-40
         Color(0xFF80DEEA),      // 40+
     )
+    val currentTierColor = visibilityTier(currentKm).color
     Canvas(modifier = modifier) {
         val w = size.width
         val barH = 10.dp.toPx()
@@ -220,7 +222,7 @@ private fun VisibilityScaleBar(
             center = Offset(posX, barY + barH / 2),
         )
         drawCircle(
-            color = visibilityTier(currentKm).color,
+            color = currentTierColor,
             radius = 5.dp.toPx(),
             center = Offset(posX, barY + barH / 2),
         )

@@ -60,6 +60,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
+import com.sysadmindoc.nimbus.ui.theme.NimbusSnowWhite
 import com.sysadmindoc.nimbus.ui.theme.NimbusSurface
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -455,7 +456,7 @@ private fun hourlyMetrics(hour: HourlyConditions, settings: NimbusSettings): Lis
                 icon = Icons.Outlined.AcUnit,
                 label = stringResource(R.string.forecast_detail_snow),
                 value = WeatherFormatter.formatSnowfall(it, settings),
-                tint = Color(0xFFE8EAF6),
+                tint = NimbusSnowWhite,
             )
         )
     }
@@ -533,7 +534,7 @@ private fun dailyMetrics(day: DailyConditions, settings: NimbusSettings): List<D
                 icon = Icons.Outlined.AcUnit,
                 label = stringResource(R.string.forecast_detail_snow),
                 value = WeatherFormatter.formatSnowfall(it, settings),
-                tint = Color(0xFFE8EAF6),
+                tint = NimbusSnowWhite,
             )
         )
     }
