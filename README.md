@@ -8,7 +8,7 @@
 
 <p align="center">Compare forecast models, understand risk, and keep control of your weather data.</p>
 
-![Version](https://img.shields.io/badge/version-1.29.5-1677FF)
+![Version](https://img.shields.io/badge/version-1.29.6-1677FF)
 ![License](https://img.shields.io/badge/license-LGPL--3.0-2EA44F)
 ![Platform](https://img.shields.io/badge/platform-Android%208.0%2B-3DDC84?logo=android&logoColor=white)
 ![Wear OS](https://img.shields.io/badge/Wear%20OS-companion-00BFA5?logo=wearos&logoColor=white)
