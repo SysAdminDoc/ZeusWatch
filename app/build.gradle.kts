@@ -26,8 +26,8 @@ android {
         applicationId = "com.sysadmindoc.nimbus"
         minSdk = 26
         targetSdk = 36
-        versionCode = 115
-        versionName = "1.29.6"
+        versionCode = 116
+        versionName = "1.29.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
