@@ -1,0 +1,1 @@
+mmHg pressure unit, area-relevant WMO alerts, normal light theme (PR #60 upstream)

@@ -156,7 +156,7 @@ private val ProviderAgreementLevel.labelRes: Int
     }
 
 private val ProviderAgreementLevel.tint: Color
-    get() = when (this) {
+    @Composable get() = when (this) {
         ProviderAgreementLevel.STRONG -> NimbusSuccess
         ProviderAgreementLevel.MODERATE -> NimbusBlueAccent
         ProviderAgreementLevel.DIVERGENT -> NimbusWarning

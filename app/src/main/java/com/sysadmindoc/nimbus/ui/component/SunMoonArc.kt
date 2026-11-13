@@ -69,6 +69,7 @@ fun SunArc(
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 10.sp)
     val twilightColor = Color(0xFF1A237E).copy(alpha = 0.25f)
+    val textTertiary = NimbusTextTertiary
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     val sunriseLabel = WeatherFormatter.formatTime(sunrise, settings)
@@ -102,7 +103,7 @@ fun SunArc(
 
                 onDrawBehind {
                     drawTwilightZones(layout, totalMinutes, twilightColor)
-                    drawHorizonLine(layout)
+                    drawHorizonLine(layout, textTertiary)
                     drawSunTrack(layout, sunProgress, isDaylight)
                     drawSunPosition(layout, sunProgress, isDaylight)
                     drawMoonTrack(layout, moonState)
@@ -237,9 +238,9 @@ private fun DrawScope.drawTwilightZones(
     }
 }
 
-private fun DrawScope.drawHorizonLine(layout: SunArcLayout) {
+private fun DrawScope.drawHorizonLine(layout: SunArcLayout, textTertiary: Color) {
     drawLine(
-        color = NimbusTextTertiary.copy(alpha = 0.3f),
+        color = textTertiary.copy(alpha = 0.3f),
         start = Offset(layout.width * 0.05f, layout.horizonY),
         end = Offset(layout.width * 0.95f, layout.horizonY),
         strokeWidth = 1f,

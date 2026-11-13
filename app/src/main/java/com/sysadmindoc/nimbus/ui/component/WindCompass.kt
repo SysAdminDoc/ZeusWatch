@@ -54,6 +54,7 @@ fun WindCompass(
     modifier: Modifier = Modifier,
 ) {
     val textMeasurer = rememberTextMeasurer()
+    val textTertiary = NimbusTextTertiary
     val s = LocalUnitSettings.current
     // Localized compass cardinals, resolved outside the draw lambda
     // (stringResource cannot be called inside Canvas DrawScope).
@@ -114,7 +115,7 @@ fun WindCompass(
                         val ringStroke = Stroke(width = ringWidth)
 
                         val cardinalStyle = TextStyle(
-                            color = NimbusTextTertiary,
+                            color = textTertiary,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Medium,
                         )

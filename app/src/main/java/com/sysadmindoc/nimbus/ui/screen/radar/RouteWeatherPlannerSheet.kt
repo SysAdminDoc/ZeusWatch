@@ -631,6 +631,7 @@ private fun DrivingRouteRiskLevel.labelRes(): Int = when (this) {
     DrivingRouteRiskLevel.HIGH -> R.string.route_planner_risk_high
 }
 
+@Composable
 private fun DrivingRouteRiskLevel.color(): Color = when (this) {
     DrivingRouteRiskLevel.CLEAR -> NimbusSuccess
     DrivingRouteRiskLevel.LOW -> NimbusBlueAccent

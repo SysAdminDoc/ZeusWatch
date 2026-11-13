@@ -3,35 +3,69 @@ package com.sysadmindoc.nimbus.ui.theme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 
+// The schemes are mode-static, so they read NimbusPalette values directly —
+// NOT the theme-aware composable getters in Color.kt (top-level initializers
+// cannot call composables). Values mirror NimbusPalette.Dark 1:1.
 private val NimbusDarkScheme = darkColorScheme(
     primary = NimbusBlueAccent,
-    onPrimary = NimbusNavyDark,
-    primaryContainer = NimbusNavyLight,
-    onPrimaryContainer = NimbusTextPrimary,
+    onPrimary = Color(0xFF01070D),
+    primaryContainer = Color(0xFF173A5C),
+    onPrimaryContainer = Color(0xFFF4F7FB),
     secondary = NimbusRainBlue,
-    onSecondary = NimbusNavyDark,
-    secondaryContainer = NimbusSurfaceElevated,
-    onSecondaryContainer = NimbusTextPrimary,
+    onSecondary = Color(0xFF01070D),
+    secondaryContainer = Color(0xFF102538),
+    onSecondaryContainer = Color(0xFFF4F7FB),
     tertiary = NimbusSunYellow,
-    onTertiary = NimbusNavyDark,
-    background = NimbusNavyDark,
-    onBackground = NimbusTextPrimary,
-    surface = NimbusSurface,
-    onSurface = NimbusTextPrimary,
-    surfaceVariant = NimbusSurfaceVariant,
-    onSurfaceVariant = NimbusTextSecondary,
-    outline = NimbusCardBorder,
+    onTertiary = Color(0xFF01070D),
+    background = Color(0xFF01070D),
+    onBackground = Color(0xFFF4F7FB),
+    surface = Color(0xFF07121C),
+    onSurface = Color(0xFFF4F7FB),
+    surfaceVariant = Color(0xFF0B1A27),
+    onSurfaceVariant = Color(0xFFB7C3D4),
+    outline = Color(0x6630475B),
     outlineVariant = Color(0xFF203A61),
-    error = NimbusError,
-    onError = NimbusNavyDark,
+    error = Color(0xFFCF6679),
+    onError = Color(0xFF01070D),
     surfaceTint = NimbusBlueAccent,
-    scrim = NimbusNavyDark.copy(alpha = 0.72f),
+    scrim = Color(0xFF01070D).copy(alpha = 0.72f),
+)
+
+/**
+ * Normal light theme (issue #59): white surfaces on cool paper, with the
+ * accent deepened so white ink on filled controls holds WCAG AA.
+ */
+internal val NimbusLightScheme = lightColorScheme(
+    primary = Color(0xFF0A66C2),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFD3E5FB),
+    onPrimaryContainer = Color(0xFF16202B),
+    secondary = Color(0xFF1273C4),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFD3E9FB),
+    onSecondaryContainer = Color(0xFF16202B),
+    tertiary = Color(0xFF9A6A00),
+    onTertiary = Color(0xFFFFFFFF),
+    background = Color(0xFFF3F6FA),
+    onBackground = Color(0xFF16202B),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF16202B),
+    surfaceVariant = Color(0xFFE8EEF5),
+    onSurfaceVariant = Color(0xFF44566B),
+    outline = Color(0xFF8CA0B4),
+    outlineVariant = Color(0xFFC3CFDA),
+    error = Color(0xFFB3261E),
+    onError = Color(0xFFFFFFFF),
+    surfaceTint = Color(0xFF0A66C2),
+    scrim = Color(0x66000A14),
 )
 
 /**
@@ -93,28 +127,33 @@ internal fun weatherAdaptiveScheme(weatherCode: WeatherCode?, isDay: Boolean): C
  */
 internal fun accentOnColor(accent: Color): Color {
     val accentLuminance = accent.luminance()
-    val darkTextContrast = (accentLuminance + 0.05f) / (NimbusNavyDark.luminance() + 0.05f)
-    val lightTextContrast = (NimbusTextPrimary.luminance() + 0.05f) / (accentLuminance + 0.05f)
-    return if (darkTextContrast >= lightTextContrast) NimbusNavyDark else NimbusTextPrimary
+    val darkTextContrast = (accentLuminance + 0.05f) / (NimbusRawInkDark.luminance() + 0.05f)
+    val lightTextContrast = (NimbusRawInkLight.luminance() + 0.05f) / (accentLuminance + 0.05f)
+    return if (darkTextContrast >= lightTextContrast) NimbusRawInkDark else NimbusRawInkLight
 }
 
 @Composable
 fun NimbusTheme(
     useWeatherAdaptive: Boolean = false,
+    isLightTheme: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     // Read weather state from CompositionLocal (provided by MainActivity, fed
     // from MainScreen via WeatherThemeBus)
     val weatherState = LocalWeatherThemeState.current
-    val colorScheme = if (useWeatherAdaptive && weatherState.weatherCode != null) {
-        weatherAdaptiveScheme(weatherState.weatherCode, weatherState.isDay)
-    } else {
-        NimbusDarkScheme
+    val colorScheme = when {
+        isLightTheme -> NimbusLightScheme
+        useWeatherAdaptive && weatherState.weatherCode != null ->
+            weatherAdaptiveScheme(weatherState.weatherCode, weatherState.isDay)
+        else -> NimbusDarkScheme
     }
+    val palette = if (isLightTheme) NimbusPalette.Light else NimbusPalette.Dark
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = NimbusTypography,
-        content = content,
-    )
+    CompositionLocalProvider(LocalNimbusPalette provides palette) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = NimbusTypography,
+            content = content,
+        )
+    }
 }

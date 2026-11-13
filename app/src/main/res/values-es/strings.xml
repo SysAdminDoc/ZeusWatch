@@ -1222,6 +1222,7 @@
     <string name="settings_unit_inhg">inHg</string>
     <string name="settings_unit_hpa">hPa</string>
     <string name="settings_unit_mbar">mbar</string>
+    <string name="settings_unit_mmhg">mmHg</string>
     <string name="settings_unit_inches">pulgadas</string>
     <string name="settings_unit_mm">mm</string>
     <string name="settings_unit_miles">millas</string>
@@ -1252,6 +1253,7 @@
     <string name="settings_icon_style_meteocons">Animados (Meteocons)</string>
     <string name="settings_icon_style_custom">Paquete de iconos personalizado</string>
     <string name="settings_theme_static_dark">Oscuro</string>
+<string name="settings_theme_light">Claro</string>
     <string name="settings_theme_weather_adaptive">Adaptativo al clima</string>
     <string name="settings_summary_standard">Estándar</string>
     <string name="settings_summary_ai_generated">Generado por IA (Gemini)</string>

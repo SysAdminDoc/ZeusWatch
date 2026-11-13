@@ -40,6 +40,7 @@ internal val PressureUnit.labelRes: Int
         PressureUnit.INHG -> R.string.settings_unit_inhg
         PressureUnit.HPA -> R.string.settings_unit_hpa
         PressureUnit.MBAR -> R.string.settings_unit_mbar
+        PressureUnit.MMHG -> R.string.settings_unit_mmhg
     }
 
 @get:StringRes
@@ -144,6 +145,7 @@ internal val ThemeMode.labelRes: Int
     get() = when (this) {
         ThemeMode.STATIC_DARK -> R.string.settings_theme_static_dark
         ThemeMode.WEATHER_ADAPTIVE -> R.string.settings_theme_weather_adaptive
+        ThemeMode.STATIC_LIGHT -> R.string.settings_theme_light
     }
 
 @get:StringRes

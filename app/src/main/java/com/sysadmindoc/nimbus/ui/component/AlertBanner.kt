@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import com.sysadmindoc.nimbus.ui.theme.LocalNimbusPalette
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
@@ -181,7 +182,7 @@ private fun AlertBannerMoreRow(
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF111833))
+            .background(LocalNimbusPalette.current.overlayCard)
             .border(1.dp, NimbusTextTertiary.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
             .clickable(onClick = onClick, role = Role.Button)
             .padding(horizontal = 14.dp, vertical = 12.dp),
@@ -238,7 +239,7 @@ private fun AlertBannerItem(
                 Brush.verticalGradient(
                     colors = listOf(
                         bgColor,
-                        Color(0xFF111833),
+                        LocalNimbusPalette.current.overlayCard,
                     ),
                 ),
             )

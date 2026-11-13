@@ -121,6 +121,7 @@ private data class PressureTrendLabel(
     val color: Color,
 )
 
+@Composable
 private fun pressureTrend(hourly: List<HourlyConditions>): PressureTrendLabel? {
     val pressures = hourly.take(6).mapNotNull { it.surfacePressure }
     if (pressures.size < 3) return null

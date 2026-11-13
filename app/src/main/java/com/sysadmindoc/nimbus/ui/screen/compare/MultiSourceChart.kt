@@ -300,6 +300,7 @@ private fun MultiSourceTemperatureCanvas(
 ) {
     val colors = rememberChartColors()
     val layoutDirection = LocalLayoutDirection.current
+    val textTertiary = NimbusTextTertiary
     Canvas(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
@@ -331,7 +332,7 @@ private fun MultiSourceTemperatureCanvas(
         repeat(4) { line ->
             val y = chartTop + chartHeight * line / 3f
             drawLine(
-                color = NimbusTextTertiary.copy(alpha = 0.14f),
+                color = textTertiary.copy(alpha = 0.14f),
                 start = Offset(chartLeft, y),
                 end = Offset(chartRight, y),
                 strokeWidth = 1.dp.toPx(),
@@ -436,8 +437,13 @@ private fun SpreadChip(
 }
 
 @Composable
-private fun rememberChartColors(): List<Color> = remember {
-    listOf(NimbusBlueAccent, NimbusWarning, NimbusSuccess)
+private fun rememberChartColors(): List<Color> {
+    val blueAccent = NimbusBlueAccent
+    val warning = NimbusWarning
+    val success = NimbusSuccess
+    return remember(blueAccent, warning, success) {
+        listOf(blueAccent, warning, success)
+    }
 }
 
 internal data class MultiSourceChartSeries(

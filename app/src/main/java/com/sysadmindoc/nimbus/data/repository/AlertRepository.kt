@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import java.text.Normalizer
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -56,6 +57,18 @@ class AlertRepository @Inject constructor(
 ) {
     companion object {
         private const val TAG = "AlertRepository"
+
+        /** Minimum normalized length for a location name to match on. */
+        private const val MIN_AREA_NAME_CHARS = 3
+
+        /** Minimum normalized length for an area-description segment to match on. */
+        private const val MIN_AREA_SEGMENT_CHARS = 4
+
+        private val COMBINING_MARKS = "\\p{Mn}+".toRegex()
+
+        /** Non-word characters. `\p{L}` keeps Cyrillic names intact (a Latin-only strip
+         * would erase e.g. a Cyrillic geocoder name before it could match the feed). */
+        private val NON_WORDS = "[^\\p{L}\\p{N}]+".toRegex()
 
         private val COUNTRY_NAME_ALIASES = mapOf(
             "britain" to "GB",
@@ -168,7 +181,15 @@ class AlertRepository @Inject constructor(
     ): List<AdapterOutcome> {
         val settings = prefs.settings.first()
         val pref = preferenceOverride ?: settings.alertSourcePref
-        val countryCode = normalizeCountryHint(countryHint) ?: detectCountry(latitude, longitude)
+        val hint = normalizeCountryHint(countryHint)
+        // The hint only pins the country CODE. Area-relevance filtering (issue
+        // #58) always needs the reverse-geocoded names: the main screen passes
+        // the location's country as a hint on every fetch, so treating a hint
+        // as "skip the geocoder" would silently disable the filter. One
+        // geocoder call yields both.
+        val geocoded = geocodedLocation(latitude, longitude)
+        val countryCode = hint ?: (geocoded.countryCode ?: detectCountryFromTimezone())
+        val locationAreaNames = geocoded.areaNames
 
         Log.d(TAG, "Detected country: $countryCode, alertSourcePref: $pref")
 
@@ -201,7 +222,15 @@ class AlertRepository @Inject constructor(
                         }
                         adapter is WmoAlertAdapter -> {
                             if (countryCode != null) {
-                                queryAdapter(adapter) { adapter.getAlertsForCountry(countryCode) }
+                                val outcome = queryAdapter(adapter) { adapter.getAlertsForCountry(countryCode) }
+                                // SWIC is country-scoped with no geometry: without
+                                // this filter a Moscow location banner-loads every
+                                // warning Roshydromet publishes from Kaliningrad to
+                                // Vladivostok (issue #58). Fails open — see
+                                // [filterAreaRelevant].
+                                outcome.copy(
+                                    alerts = filterAreaRelevant(outcome.alerts, locationAreaNames, countryCode),
+                                )
                             } else {
                                 AdapterOutcome.skipped(adapter.sourceId)
                             }
@@ -261,6 +290,67 @@ class AlertRepository @Inject constructor(
                 compareBy<WeatherAlert> { it.severity.sortOrder }
                     .thenBy { it.urgency.sortOrder }
             )
+
+    /**
+     * Drop country-scoped warnings whose area text says nothing about the
+     * requested point (issue #58). WMO SWIC stopped publishing per-alert
+     * geometry, so for federation-sized members the raw feed spans a whole
+     * continent — a Moscow location would banner-load forest fires from
+     * Volgograd and blizzards from Yamalo-Nenets. Relevance is decided by
+     * matching the alert's `areaDescription` segments against the
+     * reverse-geocoded names of the point, plus the country's display name
+     * (national-scope warnings often name only the country).
+     *
+     * Fails open like [isAlertExpired]: blank area text is kept, and an empty
+     * [areaNames] list (geocoder unavailable or returned no names) keeps every
+     * alert. Never applied to coordinate-scoped sources — NWS,
+     * BMKG, HKO, ECCC and friends already answer for the exact point, and
+     * MeteoAlarm's local-language area text would risk false negatives.
+     */
+    internal fun filterAreaRelevant(
+        alerts: List<WeatherAlert>,
+        areaNames: List<String>,
+        countryCode: String?,
+    ): List<WeatherAlert> {
+        if (areaNames.isEmpty()) return alerts
+
+        val needles = buildList {
+            areaNames.forEach { name ->
+                normalizeAreaText(name).takeIf { it.length >= MIN_AREA_NAME_CHARS }?.let(::add)
+            }
+            countryCode?.let { code ->
+                countryDisplayName(code)?.let { name ->
+                    normalizeAreaText(name).takeIf { it.length >= MIN_AREA_NAME_CHARS }?.let(::add)
+                }
+            }
+        }
+        if (needles.isEmpty()) return alerts
+
+        return alerts.filter { alert ->
+            val area = alert.areaDescription
+            if (area.isBlank()) return@filter true
+            val segments = area.split(',', ';')
+                .map(::normalizeAreaText)
+                .filter { it.length >= MIN_AREA_SEGMENT_CHARS }
+            if (segments.isEmpty()) return@filter true
+            segments.any { segment -> needles.any { needle -> areaSegmentMatches(segment, needle) } }
+        }
+    }
+
+    private fun areaSegmentMatches(segment: String, needle: String): Boolean =
+        segment == needle || segment.contains(needle) || needle.contains(segment)
+
+    /** Lowercase, fold diacritics, collapse punctuation; e.g. "São Paulo" → "sao paulo". */
+    private fun normalizeAreaText(value: String): String =
+        Normalizer.normalize(value, Normalizer.Form.NFD)
+            .replace(COMBINING_MARKS, "")
+            .lowercase(Locale.US)
+            .replace(NON_WORDS, " ")
+            .trim()
+
+    private fun countryDisplayName(countryCode: String): String? = runCatching {
+        Locale.Builder().setRegion(countryCode.uppercase(Locale.ROOT)).build().getDisplayCountry(Locale.US)
+    }.getOrNull()?.takeIf { it.isNotBlank() }
 
     private data class AdapterOutcome(
         val sourceId: String,
@@ -350,27 +440,33 @@ class AlertRepository @Inject constructor(
             .replace(Regex("[^a-z0-9]+"), " ")
             .trim()
 
-    private suspend fun detectCountry(lat: Double, lon: Double): String? {
+    /** Reverse-geocoding result: country code plus nearby administrative names. */
+    private data class GeocodedLocation(
+        val countryCode: String?,
+        val areaNames: List<String>,
+    )
+
+    private suspend fun geocodedLocation(lat: Double, lon: Double): GeocodedLocation {
         return withContext(Dispatchers.IO) {
             try {
-                detectCountryWithGeocoder(lat, lon) ?: detectCountryFromTimezone()
+                geocodeLocationContext(lat, lon)
             } catch (e: Exception) {
-                Log.w(TAG, "Geocoder country detection failed: ${e.message}")
-                detectCountryFromTimezone()
+                Log.w(TAG, "Geocoder location detection failed: ${e.message}")
+                GeocodedLocation(null, emptyList())
             }
         }
     }
 
-    private suspend fun detectCountryWithGeocoder(lat: Double, lon: Double): String? {
-        if (!Geocoder.isPresent()) return null
+    private suspend fun geocodeLocationContext(lat: Double, lon: Double): GeocodedLocation {
+        if (!Geocoder.isPresent()) return GeocodedLocation(null, emptyList())
 
         val geocoder = Geocoder(context, Locale.US)
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val address = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             suspendCancellableCoroutine { continuation ->
                 geocoder.getFromLocation(lat, lon, 1, object : Geocoder.GeocodeListener {
                     override fun onGeocode(addresses: MutableList<Address>) {
                         if (continuation.isActive) {
-                            continuation.resume(addresses.firstOrNull()?.countryCode?.uppercase())
+                            continuation.resume(addresses.firstOrNull())
                         }
                     }
 
@@ -383,8 +479,34 @@ class AlertRepository @Inject constructor(
             }
         } else {
             @Suppress("DEPRECATION")
-            geocoder.getFromLocation(lat, lon, 1)?.firstOrNull()?.countryCode?.uppercase()
+            geocoder.getFromLocation(lat, lon, 1)?.firstOrNull()
         }
+        return GeocodedLocation(
+            countryCode = address?.countryCode?.uppercase(),
+            areaNames = address?.let(::addressAreaNames) ?: emptyList(),
+        )
+    }
+
+    /**
+     * Administrative-area names of the requested point, used to judge whether a
+     * country-scoped alert's area text is relevant. Read defensively: some
+     * geocoders return sparse addresses, and a missing name only costs filter
+     * precision — it never breaks the country detection that shares this call.
+     */
+    private fun addressAreaNames(address: Address): List<String> =
+        listOfNotNull(
+            safeAddressPart { address.adminArea },
+            safeAddressPart { address.subAdminArea },
+            safeAddressPart { address.locality },
+        ).distinct()
+
+    private inline fun safeAddressPart(part: () -> String?): String? = try {
+        part()?.trim()?.takeIf { it.isNotEmpty() }
+    } catch (e: Exception) {
+        // Some geocoder providers return sparse addresses; a missing name only
+        // costs area-filter precision, never the country detection sharing this call.
+        Log.d(TAG, "Address part unavailable: ${e.message}")
+        null
     }
 
     /**

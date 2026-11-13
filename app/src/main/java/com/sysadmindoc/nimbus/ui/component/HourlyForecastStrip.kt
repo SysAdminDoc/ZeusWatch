@@ -62,6 +62,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusFogGray
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
+import com.sysadmindoc.nimbus.ui.theme.NimbusSnowWhite
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -462,7 +463,7 @@ private fun HourlyItemPrecip(
         Text(
             text = if (snow != null && snow > 0) WeatherFormatter.formatSnowfall(snow, s) else " ",
             style = MaterialTheme.typography.labelSmall,
-            color = Color(0xFFE8EAF6),
+            color = NimbusSnowWhite,
         )
     }
 }

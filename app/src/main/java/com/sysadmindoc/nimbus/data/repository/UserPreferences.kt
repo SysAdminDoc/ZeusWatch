@@ -757,6 +757,7 @@ enum class PressureUnit(val label: String, val symbol: String) {
     INHG("inHg", "inHg"),
     HPA("hPa", "hPa"),
     MBAR("mbar", "mbar"),
+    MMHG("mmHg", "mmHg")
 }
 
 enum class PrecipUnit(val label: String, val symbol: String) {
@@ -876,6 +877,7 @@ enum class IconStyle(val label: String) {
 enum class ThemeMode(val label: String) {
     STATIC_DARK("Dark"),
     WEATHER_ADAPTIVE("Weather Adaptive"),
+    STATIC_LIGHT("Light"),
 }
 
 enum class SummaryStyle(val label: String) {

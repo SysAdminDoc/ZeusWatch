@@ -1,0 +1,1 @@
+Fix: alert area filter now applies when the app passes a country hint (far-away warnings shown in Moscow)
