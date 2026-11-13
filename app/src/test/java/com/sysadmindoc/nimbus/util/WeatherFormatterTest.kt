@@ -15,6 +15,7 @@ import java.time.LocalDateTime
 class WeatherFormatterTest {
 
     private val imperial = NimbusSettings() // defaults: F, mph, inHg, inches, miles, 12h
+    private val mmHg = NimbusSettings(pressureUnit = PressureUnit.MMHG)
     private val metric = NimbusSettings(
         tempUnit = TempUnit.CELSIUS,
         windUnit = WindUnit.KMH,
@@ -119,6 +120,19 @@ class WeatherFormatterTest {
         assertEquals("+1.2 hPa", WeatherFormatter.formatPressureDelta(1.2, metric))
         assertEquals("-3.5 hPa", WeatherFormatter.formatPressureDelta(-3.5, metric))
         assertEquals("+0.0 hPa", WeatherFormatter.formatPressureDelta(0.0, metric))
+    }
+
+    @Test
+    fun `formatPressure converts hPa to whole mmHg`() {
+        // Standard atmosphere: 1013.25 hPa ≡ 760 mmHg by definition.
+        assertEquals("760 mmHg", WeatherFormatter.formatPressure(1013.25, mmHg))
+    }
+
+    @Test
+    fun `formatPressureDelta converts hPa delta to signed whole mmHg`() {
+        assertEquals("+1 mmHg", WeatherFormatter.formatPressureDelta(1.33, mmHg))
+        assertEquals("-1 mmHg", WeatherFormatter.formatPressureDelta(-1.33, mmHg))
+        assertEquals("+0 mmHg", WeatherFormatter.formatPressureDelta(0.0, mmHg))
     }
 
     // --- Precipitation (input is always mm) ---

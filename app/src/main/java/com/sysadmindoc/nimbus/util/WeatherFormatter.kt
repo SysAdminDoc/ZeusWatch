@@ -92,6 +92,7 @@ object WeatherFormatter {
         PressureUnit.INHG -> String.format(java.util.Locale.US, "%.2f inHg", hPa * 0.02953)
         PressureUnit.HPA -> "${hPa.toInt()} hPa"
         PressureUnit.MBAR -> "${hPa.toInt()} mbar"
+        PressureUnit.MMHG -> String.format(java.util.Locale.US, "%.0f mmHg", hPa * 0.750061683)
     }
 
     /** Format a signed pressure change in the user's unit: "+1.2 hPa" / "+0.04 inHg". */
@@ -99,6 +100,7 @@ object WeatherFormatter {
         PressureUnit.INHG -> String.format(java.util.Locale.US, "%+.2f inHg", hPa * 0.02953)
         PressureUnit.HPA -> String.format(java.util.Locale.US, "%+.1f hPa", hPa)
         PressureUnit.MBAR -> String.format(java.util.Locale.US, "%+.1f mbar", hPa)
+        PressureUnit.MMHG -> String.format(java.util.Locale.US, "%+.0f mmHg", hPa * 0.750061683)
     }
 
     // ── Precipitation ────────────────────────────────────────────────────

@@ -138,6 +138,7 @@ internal fun convertForDisplay(
     CustomAlertUnit.UV -> canonical
     CustomAlertUnit.HPA -> when (settings.pressureUnit) {
         PressureUnit.INHG -> canonical * 0.02953
+        PressureUnit.MMHG -> canonical * 0.750061683
         PressureUnit.HPA, PressureUnit.MBAR -> canonical
     }
     // Grains per cubic metre everywhere; no display-unit choice to honour.
@@ -166,6 +167,7 @@ internal fun convertToCanonical(
     CustomAlertUnit.UV -> displayValue
     CustomAlertUnit.HPA -> when (settings.pressureUnit) {
         PressureUnit.INHG -> displayValue / 0.02953
+        PressureUnit.MMHG -> displayValue / 0.750061683
         PressureUnit.HPA, PressureUnit.MBAR -> displayValue
     }
     CustomAlertUnit.AQI, CustomAlertUnit.POLLEN -> displayValue
@@ -187,6 +189,7 @@ internal fun displayUnitLabel(metric: CustomAlertMetric, settings: NimbusSetting
         CustomAlertUnit.UV -> ""
         CustomAlertUnit.HPA -> when (settings.pressureUnit) {
             PressureUnit.INHG -> " inHg"
+            PressureUnit.MMHG -> " mmHg"
             PressureUnit.HPA -> " hPa"
             PressureUnit.MBAR -> " mbar"
         }

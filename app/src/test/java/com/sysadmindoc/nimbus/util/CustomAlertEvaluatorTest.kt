@@ -14,6 +14,8 @@ import com.sysadmindoc.nimbus.data.model.PollenReading
 import com.sysadmindoc.nimbus.data.model.PollenThresholdsDb
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.model.WeatherCode
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.PressureUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,6 +24,20 @@ import java.time.LocalDateTime
 class CustomAlertEvaluatorTest {
 
     private val baseTime = LocalDateTime.of(2026, 1, 15, 9, 0)
+
+    @Test
+    fun `pressure metric converts between canonical hPa and mmHg display`() {
+        val settings = NimbusSettings(pressureUnit = PressureUnit.MMHG)
+
+        // Standard atmosphere: 1013.25 hPa ≡ 760 mmHg by definition.
+        val display = convertForDisplay(1013.25, CustomAlertMetric.PRESSURE_NOW, settings)
+        assertEquals(760.0, display, 0.001)
+        assertEquals(" mmHg", displayUnitLabel(CustomAlertMetric.PRESSURE_NOW, settings))
+
+        // Saving a user-entered 760 mmHg threshold stores canonical hPa again.
+        val canonical = convertToCanonical(760.0, CustomAlertMetric.PRESSURE_NOW, settings)
+        assertEquals(1013.25, canonical, 0.001)
+    }
 
     @Test
     fun `snowfall rule compares in millimeters (cm forecast x10)`() {
