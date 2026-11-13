@@ -14,6 +14,12 @@ import com.sysadmindoc.nimbus.data.api.NwsAlertApi
 import com.sysadmindoc.nimbus.data.api.NwsAlertFeature
 import com.sysadmindoc.nimbus.data.api.NwsAlertProperties
 import com.sysadmindoc.nimbus.data.api.NwsAlertResponse
+import com.sysadmindoc.nimbus.data.api.WmoAlertAdapter
+import com.sysadmindoc.nimbus.data.api.WmoAlertApi
+import com.sysadmindoc.nimbus.data.api.WmoMember
+import com.sysadmindoc.nimbus.data.api.WmoMemberRegion
+import com.sysadmindoc.nimbus.data.api.WmoWarning
+import com.sysadmindoc.nimbus.data.api.WmoWarningsResponse
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AlertUrgency
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
@@ -331,6 +337,109 @@ class AlertRepositoryTest {
         } finally {
             TimeZone.setDefault(originalTimeZone)
         }
+    }
+
+    // ── WMO area-relevance filtering (issue #58) ─────────────────────────
+    //
+    // SWIC is country-scoped with no per-alert geometry: a Moscow location
+    // used to banner-load every warning Roshydromet publishes nationwide.
+
+    /** Strict address mock with only the fields under test stubbed, mirroring setup(). */
+    private fun stubGeocoder(countryCode: String, adminArea: String?, locality: String?) {
+        val address = mockk<Address>()
+        every { address.countryCode } returns countryCode
+        adminArea?.let { every { address.adminArea } returns it }
+        locality?.let { every { address.locality } returns it }
+        every { anyConstructed<Geocoder>().getFromLocation(any(), any(), any()) } returns listOf(address)
+    }
+
+    private fun wmoAdapterReturning(warnings: List<WmoWarning>): WmoAlertAdapter {
+        val wmoApi = mockk<WmoAlertApi>()
+        coEvery { wmoApi.getMembers() } returns listOf(
+            WmoMemberRegion(
+                members = listOf(WmoMember(mid = "RUMS", name = "Russian Federation", dept = "Roshydromet")),
+            ),
+        )
+        coEvery { wmoApi.getWarnings() } returns WmoWarningsResponse(items = warnings)
+        return WmoAlertAdapter(wmoApi)
+    }
+
+    /** All severities equal so mergeAlerts' stable sort preserves list order. */
+    private fun wmoWarning(
+        id: String,
+        event: String,
+        areaDesc: String?,
+    ) = WmoWarning(
+        id = id,
+        event = event,
+        headline = event,
+        sent = null,
+        expires = null, // isAlertExpired fails open on null: never dropped as expired.
+        areaDesc = areaDesc,
+        mid = "RUMS",
+        s = 3,
+        u = 3,
+        c = 3,
+        capURL = null,
+        effective = null,
+    )
+
+    @Test
+    fun `WMO country-wide alerts are filtered to the geocoded area`() = runTest {
+        stubGeocoder(countryCode = "RU", adminArea = "Moscow", locality = "Moscow")
+        val wmoAdapter = wmoAdapterReturning(
+            listOf(
+                wmoWarning(id = "wmo-moscow", event = "Snow", areaDesc = "Moscow, New Moscow"),
+                wmoWarning(id = "wmo-fire", event = "Forestfire", areaDesc = "Volgograd Region, Voronezh Region"),
+                wmoWarning(id = "wmo-kalmykia", event = "Other dangers", areaDesc = "Republic of Kalmykia"),
+                // National-scope warnings name only the country: kept everywhere in it.
+                wmoWarning(id = "wmo-national", event = "Wind", areaDesc = "Russian Federation"),
+                // Blank area text cannot be evaluated: fails open.
+                wmoWarning(id = "wmo-blank", event = "Heat", areaDesc = ""),
+            ),
+        )
+
+        val repo = AlertRepository(context, setOf(nwsAdapter, wmoAdapter), prefs)
+        val result = repo.getAlerts(55.75, 37.62) // Moscow
+
+        assertTrue(result.isSuccess)
+        assertEquals(
+            listOf("wmo-moscow", "wmo-national", "wmo-blank"),
+            result.getOrThrow().map { it.id },
+        )
+    }
+
+    @Test
+    fun `WMO alerts pass through when geocoding yields no area names`() = runTest {
+        // Address with only a country code: the filter has nothing to match
+        // against and must fail open, keeping the whole country feed.
+        stubGeocoder(countryCode = "RU", adminArea = null, locality = null)
+        val wmoAdapter = wmoAdapterReturning(
+            listOf(
+                wmoWarning(id = "wmo-far", event = "Forestfire", areaDesc = "Volgograd Region"),
+                wmoWarning(id = "wmo-near", event = "Snow", areaDesc = "Moscow"),
+            ),
+        )
+
+        val repo = AlertRepository(context, setOf(nwsAdapter, wmoAdapter), prefs)
+        val result = repo.getAlerts(55.75, 37.62)
+
+        assertTrue(result.isSuccess)
+        assertEquals(listOf("wmo-far", "wmo-near"), result.getOrThrow().map { it.id })
+    }
+
+    @Test
+    fun `area relevance filter folds diacritics and fails open on short segments`() {
+        val repo = AlertRepository(context, setOf(nwsAdapter), prefs)
+        val near = makeGlobalAlert(id = "wmo-sao").copy(areaDescription = "São Paulo State; South Brazil")
+        val far = makeGlobalAlert(id = "wmo-far").copy(areaDescription = "Amazonas Basin")
+        // Both segments normalize below MIN_AREA_SEGMENT_CHARS: nothing to
+        // judge, so the alert fails open.
+        val shortSegments = makeGlobalAlert(id = "wmo-short").copy(areaDescription = "Os, A")
+
+        val kept = repo.filterAreaRelevant(listOf(near, far, shortSegments), listOf("São Paulo"), "BR")
+
+        assertEquals(listOf("wmo-sao", "wmo-short"), kept.map { it.id })
     }
 
     private fun makeGlobalAlert(
