@@ -442,6 +442,45 @@ class AlertRepositoryTest {
         assertEquals(listOf("wmo-sao", "wmo-short"), kept.map { it.id })
     }
 
+    @Test
+    fun `WMO country hint still filters by geocoded area`() = runTest {
+        // Regression: the main screen always passes the location's country as
+        // a hint, and the hint used to skip reverse geocoding entirely —
+        // leaving the filter no names and failing open on the whole country
+        // feed (Rostov/Chechen/Yamalo-Nenets warnings in Moscow, issue #58).
+        stubGeocoder(countryCode = "RU", adminArea = "Moscow", locality = "Moscow")
+        val wmoAdapter = wmoAdapterReturning(
+            listOf(
+                wmoWarning(id = "wmo-moscow", event = "Snow", areaDesc = "Moscow, New Moscow"),
+                wmoWarning(id = "wmo-far", event = "Rain", areaDesc = "Rostov Region"),
+                wmoWarning(id = "wmo-chechen", event = "Avalanches", areaDesc = "Chechen Republic"),
+            ),
+        )
+
+        val repo = AlertRepository(context, setOf(nwsAdapter, wmoAdapter), prefs)
+        val result = repo.getAlerts(
+            55.75,
+            37.62,
+            preferenceOverride = null,
+            includeMeteredSources = true,
+            countryHint = "Russia",
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(listOf("wmo-moscow"), result.getOrThrow().map { it.id })
+    }
+
+    @Test
+    fun `area relevance filter matches Cyrillic names`() {
+        val repo = AlertRepository(context, setOf(nwsAdapter), prefs)
+        val near = makeGlobalAlert(id = "wmo-cyr").copy(areaDescription = "Москва, Новая Москва")
+        val far = makeGlobalAlert(id = "wmo-far").copy(areaDescription = "Ростовская область")
+
+        val kept = repo.filterAreaRelevant(listOf(near, far), listOf("Москва"), null)
+
+        assertEquals(listOf("wmo-cyr"), kept.map { it.id })
+    }
+
     private fun makeGlobalAlert(
         id: String = "wmo-1",
         event: String = "Severe Thunderstorm",

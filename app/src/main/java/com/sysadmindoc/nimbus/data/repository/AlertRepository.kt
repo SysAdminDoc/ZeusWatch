@@ -65,7 +65,10 @@ class AlertRepository @Inject constructor(
         private const val MIN_AREA_SEGMENT_CHARS = 4
 
         private val COMBINING_MARKS = "\\p{Mn}+".toRegex()
-        private val NON_WORDS = "[^a-z0-9]+".toRegex()
+
+        /** Non-word characters. `\p{L}` keeps Cyrillic names intact (a Latin-only strip
+         * would erase e.g. a Cyrillic geocoder name before it could match the feed). */
+        private val NON_WORDS = "[^\\p{L}\\p{N}]+".toRegex()
 
         private val COUNTRY_NAME_ALIASES = mapOf(
             "britain" to "GB",
@@ -179,12 +182,13 @@ class AlertRepository @Inject constructor(
         val settings = prefs.settings.first()
         val pref = preferenceOverride ?: settings.alertSourcePref
         val hint = normalizeCountryHint(countryHint)
-        // An explicit hint skips reverse geocoding; otherwise one geocoder call
-        // yields both the country and the area names used by area-relevance
-        // filtering of country-scoped feeds (issue #58).
-        val geocoded = hint?.let { GeocodedLocation(it, emptyList()) }
-            ?: geocodedLocation(latitude, longitude)
-        val countryCode = geocoded.countryCode ?: detectCountryFromTimezone()
+        // The hint only pins the country CODE. Area-relevance filtering (issue
+        // #58) always needs the reverse-geocoded names: the main screen passes
+        // the location's country as a hint on every fetch, so treating a hint
+        // as "skip the geocoder" would silently disable the filter. One
+        // geocoder call yields both.
+        val geocoded = geocodedLocation(latitude, longitude)
+        val countryCode = hint ?: (geocoded.countryCode ?: detectCountryFromTimezone())
         val locationAreaNames = geocoded.areaNames
 
         Log.d(TAG, "Detected country: $countryCode, alertSourcePref: $pref")
@@ -298,8 +302,8 @@ class AlertRepository @Inject constructor(
      * (national-scope warnings often name only the country).
      *
      * Fails open like [isAlertExpired]: blank area text is kept, and an empty
-     * [areaNames] list (geocoder unavailable or a country hint was supplied)
-     * keeps every alert. Never applied to coordinate-scoped sources — NWS,
+     * [areaNames] list (geocoder unavailable or returned no names) keeps every
+     * alert. Never applied to coordinate-scoped sources — NWS,
      * BMKG, HKO, ECCC and friends already answer for the exact point, and
      * MeteoAlarm's local-language area text would risk false negatives.
      */
