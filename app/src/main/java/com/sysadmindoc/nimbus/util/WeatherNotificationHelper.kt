@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.util
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -8,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -27,6 +29,7 @@ object WeatherNotificationHelper {
     private const val DAILY_BRIEFING_CHANNEL_ID = "nimbus_daily_briefing"
     private const val NOTIFICATION_ID = 9000
     private const val DAILY_BRIEFING_NOTIFICATION_ID = 9001
+    private const val MAX_METRICS = 3
 
     fun createChannel(context: Context) {
         val channel = NotificationChannel(
@@ -94,7 +97,11 @@ object WeatherNotificationHelper {
         } else {
             builder.setSmallIcon(weatherNotificationIcon(data.current.weatherCode, data.current.isDay))
         }
-        val notification = builder.build()
+        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+            withMetricStyle(context, builder.build(), weatherNotificationMetrics(data.current, s, metricLabels(context)))
+        } else {
+            builder.build()
+        }
 
         try {
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
@@ -104,6 +111,41 @@ object WeatherNotificationHelper {
     fun dismiss(context: Context) {
         NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
     }
+
+    /**
+     * NotificationCompat has no MetricStyle, so the compat notification is rebuilt
+     * through the platform builder with the style attached. The collapsed card keeps
+     * the title and body; the expanded card shows the metrics.
+     */
+    @RequiresApi(Build.VERSION_CODES.CINNAMON_BUN)
+    private fun withMetricStyle(context: Context, base: Notification, metrics: List<WeatherMetric>): Notification {
+        val style = Notification.MetricStyle()
+        metrics.take(MAX_METRICS).forEach { metric ->
+            style.addMetric(
+                Notification.Metric(
+                    Notification.Metric.FixedText(metric.value),
+                    metric.label,
+                    metric.tone.platformStyle(),
+                ),
+            )
+        }
+        return Notification.Builder.recoverBuilder(context, base).setStyle(style).build()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.CINNAMON_BUN)
+    private fun MetricTone.platformStyle(): Int = when (this) {
+        MetricTone.UNSPECIFIED -> Notification.SEMANTIC_STYLE_UNSPECIFIED
+        MetricTone.SAFE -> Notification.SEMANTIC_STYLE_SAFE
+        MetricTone.CAUTION -> Notification.SEMANTIC_STYLE_CAUTION
+        MetricTone.DANGER -> Notification.SEMANTIC_STYLE_DANGER
+    }
+
+    private fun metricLabels(context: Context) = WeatherMetricLabels(
+        feelsLike = context.getString(R.string.forecast_detail_feels_like),
+        uvIndex = context.getString(R.string.uv_index),
+        humidity = context.getString(R.string.humidity),
+        wind = context.getString(R.string.wind),
+    )
 
     fun showDailyBriefing(
         context: Context,
