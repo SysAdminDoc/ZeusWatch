@@ -105,6 +105,9 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /** Saved keys a keystore reset destroyed, for the notice by the key fields. */
+    val apiKeysNeedingReentry: Flow<Set<ApiKeyName>> = prefs.apiKeysNeedingReentry
+
     /**
      * Providers referenced only by saved locations' per-location source
      * overrides. The API-key fields must also account for these — a keyed

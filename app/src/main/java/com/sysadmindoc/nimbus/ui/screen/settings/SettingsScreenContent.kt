@@ -157,6 +157,7 @@ internal fun SettingsContent(
     transferInProgress: Boolean = false,
     pendingImportPreview: SettingsImportPreview? = null,
     locationOverrideProviders: Set<WeatherSourceProvider> = emptySet(),
+    apiKeysNeedingReentry: Set<ApiKeyName> = emptySet(),
     actions: SettingsActions = SettingsActions(),
 ) {
     PredictiveBackScaffold(onBack = onBack) {
@@ -208,6 +209,7 @@ internal fun SettingsContent(
                     transferInProgress = transferInProgress,
                     pendingImportPreview = pendingImportPreview,
                     locationOverrideProviders = locationOverrideProviders,
+                    apiKeysNeedingReentry = apiKeysNeedingReentry,
                 ),
                 actions = actions,
             )
@@ -293,6 +295,7 @@ private data class SettingsSupportState(
     val transferInProgress: Boolean,
     val pendingImportPreview: SettingsImportPreview?,
     val locationOverrideProviders: Set<WeatherSourceProvider>,
+    val apiKeysNeedingReentry: Set<ApiKeyName>,
 )
 
 @Composable
@@ -331,6 +334,7 @@ private fun SettingsCategoryContent(
                 activityThresholds = supportState.activityThresholds,
                 transferInProgress = supportState.transferInProgress,
                 locationOverrideProviders = supportState.locationOverrideProviders,
+                apiKeysNeedingReentry = supportState.apiKeysNeedingReentry,
                 actions = actions,
             )
             SettingsAdvancedSection(
@@ -939,6 +943,7 @@ private fun SettingsDataSourcesSection(
     activityThresholds: ActivityThresholds,
     transferInProgress: Boolean,
     locationOverrideProviders: Set<WeatherSourceProvider>,
+    apiKeysNeedingReentry: Set<ApiKeyName>,
     actions: SettingsActions,
 ) {
     SettingSection(
@@ -987,7 +992,7 @@ private fun SettingsDataSourcesSection(
                 actions.onWeatherContentProviderCoarseLocation,
             )
         }
-        SettingsApiKeyFields(settings, locationOverrideProviders, actions)
+        SettingsApiKeyFields(settings, locationOverrideProviders, apiKeysNeedingReentry, actions)
         ProviderHealthPanel(
             snapshot = providerHealth,
             transferInProgress = transferInProgress,
@@ -1015,6 +1020,7 @@ private fun SettingsDataSourcesSection(
 private fun SettingsApiKeyFields(
     settings: NimbusSettings,
     locationOverrideProviders: Set<WeatherSourceProvider>,
+    apiKeysNeedingReentry: Set<ApiKeyName>,
     actions: SettingsActions,
 ) {
     val sourceConfig = settings.sourceConfig
@@ -1036,11 +1042,11 @@ private fun SettingsApiKeyFields(
         settings.tempestDeviceId.isNotBlank()
 
     // A key a keystore reset destroyed, on a field that's showing and still empty.
-    val owmNeedsReentry = needsOwmKey && ApiKeyName.OWM in settings.apiKeysNeedingReentry &&
+    val owmNeedsReentry = needsOwmKey && ApiKeyName.OWM in apiKeysNeedingReentry &&
         settings.owmApiKey.isBlank()
-    val pirateNeedsReentry = needsPirateKey && ApiKeyName.PIRATE_WEATHER in settings.apiKeysNeedingReentry &&
+    val pirateNeedsReentry = needsPirateKey && ApiKeyName.PIRATE_WEATHER in apiKeysNeedingReentry &&
         settings.pirateWeatherApiKey.isBlank()
-    val tempestNeedsReentry = needsTempestConfig && ApiKeyName.TEMPEST in settings.apiKeysNeedingReentry &&
+    val tempestNeedsReentry = needsTempestConfig && ApiKeyName.TEMPEST in apiKeysNeedingReentry &&
         settings.tempestAccessToken.isBlank()
 
     if (needsOwmKey || needsPirateKey || needsTempestConfig) {

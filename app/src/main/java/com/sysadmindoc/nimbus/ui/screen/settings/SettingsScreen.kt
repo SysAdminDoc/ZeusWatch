@@ -123,6 +123,7 @@ fun SettingsScreen(
     // read when the screen appears rather than left blank until a run.
     LaunchedEffect(Unit) { viewModel.refreshDeliverySchedule() }
     val locationOverrideProviders by viewModel.locationOverrideProviders.collectAsStateWithLifecycle(initialValue = emptySet())
+    val apiKeysNeedingReentry by viewModel.apiKeysNeedingReentry.collectAsStateWithLifecycle(initialValue = emptySet())
     val transferStatus by viewModel.transferStatus.collectAsStateWithLifecycle()
     val transferInProgress by viewModel.transferInProgress.collectAsStateWithLifecycle()
     val pendingImportPreview by viewModel.pendingImportPreview.collectAsStateWithLifecycle()
@@ -161,6 +162,7 @@ fun SettingsScreen(
         transferInProgress = transferInProgress,
         pendingImportPreview = pendingImportPreview,
         locationOverrideProviders = locationOverrideProviders,
+        apiKeysNeedingReentry = apiKeysNeedingReentry,
         actions = SettingsActions(
             onTempUnit = viewModel::setTempUnit,
             onWindUnit = viewModel::setWindUnit,

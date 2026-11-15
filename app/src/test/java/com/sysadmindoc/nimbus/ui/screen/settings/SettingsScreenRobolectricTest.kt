@@ -259,11 +259,9 @@ class SettingsScreenRobolectricTest {
             NimbusTheme {
                 SettingsContent(
                     // Pirate Weather's field shows for AUTO alerts; its key is gone. The OWM key isn't in use.
-                    settings = NimbusSettings(
-                        alertSourcePref = AlertSourcePreference.AUTO,
-                        apiKeysNeedingReentry = setOf(ApiKeyName.PIRATE_WEATHER, ApiKeyName.OWM),
-                    ),
+                    settings = NimbusSettings(alertSourcePref = AlertSourcePreference.AUTO),
                     onBack = {},
+                    apiKeysNeedingReentry = setOf(ApiKeyName.PIRATE_WEATHER, ApiKeyName.OWM),
                     actions = SettingsActions(onDismissApiKeysReset = { dismissed = true }),
                 )
             }
@@ -286,9 +284,9 @@ class SettingsScreenRobolectricTest {
                     settings = NimbusSettings(
                         alertSourcePref = AlertSourcePreference.AUTO,
                         pirateWeatherApiKey = "re-entered",
-                        apiKeysNeedingReentry = setOf(ApiKeyName.PIRATE_WEATHER),
                     ),
                     onBack = {},
+                    apiKeysNeedingReentry = setOf(ApiKeyName.PIRATE_WEATHER),
                 )
             }
         }
