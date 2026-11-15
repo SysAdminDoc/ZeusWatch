@@ -84,6 +84,7 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CustomAlertMetric
 import com.sysadmindoc.nimbus.data.model.CustomAlertOperator
 import com.sysadmindoc.nimbus.data.model.CustomAlertRule
+import com.sysadmindoc.nimbus.data.model.CustomAlertUnit
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.component.NimbusScrollableSegmentRow
 import com.sysadmindoc.nimbus.ui.component.NimbusSelectableSegment
@@ -211,6 +212,7 @@ fun CustomAlertsScreen(
                 RuleList(
                     rules = state.rules,
                     settings = state.settings,
+                    pollenNotPublished = state.pollenNotPublished,
                     onToggle = { viewModel.toggleRule(it) },
                     onEdit = { editing = EditorState(existing = it, draft = it) },
                     onDelete = deleteWithUndo,
@@ -231,6 +233,7 @@ fun CustomAlertsScreen(
                 initial = ed.draft,
                 isNew = ed.existing == null,
                 settings = state.settings,
+                pollenNotPublished = state.pollenNotPublished,
                 onSave = { metric, op, threshold, enabled ->
                     if (ed.existing == null && state.isAtRuleCap) {
                         // Cap reached while the sheet was open — keep the
@@ -301,6 +304,7 @@ private val EditorStateSaver = listSaver<EditorState?, String>(
 private fun RuleList(
     rules: List<CustomAlertRule>,
     settings: NimbusSettings,
+    pollenNotPublished: Boolean,
     onToggle: (CustomAlertRule) -> Unit,
     onEdit: (CustomAlertRule) -> Unit,
     onDelete: (CustomAlertRule) -> Unit,
@@ -321,6 +325,7 @@ private fun RuleList(
                 RuleRow(
                     rule = rule,
                     settings = settings,
+                    neverFires = pollenNotPublished && rule.metric.unit == CustomAlertUnit.POLLEN,
                     onToggle = { onToggle(rule) },
                     onEdit = { onEdit(rule) },
                     onDelete = { onDelete(rule) },
@@ -354,6 +359,7 @@ private fun EmptyState(
 private fun RuleRow(
     rule: CustomAlertRule,
     settings: NimbusSettings,
+    neverFires: Boolean,
     onToggle: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -369,7 +375,9 @@ private fun RuleRow(
     } else {
         stringResource(R.string.custom_alerts_state_paused)
     }
+    val pollenNote = stringResource(R.string.custom_alerts_pollen_not_published)
     val editDescription = stringResource(R.string.custom_alerts_edit_cd, ruleState, ruleDescription)
+        .let { if (neverFires) "$it. $pollenNote" else it }
     val pauseDescription = stringResource(R.string.custom_alerts_pause_cd, ruleDescription)
     val resumeDescription = stringResource(R.string.custom_alerts_resume_cd, ruleDescription)
     val deleteDescription = stringResource(R.string.custom_alerts_delete_cd, ruleDescription)
@@ -401,13 +409,13 @@ private fun RuleRow(
                 color = NimbusTextTertiary,
             )
             Text(
-                text = if (rule.enabled) {
-                    stringResource(R.string.custom_alerts_status_active)
-                } else {
-                    stringResource(R.string.custom_alerts_status_paused)
+                text = when {
+                    neverFires -> pollenNote
+                    rule.enabled -> stringResource(R.string.custom_alerts_status_active)
+                    else -> stringResource(R.string.custom_alerts_status_paused)
                 },
                 style = MaterialTheme.typography.labelSmall,
-                color = if (rule.enabled) NimbusBlueAccent else NimbusWarning,
+                color = if (rule.enabled && !neverFires) NimbusBlueAccent else NimbusWarning,
             )
         }
         Switch(
@@ -469,6 +477,7 @@ private fun RuleEditor(
     initial: CustomAlertRule,
     isNew: Boolean,
     settings: NimbusSettings,
+    pollenNotPublished: Boolean,
     onSave: (CustomAlertMetric, CustomAlertOperator, Double, Boolean) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -502,6 +511,13 @@ private fun RuleEditor(
     ) {
         RuleEditorHeader(isNew = isNew)
         RuleMetricPicker(metric = metric, onMetricChange = { metric = it })
+        if (pollenNotPublished && metric.unit == CustomAlertUnit.POLLEN) {
+            Text(
+                text = stringResource(R.string.custom_alerts_pollen_not_published),
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusWarning,
+            )
+        }
         RuleOperatorPicker(operator = operator, onOperatorChange = { operator = it })
         RuleThresholdInput(
             metric = metric,

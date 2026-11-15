@@ -103,6 +103,7 @@
     <string name="custom_alerts_enabled_notifications_paused">las notificaciones están pausadas</string>
     <string name="custom_alerts_enabled_desc_on">Esta regla puede enviar notificaciones.</string>
     <string name="custom_alerts_enabled_desc_off">Guardada, pero las notificaciones están pausadas.</string>
+    <string name="custom_alerts_pollen_not_published">Los pronósticos de polen solo se publican para Europa, así que esta regla no puede activarse en tu ubicación de alertas.</string>
     <string name="common_cancel">Cancelar</string>
     <string name="common_save">Guardar</string>
     <string name="common_back">Atrás</string>
@@ -655,6 +656,7 @@
     <string name="dew_point_comfort_muggy">Bochornoso</string>
     <string name="dew_point_comfort_oppressive">Opresivo</string>
     <string name="pollen_unavailable">Las lecturas de polen son bajas o no están disponibles para esta ubicación ahora.</string>
+    <string name="pollen_not_published_here">Los pronósticos de polen solo se publican para Europa, así que no hay para esta ubicación.</string>
     <string name="pollen_overall">General</string>
     <string name="pollen_level_none">Ninguno</string>
     <string name="pollen_level_low">Bajo</string>

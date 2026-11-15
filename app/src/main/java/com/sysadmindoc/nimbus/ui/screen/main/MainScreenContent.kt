@@ -86,6 +86,7 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AirQualityData
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AstronomyData
+import com.sysadmindoc.nimbus.data.model.PollenData
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.ui.component.AdaptiveLayoutInfo
@@ -135,6 +136,7 @@ import com.sysadmindoc.nimbus.data.repository.CardType
 import com.sysadmindoc.nimbus.data.repository.ForecastAccuracyData
 import com.sysadmindoc.nimbus.data.repository.accessibilityCardOrder
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.PollenCoverage
 import com.sysadmindoc.nimbus.ui.component.ShimmerLoadingSkeleton
 import com.sysadmindoc.nimbus.ui.component.TemperatureGraph
 import com.sysadmindoc.nimbus.ui.component.UvIndexBar
@@ -1417,7 +1419,11 @@ private fun RenderAtmosphereCard(
             }
         }
         CardType.POLLEN -> {
-            context.airQuality?.let { aq ->
+            val location = context.data.location
+            if (!PollenCoverage.isCovered(location.latitude, location.longitude)) {
+                // A permanent gap, not a failed fetch: say so whatever the air quality request did.
+                PollenCard(pollen = PollenData(), modifier = modifier, outsideCoverage = true)
+            } else context.airQuality?.let { aq ->
                 PollenCard(
                     pollen = aq.pollen,
                     modifier = modifier,

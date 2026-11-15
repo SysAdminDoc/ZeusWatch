@@ -105,6 +105,7 @@
     <string name="custom_alerts_enabled_notifications_paused">notifications are paused</string>
     <string name="custom_alerts_enabled_desc_on">This rule can send notifications.</string>
     <string name="custom_alerts_enabled_desc_off">Saved, but notifications are paused.</string>
+    <string name="custom_alerts_pollen_not_published">Pollen forecasts are only published for Europe, so this rule can\'t fire at your alert location.</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_save">Save</string>
     <string name="common_back">Back</string>
@@ -663,6 +664,7 @@
     <string name="dew_point_comfort_muggy">Muggy</string>
     <string name="dew_point_comfort_oppressive">Oppressive</string>
     <string name="pollen_unavailable">Pollen readings are low or unavailable for this location right now.</string>
+    <string name="pollen_not_published_here">Pollen forecasts are only published for Europe, so there are none for this location.</string>
     <string name="pollen_overall">Overall</string>
     <string name="pollen_level_none">None</string>
     <string name="pollen_level_low">Low</string>

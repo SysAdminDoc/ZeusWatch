@@ -40,6 +40,8 @@ fun PollenCard(
     modifier: Modifier = Modifier,
     statusLabel: String? = null,
     statusTint: Color = NimbusTextSecondary,
+    /** The location is outside every pollen forecast's area, so there will never be readings. */
+    outsideCoverage: Boolean = false,
 ) {
     val readings = listOf(
         PollenRowText(
@@ -79,7 +81,9 @@ fun PollenCard(
         ),
     ).filter { it.reading.level != PollenLevel.NONE }
     val overallLabel = stringResource(pollen.overallLevel.labelRes)
-    val semanticSummary = if (!pollen.hasData) {
+    val semanticSummary = if (outsideCoverage) {
+        stringResource(R.string.pollen_not_published_here)
+    } else if (!pollen.hasData) {
         stringResource(R.string.pollen_semantics_unavailable)
     } else {
         val readingSummary = readings.joinToString(separator = ", ") { row ->
@@ -93,12 +97,12 @@ fun PollenCard(
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = semanticSummary
         },
-        statusLabel = statusLabel,
+        statusLabel = statusLabel.takeUnless { outsideCoverage },
         statusTint = statusTint,
     ) {
-        if (!pollen.hasData) {
+        if (outsideCoverage || !pollen.hasData) {
             Text(
-                stringResource(R.string.pollen_unavailable),
+                stringResource(if (outsideCoverage) R.string.pollen_not_published_here else R.string.pollen_unavailable),
                 style = MaterialTheme.typography.bodySmall,
                 color = NimbusTextTertiary,
             )

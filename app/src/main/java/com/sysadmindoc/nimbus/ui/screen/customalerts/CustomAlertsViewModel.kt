@@ -7,6 +7,7 @@ import com.sysadmindoc.nimbus.data.model.CustomAlertMetric
 import com.sysadmindoc.nimbus.data.model.CustomAlertOperator
 import com.sysadmindoc.nimbus.data.model.CustomAlertRule
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.PollenCoverage
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.util.AlertNotificationHelper
 import com.sysadmindoc.nimbus.util.CustomAlertWorker
@@ -40,10 +41,21 @@ class CustomAlertsViewModel @Inject constructor(
         val rules: List<CustomAlertRule> = emptyList(),
         val settings: NimbusSettings = NimbusSettings(),
         val isAtRuleCap: Boolean = false,
+        /** Rules are checked at the background alert location, and it has no pollen forecast, so pollen rules never fire. */
+        val pollenNotPublished: Boolean = false,
     )
 
-    val uiState: StateFlow<UiState> = combine(prefs.customAlertRules, prefs.settings) { rules, s ->
-        UiState(rules = rules, settings = s, isAtRuleCap = rules.size >= MAX_CUSTOM_ALERT_RULES)
+    val uiState: StateFlow<UiState> = combine(
+        prefs.customAlertRules,
+        prefs.settings,
+        prefs.backgroundAlertLocation,
+    ) { rules, s, location ->
+        UiState(
+            rules = rules,
+            settings = s,
+            isAtRuleCap = rules.size >= MAX_CUSTOM_ALERT_RULES,
+            pollenNotPublished = location != null && !PollenCoverage.isCovered(location.latitude, location.longitude),
+        )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, UiState())
 
     /**

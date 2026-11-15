@@ -99,6 +99,7 @@
     <string name="custom_alerts_enabled_notifications_paused">notifications are paused</string>
     <string name="custom_alerts_enabled_desc_on">This rule can send notifications.</string>
     <string name="custom_alerts_enabled_desc_off">Saved, but notifications are paused.</string>
+    <string name="custom_alerts_pollen_not_published">תחזיות אבקנים מתפרסמות רק לאירופה, ולכן הכלל הזה לא יופעל במיקום ההתראות שלך.</string>
     <string name="common_cancel">ביטול</string>
     <string name="common_save">שמירה</string>
     <string name="common_back">חזרה</string>
@@ -653,6 +654,7 @@
     <string name="dew_point_comfort_muggy">Muggy</string>
     <string name="dew_point_comfort_oppressive">Oppressive</string>
     <string name="pollen_unavailable">Pollen readings are low or unavailable for this location right now.</string>
+    <string name="pollen_not_published_here">תחזיות אבקנים מתפרסמות רק לאירופה, ולכן אין תחזית למיקום הזה.</string>
     <string name="pollen_overall">Overall</string>
     <string name="pollen_level_none">None</string>
     <string name="pollen_level_low">Low</string>
