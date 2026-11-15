@@ -147,9 +147,9 @@
     <string name="whats_new_version">Versión %1$s</string>
     <string name="whats_new_done">Entendido</string>
     <string-array name="whats_new_items">
-        <item>Los pronósticos de Environment Canada vuelven, ahora con detalle por hora.</item>
-        <item>Los cambios de hora de otoño ya no interrumpen el pronóstico por hora.</item>
-        <item>Tu reloj conserva las alertas activas aunque falle una actualización.</item>
+        <item>Un tema claro normal. Actívalo en Ajustes, Apariencia, Modo de tema.</item>
+        <item>La presión ya se puede mostrar en mmHg.</item>
+        <item>Las alertas mundiales ahora solo muestran avisos que cubren tu zona.</item>
     </string-array>
     <string name="custom_alerts_rule_center">Centro de reglas</string>
     <string name="custom_alert_metric_temp_high_today">Máxima de hoy</string>

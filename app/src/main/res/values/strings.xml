@@ -151,9 +151,9 @@
     <string name="whats_new_version">Version %1$s</string>
     <string name="whats_new_done">Got it</string>
     <string-array name="whats_new_items">
-        <item>Environment Canada forecasts are back, now with hourly detail.</item>
-        <item>Autumn clock changes no longer interrupt the hourly forecast.</item>
-        <item>Your watch keeps active alerts even if a forecast refresh hiccups.</item>
+        <item>A regular light theme. Turn it on under Settings, Appearance, Theme Mode.</item>
+        <item>Pressure can now show in mmHg.</item>
+        <item>Worldwide alerts now only show warnings that cover your area.</item>
     </string-array>
     <string name="custom_alerts_rule_center">Rule center</string>
     <string name="custom_alert_metric_temp_high_today">Today\'s high</string>

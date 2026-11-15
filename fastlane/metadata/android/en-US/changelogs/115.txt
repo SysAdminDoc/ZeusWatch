@@ -1,0 +1,1 @@
+New light theme and mmHg pressure. Worldwide (WMO) alerts now only show warnings that cover your area, with the right times. The daily briefing arrives at the time you picked, background updates can stay on Wi-Fi, and the radar maps no longer need Carto. Lots of dark theme readability fixes too.
