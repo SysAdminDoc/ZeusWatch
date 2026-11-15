@@ -529,6 +529,7 @@ private fun BoxScope.RadarNativeContent(
     val isRadarMode = state.selectedLayer == RadarLayer.RADAR
     val isLightningMode = state.selectedLayer == RadarLayer.LIGHTNING
     val showLightning = radarLayerShowsLightning(state.selectedLayer)
+    var basemapAttributionRes by remember { mutableStateOf<Int?>(null) }
     RadarMapView(
         latitude = coordinates.latitude,
         longitude = coordinates.longitude,
@@ -542,6 +543,7 @@ private fun BoxScope.RadarNativeContent(
         onAlertSelected = actions.onAlertSelected,
         onCameraMoveStarted = actions.onCameraMoveStarted,
         onCameraIdle = actions.onCameraIdle,
+        onBasemapLoaded = { basemapAttributionRes = it },
         modifier = Modifier.fillMaxSize(),
     )
     RadarTopControls(
@@ -558,13 +560,25 @@ private fun BoxScope.RadarNativeContent(
     if (isRadarMode) {
         RadarPlaybackAndStatus(state, actions)
     }
-    if (radarLayerShowsAttribution(state.selectedLayer)) {
+    val showsRadarCredit = radarLayerShowsAttribution(state.selectedLayer)
+    if (showsRadarCredit || basemapAttributionRes != null) {
+        // Rides above the playback panel the way the FABs do, and stops short of
+        // the FAB column, so the credit never covers a control.
+        val playbackVisible = isRadarMode && state.radarState.frameSet != null
         RadarAttribution(
             provider = state.settings.radarProvider,
             source = state.radarState.frameSet?.source,
             isCached = state.radarState.frameSet?.isFromCache == true,
+            showsRadarCredit = showsRadarCredit,
             showsLightning = showLightning,
-            modifier = Modifier.align(Alignment.BottomStart),
+            basemapAttributionRes = basemapAttributionRes,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(
+                    end = RADAR_ATTRIBUTION_FAB_CLEARANCE,
+                    bottom = if (playbackVisible) radarFabBottomPadding(showPlaybackControls = true) else 0.dp,
+                ),
         )
     }
 }
@@ -574,7 +588,9 @@ private fun RadarAttribution(
     provider: RadarProvider,
     source: RadarTileSource?,
     isCached: Boolean,
+    showsRadarCredit: Boolean,
     showsLightning: Boolean,
+    basemapAttributionRes: Int?,
     modifier: Modifier = Modifier,
 ) {
     val attributionRes = when {
@@ -589,11 +605,14 @@ private fun RadarAttribution(
     }
     // Blitzortung's terms are explicit that the network is for private use and
     // not a warning system, so the overlay says so wherever strikes are drawn.
-    val attribution = if (showsLightning) {
-        stringResource(attributionRes) + " " + stringResource(R.string.radar_attribution_lightning)
-    } else {
-        stringResource(attributionRes)
+    val radarCredit = when {
+        !showsRadarCredit -> null
+        showsLightning -> stringResource(attributionRes) + " " + stringResource(R.string.radar_attribution_lightning)
+        else -> stringResource(attributionRes)
     }
+    // The basemap credit rides in the same strip.
+    val basemapCredit = basemapAttributionRes?.let { stringResource(it) }
+    val attribution = listOfNotNull(radarCredit, basemapCredit).joinToString(" • ")
     // Scrim + larger/higher-contrast text: 9sp at 50% alpha directly over live
     // map tiles was illegible, including the cached-fallback status.
     Text(
@@ -1163,6 +1182,9 @@ internal fun shouldShowRadarReportFab(
 internal fun radarTopControlsSpacing(showBackButton: Boolean): Dp {
     return if (showBackButton) 10.dp else 8.dp
 }
+
+/** A 56 dp FAB plus its 16 dp end margin and an 8 dp gap. */
+private val RADAR_ATTRIBUTION_FAB_CLEARANCE = 80.dp
 
 internal fun radarFabBottomPadding(showPlaybackControls: Boolean): Dp {
     return if (showPlaybackControls) 124.dp else 16.dp

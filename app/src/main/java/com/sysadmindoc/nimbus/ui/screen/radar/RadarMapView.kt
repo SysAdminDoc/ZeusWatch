@@ -44,6 +44,7 @@ import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.CommunityReport
 import com.sysadmindoc.nimbus.data.model.ReportCondition
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import com.sysadmindoc.nimbus.ui.theme.LocalNimbusPalette
 import com.sysadmindoc.nimbus.util.parseAlertInstant
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.SymbolLayer
@@ -53,7 +54,8 @@ import kotlin.math.abs
 /**
  * MapLibre composable wrapper displaying radar tiles from RainViewer
  * and optional weather overlay layers (temperature, wind, clouds, precipitation).
- * Uses CartoCDN Dark Matter basemap (no API key).
+ * The basemap follows the app theme and falls back through [basemapFallbackChain];
+ * [onBasemapLoaded] reports the attribution the loaded basemap needs (null for none).
  * Manages radar tile layers with opacity crossfade for animation,
  * and a separate overlay layer for static weather tile sources.
  */
@@ -74,16 +76,21 @@ fun RadarMapView(
     onCameraMoveStarted: () -> Unit = {},
     onCameraIdle: () -> Unit = {},
     onAlertSelected: (String) -> Unit = {},
+    onBasemapLoaded: (attributionRes: Int?) -> Unit = {},
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentOnAlertSelected by rememberUpdatedState(onAlertSelected)
+    val currentOnBasemapLoaded by rememberUpdatedState(onBasemapLoaded)
+    val currentOnMapReady by rememberUpdatedState(onMapReady)
+    val isLightTheme = LocalNimbusPalette.current.isLight
 
     // Initialize MapLibre once
     remember { MapLibre.getInstance(context) }
 
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var styleRef by remember { mutableStateOf<Style?>(null) }
+    var basemapLoader by remember { mutableStateOf<BasemapLoader?>(null) }
 
     val mapView = remember {
         MapView(context).apply {
@@ -97,43 +104,47 @@ fun RadarMapView(
     }
 
     MapViewLifecycleEffect(mapView, lifecycleOwner)
+    BasemapLoaderEffect(basemapLoader, isLightTheme)
+
+    // Every layer effect is keyed on styleRef as well: the basemap can take a
+    // while to settle (a fallback, an offline timeout) or be swapped later (a
+    // theme change, a retry), and each style gets every layer drawn on it.
 
     // Update radar tile layer when frame changes
-    LaunchedEffect(currentTileUrl, previousTileUrl, radarMaxZoom) {
+    LaunchedEffect(styleRef, currentTileUrl, previousTileUrl, radarMaxZoom) {
         val style = styleRef ?: return@LaunchedEffect
         updateRadarLayers(style, currentTileUrl, previousTileUrl, radarMaxZoom)
     }
 
     // Update overlay tile layer (temperature, wind, clouds, precipitation)
-    LaunchedEffect(overlayTileUrl) {
+    LaunchedEffect(styleRef, overlayTileUrl) {
         val style = styleRef ?: return@LaunchedEffect
         updateOverlayLayer(style, overlayTileUrl)
     }
 
     // Update lightning strike points reactively
-    LaunchedEffect(lightningStrikes) {
+    LaunchedEffect(styleRef, lightningStrikes) {
         val style = styleRef ?: return@LaunchedEffect
         updateLightningLayer(style, lightningStrikes)
     }
 
     // Update community report markers reactively
-    LaunchedEffect(communityReports) {
+    LaunchedEffect(styleRef, communityReports) {
         val style = styleRef ?: return@LaunchedEffect
         updateCommunityReports(style, communityReports)
     }
 
     // Update active warning polygons reactively.
-    LaunchedEffect(alertOverlays) {
+    LaunchedEffect(styleRef, alertOverlays) {
         val style = styleRef ?: return@LaunchedEffect
         updateAlertOverlayLayer(style, alertOverlays)
     }
 
     // Re-center when the requested coordinates change materially (e.g. a deep
     // link that opened at 0,0 resolves to the real location after the map was
-    // created). Keyed on styleRef so it re-runs once the style is ready and
-    // wins over the initial camera set in the style callback.
-    LaunchedEffect(styleRef, latitude, longitude) {
-        if (styleRef == null) return@LaunchedEffect
+    // created). Not keyed on the style: a basemap that loads late must not
+    // pull the camera back from wherever the user panned.
+    LaunchedEffect(mapRef, latitude, longitude) {
         val map = mapRef ?: return@LaunchedEffect
         val target = map.cameraPosition.target
         val materiallyMoved = target == null ||
@@ -148,6 +159,15 @@ fun RadarMapView(
         factory = {
             mapView.apply {
                 getMapAsync { map ->
+                    // The camera needs no style, so it's in place before the basemap loads.
+                    map.cameraPosition = CameraPosition.Builder()
+                        .target(LatLng(latitude, longitude))
+                        .zoom(zoom)
+                        .build()
+                    map.uiSettings.apply {
+                        isLogoEnabled = false
+                        isAttributionEnabled = true
+                    }
                     mapRef = map
 
                     // Camera listeners for pause/resume during gestures
@@ -170,52 +190,22 @@ fun RadarMapView(
                         }
                     }
 
-                    // Dark basemap
-                    map.setStyle(
-                        Style.Builder()
-                            .fromUri(DARK_BASEMAP_URL)
-                    ) { style ->
-                        styleRef = style
-
-                        // Set initial camera
-                        map.cameraPosition = CameraPosition.Builder()
-                            .target(LatLng(latitude, longitude))
-                            .zoom(zoom)
-                            .build()
-
-                        // Apply initial radar layer
-                        if (currentTileUrl != null) {
-                            updateRadarLayers(style, currentTileUrl, null, radarMaxZoom)
-                        }
-
-                        // Apply initial overlay layer
-                        if (overlayTileUrl != null) {
-                            updateOverlayLayer(style, overlayTileUrl)
-                        }
-
-                        // Apply initial lightning layer
-                        if (lightningStrikes.isNotEmpty()) {
-                            updateLightningLayer(style, lightningStrikes)
-                        }
-
-                        // Apply initial community reports layer
-                        if (communityReports.isNotEmpty()) {
-                            updateCommunityReports(style, communityReports)
-                        }
-
-                        // Apply initial active alert polygons
-                        if (alertOverlays.isNotEmpty()) {
-                            updateAlertOverlayLayer(style, alertOverlays)
-                        }
-
-                        // Attribution
-                        map.uiSettings.apply {
-                            isLogoEnabled = false
-                            isAttributionEnabled = true
-                        }
-
-                        onMapReady()
-                    }
+                    // BasemapLoaderEffect loads the theme's chain once this is set.
+                    // The layer effects above draw radar, overlays, strikes,
+                    // reports and alerts on each style once styleRef is set.
+                    basemapLoader = BasemapLoader(
+                        map = map,
+                        mapView = mapView,
+                        onLoaded = { style, basemap ->
+                            styleRef = style
+                            currentOnBasemapLoaded(basemap.attributionRes)
+                            currentOnMapReady()
+                        },
+                        onUnloaded = {
+                            styleRef = null
+                            currentOnBasemapLoaded(null)
+                        },
+                    )
                 }
             }
         },
@@ -700,8 +690,6 @@ private val MARKER_LAYER_IDS = setOf(
     REPORTS_LAYER_ID,
     REPORTS_LABEL_LAYER_ID,
 )
-private const val DARK_BASEMAP_URL =
-    "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
 
 private fun layerId(url: String): String = "${RADAR_LAYER_PREFIX}layer-${url.hashCode()}"
 private fun sourceId(url: String): String = "${RADAR_LAYER_PREFIX}source-${url.hashCode()}"

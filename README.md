@@ -243,4 +243,4 @@ Issues and focused pull requests are welcome. Please run `./gradlew localQuality
 
 ZeusWatch is licensed under [LGPL-3.0](LICENSE).
 
-Forecast and map data remain subject to their providers' terms. Major sources include Open-Meteo, MET Norway, Environment Canada, DWD through Bright Sky, RainViewer, Windy, NOAA/NWS, MeteoAlarm, JMA, and Blitzortung. Weather icons use Meteocons by Bas Milius under the MIT License.
+Forecast and map data remain subject to their providers' terms. Major sources include Open-Meteo, MET Norway, Environment Canada, DWD through Bright Sky, RainViewer, Windy, NOAA/NWS, MeteoAlarm, JMA, and Blitzortung. The native maps draw on OpenFreeMap basemaps (OpenMapTiles schema, OpenStreetMap data), with VersaTiles as the backup. Weather icons use Meteocons by Bas Milius under the MIT License.

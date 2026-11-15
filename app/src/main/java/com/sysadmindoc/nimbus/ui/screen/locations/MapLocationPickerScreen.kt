@@ -52,6 +52,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.ui.screen.radar.BasemapLoader
+import com.sysadmindoc.nimbus.ui.screen.radar.BasemapLoaderEffect
+import com.sysadmindoc.nimbus.ui.theme.LocalNimbusPalette
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
@@ -77,8 +80,6 @@ import org.maplibre.geojson.Point
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 
-private const val DARK_BASEMAP_URL =
-    "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
 private const val PIN_SOURCE = "picker-pin-source"
 private const val PIN_LAYER = "picker-pin-layer"
 
@@ -103,6 +104,9 @@ fun MapLocationPickerScreen(
     var selectedName by remember { mutableStateOf<String?>(null) }
     var isGeocoding by remember { mutableStateOf(false) }
     var hasUserSelection by remember { mutableStateOf(false) }
+    var basemapAttributionRes by remember { mutableStateOf<Int?>(null) }
+    var basemapLoader by remember { mutableStateOf<BasemapLoader?>(null) }
+    val isLightTheme = LocalNimbusPalette.current.isLight
     // Request token: a slow earlier reverse-geocode must not overwrite the
     // name for a later tap (same guard pattern as LocationsViewModel search).
     val geocodeRequestId = remember { AtomicInteger(0) }
@@ -119,12 +123,14 @@ fun MapLocationPickerScreen(
     }
 
     MapPickerLifecycleEffect(mapView, lifecycleOwner)
+    BasemapLoaderEffect(basemapLoader, isLightTheme)
 
-    LaunchedEffect(initialLatitude, initialLongitude, initialName, mapRef, styleRef) {
+    // The location being edited is the starting selection. Keyed on the map,
+    // not the style, so a basemap that loads late can't move the camera.
+    LaunchedEffect(initialLatitude, initialLongitude, initialName, mapRef) {
         val latitude = initialLatitude ?: return@LaunchedEffect
         val longitude = initialLongitude ?: return@LaunchedEffect
         val map = mapRef ?: return@LaunchedEffect
-        val style = styleRef ?: return@LaunchedEffect
         if (hasUserSelection || selectedLat != null || selectedLon != null) return@LaunchedEffect
 
         selectedLat = latitude
@@ -134,9 +140,16 @@ fun MapLocationPickerScreen(
             .target(LatLng(latitude, longitude))
             .zoom(10.0)
             .build()
-        val pinPoint = Point.fromLngLat(longitude, latitude)
+    }
+
+    // The pin follows the selection onto whichever style is loaded, so a tap
+    // made before the basemap arrives still shows once it does.
+    LaunchedEffect(styleRef, selectedLat, selectedLon) {
+        val style = styleRef ?: return@LaunchedEffect
+        val latitude = selectedLat ?: return@LaunchedEffect
+        val longitude = selectedLon ?: return@LaunchedEffect
         style.getSourceAs<GeoJsonSource>(PIN_SOURCE)?.setGeoJson(
-            FeatureCollection.fromFeature(Feature.fromGeometry(pinPoint)),
+            FeatureCollection.fromFeature(Feature.fromGeometry(Point.fromLngLat(longitude, latitude))),
         )
     }
 
@@ -145,38 +158,44 @@ fun MapLocationPickerScreen(
             factory = {
                 mapView.apply {
                     getMapAsync { map ->
+                        map.cameraPosition = CameraPosition.Builder()
+                            .target(LatLng(20.0, 0.0))
+                            .zoom(2.0)
+                            .build()
                         mapRef = map
-                        map.setStyle(Style.Builder().fromUri(DARK_BASEMAP_URL)) { style ->
-                            styleRef = style
-                            map.cameraPosition = CameraPosition.Builder()
-                                .target(LatLng(20.0, 0.0))
-                                .zoom(2.0)
-                                .build()
-
-                            style.addSource(GeoJsonSource(PIN_SOURCE))
-                            style.addLayer(
-                                CircleLayer(PIN_LAYER, PIN_SOURCE).withProperties(
-                                    PropertyFactory.circleRadius(10f),
-                                    PropertyFactory.circleColor(NimbusPalette.Dark.accent.toArgb()),
-                                    PropertyFactory.circleStrokeWidth(3f),
-                                    PropertyFactory.circleStrokeColor(
-                                        android.graphics.Color.WHITE,
+                        // BasemapLoaderEffect loads the theme's chain once this is set.
+                        basemapLoader = BasemapLoader(
+                            map = map,
+                            mapView = mapView,
+                            onLoaded = { style, basemap ->
+                                basemapAttributionRes = basemap.attributionRes
+                                style.addSource(GeoJsonSource(PIN_SOURCE))
+                                style.addLayer(
+                                    CircleLayer(PIN_LAYER, PIN_SOURCE).withProperties(
+                                        PropertyFactory.circleRadius(10f),
+                                        PropertyFactory.circleColor(NimbusPalette.Dark.accent.toArgb()),
+                                        PropertyFactory.circleStrokeWidth(3f),
+                                        PropertyFactory.circleStrokeColor(
+                                            android.graphics.Color.WHITE,
+                                        ),
                                     ),
-                                ),
-                            )
-                        }
+                                )
+                                // Set last: the pin effect looks for the source above.
+                                styleRef = style
+                            },
+                            onUnloaded = {
+                                styleRef = null
+                                basemapAttributionRes = null
+                            },
+                        )
 
+                        // The pin effect draws the tap once a style is in.
                         map.addOnMapClickListener { latLng ->
                             hasUserSelection = true
                             selectedLat = latLng.latitude
                             selectedLon = latLng.longitude
                             selectedName = null
                             isGeocoding = true
-
-                            val pinPoint = Point.fromLngLat(latLng.longitude, latLng.latitude)
-                            styleRef?.getSourceAs<GeoJsonSource>(PIN_SOURCE)?.setGeoJson(
-                                FeatureCollection.fromFeature(Feature.fromGeometry(pinPoint)),
-                            )
 
                             val requestId = geocodeRequestId.incrementAndGet()
                             scope.launch {
@@ -200,6 +219,7 @@ fun MapLocationPickerScreen(
             selectedLon = selectedLon,
             selectedName = selectedName,
             isGeocoding = isGeocoding,
+            basemapAttributionRes = basemapAttributionRes,
             onLocationPicked = onLocationPicked,
         )
     }
@@ -259,6 +279,7 @@ private fun BoxScope.MapPickerSelectionPanel(
     selectedLon: Double?,
     selectedName: String?,
     isGeocoding: Boolean,
+    basemapAttributionRes: Int?,
     onLocationPicked: (lat: Double, lon: Double, name: String) -> Unit,
 ) {
     Column(
@@ -304,6 +325,14 @@ private fun BoxScope.MapPickerSelectionPanel(
             colors = ButtonDefaults.buttonColors(containerColor = NimbusBlueAccent),
         ) {
             Text(stringResource(R.string.map_picker_save))
+        }
+        if (basemapAttributionRes != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = stringResource(basemapAttributionRes),
+                style = MaterialTheme.typography.labelSmall,
+                color = NimbusTextSecondary,
+            )
         }
     }
 }
