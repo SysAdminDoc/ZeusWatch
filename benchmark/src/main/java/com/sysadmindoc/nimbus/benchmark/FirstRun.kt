@@ -36,11 +36,13 @@ fun MacrobenchmarkScope.grantLocation() {
 /**
  * Walks a fresh install through onboarding and closes the What's New sheet that
  * follows it, so every later launch opens on the weather screen. Does nothing
- * when the app already opens there.
+ * when the app already opens there. An install past onboarding that hasn't
+ * seen this version's What's New opens with the sheet on top, which hides the
+ * tab bar, so the sheet counts as a landing too.
  */
 fun MacrobenchmarkScope.finishFirstRunIfShown() {
-    val landed = awaitAny(By.text(CONTINUE), todayTab())
-    check(landed != null) { "Neither onboarding nor the weather screen showed after launch" }
+    val landed = awaitAny(By.text(CONTINUE), todayTab(), By.text(WHATS_NEW_DONE))
+    check(landed != null) { "Neither onboarding, What's New nor the weather screen showed after launch" }
     if (landed == 0) {
         for (step in 1 until ONBOARDING_STEPS) {
             clickText(CONTINUE)
