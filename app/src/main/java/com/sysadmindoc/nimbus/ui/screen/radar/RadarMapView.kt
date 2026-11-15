@@ -464,13 +464,14 @@ private fun updateCommunityReports(
         style.getSource(REPORTS_SOURCE_ID)?.let { style.removeSource(it) }
         return
     }
+    style.ensureReportIcons()
 
     // Build GeoJSON FeatureCollection from reports
     val features = reports.map { report ->
         Feature.fromGeometry(
             Point.fromLngLat(report.longitude, report.latitude)
         ).apply {
-            addStringProperty("emoji", report.condition.emoji)
+            addStringProperty("icon", reportIconId(report.condition))
             addStringProperty("condition", report.condition.name)
             addStringProperty("color", conditionColor(report.condition))
         }
@@ -500,13 +501,12 @@ private fun updateCommunityReports(
         }
         style.addLayer(circleLayer)
 
-        // Emoji label layer on top of circles
+        // Condition icon on top of each circle
         val labelLayer = SymbolLayer(REPORTS_LABEL_LAYER_ID, REPORTS_SOURCE_ID).apply {
             setProperties(
-                PropertyFactory.textField(Expression.get("emoji")),
-                PropertyFactory.textSize(14f),
-                PropertyFactory.textAllowOverlap(true),
+                PropertyFactory.iconImage(Expression.get("icon")),
                 PropertyFactory.iconAllowOverlap(true),
+                PropertyFactory.iconIgnorePlacement(true),
             )
         }
         style.addLayer(labelLayer)
