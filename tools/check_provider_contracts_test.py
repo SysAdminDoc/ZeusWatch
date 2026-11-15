@@ -96,6 +96,20 @@ class ProviderContractTests(unittest.TestCase):
                 "<h1>Index of /today/alerts/cap/20260701</h1><a href=\"LAND/\">LAND/</a>"
             ).ok
         )
+        # By 2026-11 the day's CAP files sit under the issuing office, then the hour.
+        self.assertTrue(
+            contracts.validate_eccc_cap_index(
+                "<h1>Index of /today/alerts/cap/20261115/</h1>"
+                "<a href=\"/today/alerts/cap/\">Parent Directory</a>"
+                "<a href=\"CWVR/\">CWVR/</a><a href=\"CWWG/\">CWWG/</a>"
+            ).ok
+        )
+        self.assertFalse(
+            contracts.validate_eccc_cap_index(
+                "<h1>Index of /today/alerts/cap/20261115/</h1>"
+                "<a href=\"/today/alerts/cap/\">Parent Directory</a>"
+            ).ok
+        )
         self.assertTrue(
             contracts.validate_hko_forecast(
                 {

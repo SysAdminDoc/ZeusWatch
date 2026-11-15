@@ -963,8 +963,11 @@ def validate_eccc_cap_index(data: Any) -> ValidationResult:
         return ValidationResult(False, "expected text/html index")
     if "Index of /today/alerts/cap/" not in data:
         return ValidationResult(False, "CAP index title missing")
-    if ".cap" not in data and "LAND/" not in data and "WATR/" not in data:
-        return ValidationResult(False, "CAP index has no alert files or LAND/WATR directories")
+    # The day's files have sat under LAND/ and WATR/, and since 2026-11 under
+    # the issuing office's ICAO code (CWVR/, CWWG/), then the hour.
+    has_office = re.search(r'href="C[A-Z]{3}/"', data) is not None
+    if ".cap" not in data and "LAND/" not in data and "WATR/" not in data and not has_office:
+        return ValidationResult(False, "CAP index has no alert files, LAND/WATR or office directories")
     return ValidationResult(True, "current-day ECCC CAP index reachable")
 
 
