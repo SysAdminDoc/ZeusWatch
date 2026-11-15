@@ -317,10 +317,12 @@ class MetNorwayAdapterTest {
             properties = MetProperties(timeseries = entries),
         )
 
+        // Fetched two hours ago, past Bergen's 30-minute floor, so the adapter must ask again.
         cache.put(60.39, 5.32, MetNorwayHttpCache.CacheEntry(
             lastModified = "Sun, 14 Jun 2026 12:00:00 GMT",
             expires = null,
             response = metResponse,
+            fetchedAt = java.time.Instant.now().minusSeconds(7200),
         ))
 
         val rawResponse = okhttp3.Response.Builder()
@@ -337,6 +339,9 @@ class MetNorwayAdapterTest {
         val data = adapter.getWeather(60.39, 5.32, "Oslo").getOrThrow()
         assertEquals("Oslo", data.location.name)
         assertEquals(15.0, data.current.temperature, 0.01)
+        io.mockk.coVerify(exactly = 1) {
+            api.getForecast(60.39, 5.32, any(), "Sun, 14 Jun 2026 12:00:00 GMT")
+        }
     }
 
     @Test

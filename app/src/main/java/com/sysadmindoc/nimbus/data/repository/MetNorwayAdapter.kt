@@ -10,12 +10,15 @@ import com.sysadmindoc.nimbus.data.model.MetNorwayResponse
 import com.sysadmindoc.nimbus.data.model.MetTimeseriesEntry
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
@@ -39,17 +42,34 @@ class MetNorwayForecastAdapter @Inject constructor(
     private val api: MetNorwayApi,
     private val httpCache: MetNorwayHttpCache,
 ) {
+    /** One load per rounded coordinate at a time, so a widget, a worker and the UI asking together make one request. */
+    private val loadLocks = ConcurrentHashMap<String, Mutex>()
+
     suspend fun getWeather(
         latitude: Double,
         longitude: Double,
         locationName: String? = null,
         locationZone: ZoneId? = null,
     ): Result<WeatherData> = runCatching {
-        val zone = locationZone ?: ZoneId.systemDefault()
+        val lock = loadLocks.getOrPut(httpCache.coordKey(latitude, longitude)) { Mutex() }
+        lock.withLock { load(latitude, longitude, locationName, locationZone ?: ZoneId.systemDefault()) }
+    }.onFailure {
+        if (it is kotlinx.coroutines.CancellationException) throw it
+        Log.w(TAG, "MET Norway forecast failed", it)
+    }
+
+    private suspend fun load(
+        latitude: Double,
+        longitude: Double,
+        locationName: String?,
+        zone: ZoneId,
+    ): WeatherData {
         val cached = httpCache.get(latitude, longitude)
 
-        if (cached != null && cached.isFresh()) {
-            return@runCatching mapToWeatherData(cached.response, latitude, longitude, locationName, zone)
+        if (cached != null && httpCache.isFresh(cached, latitude, longitude)) {
+            return mapToWeatherData(
+                cached.response, latitude, longitude, locationName, zone, fetchedAt = cached.fetchedAt,
+            )
         }
 
         val httpResponse = api.getForecast(
@@ -57,28 +77,31 @@ class MetNorwayForecastAdapter @Inject constructor(
             ifModifiedSince = cached?.lastModified,
         )
 
-        val metResponse = when (httpResponse.code()) {
-            304 -> {
-                cached?.response ?: throw IllegalStateException("304 but no cached response")
-            }
-            in 200..299 -> {
-                val body = httpResponse.body() ?: throw IllegalStateException("Empty 200 response from MET Norway")
-                val lastMod = httpResponse.headers()["Last-Modified"]
-                val expires = MetNorwayHttpCache.parseHttpDate(httpResponse.headers()["Expires"])
-                httpCache.put(latitude, longitude, MetNorwayHttpCache.CacheEntry(
-                    lastModified = lastMod,
-                    expires = expires,
-                    response = body,
-                ))
-                body
-            }
+        val fetchedAt = httpCache.now()
+        val headers = httpResponse.headers()
+        val expires = MetNorwayHttpCache.expiresAt(headers["Expires"], headers["Date"], fetchedAt)
+        val entry = when (httpResponse.code()) {
+            // Restart the minimum cache time, or every later load past it would re-ask.
+            304 -> (cached ?: throw IllegalStateException("304 but no cached response")).copy(
+                lastModified = headers["Last-Modified"] ?: cached.lastModified,
+                expires = expires,
+                fetchedAt = fetchedAt,
+            )
+            in 200..299 -> MetNorwayHttpCache.CacheEntry(
+                lastModified = headers["Last-Modified"],
+                expires = expires,
+                response = httpResponse.body() ?: throw IllegalStateException("Empty 200 response from MET Norway"),
+                fetchedAt = fetchedAt,
+            )
             else -> throw retrofit2.HttpException(httpResponse)
         }
 
-        mapToWeatherData(metResponse, latitude, longitude, locationName, zone)
-    }.onFailure {
-        if (it is kotlinx.coroutines.CancellationException) throw it
-        Log.w(TAG, "MET Norway forecast failed", it)
+        // Map before caching, so a body the app can't show is never held for the minimum cache time.
+        val weather = mapToWeatherData(
+            entry.response, latitude, longitude, locationName, zone, fetchedAt = entry.fetchedAt,
+        )
+        httpCache.put(latitude, longitude, entry)
+        return weather
     }
 
     /**
@@ -95,6 +118,7 @@ class MetNorwayForecastAdapter @Inject constructor(
         lon: Double,
         locationName: String?,
         zone: ZoneId = ZoneId.systemDefault(),
+        fetchedAt: Instant? = null,
     ): WeatherData {
         val timeseries = response.properties?.timeseries.orEmpty()
         require(timeseries.isNotEmpty()) { "No timeseries data from MET Norway" }
@@ -148,6 +172,9 @@ class MetNorwayForecastAdapter @Inject constructor(
             ),
             hourly = hourly,
             daily = daily,
+            // A body served from the cache is as old as its fetch, up to the 3-hour floor.
+            lastUpdated = fetchedAt?.let { LocalDateTime.ofInstant(it, ZoneId.systemDefault()) }
+                ?: LocalDateTime.now(),
         )
     }
 
