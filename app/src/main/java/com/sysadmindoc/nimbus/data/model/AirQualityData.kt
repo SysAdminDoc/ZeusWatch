@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.data.model
 
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
 
 /**
  * Air quality data for UI display.
@@ -52,30 +53,30 @@ enum class AqiLevel(
     val range: IntRange,
 ) {
     GOOD(
-        "Good", Color(0xFF4CAF50), "Air quality is satisfactory.",
+        "Good", ScaleColors.Green500, "Air quality is satisfactory.",
         0..50
     ),
     MODERATE(
-        "Moderate", Color(0xFFFFEB3B), "Acceptable. May be a risk for sensitive groups.",
+        "Moderate", ScaleColors.Yellow500, "Acceptable. May be a risk for sensitive groups.",
         51..100
     ),
     UNHEALTHY_SENSITIVE(
-        "Unhealthy for Sensitive Groups", Color(0xFFFF9800),
+        "Unhealthy for Sensitive Groups", ScaleColors.Orange500,
         "Sensitive groups may experience health effects.",
         101..150
     ),
     UNHEALTHY(
-        "Unhealthy", Color(0xFFF44336),
+        "Unhealthy", ScaleColors.Red500,
         "Everyone may begin to experience health effects.",
         151..200
     ),
     VERY_UNHEALTHY(
-        "Very Unhealthy", Color(0xFF9C27B0),
+        "Very Unhealthy", ScaleColors.Purple500,
         "Health alert: increased risk of health effects for everyone.",
         201..300
     ),
     HAZARDOUS(
-        "Hazardous", Color(0xFF880E4F),
+        "Hazardous", ScaleColors.Pink900,
         "Health warning of emergency conditions.",
         301..500
     );
@@ -143,11 +144,11 @@ data class PollenReading(
 data class PollenThresholds(val low: Double, val moderate: Double, val high: Double)
 
 enum class PollenLevel(val label: String, val color: Color) {
-    NONE("None", Color(0xFF9E9E9E)),
-    LOW("Low", Color(0xFF4CAF50)),
-    MODERATE("Moderate", Color(0xFFFFEB3B)),
-    HIGH("High", Color(0xFFFF9800)),
-    VERY_HIGH("Very High", Color(0xFFF44336)),
+    NONE("None", ScaleColors.Grey500),
+    LOW("Low", ScaleColors.Green500),
+    MODERATE("Moderate", ScaleColors.Yellow500),
+    HIGH("High", ScaleColors.Orange500),
+    VERY_HIGH("Very High", ScaleColors.Red500),
 }
 
 // Standard pollen thresholds (grains/m3)

@@ -1,6 +1,7 @@
 package com.sysadmindoc.nimbus.ui.theme
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -16,9 +17,11 @@ import androidx.compose.ui.graphics.luminance
  * read from composable context (hoist into a `val` before a `Canvas`/
  * `remember` block if you need them inside one).
  *
- * Data-visualization colors stay literal on purpose: their meaning (UV scale,
- * condition icons, precipitation gradient) must not shift with the theme, and
- * [inkOn] picks readable ink on top of them. The UI accent tracks the palette.
+ * Data-visualization colors keep one value on purpose: their meaning (UV scale,
+ * condition icons, precipitation gradient) must not shift with the theme.
+ * [inkOn] picks readable ink on top of them, and where one is drawn on a card
+ * as text or as a mark it goes through [textTint] or [markTint]. The scale
+ * swatches live in [ScaleColors]. The UI accent tracks the palette.
  */
 
 // Fixed raw inks: theme-independent luminance reference points for the
@@ -139,6 +142,24 @@ val NimbusHeaderGradient: Brush
 @Composable
 fun skyGradient(isDay: Boolean, weatherCode: Int): Brush =
     LocalNimbusPalette.current.skyGradient(isDay, weatherCode)
+
+/**
+ * A data colour drawn as text on a card, readable in both themes; see
+ * [NimbusPalette.textTint]. Pass [wash] when the text sits on a tinted chip
+ * and [fade] when it's drawn translucent.
+ */
+@Composable
+fun textTint(color: Color, wash: Color = Color.Transparent, fade: Float = 1f): Color {
+    val palette = LocalNimbusPalette.current
+    return remember(palette, color, wash, fade) { palette.textTint(color, wash, fade) }
+}
+
+/** A data colour drawn as a bar, arc, dot or icon on a card; see [NimbusPalette.markTint]. */
+@Composable
+fun markTint(color: Color, wash: Color = Color.Transparent, fade: Float = 1f): Color {
+    val palette = LocalNimbusPalette.current
+    return remember(palette, color, wash, fade) { palette.markTint(color, wash, fade) }
+}
 
 /**
  * Readable ink for text drawn on [container].

@@ -7,6 +7,7 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.WeatherCode
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
 
 /**
  * Evaluates current weather conditions for driving hazards.
@@ -179,7 +180,7 @@ enum class DrivingAlertType(@StringRes val labelRes: Int, val icon: String) {
 }
 
 enum class DrivingSeverity(@StringRes val labelRes: Int, val color: Color) {
-    DANGER(R.string.driving_severity_danger, Color(0xFFD32F2F)),
-    CAUTION(R.string.driving_severity_caution, Color(0xFFFF9800)),
-    ADVISORY(R.string.driving_severity_advisory, Color(0xFFFFEB3B)),
+    DANGER(R.string.driving_severity_danger, ScaleColors.Red700),
+    CAUTION(R.string.driving_severity_caution, ScaleColors.Orange500),
+    ADVISORY(R.string.driving_severity_advisory, ScaleColors.Yellow500),
 }

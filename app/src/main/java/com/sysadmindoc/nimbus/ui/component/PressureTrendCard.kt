@@ -22,6 +22,8 @@ import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -48,7 +50,7 @@ fun PressureTrendCard(
     val trendLabel = trend?.let { stringResource(it.labelRes) }
     val trendSemanticLabel = trend?.let { stringResource(it.semanticLabelRes) }
         ?: stringResource(R.string.pressure_trend_steady_semantic)
-    val trendColor = trend?.color ?: NimbusTextSecondary
+    val trendColor = textTint(trend?.color ?: NimbusTextSecondary)
 
     val firstPressure = data.first().second
     val lastPressure = data.last().second
@@ -130,22 +132,22 @@ private fun pressureTrend(hourly: List<HourlyConditions>): PressureTrendLabel? {
         delta > 2.0 -> PressureTrendLabel(
             labelRes = R.string.pressure_trend_rising,
             semanticLabelRes = R.string.pressure_trend_rising_semantic,
-            color = Color(0xFF4CAF50),
+            color = ScaleColors.Green500,
         )
         delta > 0.5 -> PressureTrendLabel(
             labelRes = R.string.pressure_trend_slowly_rising,
             semanticLabelRes = R.string.pressure_trend_slowly_rising_semantic,
-            color = Color(0xFF4CAF50),
+            color = ScaleColors.Green500,
         )
         delta < -2.0 -> PressureTrendLabel(
             labelRes = R.string.pressure_trend_falling,
             semanticLabelRes = R.string.pressure_trend_falling_semantic,
-            color = Color(0xFFFF9800),
+            color = ScaleColors.Orange500,
         )
         delta < -0.5 -> PressureTrendLabel(
             labelRes = R.string.pressure_trend_slowly_falling,
             semanticLabelRes = R.string.pressure_trend_slowly_falling_semantic,
-            color = Color(0xFFFF9800),
+            color = ScaleColors.Orange500,
         )
         else -> PressureTrendLabel(
             labelRes = R.string.pressure_trend_steady,

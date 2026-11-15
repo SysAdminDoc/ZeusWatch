@@ -45,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -72,6 +73,8 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.ui.theme.inkOn
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 
 @Composable
 fun GlassActionButton(
@@ -261,17 +264,18 @@ fun PremiumMessageCard(
                 .background(tint.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center,
         ) {
+            val mark = markTint(tint, tint.copy(alpha = 0.14f))
             if (loading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(26.dp),
-                    color = tint,
+                    color = mark,
                     strokeWidth = 2.5.dp,
                 )
             } else {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = tint,
+                    tint = mark,
                     modifier = Modifier.size(26.dp),
                 )
             }
@@ -367,7 +371,7 @@ fun PremiumMessageCard(
             Text(
                 text = tertiaryActionLabel,
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                color = tint,
+                color = textTint(tint),
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -397,10 +401,11 @@ fun NimbusStatusBadge(
     maxLines: Int = 2,
 ) {
     val shape = RoundedCornerShape(8.dp)
+    val wash = tint.copy(alpha = if (emphasized) 0.16f else 0.10f)
     val textColor = when {
         emphasized -> NimbusTextPrimary
         tint == NimbusTextTertiary -> NimbusTextSecondary
-        else -> tint
+        else -> textTint(tint, wash)
     }
 
     Row(
@@ -409,7 +414,7 @@ fun NimbusStatusBadge(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        tint.copy(alpha = if (emphasized) 0.16f else 0.10f),
+                        wash,
                         NimbusOverlayInk.copy(alpha = 0.04f),
                     ),
                 ),
@@ -423,7 +428,7 @@ fun NimbusStatusBadge(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = tint,
+                tint = markTint(tint, wash),
                 modifier = Modifier.size(14.dp),
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -631,7 +636,8 @@ fun InlineNoticeCard(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = tint,
+                // The icon box is a second wash over the card's own.
+                tint = markTint(tint, tint.copy(alpha = 0.14f).compositeOver(tint.copy(alpha = 0.12f))),
                 modifier = Modifier.size(18.dp),
             )
         }

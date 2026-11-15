@@ -80,6 +80,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
+import com.sysadmindoc.nimbus.ui.theme.textTint
 
 private const val ONBOARDING_STEP_COUNT = 3
 
@@ -473,7 +474,7 @@ private fun CardSetOption(
         Text(
             text = setCount,
             style = MaterialTheme.typography.labelLarge,
-            color = if (selected) tint else NimbusTextTertiary,
+            color = if (selected) textTint(tint, tint.copy(alpha = 0.20f)) else NimbusTextTertiary,
             fontWeight = FontWeight.SemiBold,
         )
     }

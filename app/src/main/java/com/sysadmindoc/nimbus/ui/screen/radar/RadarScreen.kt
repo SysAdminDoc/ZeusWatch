@@ -614,15 +614,18 @@ private fun RadarAttribution(
     val basemapCredit = basemapAttributionRes?.let { stringResource(it) }
     val attribution = listOfNotNull(radarCredit, basemapCredit).joinToString(" • ")
     // Scrim + larger/higher-contrast text: 9sp at 50% alpha directly over live
-    // map tiles was illegible, including the cached-fallback status.
+    // map tiles was illegible, including the cached-fallback status. Over the
+    // white light basemap, 85% text on a 45% scrim still read about 2.6:1 and
+    // let the map labels through; opaque text on a 60% scrim reads 5.4:1 on
+    // white and more on anything darker.
     Text(
         text = attribution,
-        color = NimbusRawInkLight.copy(alpha = 0.85f),
+        color = NimbusRawInkLight,
         fontSize = 10.sp,
         modifier = modifier
             .padding(start = 8.dp, bottom = 4.dp)
             .clip(RoundedCornerShape(6.dp))
-            .background(Color.Black.copy(alpha = 0.45f))
+            .background(Color.Black.copy(alpha = 0.6f))
             .padding(horizontal = 6.dp, vertical = 2.dp),
     )
 }

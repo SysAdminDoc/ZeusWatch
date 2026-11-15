@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import com.sysadmindoc.nimbus.ui.theme.LocalNimbusPalette
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusFogGray
 import com.sysadmindoc.nimbus.ui.theme.NimbusSuccess
@@ -41,6 +42,9 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.ui.theme.NimbusUvHigh
 import com.sysadmindoc.nimbus.ui.theme.NimbusUvModerate
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.format.DateTimeFormatter
 
@@ -97,7 +101,7 @@ fun VisibilityCard(
                 Text(
                     text = WeatherFormatter.formatVisibility(visibilityMeters, settings),
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                    color = tier.color,
+                    color = textTint(tier.color),
                 )
                 Text(
                     text = tierLabel,
@@ -150,7 +154,7 @@ private fun visibilityTier(km: Double): VisibilityTier = when {
     km < 10.0 -> VisibilityTier(R.string.visibility_tier_moderate, NimbusUvModerate)
     km < 20.0 -> VisibilityTier(R.string.visibility_tier_good, NimbusSuccess)
     km < 40.0 -> VisibilityTier(R.string.visibility_tier_clear, NimbusBlueAccent)
-    else -> VisibilityTier(R.string.visibility_tier_perfectly_clear, Color(0xFF80DEEA))
+    else -> VisibilityTier(R.string.visibility_tier_perfectly_clear, ScaleColors.Cyan200)
 }
 
 @Composable
@@ -171,9 +175,14 @@ private fun VisibilityScaleBar(
         NimbusUvModerate,       // 4-10
         NimbusSuccess,          // 10-20
         NimbusBlueAccent,       // 20-40
-        Color(0xFF80DEEA),      // 40+
+        ScaleColors.Cyan200,    // 40+
     )
-    val currentTierColor = visibilityTier(currentKm).color
+    val palette = LocalNimbusPalette.current
+    val currentTierColor = markTint(visibilityTier(currentKm).color)
+    // The bands are a faint, labelled backdrop; the ringed marker carries the
+    // reading (its dot reads at 3:1 on the white ring in light mode, the ring
+    // on the bands in dark).
+    val bandColors = remember(palette) { colors.map { palette.markTint(it).copy(alpha = 0.35f) } }
     Canvas(modifier = modifier) {
         val w = size.width
         val barH = 10.dp.toPx()
@@ -189,7 +198,7 @@ private fun VisibilityScaleBar(
             val startX = rtlCanvasRectLeft(w * startFrac, segW, w, isRtl)
 
             drawRoundRect(
-                color = colors[i].copy(alpha = 0.35f),
+                color = bandColors[i],
                 topLeft = Offset(startX, barY),
                 size = Size(segW, barH),
                 cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx()),

@@ -31,6 +31,9 @@ import com.sysadmindoc.nimbus.ui.component.LocalUnitSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.adviceRes
 import com.sysadmindoc.nimbus.util.labelRes
 
@@ -70,7 +73,7 @@ fun AqiCard(
                 Text(
                     aqiLevelLabel,
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = data.aqiLevel.color,
+                    color = textTint(data.aqiLevel.color),
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -155,15 +158,16 @@ fun AqiCard(
 
 @Composable
 private fun PollutantChip(label: String, value: String, unit: String, isWorst: Boolean = false) {
+    val worstWash = ScaleColors.Orange500.copy(alpha = 0.1f)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = if (isWorst) Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0x1AFF9800))
+            .background(worstWash)
             .padding(horizontal = 6.dp, vertical = 4.dp)
         else Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
     ) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = if (isWorst) Color(0xFFFF9800) else NimbusTextTertiary)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = if (isWorst) textTint(ScaleColors.Orange500, worstWash) else NimbusTextTertiary)
         Text(value, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = NimbusTextPrimary)
         Text(unit, style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp), color = NimbusTextTertiary)
     }
@@ -176,15 +180,16 @@ private fun HourlyAqiChip(hour: HourlyAqi, referenceTime: java.time.LocalDateTim
         hour.time, referenceTime, settings,
     ).let { if (it == "Now") stringResource(R.string.common_now) else it }
 
+    val hourWash = hour.level.color.copy(alpha = 0.15f)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(hour.level.color.copy(alpha = 0.15f))
+            .background(hourWash)
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
         Text(hourLabel, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp), color = NimbusTextTertiary)
-        Text("${hour.aqi}", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium), color = hour.level.color)
+        Text("${hour.aqi}", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium), color = textTint(hour.level.color, hourWash))
     }
 }
 
@@ -209,9 +214,9 @@ private fun DailyAqiBar(day: com.sysadmindoc.nimbus.data.model.DailyAqi) {
                 .width(20.dp)
                 .height(barHeight.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(day.level.color.copy(alpha = 0.6f)),
+                .background(markTint(day.level.color, fade = 0.6f)),
         )
         Spacer(modifier = Modifier.height(2.dp))
-        Text("${day.maxAqi}", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium), color = day.level.color)
+        Text("${day.maxAqi}", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium), color = textTint(day.level.color))
     }
 }

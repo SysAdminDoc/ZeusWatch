@@ -59,6 +59,9 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.conditionDescription
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
@@ -336,11 +339,11 @@ private fun DailyUvRow(
     val context = LocalContext.current
     val uv = day.uvIndexMax ?: 0.0
     val uvColor = when {
-        uv < 3 -> Color(0xFF4CAF50)
-        uv < 6 -> Color(0xFFFFEB3B)
-        uv < 8 -> Color(0xFFFF9800)
-        uv < 11 -> Color(0xFFF44336)
-        else -> Color(0xFF9C27B0)
+        uv < 3 -> ScaleColors.Green500
+        uv < 6 -> ScaleColors.Yellow500
+        uv < 8 -> ScaleColors.Orange500
+        uv < 11 -> ScaleColors.Red500
+        else -> ScaleColors.Purple500
     }
     val uvLabel = stringResource(uvLevelLabelRes(uv))
     Row(
@@ -375,7 +378,7 @@ private fun DailyUvRow(
                     .fillMaxWidth((uv / 12.0).toFloat().coerceIn(0f, 1f))
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(uvColor.copy(alpha = 0.7f)),
+                    .background(markTint(uvColor, NimbusOverlayInk.copy(alpha = 0.08f), fade = 0.7f)),
             )
         }
         Spacer(Modifier.width(10.dp))
@@ -383,7 +386,7 @@ private fun DailyUvRow(
             Text(
                 text = WeatherFormatter.formatUvIndex(uv),
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                color = uvColor,
+                color = textTint(uvColor),
             )
             Text(
                 text = uvLabel,
@@ -587,6 +590,7 @@ private fun ForecastAccuracyBadge(
     if (absDelta < 0.5) return
     val isTooWarm = delta.temperatureDeltaC > 0
     val badgeColor = if (isTooWarm) NimbusWarning else NimbusBlueAccent
+    val badgeWash = badgeColor.copy(alpha = 0.10f)
     val deltaFormatted = WeatherFormatter.formatTemperatureDelta(absDelta, settings)
     val label = stringResource(
         if (isTooWarm) R.string.forecast_accuracy_too_warm
@@ -598,13 +602,13 @@ private fun ForecastAccuracyBadge(
         modifier = Modifier
             .padding(top = 3.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(badgeColor.copy(alpha = 0.10f))
+            .background(badgeWash)
             .padding(horizontal = 7.dp, vertical = 3.dp),
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = badgeColor.copy(alpha = 0.85f),
+            color = textTint(badgeColor, badgeWash),
         )
     }
 }
@@ -621,14 +625,15 @@ private fun TempRangeBar(
     val barShape = RoundedCornerShape(6.dp)
     val midFraction = (startFraction + endFraction) / 2f
     val barColor = when {
-        midFraction < 0.33f -> Color(0xFF73C5FF)
-        midFraction < 0.66f -> Color(0xFF7AB8FF)
-        else -> Color(0xFFFFB74D)
+        midFraction < 0.33f -> ScaleColors.RangeCool
+        midFraction < 0.66f -> ScaleColors.RangeMild
+        else -> ScaleColors.Orange300
     }
+    // Both ends are judged on the track, the faded one after its fade.
     val gradientBrush = Brush.horizontalGradient(
         colors = listOf(
-            barColor.copy(alpha = 0.7f),
-            barColor,
+            markTint(barColor, trackColor, fade = 0.7f),
+            markTint(barColor, trackColor),
         ),
     )
 

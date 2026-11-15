@@ -27,6 +27,8 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.repository.ClimateOutlookData
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import java.util.Locale
 
 @Composable
@@ -102,7 +104,7 @@ fun ClimateOutlookCard(
                 Text(
                     text = stringResource(R.string.climate_delta_value, formatSignedOneDecimal(data.lowDelta, locale)),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = deltaColor(data.lowDelta),
+                    color = textTint(deltaColor(data.lowDelta)),
                 )
             }
         }
@@ -133,24 +135,25 @@ fun ClimateOutlookCard(
 @Composable
 private fun DeltaBadge(delta: Double, locale: Locale) {
     val color = deltaColor(delta)
+    val wash = color.copy(alpha = 0.12f)
     Text(
         text = "${formatSignedOneDecimal(delta, locale)}°",
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-        color = color,
+        color = textTint(color, wash),
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(color.copy(alpha = 0.12f))
+            .background(wash)
             .padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }
 
 private fun deltaColor(delta: Double): Color = when {
-    delta > 2.0 -> Color(0xFFF44336)
-    delta > 1.0 -> Color(0xFFFF9800)
-    delta > 0.0 -> Color(0xFFFFC107)
-    delta < -1.0 -> Color(0xFF2196F3)
-    delta < 0.0 -> Color(0xFF64B5F6)
-    else -> Color(0xFF9E9E9E)
+    delta > 2.0 -> ScaleColors.Red500
+    delta > 1.0 -> ScaleColors.Orange500
+    delta > 0.0 -> ScaleColors.Amber500
+    delta < -1.0 -> ScaleColors.Blue500
+    delta < 0.0 -> ScaleColors.Blue300
+    else -> ScaleColors.Grey500
 }
 
 private fun formatOneDecimal(value: Double, locale: Locale): String =

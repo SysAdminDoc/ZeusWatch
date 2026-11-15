@@ -156,6 +156,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.Locale
@@ -995,15 +996,16 @@ private fun WeatherUpdatedRow(
     sourceProvider: String? = null,
     usedFallback: Boolean = false,
 ) {
-    // Secondary rather than tertiary, and no alpha on the cached case: this
-    // row sits on the bright header, where tertiary measured 2.90:1 and the
-    // dimmed cached variant 2.32:1. Secondary clears 4.79:1 there. The two
-    // warning tiers already clear 3:1 on the same background.
+    // The line sits on a card-coloured pill, not the bare sky: the dark
+    // clear-day stop held secondary to 3.3:1 and the warning to 3.4:1, and
+    // the light storm stop the warning to 3.5:1. On the pill the card inks
+    // and tints apply. Secondary rather than tertiary, and no alpha on the
+    // cached case. The stale tiers use the full warning colour (at 70% it
+    // read 2.9:1), and the age is in the text anyway.
     val statusColor = when {
         isCached -> NimbusTextSecondary
         updatedAgeMinutes < 60 -> NimbusTextSecondary
-        updatedAgeMinutes < 120 -> NimbusWarning.copy(alpha = 0.7f)
-        else -> NimbusWarning
+        else -> textTint(NimbusWarning)
     }
     val details = buildList {
         if (todayPrecipChance > 0) {
@@ -1035,10 +1037,14 @@ private fun WeatherUpdatedRow(
         Text(
             text = details.joinToString(" • "),
             style = MaterialTheme.typography.labelSmall,
-            color = if (usedFallback) NimbusWarning.copy(alpha = 0.82f) else statusColor,
+            color = if (usedFallback) textTint(NimbusWarning) else statusColor,
             maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(NimbusCardBg)
+                .padding(horizontal = 10.dp, vertical = 3.dp),
         )
     }
 }

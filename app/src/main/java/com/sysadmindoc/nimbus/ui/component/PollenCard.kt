@@ -32,6 +32,8 @@ import com.sysadmindoc.nimbus.data.model.PollenLevel
 import com.sysadmindoc.nimbus.data.model.PollenReading
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.labelRes
 
 @Composable
@@ -122,7 +124,7 @@ fun PollenCard(
             Text(
                 overallLabel,
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                color = pollen.overallLevel.color,
+                color = textTint(pollen.overallLevel.color),
             )
         }
 
@@ -180,7 +182,7 @@ private fun PollenRow(label: String, levelLabel: String, reading: PollenReading)
                     .fillMaxWidth(animatedFraction)
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(reading.level.color),
+                    .background(markTint(reading.level.color)),
             )
         }
 
@@ -194,7 +196,7 @@ private fun PollenRow(label: String, levelLabel: String, reading: PollenReading)
             Text(
                 levelLabel,
                 style = MaterialTheme.typography.labelSmall,
-                color = reading.level.color,
+                color = textTint(reading.level.color),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

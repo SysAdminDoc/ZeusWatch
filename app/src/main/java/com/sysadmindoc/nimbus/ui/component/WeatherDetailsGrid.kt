@@ -38,6 +38,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 @Composable
@@ -166,7 +168,7 @@ private fun DetailCell(item: DetailItem, modifier: Modifier = Modifier) {
                     Text(
                         text = item.subtitle,
                         style = MaterialTheme.typography.labelSmall,
-                        color = item.subtitleColor ?: NimbusTextTertiary,
+                        color = item.subtitleColor?.let { textTint(it) } ?: NimbusTextTertiary,
                     )
                 }
             }
@@ -176,9 +178,9 @@ private fun DetailCell(item: DetailItem, modifier: Modifier = Modifier) {
 }
 
 private fun dewPointComfortColor(dewPointCelsius: Double): Color = when {
-    dewPointCelsius < 10 -> Color(0xFF64B5F6)   // Dry — cool blue
-    dewPointCelsius < 16 -> Color(0xFF81C784)   // Comfortable — green
-    dewPointCelsius < 21 -> Color(0xFFFFB74D)   // Slightly humid — amber
-    dewPointCelsius < 24 -> Color(0xFFFF9800)   // Muggy — orange
-    else -> Color(0xFFEF5350)                    // Oppressive — red
+    dewPointCelsius < 10 -> ScaleColors.Blue300      // Dry — cool blue
+    dewPointCelsius < 16 -> ScaleColors.Green300     // Comfortable — green
+    dewPointCelsius < 21 -> ScaleColors.Orange300    // Slightly humid — amber
+    dewPointCelsius < 24 -> ScaleColors.Orange500    // Muggy — orange
+    else -> ScaleColors.Red400                       // Oppressive — red
 }

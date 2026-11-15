@@ -5,6 +5,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
 import java.time.Duration
 import java.util.Locale
 import kotlin.math.abs
@@ -282,7 +283,7 @@ enum class HealthAlertType(@StringRes val labelRes: Int) {
 }
 
 enum class HealthSeverity(@StringRes val labelRes: Int, val color: Color) {
-    WARNING(R.string.health_severity_warning, Color(0xFFFF5722)),
-    ADVISORY(R.string.health_severity_advisory, Color(0xFFFF9800)),
-    INFO(R.string.health_severity_info, Color(0xFF2196F3)),
+    WARNING(R.string.health_severity_warning, ScaleColors.DeepOrange500),
+    ADVISORY(R.string.health_severity_advisory, ScaleColors.Orange500),
+    INFO(R.string.health_severity_info, ScaleColors.Blue500),
 }

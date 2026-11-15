@@ -29,10 +29,13 @@ import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import java.util.Locale
 
-private val GHI_COLOR = Color(0xFFFFD54F)
-private val DNI_COLOR = Color(0xFFFF8F00)
+private val GHI_COLOR = ScaleColors.Amber300
+private val DNI_COLOR = ScaleColors.Amber800
 
 @Composable
 fun SolarIrradianceCard(
@@ -74,7 +77,7 @@ fun SolarIrradianceCard(
                 Text(
                     text = stringResource(R.string.solar_wm2_value, currentGhi.toInt()),
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = GHI_COLOR,
+                    color = textTint(GHI_COLOR),
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -86,7 +89,7 @@ fun SolarIrradianceCard(
                 Text(
                     text = stringResource(R.string.solar_wm2_value, currentDni.toInt()),
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = DNI_COLOR,
+                    color = textTint(DNI_COLOR),
                 )
             }
             Column(
@@ -130,6 +133,8 @@ private fun SolarChart(
     // 24h curves run chronologically start-edge → end-edge; mirror under RTL.
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val overlayInk = NimbusOverlayInk
+    val ghiMark = markTint(GHI_COLOR)
+    val dniMark = markTint(DNI_COLOR)
     Canvas(modifier = modifier) {
         if (ghiValues.isEmpty()) return@Canvas
         val w = size.width
@@ -148,8 +153,8 @@ private fun SolarChart(
             drawPath(path, color, style = Stroke(width = strokeW, cap = StrokeCap.Round))
         }
 
-        drawCurve(ghiValues, GHI_COLOR)
-        drawCurve(dniValues, DNI_COLOR)
+        drawCurve(ghiValues, ghiMark)
+        drawCurve(dniValues, dniMark)
 
         drawLine(
             color = overlayInk.copy(alpha = 0.08f),

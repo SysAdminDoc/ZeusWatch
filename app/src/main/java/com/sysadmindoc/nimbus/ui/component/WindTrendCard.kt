@@ -10,7 +10,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -22,6 +21,9 @@ import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -88,7 +90,7 @@ fun WindTrendCard(
                     Text(
                         text = WeatherFormatter.formatWindSpeed(maxGust, s),
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                        color = Color(0xFFFF9800),
+                        color = textTint(ScaleColors.Orange500),
                     )
                 }
             }
@@ -113,7 +115,9 @@ fun WindTrendCard(
             columnValues = gustValues,
             labels = labels,
             lineColor = NimbusBlueAccent,
-            columnColor = Color(0xFFFF9800).copy(alpha = 0.22f),
+            // Each column is an hour's gust, so it's judged after its fade.
+            // At the old 22% it read 1.3:1 to 1.5:1 in both themes.
+            columnColor = markTint(ScaleColors.Orange500, fade = 0.5f),
         )
     }
 }

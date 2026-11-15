@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.PetSafetyAlert
 
 @Composable
@@ -43,7 +45,7 @@ fun PetSafetyCard(
                         Icons.Outlined.Pets,
                         contentDescription = petSafetyDescription,
                         modifier = Modifier.size(18.dp),
-                        tint = alert.severity.color,
+                        tint = markTint(alert.severity.color),
                     )
                     Spacer(Modifier.width(8.dp))
                     Column {
@@ -55,7 +57,7 @@ fun PetSafetyCard(
                         Text(
                             text = message,
                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                            color = alert.severity.color,
+                            color = textTint(alert.severity.color),
                         )
                         val detailRes = alert.detailRes
                         if (detailRes != null) {

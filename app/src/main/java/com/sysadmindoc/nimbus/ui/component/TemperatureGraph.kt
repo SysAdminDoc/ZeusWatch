@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -55,6 +56,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.markTint
 import com.sysadmindoc.nimbus.util.labelRes
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
@@ -115,6 +118,10 @@ fun TemperatureGraph(
     // Summarize the series for TalkBack; exact drag interaction isn't
     // meaningful to a screen reader, but the shape of the curve is.
     val trendSummary = remember(data, s.tempUnit) { buildTemperatureTrendSummary(data, s) }
+    // Opaque: at the old 0.6 fade not even white reads 3:1 over the full
+    // stack of fills in dark mode. It draws under the main line, which
+    // stays whole where the two meet.
+    val feelsLikeColor = markTint(ScaleColors.Orange500, wash = temperatureGraphFills(accent, overlayInk, rainColor))
     val trendSummaryText = stringResource(
         R.string.temperature_graph_summary,
         trendSummary.hours,
@@ -191,8 +198,9 @@ fun TemperatureGraph(
                                 drawPrecipitationBars(data, metrics, isRtl, rainColor)
                                 drawNormalBand(metrics, normalHigh, normalLow, textTertiary, overlayInk)
                                 drawConfidenceBand(data, metrics, confidenceBands, isRtl, accent)
-                                drawTemperatureCurve(paths, metrics, accent)
-                                drawFeelsLikeOverlay(data, metrics, isRtl)
+                                drawTemperatureFill(paths, metrics, accent)
+                                drawFeelsLikeOverlay(data, metrics, isRtl, feelsLikeColor)
+                                drawTemperatureLine(paths, accent)
                                 drawHighLowMarkers(data, points, textMeasurer, labelStyle, s, metrics.width, accent)
                                 drawDayBoundaries(data, points, textMeasurer, labelStyle, metrics, isRtl, textTertiary)
                                 drawTimeLabels(data, points, referenceTime, s, textMeasurer, labelStyle, metrics, context)
@@ -378,7 +386,7 @@ private fun DrawScope.drawPrecipitationBars(
         if (hour.precipitationProbability > 5) {
             val barHeight = (hour.precipitationProbability / 100f) * metrics.graphHeight * 0.4f
             drawRect(
-                color = rainColor.copy(alpha = 0.15f),
+                color = rainColor.copy(alpha = PRECIP_BAR_ALPHA),
                 topLeft = Offset(
                     rtlCanvasRectLeft(index * metrics.stepX - barWidth / 2, barWidth, metrics.width, isRtl),
                     metrics.baselineY - barHeight,
@@ -403,7 +411,7 @@ private fun DrawScope.drawNormalBand(
     val highY = temperatureY(high, metrics)
     val lowY = temperatureY(low, metrics)
     drawRect(
-        color = overlayInk.copy(alpha = 0.082f),
+        color = overlayInk.copy(alpha = NORMAL_BAND_ALPHA),
         topLeft = Offset(0f, highY.coerceAtLeast(metrics.paddingTop)),
         size = Size(metrics.width, (lowY - highY).coerceAtLeast(2f)),
     )
@@ -465,7 +473,7 @@ private fun DrawScope.drawConfidenceBand(
 
     drawPath(
         path = fillPath,
-        color = accent.copy(alpha = 0.12f),
+        color = accent.copy(alpha = CONFIDENCE_FILL_ALPHA),
     )
     drawConfidenceBandEdge(upperPoints, metrics, accent)
     drawConfidenceBandEdge(lowerPoints, metrics, accent)
@@ -497,7 +505,7 @@ private fun DrawScope.drawConfidenceBandEdge(
     )
 }
 
-private fun DrawScope.drawTemperatureCurve(
+private fun DrawScope.drawTemperatureFill(
     paths: TemperatureGraphPaths,
     metrics: TemperatureGraphMetrics,
     accent: Color,
@@ -505,11 +513,14 @@ private fun DrawScope.drawTemperatureCurve(
     drawPath(
         path = paths.fill,
         brush = Brush.verticalGradient(
-            listOf(accent.copy(alpha = 0.25f), Color.Transparent),
+            listOf(accent.copy(alpha = TEMPERATURE_FILL_ALPHA), Color.Transparent),
             startY = metrics.paddingTop,
             endY = metrics.baselineY,
         ),
     )
+}
+
+private fun DrawScope.drawTemperatureLine(paths: TemperatureGraphPaths, accent: Color) {
     drawPath(
         path = paths.line,
         color = accent,
@@ -521,11 +532,12 @@ private fun DrawScope.drawFeelsLikeOverlay(
     data: List<HourlyConditions>,
     metrics: TemperatureGraphMetrics,
     isRtl: Boolean,
+    color: Color,
 ) {
     if (!shouldDrawFeelsLikeOverlay(data)) return
     drawPath(
         path = buildFeelsLikePath(data, metrics, isRtl),
-        color = Color(0xFFFF9800).copy(alpha = 0.6f),
+        color = color,
         style = Stroke(
             width = 1.5f,
             cap = StrokeCap.Round,
@@ -799,3 +811,24 @@ private fun ForecastUncertaintyLevel.descriptionRes(): Int = when (this) {
 
 /** The Today card's window, and the historical default for every caller. */
 private const val DEFAULT_GRAPH_HOURS = 24
+
+internal const val PRECIP_BAR_ALPHA = 0.15f
+internal const val NORMAL_BAND_ALPHA = 0.082f
+internal const val CONFIDENCE_FILL_ALPHA = 0.12f
+
+/** The temperature fill at its strongest, the top of its gradient. */
+internal const val TEMPERATURE_FILL_ALPHA = 0.25f
+
+/**
+ * Every fill the feels-like line can cross at once, in draw order: the rain
+ * bars, the normal band, the confidence band and the top of the temperature
+ * fill. The line is tinted against the whole stack, the hardest ground it
+ * meets in both themes.
+ */
+internal fun temperatureGraphFills(accent: Color, overlayInk: Color, rain: Color): Color =
+    listOf(
+        rain.copy(alpha = PRECIP_BAR_ALPHA),
+        overlayInk.copy(alpha = NORMAL_BAND_ALPHA),
+        accent.copy(alpha = CONFIDENCE_FILL_ALPHA),
+        accent.copy(alpha = TEMPERATURE_FILL_ALPHA),
+    ).reduce { below, above -> above.compositeOver(below) }

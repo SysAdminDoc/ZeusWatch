@@ -27,6 +27,9 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -69,7 +72,7 @@ fun HumidityCard(
                 Text(
                     text = comfortLabel,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = comfort.color,
+                    color = textTint(comfort.color),
                 )
                 if (dewPointValue != null && dewComfort != null) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -92,7 +95,7 @@ fun HumidityCard(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 HumidityGauge(
                     humidity = humidity,
-                    color = comfort.color,
+                    color = markTint(comfort.color),
                     modifier = Modifier.height(80.dp).width(120.dp),
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -159,12 +162,12 @@ private data class HumidityComfortLevel(
 )
 
 private fun humidityComfort(humidity: Int): HumidityComfortLevel = when {
-    humidity < 25 -> HumidityComfortLevel(R.string.humidity_level_very_dry, R.string.humidity_desc_very_dry, Color(0xFFFFB74D))
-    humidity < 30 -> HumidityComfortLevel(R.string.humidity_level_dry, R.string.humidity_desc_dry, Color(0xFFFFCC80))
-    humidity in 30..60 -> HumidityComfortLevel(R.string.humidity_level_comfortable, R.string.humidity_desc_comfortable, Color(0xFF81C784))
-    humidity in 61..70 -> HumidityComfortLevel(R.string.humidity_level_slightly_humid, R.string.humidity_desc_slightly_humid, Color(0xFF4FC3F7))
-    humidity in 71..85 -> HumidityComfortLevel(R.string.humidity_level_humid, R.string.humidity_desc_humid, Color(0xFF42A5F5))
-    else -> HumidityComfortLevel(R.string.humidity_level_very_humid, R.string.humidity_desc_very_humid, Color(0xFFEF5350))
+    humidity < 25 -> HumidityComfortLevel(R.string.humidity_level_very_dry, R.string.humidity_desc_very_dry, ScaleColors.Orange300)
+    humidity < 30 -> HumidityComfortLevel(R.string.humidity_level_dry, R.string.humidity_desc_dry, ScaleColors.Orange200)
+    humidity in 30..60 -> HumidityComfortLevel(R.string.humidity_level_comfortable, R.string.humidity_desc_comfortable, ScaleColors.Green300)
+    humidity in 61..70 -> HumidityComfortLevel(R.string.humidity_level_slightly_humid, R.string.humidity_desc_slightly_humid, ScaleColors.LightBlue300)
+    humidity in 71..85 -> HumidityComfortLevel(R.string.humidity_level_humid, R.string.humidity_desc_humid, ScaleColors.Blue400)
+    else -> HumidityComfortLevel(R.string.humidity_level_very_humid, R.string.humidity_desc_very_humid, ScaleColors.Red400)
 }
 
 private fun dewPointComfortRes(dewPointCelsius: Double): Int = when {

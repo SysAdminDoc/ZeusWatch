@@ -30,6 +30,8 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusSunYellow
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -63,6 +65,7 @@ fun SunshineDurationCard(
         ) {
             // Progress ring
             val textTertiary = NimbusTextTertiary
+            val sunMark = markTint(NimbusSunYellow)
             Canvas(modifier = Modifier.size(56.dp)) {
                 val strokeWidth = 6f
                 val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
@@ -78,7 +81,7 @@ fun SunshineDurationCard(
                     style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
                 )
                 drawArc(
-                    color = NimbusSunYellow,
+                    color = sunMark,
                     startAngle = -90f,
                     sweepAngle = 360f * progress,
                     useCenter = false,
@@ -92,12 +95,12 @@ fun SunshineDurationCard(
 
             Column {
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Icon(Icons.Outlined.WbSunny, null, tint = NimbusSunYellow, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Outlined.WbSunny, null, tint = sunMark, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(
                         sunshineText,
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = NimbusSunYellow,
+                        color = textTint(NimbusSunYellow),
                     )
                 }
                 Text(

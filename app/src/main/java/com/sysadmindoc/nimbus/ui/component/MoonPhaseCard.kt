@@ -32,6 +32,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusMoonBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import com.sysadmindoc.nimbus.util.labelRes
 import kotlin.math.PI
@@ -140,7 +141,7 @@ fun MoonPhaseCard(
                 Text(
                     moonPhaseLabel,
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = NimbusMoonBlue,
+                    color = textTint(NimbusMoonBlue),
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(

@@ -21,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
@@ -33,6 +32,9 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 @Composable
@@ -44,12 +46,14 @@ fun OutdoorScoreCard(
     val label = stringResource(outdoorScoreLabelRes(score))
     val description = stringResource(outdoorScoreDescriptionRes(score))
     val scoreColor = when {
-        score >= 80 -> Color(0xFF4CAF50)
-        score >= 60 -> Color(0xFF8BC34A)
-        score >= 40 -> Color(0xFFFF9800)
-        score >= 20 -> Color(0xFFFF5722)
-        else -> Color(0xFFF44336)
+        score >= 80 -> ScaleColors.Green500
+        score >= 60 -> ScaleColors.LightGreen500
+        score >= 40 -> ScaleColors.Orange500
+        score >= 20 -> ScaleColors.DeepOrange500
+        else -> ScaleColors.Red500
     }
+    val scoreText = textTint(scoreColor)
+    val scoreMark = markTint(scoreColor)
     val factors = listOf(
         stringResource(R.string.outdoor_factor_temp) to breakdown.tempScore,
         stringResource(R.string.outdoor_factor_wind) to breakdown.windScore,
@@ -100,7 +104,7 @@ fun OutdoorScoreCard(
                         style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
                     )
                     drawArc(
-                        color = scoreColor,
+                        color = scoreMark,
                         startAngle = 135f,
                         sweepAngle = 270f * (score / 100f),
                         useCenter = false,
@@ -112,7 +116,7 @@ fun OutdoorScoreCard(
                 Text(
                     text = "$score",
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                    color = scoreColor,
+                    color = scoreText,
                 )
             }
 
@@ -122,7 +126,7 @@ fun OutdoorScoreCard(
                 Text(
                     text = label,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = scoreColor,
+                    color = scoreText,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -159,10 +163,10 @@ private fun outdoorScoreDescriptionRes(score: Int): Int = when {
 @Composable
 private fun FactorBar(name: String, value: Int) {
     val barColor = when {
-        value >= 80 -> Color(0xFF4CAF50)
-        value >= 50 -> Color(0xFFFF9800)
-        else -> Color(0xFFF44336)
-    }
+        value >= 80 -> ScaleColors.Green500
+        value >= 50 -> ScaleColors.Orange500
+        else -> ScaleColors.Red500
+    }.let { markTint(it) }
     Row(
         modifier = Modifier
             .fillMaxWidth()

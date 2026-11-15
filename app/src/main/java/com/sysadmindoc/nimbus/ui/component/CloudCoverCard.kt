@@ -38,6 +38,8 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusFogGray
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -89,7 +91,7 @@ fun CloudCoverCard(
                 Text(
                     text = "$currentCloud%",
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                    color = cloudColor,
+                    color = textTint(cloudColor),
                 )
                 Text(
                     text = cloudLabel,
@@ -131,9 +133,12 @@ private fun CloudCoverChart(
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val textSecondary = NimbusTextSecondary
-    val textTertiary = NimbusTextTertiary
     val accent = NimbusBlueAccent
+    // The bars are the chart, so each tier is judged after its fade.
+    val clearMark = markTint(accent, fade = 0.7f)
+    val partlyMark = markTint(NimbusFogGray, fade = 0.6f)
+    val mostlyMark = markTint(NimbusTextSecondary, fade = 0.5f)
+    val overcastMark = markTint(NimbusTextTertiary, fade = 0.55f)
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -169,10 +174,10 @@ private fun CloudCoverChart(
             val x = rtlCanvasRectLeft(i * (barWidth + barSpacing), barWidth, w, isRtl)
 
             val barColor = when {
-                cloud <= 25 -> accent.copy(alpha = 0.7f)
-                cloud <= 50 -> NimbusFogGray.copy(alpha = 0.6f)
-                cloud <= 75 -> textSecondary.copy(alpha = 0.5f)
-                else -> textTertiary.copy(alpha = 0.55f)
+                cloud <= 25 -> clearMark
+                cloud <= 50 -> partlyMark
+                cloud <= 75 -> mostlyMark
+                else -> overcastMark
             }
 
             val isCurrent = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime)

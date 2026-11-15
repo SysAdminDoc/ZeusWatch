@@ -31,19 +31,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.MinutelyPrecipitation
+import com.sysadmindoc.nimbus.ui.theme.LocalNimbusPalette
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
-private enum class PrecipIntensity(val color: Color, val labelRes: Int) {
-    NONE(Color(0xFF2A2A3A), R.string.nowcast_intensity_none),
-    LIGHT(Color(0xFF5B8DEF), R.string.nowcast_intensity_light),
-    MODERATE(Color(0xFF3A7BD5), R.string.nowcast_intensity_moderate),
-    HEAVY(Color(0xFF1B4F9E), R.string.nowcast_intensity_heavy),
+/** [stepRatio] is the least contrast each step reads at, on the track and on the legend's card. */
+private enum class PrecipIntensity(val color: Color, val stepRatio: Double, val labelRes: Int) {
+    NONE(ScaleColors.NowcastTrack, 1.0, R.string.nowcast_intensity_none),
+    LIGHT(ScaleColors.NowcastLight, 3.0, R.string.nowcast_intensity_light),
+    MODERATE(ScaleColors.NowcastModerate, 4.5, R.string.nowcast_intensity_moderate),
+    HEAVY(ScaleColors.NowcastHeavy, 7.0, R.string.nowcast_intensity_heavy),
 }
 
 private fun classifyIntensity(mmPer15min: Double): PrecipIntensity = when {
@@ -79,6 +83,20 @@ fun NowcastCard(
 
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
+    // More rain is more ink in both themes: each step is the Nowcast hue at
+    // least at its contrast (3:1, 4.5:1, 7:1) on the track and on the bare
+    // card under the legend swatches, whichever is harder, so the steps keep
+    // their order and stay apart. The raw dark steps ran the other way, Heavy
+    // the darkest at 1.8:1. The dark track reads as a black bar on a white
+    // card, so light mode uses the neutral wash instead.
+    val palette = LocalNimbusPalette.current
+    val trackColor = if (palette.isLight) NimbusOverlayInk.copy(alpha = 0.08f) else PrecipIntensity.NONE.color
+    val stepColors = remember(palette, trackColor) {
+        PrecipIntensity.entries
+            .filter { it != PrecipIntensity.NONE }
+            .associateWith { palette.stepTint(it.color, it.stepRatio, listOf(trackColor, Color.Transparent)) }
+    }
+    val intensityColor: (PrecipIntensity) -> Color = { intensity -> stepColors[intensity] ?: trackColor }
 
     val semanticSummary = narrativeText
 
@@ -112,7 +130,7 @@ fun NowcastCard(
             val cornerR = 6f
 
             drawRoundRect(
-                color = PrecipIntensity.NONE.color,
+                color = trackColor,
                 topLeft = Offset(0f, 0f),
                 size = Size(w, barHeight),
                 cornerRadius = CornerRadius(cornerR, cornerR),
@@ -122,7 +140,7 @@ fun NowcastCard(
                 val intensity = classifyIntensity(entry.precipitation)
                 if (intensity != PrecipIntensity.NONE) {
                     drawRect(
-                        color = intensity.color,
+                        color = intensityColor(intensity),
                         topLeft = Offset(rtlCanvasRectLeft(i * segWidth, segWidth + 1f, w, isRtl), 0f),
                         size = Size(segWidth + 1f, barHeight),
                     )
@@ -146,7 +164,7 @@ fun NowcastCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Canvas(modifier = Modifier.width(12.dp).height(8.dp)) {
-                drawRect(PrecipIntensity.LIGHT.color, size = Size(size.width, size.height))
+                drawRect(intensityColor(PrecipIntensity.LIGHT), size = Size(size.width, size.height))
             }
             Spacer(modifier = Modifier.width(4.dp))
             Text(
@@ -156,7 +174,7 @@ fun NowcastCard(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Canvas(modifier = Modifier.width(12.dp).height(8.dp)) {
-                drawRect(PrecipIntensity.MODERATE.color, size = Size(size.width, size.height))
+                drawRect(intensityColor(PrecipIntensity.MODERATE), size = Size(size.width, size.height))
             }
             Spacer(modifier = Modifier.width(4.dp))
             Text(
@@ -166,7 +184,7 @@ fun NowcastCard(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Canvas(modifier = Modifier.width(12.dp).height(8.dp)) {
-                drawRect(PrecipIntensity.HEAVY.color, size = Size(size.width, size.height))
+                drawRect(intensityColor(PrecipIntensity.HEAVY), size = Size(size.width, size.height))
             }
             Spacer(modifier = Modifier.width(4.dp))
             Text(

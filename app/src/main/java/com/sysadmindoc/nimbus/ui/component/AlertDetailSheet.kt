@@ -44,6 +44,8 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusSurface
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.coverageText
 import com.sysadmindoc.nimbus.util.labelRes
 import java.time.ZoneId
@@ -87,7 +89,7 @@ fun AlertDetailSheet(
                 Icon(
                     Icons.Filled.Warning,
                     contentDescription = alertContentDescription,
-                    tint = alert.severity.color,
+                    tint = markTint(alert.severity.color),
                     modifier = Modifier.size(28.dp),
                 )
                 Spacer(modifier = Modifier.width(10.dp))
@@ -97,7 +99,7 @@ fun AlertDetailSheet(
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.Bold,
                         ),
-                        color = alert.severity.color,
+                        color = textTint(alert.severity.color),
                     )
                     Text(
                         text = alert.headline,

@@ -28,6 +28,9 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.ActivityFactor
 import com.sysadmindoc.nimbus.util.ActivityIndex
 import com.sysadmindoc.nimbus.util.ActivityWindow
@@ -91,14 +94,14 @@ private fun ActivityRow(index: ActivityIndex, window: ActivityWindow?) {
                     .fillMaxWidth(index.score / 100f)
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(color),
+                    .background(markTint(color)),
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "${index.score}",
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-            color = color,
+            color = textTint(color),
             modifier = Modifier.width(28.dp),
         )
         Text(
@@ -180,8 +183,8 @@ private val ActivityFactor.labelRes: Int
     }
 
 private fun scoreColor(score: Int): Color = when {
-    score >= 80 -> Color(0xFF4CAF50)
-    score >= 60 -> Color(0xFF8BC34A)
-    score >= 40 -> Color(0xFFFF9800)
-    else -> Color(0xFFF44336)
+    score >= 80 -> ScaleColors.Green500
+    score >= 60 -> ScaleColors.LightGreen500
+    score >= 40 -> ScaleColors.Orange500
+    else -> ScaleColors.Red500
 }

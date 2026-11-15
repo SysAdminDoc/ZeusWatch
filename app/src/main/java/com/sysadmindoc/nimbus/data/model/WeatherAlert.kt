@@ -2,6 +2,7 @@ package com.sysadmindoc.nimbus.data.model
 
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
 import java.util.Locale
 import kotlin.math.abs
 
@@ -106,11 +107,11 @@ private fun isPointOnSegment(
 }
 
 enum class AlertSeverity(val label: String, val color: Color, val sortOrder: Int) {
-    EXTREME("Extreme", Color(0xFFD32F2F), 0),
-    SEVERE("Severe", Color(0xFFFF5722), 1),
-    MODERATE("Moderate", Color(0xFFFF9800), 2),
-    MINOR("Minor", Color(0xFFFFEB3B), 3),
-    UNKNOWN("Unknown", Color(0xFF9E9E9E), 4);
+    EXTREME("Extreme", ScaleColors.Red700, 0),
+    SEVERE("Severe", ScaleColors.DeepOrange500, 1),
+    MODERATE("Moderate", ScaleColors.Orange500, 2),
+    MINOR("Minor", ScaleColors.Yellow500, 3),
+    UNKNOWN("Unknown", ScaleColors.Grey500, 4);
 
     companion object {
         // Locale.ROOT keeps lowercase() deterministic — default-locale lowercase on

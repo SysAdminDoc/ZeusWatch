@@ -22,6 +22,8 @@ import com.sysadmindoc.nimbus.data.repository.FloodData
 import com.sysadmindoc.nimbus.data.repository.FloodRiskLevel
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import java.util.Locale
 
 @Composable
@@ -52,7 +54,7 @@ fun FloodRiskCard(
                 Text(
                     text = riskLabel,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = riskColor,
+                    color = textTint(riskColor),
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -95,10 +97,10 @@ fun FloodRiskCard(
 }
 
 private fun floodRiskColor(level: FloodRiskLevel): Color = when (level) {
-    FloodRiskLevel.LOW -> Color(0xFF4CAF50)
-    FloodRiskLevel.MODERATE -> Color(0xFFFF9800)
-    FloodRiskLevel.HIGH -> Color(0xFFFF5722)
-    FloodRiskLevel.EXTREME -> Color(0xFFF44336)
+    FloodRiskLevel.LOW -> ScaleColors.Green500
+    FloodRiskLevel.MODERATE -> ScaleColors.Orange500
+    FloodRiskLevel.HIGH -> ScaleColors.DeepOrange500
+    FloodRiskLevel.EXTREME -> ScaleColors.Red500
 }
 
 private val FloodRiskLevel.labelRes: Int

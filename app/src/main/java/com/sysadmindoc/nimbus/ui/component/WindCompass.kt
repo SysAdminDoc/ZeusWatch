@@ -38,6 +38,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import kotlin.math.PI
 import kotlin.math.cos
@@ -186,7 +187,7 @@ fun WindCompass(
                     Text(
                         text = stringResource(R.string.wind_beaufort_value, beaufort.scale, beaufortLabel),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(beaufort.colorHex),
+                        color = textTint(Color(beaufort.colorHex)),
                     )
                 }
                 if (windGusts != null && windGusts > windSpeed) {

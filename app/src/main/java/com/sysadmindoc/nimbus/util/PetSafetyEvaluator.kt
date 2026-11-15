@@ -5,6 +5,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
 
 /**
  * Evaluates weather conditions for pet safety.
@@ -164,7 +165,7 @@ enum class PetAlertType(val label: String) {
 }
 
 enum class PetSeverity(val label: String, val color: Color) {
-    DANGER("Danger", Color(0xFFD32F2F)),
-    WARNING("Warning", Color(0xFFFF9800)),
-    CAUTION("Caution", Color(0xFFFFEB3B)),
+    DANGER("Danger", ScaleColors.Red700),
+    WARNING("Warning", ScaleColors.Orange500),
+    CAUTION("Caution", ScaleColors.Yellow500),
 }

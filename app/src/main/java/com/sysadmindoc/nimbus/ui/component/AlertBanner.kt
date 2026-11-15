@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
@@ -56,6 +57,8 @@ import com.sysadmindoc.nimbus.ui.theme.LocalNimbusPalette
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
 import com.sysadmindoc.nimbus.util.labelRes
 import com.sysadmindoc.nimbus.util.parseAlertInstant
@@ -216,6 +219,11 @@ private fun AlertBannerItem(
     val shape = RoundedCornerShape(12.dp)
     val severityColor = alert.severity.color
     val bgColor = severityColor.copy(alpha = 0.12f)
+    // Severity text sits on the banner's own wash, the icon on a second wash
+    // inside it. The wash is laid over the opaque sheet, never the sky: on
+    // the sky the tinted title fell to about 2:1.
+    val severityText = textTint(severityColor, bgColor)
+    val severityIcon = markTint(severityColor, severityColor.copy(alpha = 0.15f).compositeOver(bgColor))
     val severityLabel = stringResource(alert.severity.labelRes)
     val urgencyLabel = stringResource(alert.urgency.labelRes)
     val coverageText = alert.coverageLabel(resources)
@@ -257,6 +265,7 @@ private fun AlertBannerItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
+            .background(LocalNimbusPalette.current.overlayCard)
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -282,7 +291,7 @@ private fun AlertBannerItem(
                     Icons.Filled.Warning,
                     // The row's own description names the event.
                     contentDescription = null,
-                    tint = severityColor,
+                    tint = severityIcon,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -291,7 +300,7 @@ private fun AlertBannerItem(
                 Text(
                     text = alert.event,
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = severityColor,
+                    color = severityText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -318,7 +327,7 @@ private fun AlertBannerItem(
                     Text(
                         text = it,
                         style = MaterialTheme.typography.labelSmall,
-                        color = severityColor,
+                        color = severityText,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

@@ -19,13 +19,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 
 /**
@@ -43,12 +45,13 @@ fun SevereWeatherCard(
     val potentialDescription = stringResource(R.string.severe_weather_potential_cd)
     val thunderstormWarning = stringResource(R.string.severe_weather_thunderstorm_warning)
     val color = when {
-        cape >= 4000 -> Color(0xFFD32F2F) // Extremely Unstable
-        cape >= 2500 -> Color(0xFFFF5722) // Very Unstable
-        cape >= 1000 -> Color(0xFFFF9800) // Moderately Unstable
-        cape >= 300 -> Color(0xFFFFEB3B)  // Marginally Unstable
-        else -> Color(0xFF9E9E9E)
+        cape >= 4000 -> ScaleColors.Red700 // Extremely Unstable
+        cape >= 2500 -> ScaleColors.DeepOrange500 // Very Unstable
+        cape >= 1000 -> ScaleColors.Orange500 // Moderately Unstable
+        cape >= 300 -> ScaleColors.Yellow500 // Marginally Unstable
+        else -> ScaleColors.Grey500
     }
+    val wash = color.copy(alpha = 0.1f)
 
     WeatherCard(
         titleRes = R.string.card_type_severe_weather,
@@ -58,14 +61,14 @@ fun SevereWeatherCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .background(color.copy(alpha = 0.1f))
+                .background(wash)
                 .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 Icons.Filled.Thunderstorm,
                 contentDescription = potentialDescription,
-                tint = color,
+                tint = markTint(color, wash),
                 modifier = Modifier.size(28.dp),
             )
             Spacer(Modifier.width(10.dp))
@@ -73,7 +76,7 @@ fun SevereWeatherCard(
                 Text(
                     description,
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = color,
+                    color = textTint(color, wash),
                 )
                 Text(
                     WeatherFormatter.formatCape(cape),

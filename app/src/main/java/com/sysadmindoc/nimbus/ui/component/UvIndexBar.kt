@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,6 +82,13 @@ fun UvIndexBar(
         uvIndex < 11 -> NimbusUvVeryHigh
         else -> NimbusUvExtreme
     }
+    val levelText = textTint(levelColor)
+    val levelMark = markTint(levelColor)
+    val palette = LocalNimbusPalette.current
+    val gradientColors = remember(palette) {
+        listOf(NimbusUvLow, NimbusUvModerate, NimbusUvHigh, NimbusUvVeryHigh, NimbusUvExtreme)
+            .map { palette.markTint(it) }
+    }
     val cue = ColorSafeRiskCues.uv(uvIndex)
 
     WeatherCard(
@@ -97,7 +105,7 @@ fun UvIndexBar(
             Text(
                 text = uvIndex.toInt().toString(),
                 style = MaterialTheme.typography.displaySmall,
-                color = levelColor,
+                color = levelText,
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -105,7 +113,7 @@ fun UvIndexBar(
                     Text(
                         text = level,
                         style = MaterialTheme.typography.titleSmall,
-                        color = levelColor,
+                        color = levelText,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     ColorSafeCueBadge(cue = cue)
@@ -149,13 +157,6 @@ fun UvIndexBar(
                     val h = size.height
 
                     // Background gradient bar (0-12+ scale)
-                    val gradientColors = listOf(
-                        NimbusUvLow,
-                        NimbusUvModerate,
-                        NimbusUvHigh,
-                        NimbusUvVeryHigh,
-                        NimbusUvExtreme,
-                    )
                     drawRoundRect(
                         brush = Brush.horizontalGradient(
                             colors = if (isRtl) gradientColors.asReversed() else gradientColors,
@@ -181,7 +182,7 @@ fun UvIndexBar(
                         center = Offset(markerX, h / 2f),
                     )
                     drawCircle(
-                        color = levelColor,
+                        color = levelMark,
                         radius = 5.dp.toPx(),
                         center = Offset(markerX, h / 2f),
                     )

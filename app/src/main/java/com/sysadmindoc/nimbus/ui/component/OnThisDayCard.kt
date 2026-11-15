@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -446,7 +447,7 @@ private fun DeltaBadge(deltaCelsius: Double, label: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = fg,
+            color = textTint(fg, bg),
         )
     }
 }

@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -66,6 +67,9 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusSnowWhite
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.markTint
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import kotlin.math.roundToInt
 
@@ -276,7 +280,7 @@ private fun HourlyItemShell(
     val context = LocalContext.current
     val shape = RoundedCornerShape(0.dp)
     val cardBrush = if (highlighted) {
-        Brush.verticalGradient(listOf(NimbusBlueAccent.copy(alpha = 0.18f), Color.Transparent))
+        Brush.verticalGradient(listOf(hourlyWash(highlighted), Color.Transparent))
     } else {
         Brush.verticalGradient(listOf(Color.Transparent, NimbusGlassBottom.copy(alpha = 0.25f)))
     }
@@ -301,12 +305,37 @@ private fun HourlyItemShell(
         Text(
             text = WeatherFormatter.formatRelativeHourLabel(context, hour.time, referenceTime, s),
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = if (highlighted) NimbusBlueAccent else NimbusTextSecondary,
+            color = if (highlighted) textTint(NimbusBlueAccent, hourlyWash(highlighted)) else NimbusTextSecondary,
         )
         Spacer(modifier = Modifier.height(5.dp))
         content()
     }
 }
+
+/**
+ * The highlighted hour's accent wash at its strongest, the top of its
+ * gradient. Text and marks in that cell are tinted against it.
+ */
+@Composable
+private fun hourlyWash(highlighted: Boolean): Color =
+    if (highlighted) NimbusBlueAccent.copy(alpha = 0.18f) else Color.Transparent
+
+/** A theme ink (rain, snow) as text in an hour cell, tinted for [hourlyWash]. */
+@Composable
+private fun hourlyInk(color: Color, highlighted: Boolean): Color = textTint(color, hourlyWash(highlighted))
+
+/** The mini bars' track, which their fill is judged against, over [hourlyWash]. */
+@Composable
+private fun hourlyBarWash(highlighted: Boolean): Color =
+    NimbusOverlayInk.copy(alpha = 0.1f).compositeOver(hourlyWash(highlighted))
+
+/**
+ * Tertiary ink, or secondary on the highlighted hour, where the accent wash
+ * holds tertiary to about 3.4:1 in both themes.
+ */
+@Composable
+private fun hourlyMinorInk(highlighted: Boolean): Color =
+    if (highlighted) NimbusTextSecondary else NimbusTextTertiary
 
 // ── Tab-specific item renderers ─────────────────────────────────────────
 
@@ -338,14 +367,14 @@ private fun HourlyItemTemp(
                 s,
             ),
             style = MaterialTheme.typography.labelSmall,
-            color = NimbusTextTertiary,
+            color = hourlyMinorInk(highlighted),
             maxLines = 1,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "${hour.precipitationProbability}%",
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = if (hour.precipitationProbability > 20) NimbusRainBlue else NimbusTextSecondary,
+            color = if (hour.precipitationProbability > 20) hourlyInk(NimbusRainBlue, highlighted) else NimbusTextSecondary,
         )
     }
 }
@@ -361,7 +390,7 @@ private fun HourlyItemFeelsLike(
     val feelsLike = hour.feelsLike ?: hour.temperature
     val diff = feelsLike - hour.temperature
     val diffColor = when {
-        diff > 3 -> Color(0xFFFF8A65) // warmer
+        diff > 3 -> ScaleColors.DeepOrange300 // warmer
         diff < -3 -> NimbusRainBlue   // cooler
         else -> NimbusTextSecondary
     }
@@ -374,19 +403,19 @@ private fun HourlyItemFeelsLike(
         Text(
             text = stringResource(R.string.forecast_hourly_actual),
             style = MaterialTheme.typography.labelSmall,
-            color = NimbusTextTertiary,
+            color = hourlyMinorInk(highlighted),
         )
         Text(
             text = WeatherFormatter.formatTemperature(hour.temperature, s),
             style = MaterialTheme.typography.labelMedium,
-            color = NimbusTextTertiary,
+            color = hourlyMinorInk(highlighted),
         )
         Spacer(modifier = Modifier.height(4.dp))
         // Always render the delta line (blank when negligible) for equal height.
         Text(
             text = feelsLikeDeltaText(diff),
             style = MaterialTheme.typography.labelSmall,
-            color = diffColor,
+            color = textTint(diffColor, hourlyWash(highlighted)),
         )
     }
 }
@@ -424,7 +453,7 @@ private fun HourlyItemWind(
                 " "
             },
             style = MaterialTheme.typography.labelSmall,
-            color = NimbusTextTertiary,
+            color = hourlyMinorInk(highlighted),
         )
     }
 }
@@ -441,7 +470,7 @@ private fun HourlyItemPrecip(
         Text(
             text = "${hour.precipitationProbability}%",
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-            color = if (hour.precipitationProbability > 40) NimbusRainBlue else NimbusTextSecondary,
+            color = if (hour.precipitationProbability > 40) hourlyInk(NimbusRainBlue, highlighted) else NimbusTextSecondary,
         )
         Spacer(modifier = Modifier.height(4.dp))
         val precip = hour.precipitation
@@ -449,13 +478,13 @@ private fun HourlyItemPrecip(
             Text(
                 text = WeatherFormatter.formatPrecipitation(precip, s),
                 style = MaterialTheme.typography.labelMedium,
-                color = NimbusRainBlue,
+                color = hourlyInk(NimbusRainBlue, highlighted),
             )
         } else {
             Text(
                 text = "--",
                 style = MaterialTheme.typography.labelMedium,
-                color = NimbusTextTertiary,
+                color = hourlyMinorInk(highlighted),
             )
         }
         // Reserve the snowfall line (blank when none) so cards stay equal height.
@@ -464,7 +493,7 @@ private fun HourlyItemPrecip(
         Text(
             text = if (snow != null && snow > 0) WeatherFormatter.formatSnowfall(snow, s) else " ",
             style = MaterialTheme.typography.labelSmall,
-            color = NimbusSnowWhite,
+            color = hourlyInk(NimbusSnowWhite, highlighted),
         )
     }
 }
@@ -487,7 +516,7 @@ private fun HourlyItemCloudCover(
         Text(
             text = "$cloud%",
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-            color = cloudColor,
+            color = textTint(cloudColor, hourlyWash(highlighted)),
         )
         Spacer(modifier = Modifier.height(4.dp))
         // Mini bar
@@ -503,7 +532,7 @@ private fun HourlyItemCloudCover(
                     .fillMaxWidth(cloud.toFloat() / 100f)
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(cloudColor.copy(alpha = 0.7f)),
+                    .background(markTint(cloudColor, hourlyBarWash(highlighted), fade = 0.7f)),
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
@@ -515,7 +544,7 @@ private fun HourlyItemCloudCover(
                 else -> stringResource(R.string.forecast_cloud_overcast)
             },
             style = MaterialTheme.typography.labelSmall,
-            color = NimbusTextTertiary,
+            color = hourlyMinorInk(highlighted),
         )
     }
 }
@@ -534,13 +563,13 @@ private fun HourlyItemHumidity(
             Text(
                 text = "—",
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                color = NimbusTextTertiary,
+                color = hourlyMinorInk(highlighted),
             )
         }
         return
     }
     val humidColor = when {
-        humidity < 30 -> Color(0xFFFFB74D) // dry
+        humidity < 30 -> ScaleColors.Orange300 // dry
         humidity > 70 -> NimbusRainBlue     // humid
         else -> NimbusTextSecondary
     }
@@ -548,7 +577,7 @@ private fun HourlyItemHumidity(
         Text(
             text = "$humidity%",
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-            color = humidColor,
+            color = textTint(humidColor, hourlyWash(highlighted)),
         )
         Spacer(modifier = Modifier.height(4.dp))
         // Mini bar
@@ -564,7 +593,7 @@ private fun HourlyItemHumidity(
                     .fillMaxWidth(humidity.toFloat() / 100f)
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(humidColor.copy(alpha = 0.7f)),
+                    .background(markTint(humidColor, hourlyBarWash(highlighted), fade = 0.7f)),
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
@@ -576,7 +605,7 @@ private fun HourlyItemHumidity(
                 else -> stringResource(R.string.forecast_humidity_muggy)
             },
             style = MaterialTheme.typography.labelSmall,
-            color = NimbusTextTertiary,
+            color = hourlyMinorInk(highlighted),
         )
     }
 }

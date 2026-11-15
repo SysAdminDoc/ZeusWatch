@@ -25,8 +25,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AqiLevel
+import com.sysadmindoc.nimbus.ui.theme.LocalNimbusPalette
 import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
+import com.sysadmindoc.nimbus.ui.theme.ScaleColors
+import com.sysadmindoc.nimbus.ui.theme.textTint
 import com.sysadmindoc.nimbus.util.labelRes
 import kotlin.math.PI
 import kotlin.math.cos
@@ -52,6 +55,7 @@ fun AqiGauge(
 
     val semanticLabel = stringResource(R.string.aqi_gauge_semantics, aqi, levelLabel)
     val overlayInk = NimbusOverlayInk
+    val palette = LocalNimbusPalette.current
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -106,12 +110,12 @@ fun AqiGauge(
             }
 
             val segments = listOf(
-                AqiSegment(0f, 50f / maxAqi, Color(0xFF4CAF50)),     // Good
-                AqiSegment(50f / maxAqi, 100f / maxAqi, Color(0xFFFFEB3B)),   // Moderate
-                AqiSegment(100f / maxAqi, 150f / maxAqi, Color(0xFFFF9800)),  // USG
-                AqiSegment(150f / maxAqi, 200f / maxAqi, Color(0xFFF44336)),  // Unhealthy
-                AqiSegment(200f / maxAqi, 250f / maxAqi, Color(0xFF9C27B0)),  // Very Unhealthy
-                AqiSegment(250f / maxAqi, 1f, Color(0xFF880E4F)),             // Hazardous
+                AqiSegment(0f, 50f / maxAqi, ScaleColors.Green500),            // Good
+                AqiSegment(50f / maxAqi, 100f / maxAqi, ScaleColors.Yellow500), // Moderate
+                AqiSegment(100f / maxAqi, 150f / maxAqi, ScaleColors.Orange500), // USG
+                AqiSegment(150f / maxAqi, 200f / maxAqi, ScaleColors.Red500),   // Unhealthy
+                AqiSegment(200f / maxAqi, 250f / maxAqi, ScaleColors.Purple500), // Very Unhealthy
+                AqiSegment(250f / maxAqi, 1f, ScaleColors.Pink900),             // Hazardous
             )
 
             // Determine which segments are visible for correct cap styling
@@ -135,7 +139,7 @@ fun AqiGauge(
                 }
 
                 drawArc(
-                    color = seg.color,
+                    color = palette.markTint(seg.color),
                     startAngle = segStart,
                     sweepAngle = effectiveSweep,
                     useCenter = false,
@@ -161,7 +165,7 @@ fun AqiGauge(
             )
             // Colored center
             drawCircle(
-                color = level.color,
+                color = palette.markTint(level.color),
                 radius = 4f,
                 center = Offset(needleX, needleY),
             )
@@ -171,7 +175,7 @@ fun AqiGauge(
             Text(
                 text = "$aqi",
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = level.color,
+                color = textTint(level.color),
             )
             Text(
                 text = levelLabel,

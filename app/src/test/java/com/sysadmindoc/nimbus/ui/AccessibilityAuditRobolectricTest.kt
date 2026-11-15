@@ -1,8 +1,11 @@
 package com.sysadmindoc.nimbus.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -15,9 +18,20 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
 import com.sysadmindoc.nimbus.data.model.AlertSeverity
 import com.sysadmindoc.nimbus.data.model.AlertUrgency
+import com.sysadmindoc.nimbus.data.model.AqiLevel
+import com.sysadmindoc.nimbus.data.repository.AuroraKpData
+import com.sysadmindoc.nimbus.ui.component.AqiGauge
+import com.sysadmindoc.nimbus.ui.component.AuroraKpCard
+import com.sysadmindoc.nimbus.ui.component.HumidityCard
+import com.sysadmindoc.nimbus.ui.component.OutdoorScoreCard
+import com.sysadmindoc.nimbus.ui.component.SevereWeatherCard
+import com.sysadmindoc.nimbus.ui.component.SunshineDurationCard
+import com.sysadmindoc.nimbus.ui.component.UvIndexBar
+import com.sysadmindoc.nimbus.util.WeatherFormatter
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.ui.component.AlertBanner
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
@@ -43,6 +57,7 @@ import com.sysadmindoc.nimbus.ui.screen.main.TodayContent
 import com.sysadmindoc.nimbus.ui.screen.settings.SettingsContent
 import com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
+import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import com.sysadmindoc.nimbus.ui.theme.WeatherThemeState
 import org.junit.Assert.assertEquals
@@ -200,9 +215,9 @@ class AccessibilityAuditRobolectricTest {
         assertTrue(rowDescriptions.joinToString("\n"), rowDescriptions.any { it.contains("8 areas") })
     }
 
-    private fun auditSettings(fontScale: Float) {
+    private fun auditSettings(fontScale: Float, light: Boolean = false) {
         composeTestRule.setContentWithAccessibilityChecks {
-            NimbusTheme {
+            NimbusTheme(isLightTheme = light) {
                 WithFontScale(fontScale) {
                     SettingsContent(
                         settings = com.sysadmindoc.nimbus.data.repository.NimbusSettings(),
@@ -216,9 +231,9 @@ class AccessibilityAuditRobolectricTest {
         composeTestRule.assertVisibleTouchTargetsMeetMinimum()
     }
 
-    private fun auditLocations(fontScale: Float) {
+    private fun auditLocations(fontScale: Float, light: Boolean = false) {
         composeTestRule.setContentWithAccessibilityChecks {
-            NimbusTheme {
+            NimbusTheme(isLightTheme = light) {
                 WithFontScale(fontScale) {
                     LocationsContent(
                         saved = auditSavedLocations(),
@@ -279,6 +294,66 @@ class AccessibilityAuditRobolectricTest {
         }
     }
 
+    // NX-95: the light theme (#59) was never audited. Every fixture above
+    // runs again in it, and the cards that draw a scale colour as text (the
+    // humidity comfort steps, CAPE, Kp, the outdoor score, AQI, UV) run in both.
+
+    @Test
+    fun mainWeatherScreenPassesAccessibilityGateInLightTheme() {
+        setMainWeatherAuditContent(fontScale = 1.3f, light = true)
+    }
+
+    @Test
+    fun settingsScreenPassesAccessibilityGateInLightTheme() = auditSettings(fontScale = 1f, light = true)
+
+    @Test
+    fun locationsScreenPassesAccessibilityGateInLightTheme() = auditLocations(fontScale = 1f, light = true)
+
+    @Test
+    fun pwsObservationCardPassesInLightTheme() {
+        auditCard(light = true) { PwsObservationCard(observation = auditPwsObservation()) }
+    }
+
+    @Test
+    fun providerAgreementCardPassesInLightTheme() {
+        auditCard(light = true) { ProviderAgreementCard(data = auditProviderAgreement()) }
+    }
+
+    @Test
+    fun onThisDayCardPassesInLightTheme() {
+        auditCard(light = true) {
+            OnThisDayCard(
+                data = auditOnThisDay(),
+                forecastHighC = 26.7,
+                onDateSelected = {},
+            )
+        }
+    }
+
+    @Test
+    fun humidityComfortStepsReadInDarkThemeDrySide() = auditCard { HumidityCards(20, 27, 45) }
+
+    @Test
+    fun humidityComfortStepsReadInLightThemeDrySide() = auditCard(light = true) { HumidityCards(20, 27, 45) }
+
+    @Test
+    fun humidityComfortStepsReadInDarkThemeHumidSide() = auditCard { HumidityCards(65, 80, 95) }
+
+    @Test
+    fun humidityComfortStepsReadInLightThemeHumidSide() = auditCard(light = true) { HumidityCards(65, 80, 95) }
+
+    @Test
+    fun scaleCardsReadInDarkTheme() = auditCard { ScaleCards() }
+
+    @Test
+    fun scaleCardsReadInLightTheme() = auditCard(light = true) { ScaleCards() }
+
+    @Test
+    fun gaugeCardsReadInDarkTheme() = auditCard { GaugeCards() }
+
+    @Test
+    fun gaugeCardsReadInLightTheme() = auditCard(light = true) { GaugeCards() }
+
     /**
      * Audits one card on its own.
      *
@@ -290,16 +365,21 @@ class AccessibilityAuditRobolectricTest {
      */
     private fun auditCard(
         fontScale: Float = 1f,
+        light: Boolean = false,
         card: @Composable () -> Unit,
     ) {
         composeTestRule.setContentWithAccessibilityChecks {
-            NimbusTheme {
+            NimbusTheme(isLightTheme = light) {
                 CompositionLocalProvider(
                     LocalUnitSettings provides com.sysadmindoc.nimbus.data.repository.NimbusSettings(),
                     LocalWeatherThemeState provides WeatherThemeState(
                         weatherCode = WeatherCode.CLEAR_SKY,
                         isDay = true,
                     ),
+                    // The main Scaffold's content colour (MainScreen). Big
+                    // readings like the humidity percentage take no colour of
+                    // their own, so without it they draw black on navy.
+                    LocalContentColor provides NimbusTextPrimary,
                 ) {
                     // The app background, not the default window grey: these
                     // cards have translucent glass fills, so on a bare window
@@ -324,9 +404,9 @@ class AccessibilityAuditRobolectricTest {
         composeTestRule.assertTextContrastMeetsMinimum().assertMeasuredAtLeast(1.0)
     }
 
-    private fun setMainWeatherAuditContent(fontScale: Float) {
+    private fun setMainWeatherAuditContent(fontScale: Float, light: Boolean = false) {
         composeTestRule.setContentWithAccessibilityChecks {
-            NimbusTheme {
+            NimbusTheme(isLightTheme = light) {
                 WithFontScale(fontScale) {
                     MainWeatherAuditContent()
                 }
@@ -342,6 +422,49 @@ class AccessibilityAuditRobolectricTest {
         // cannot quietly get lower. Touch targets and semantics above still
         // cover the whole tree, which is composed in full.
         composeTestRule.assertTextContrastMeetsMinimum().assertMeasuredAtLeast(0.20)
+    }
+}
+
+/** Three humidity cards, one per comfort step asked for, each with a dew point. */
+@Composable
+private fun HumidityCards(vararg humidities: Int) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        humidities.forEach { humidity ->
+            HumidityCard(humidity = humidity, dewPoint = humidity / 5.0)
+        }
+    }
+}
+
+/**
+ * The yellow step of each scale: the hardest one to read on a light card.
+ * CAPE 500 is "marginally unstable", Kp 3.5 is "unsettled".
+ */
+@Composable
+private fun ScaleCards() {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SevereWeatherCard(cape = 500.0)
+        AuroraKpCard(data = AuroraKpData(kpValue = 3.5, timestamp = "2026-11-15 12:00:00.000"))
+        OutdoorScoreCard(
+            breakdown = WeatherFormatter.OutdoorScoreBreakdown(
+                score = 55,
+                tempScore = 70,
+                humidityScore = 60,
+                windScore = 50,
+                uvScore = 40,
+                precipScore = 80,
+                aqiScore = 45,
+            ),
+        )
+    }
+}
+
+/** A moderate AQI (yellow) and a high UV index next to sunshine. */
+@Composable
+private fun GaugeCards() {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        AqiGauge(aqi = 75, level = AqiLevel.MODERATE)
+        UvIndexBar(uvIndex = 6.0)
+        SunshineDurationCard(sunshineDurationSeconds = 30_000.0, dayLengthMinutes = 600)
     }
 }
 
