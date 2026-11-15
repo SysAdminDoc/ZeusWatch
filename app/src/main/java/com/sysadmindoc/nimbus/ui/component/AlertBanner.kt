@@ -91,14 +91,10 @@ fun AlertBanner(
         }
     }
 
-    val alertDescription = alerts.joinToString(". ") { alert ->
-        resources.getString(
-            R.string.alert_banner_item_cd,
-            resources.getString(alert.severity.labelRes),
-            listOfNotNull(alert.event, alert.coverageLabel(resources)).joinToString(", "),
-        )
-    }
-    val bannerContentDescription = resources.getString(R.string.alert_banner_list_cd, alertDescription)
+    // The live region speaks over whatever TalkBack was reading, so it gets
+    // the count and the worst severity only. Each row describes itself when
+    // the user moves to it.
+    val bannerContentDescription = alertBannerSummary(resources, alerts)
 
     val groups = remember(alerts) { groupAlertsForBanner(alerts) }
     var showAll by rememberSaveable(alerts.size) { mutableStateOf(false) }
@@ -145,6 +141,20 @@ internal data class AlertBannerGroup(
 
 /** How many groups the banner shows before it offers to expand. */
 internal const val MAX_COLLAPSED_ALERT_GROUPS = 5
+
+/** A collapsed row names its areas up to this many, then says how many there are. */
+private const val MAX_SPOKEN_ALERT_AREAS = 3
+
+/** What the banner's live region announces: how many alerts there are and the worst severity among them. */
+internal fun alertBannerSummary(resources: Resources, alerts: List<WeatherAlert>): String {
+    val worst = alerts.minByOrNull { it.severity.sortOrder }?.severity ?: AlertSeverity.UNKNOWN
+    return resources.getQuantityString(
+        R.plurals.alert_banner_summary_cd,
+        alerts.size,
+        alerts.size,
+        resources.getString(worst.labelRes),
+    )
+}
 
 /**
  * Collapse [alerts] on event plus severity, preserving the caller's order.
@@ -209,6 +219,18 @@ private fun AlertBannerItem(
     val severityLabel = stringResource(alert.severity.labelRes)
     val urgencyLabel = stringResource(alert.urgency.labelRes)
     val coverageText = alert.coverageLabel(resources)
+    val expiresText = alert.expires?.let { formatExpiresIn(resources, it) }
+    val areasText = when {
+        group.areas.isEmpty() -> null
+        group.areas.size <= MAX_SPOKEN_ALERT_AREAS -> group.areas.joinToString(", ")
+        else -> pluralStringResource(R.plurals.alert_banner_area_count, group.areas.size, group.areas.size)
+    }
+    val rowDescription = stringResource(
+        R.string.alert_banner_item_cd,
+        severityLabel,
+        listOfNotNull(alert.event, coverageText, urgencyLabel, expiresText, alert.headline.ifBlank { null }, areasText)
+            .joinToString(", "),
+    )
 
     // Pulse border for extreme alerts; honor reduced motion with a static
     // emphasized border instead.
@@ -245,6 +267,7 @@ private fun AlertBannerItem(
             )
             .border(1.dp, severityColor.copy(alpha = borderAlpha), shape)
             .clickable(onClick = onClick, role = Role.Button)
+            .semantics { contentDescription = rowDescription }
             .padding(horizontal = 14.dp, vertical = 12.dp),
     ) {
         Row(verticalAlignment = Alignment.Top) {
@@ -257,7 +280,8 @@ private fun AlertBannerItem(
             ) {
                 Icon(
                     Icons.Filled.Warning,
-                    contentDescription = stringResource(R.string.alert_banner_icon_cd, alert.event),
+                    // The row's own description names the event.
+                    contentDescription = null,
                     tint = severityColor,
                     modifier = Modifier.size(22.dp),
                 )
@@ -282,7 +306,7 @@ private fun AlertBannerItem(
                         text = urgencyLabel,
                         tint = NimbusTextSecondary,
                     )
-                    alert.expires?.let { formatExpiresIn(resources, it) }?.let { expiresIn ->
+                    expiresText?.let { expiresIn ->
                         AlertMetaBadge(
                             text = expiresIn,
                             tint = NimbusTextTertiary,

@@ -223,9 +223,15 @@
     <string name="alert_urgency_future">Future</string>
     <string name="alert_urgency_past">Past</string>
     <string name="alert_urgency_unknown">Unknown</string>
-    <string name="alert_banner_list_cd">%1$s. Tap for details.</string>
     <string name="alert_banner_item_cd">%1$s: %2$s</string>
-    <string name="alert_banner_icon_cd">Weather alert: %1$s</string>
+    <plurals name="alert_banner_summary_cd">
+        <item quantity="one">%1$d weather alert, severity %2$s</item>
+        <item quantity="other">%1$d weather alerts, highest severity %2$s</item>
+    </plurals>
+    <plurals name="alert_banner_area_count">
+        <item quantity="one">%1$d area</item>
+        <item quantity="other">%1$d areas</item>
+    </plurals>
     <plurals name="alert_banner_show_more">
         <item quantity="one">Show %1$d more warning</item>
         <item quantity="other">Show %1$d more warnings</item>

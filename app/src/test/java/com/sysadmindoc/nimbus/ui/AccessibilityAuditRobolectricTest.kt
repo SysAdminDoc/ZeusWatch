@@ -7,11 +7,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
 import com.sysadmindoc.nimbus.data.api.GeocodingResult
+import com.sysadmindoc.nimbus.data.model.AlertSeverity
+import com.sysadmindoc.nimbus.data.model.AlertUrgency
+import com.sysadmindoc.nimbus.data.model.WeatherAlert
+import com.sysadmindoc.nimbus.ui.component.AlertBanner
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
@@ -37,6 +45,9 @@ import com.sysadmindoc.nimbus.ui.theme.LocalWeatherThemeState
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import com.sysadmindoc.nimbus.ui.theme.WeatherThemeState
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -142,6 +153,51 @@ class AccessibilityAuditRobolectricTest {
         }
 
         composeTestRule.assertVisibleTouchTargetsMeetMinimum()
+    }
+
+    @Test
+    fun alertBannerAnnouncesASummaryAndDescribesEachRow() {
+        // Issue #55: a national feed answers one query with 54 alerts.
+        val events = listOf("Heavy Rain", "Thunderstorm", "Heat Wave", "Dense Fog", "Strong Wind", "Coastal Flood", "Snow")
+        val alerts = (1..54).map { index ->
+            auditAlert(
+                id = "$index",
+                event = events[index % events.size],
+                severity = if (index == 30) AlertSeverity.EXTREME else AlertSeverity.MODERATE,
+                area = "District $index",
+            )
+        }
+        composeTestRule.setContentWithAccessibilityChecks {
+            NimbusTheme {
+                CompositionLocalProvider(
+                    LocalUnitSettings provides com.sysadmindoc.nimbus.data.repository.NimbusSettings(hapticFeedbackForAlerts = false),
+                ) {
+                    // The app background, as in auditCard: the rows are translucent tints.
+                    Box(modifier = Modifier.fillMaxSize().background(NimbusNavyDark)) {
+                        AlertBanner(alerts = alerts, onAlertClick = {})
+                    }
+                }
+            }
+        }
+
+        val summary = composeTestRule
+            .onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion))
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.ContentDescription]
+            .joinToString()
+        assertTrue("the announcement is ${summary.length} characters: $summary", summary.length < 200)
+        assertTrue(summary, summary.contains("54"))
+        assertTrue(summary, summary.contains("Extreme"))
+        events.forEach { assertFalse("the announcement names $it: $summary", summary.contains(it)) }
+
+        val rowDescriptions = composeTestRule.onAllNodes(hasClickAction()).fetchSemanticsNodes()
+            .mapNotNull { node -> node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString() }
+        assertEquals("every visible alert row describes itself", 5, rowDescriptions.size)
+        rowDescriptions.forEach { description ->
+            assertTrue("a row doesn't name its alert: $description", events.any { description.contains(it) })
+            assertFalse("a row lists every area: $description", description.contains("District 1,"))
+        }
+        assertTrue(rowDescriptions.joinToString("\n"), rowDescriptions.any { it.contains("8 areas") })
     }
 
     private fun auditSettings(fontScale: Float) {
@@ -458,6 +514,22 @@ private fun auditProviderAgreement() = com.sysadmindoc.nimbus.data.repository.Pr
     ),
     temperatureSpreadC = 1.4,
     precipitationSpreadMm = 1.4,
+)
+
+private fun auditAlert(id: String, event: String, severity: AlertSeverity, area: String) = WeatherAlert(
+    id = id,
+    event = event,
+    headline = "$event warning until 6 PM",
+    description = "",
+    instruction = null,
+    severity = severity,
+    urgency = AlertUrgency.EXPECTED,
+    certainty = "Likely",
+    senderName = "Test",
+    areaDescription = area,
+    effective = null,
+    expires = null,
+    response = null,
 )
 
 private fun auditOnThisDay() = com.sysadmindoc.nimbus.data.model.OnThisDayData(
