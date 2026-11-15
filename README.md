@@ -204,7 +204,7 @@ Optional features have clear boundaries:
 | Companion surfaces | Glance widgets, Wear OS tiles and complications, Smartspacer, and Gadgetbridge |
 | Brand archive | Approved master and twelve original logo directions under `assets/brand` |
 
-**Stack:** Gradle 9.5.0, Android Gradle Plugin 9.3.2, Kotlin 2.4.21, Jetpack Compose 2026.08.00, Hilt 2.60.1, Retrofit 3.0.0, OkHttp 5.5.0, Room 2.8.4, DataStore 1.2.1, MapLibre 13.3.1, Glance 1.2.0, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.6.0, Firebase Firestore 34.18.0.
+**Stack:** Gradle 9.9.1, Android Gradle Plugin 9.3.2, Kotlin 2.4.21, Jetpack Compose 2026.08.00, Hilt 2.60.1, Retrofit 3.0.0, OkHttp 5.5.0, Room 2.8.4, DataStore 1.2.1, MapLibre 13.3.1, Glance 1.2.0, WorkManager 2.11.2, Lottie 6.7.1, Coil 3.6.0, Firebase Firestore 34.18.0.
 
 ## Build from source
 
