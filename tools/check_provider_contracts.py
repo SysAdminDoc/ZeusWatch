@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 import time
 from dataclasses import dataclass
@@ -45,6 +46,25 @@ VIENNA_LATITUDE = "48.2082"
 VIENNA_LONGITUDE = "16.3738"
 HELSINKI_LATITUDE = "60.1699"
 HELSINKI_LONGITUDE = "24.9384"
+BEIJING_LATITUDE = 39.9042
+BEIJING_LONGITUDE = 116.4074
+# China's member id. CMA publishes geometry-less rows all day, so the point
+# query almost always has rows to check.
+WMO_CHINA_MEMBER_ID = "001"
+# Mirrors WmoAlertAdapter.pointFilter for one member.
+WMO_POINT_FILTER = (
+    '<Filter xmlns="http://www.opengis.net/ogc" xmlns:gml="http://www.opengis.net/gml"><And>'
+    "<PropertyIsNotEqualTo><PropertyName>mem</PropertyName><Literal>0</Literal></PropertyIsNotEqualTo>"
+    "<Or><Intersects><PropertyName>wkb_geometry</PropertyName>"
+    f"<gml:Point><gml:coordinates>{BEIJING_LONGITUDE:.5f},{BEIJING_LATITUDE:.5f}</gml:coordinates></gml:Point>"
+    "</Intersects><And><PropertyIsEqualTo><PropertyName>row_type</PropertyName>"
+    "<Literal>POINT</Literal></PropertyIsEqualTo>"
+    f"<PropertyIsEqualTo><PropertyName>mem</PropertyName><Literal>{WMO_CHINA_MEMBER_ID}</Literal>"
+    "</PropertyIsEqualTo></And></Or></And></Filter>"
+)
+# Mirrors WmoAlertApi.WFS_PROPERTIES.
+WMO_WFS_PROPERTIES = "capurl,event,headline,description,areadesc,sent,effective,onset,expires,mem,s,u,c,row_type"
+WMO_CAP_PATH_TIME = re.compile(r"/\d{4}/\d{2}/\d{2}/\d{2}/\d{2}/\d{2}-")
 
 JsonMap = dict[str, Any]
 Transport = Callable[[Request, float], tuple[int, dict[str, str], bytes]]
@@ -283,6 +303,17 @@ def provider_checks() -> list[ContractCheck]:
         }
     )
     met_no_query = urlencode({"lat": NYC_LATITUDE, "lon": NYC_LONGITUDE})
+    wmo_point_query = urlencode(
+        {
+            "service": "WFS",
+            "version": "1.0.0",
+            "request": "GetFeature",
+            "typeName": "local_postgis:postgis_geojsons",
+            "outputFormat": "application/json",
+            "propertyName": WMO_WFS_PROPERTIES,
+            "filter": WMO_POINT_FILTER,
+        }
+    )
     return [
         ContractCheck(
             key="wmo-members",
@@ -292,6 +323,15 @@ def provider_checks() -> list[ContractCheck]:
             validator=validate_wmo_members,
             coverage="global metadata",
             schema_assertion="top-level region list with member mid/name fields",
+        ),
+        ContractCheck(
+            key="wmo-point-alerts",
+            name="WMO SWIC point alert query",
+            url=f"https://severeweather.wmo.int/f/ows?{wmo_point_query}",
+            docs_url="https://severeweather.wmo.int/about.html",
+            validator=validate_wmo_point_alerts,
+            coverage=f"Beijing, CN ({BEIJING_LATITUDE},{BEIJING_LONGITUDE}) plus CMA's geometry-less rows",
+            schema_assertion="GeoJSON features whose properties carry capurl/event/sent/mem/row_type, with dated CAP paths",
         ),
         ContractCheck(
             key="rainviewer-metadata",
@@ -711,6 +751,30 @@ def validate_wmo_members(data: Any) -> ValidationResult:
     if named_members == 0:
         return ValidationResult(False, "members are missing mid/name fields")
     return ValidationResult(True, f"{len(regions)} regions, {member_count} members")
+
+
+def validate_wmo_point_alerts(data: Any) -> ValidationResult:
+    if not isinstance(data, dict):
+        return ValidationResult(False, "expected a GeoJSON object")
+    features = data.get("features")
+    if not isinstance(features, list):
+        return ValidationResult(False, "features must be a list")
+    dated = 0
+    for feature in features:
+        properties = feature.get("properties") if isinstance(feature, dict) else None
+        if not isinstance(properties, dict):
+            return ValidationResult(False, "feature properties must be objects")
+        missing = [key for key in ("capurl", "event", "sent", "mem", "row_type") if key not in properties]
+        if missing:
+            return ValidationResult(False, f"feature properties missing {', '.join(missing)}")
+        if properties["row_type"] not in ("POINT", "POLYGON"):
+            return ValidationResult(False, f"unexpected row_type {properties['row_type']!r}")
+        # The adapter reads the server's clock offset off these paths.
+        if WMO_CAP_PATH_TIME.search(str(properties.get("capurl") or "")):
+            dated += 1
+    if features and not dated:
+        return ValidationResult(False, "no capurl carries the dated CAP path the clock fix reads")
+    return ValidationResult(True, f"{len(features)} WMO point alert rows, {dated} with dated CAP paths")
 
 
 def validate_rainviewer_metadata(data: Any) -> ValidationResult:

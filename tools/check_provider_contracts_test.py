@@ -155,6 +155,29 @@ class ProviderContractTests(unittest.TestCase):
 
         self.assertTrue(result.ok)
 
+    def test_wmo_point_validator_needs_dated_cap_paths(self) -> None:
+        row = {
+            "capurl": "cn-cma-xx/2026/11/14/23/45/00-2125.xml",
+            "event": "Dense fog",
+            "sent": "2026-11-14T15:45:00Z",
+            "mem": "001",
+            "row_type": "POINT",
+        }
+        self.assertTrue(contracts.validate_wmo_point_alerts({"features": [{"properties": row}]}).ok)
+        # A quiet day is still a valid answer.
+        self.assertTrue(contracts.validate_wmo_point_alerts({"features": []}).ok)
+
+        undated = dict(row, capurl="cn-cma-xx/warning.xml")
+        self.assertFalse(contracts.validate_wmo_point_alerts({"features": [{"properties": undated}]}).ok)
+        unknown_type = dict(row, row_type="MULTIPOLYGON")
+        self.assertFalse(contracts.validate_wmo_point_alerts({"features": [{"properties": unknown_type}]}).ok)
+        no_member = {key: value for key, value in row.items() if key != "mem"}
+        self.assertFalse(contracts.validate_wmo_point_alerts({"features": [{"properties": no_member}]}).ok)
+
+    def test_wmo_point_filter_matches_the_adapter_shape(self) -> None:
+        self.assertIn("<gml:coordinates>116.40740,39.90420</gml:coordinates>", contracts.WMO_POINT_FILTER)
+        self.assertIn("<Literal>001</Literal>", contracts.WMO_POINT_FILTER)
+
     def test_validator_reports_missing_rainviewer_frames(self) -> None:
         result = contracts.validate_rainviewer_metadata({"generated": 1710000000, "host": "https://example.test"})
         self.assertFalse(result.ok)
