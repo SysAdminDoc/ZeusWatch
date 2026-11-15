@@ -132,6 +132,7 @@ private fun currentComparisonLabel(
     }
 }
 
+@Composable
 private fun currentComparisonColor(
     current: CurrentConditions,
     yesterdayHigh: Double?,

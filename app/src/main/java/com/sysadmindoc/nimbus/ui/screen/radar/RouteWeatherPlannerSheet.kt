@@ -68,6 +68,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusError
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyMid
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusSuccess
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -590,7 +591,7 @@ private fun RouteMetric(
         modifier = modifier
             .height(54.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color.White.copy(alpha = 0.05f))
+            .background(NimbusOverlayInk.copy(alpha = 0.05f))
             .padding(horizontal = 10.dp, vertical = 7.dp),
         verticalArrangement = Arrangement.Center,
     ) {
@@ -631,6 +632,7 @@ private fun DrivingRouteRiskLevel.labelRes(): Int = when (this) {
     DrivingRouteRiskLevel.HIGH -> R.string.route_planner_risk_high
 }
 
+@Composable
 private fun DrivingRouteRiskLevel.color(): Color = when (this) {
     DrivingRouteRiskLevel.CLEAR -> NimbusSuccess
     DrivingRouteRiskLevel.LOW -> NimbusBlueAccent

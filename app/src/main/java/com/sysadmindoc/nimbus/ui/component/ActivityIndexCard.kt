@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.ActivityFactor
@@ -83,7 +84,7 @@ private fun ActivityRow(index: ActivityIndex, window: ActivityWindow?) {
                 .weight(1f)
                 .height(8.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color.White.copy(alpha = 0.06f)),
+                .background(NimbusOverlayInk.copy(alpha = 0.06f)),
         ) {
             Box(
                 modifier = Modifier

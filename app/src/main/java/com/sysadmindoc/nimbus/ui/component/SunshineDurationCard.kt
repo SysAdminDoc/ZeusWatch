@@ -62,13 +62,14 @@ fun SunshineDurationCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Progress ring
+            val textTertiary = NimbusTextTertiary
             Canvas(modifier = Modifier.size(56.dp)) {
                 val strokeWidth = 6f
                 val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
                 val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
 
                 drawArc(
-                    color = NimbusTextTertiary.copy(alpha = 0.15f),
+                    color = textTertiary.copy(alpha = 0.15f),
                     startAngle = -90f,
                     sweepAngle = 360f,
                     useCenter = false,

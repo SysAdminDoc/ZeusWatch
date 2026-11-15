@@ -59,7 +59,9 @@ import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
+import com.sysadmindoc.nimbus.ui.theme.NimbusSnowWhite
 import com.sysadmindoc.nimbus.ui.theme.NimbusSurface
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -351,7 +353,7 @@ private fun ForecastUncertaintyDetailCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(Color.White.copy(alpha = 0.04f))
+            .background(NimbusOverlayInk.copy(alpha = 0.04f))
             .border(1.dp, NimbusBlueAccent.copy(alpha = 0.24f), RoundedCornerShape(10.dp))
             .semantics(mergeDescendants = true) {
                 contentDescription = semanticText
@@ -393,7 +395,7 @@ private fun DetailMetricCard(metric: DetailMetric) {
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(Color.White.copy(alpha = 0.04f))
+            .background(NimbusOverlayInk.copy(alpha = 0.04f))
             .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -455,7 +457,7 @@ private fun hourlyMetrics(hour: HourlyConditions, settings: NimbusSettings): Lis
                 icon = Icons.Outlined.AcUnit,
                 label = stringResource(R.string.forecast_detail_snow),
                 value = WeatherFormatter.formatSnowfall(it, settings),
-                tint = Color(0xFFE8EAF6),
+                tint = NimbusSnowWhite,
             )
         )
     }
@@ -533,7 +535,7 @@ private fun dailyMetrics(day: DailyConditions, settings: NimbusSettings): List<D
                 icon = Icons.Outlined.AcUnit,
                 label = stringResource(R.string.forecast_detail_snow),
                 value = WeatherFormatter.formatSnowfall(it, settings),
-                tint = Color(0xFFE8EAF6),
+                tint = NimbusSnowWhite,
             )
         )
     }

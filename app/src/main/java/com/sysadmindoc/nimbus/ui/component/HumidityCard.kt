@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -111,7 +112,8 @@ private fun HumidityGauge(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
-    val trackColor = Color.White.copy(alpha = 0.08f)
+    val trackColor = NimbusOverlayInk.copy(alpha = 0.08f)
+    val overlayInk = NimbusOverlayInk
     // Defensive clamp so an upstream out-of-range value (>100 or <0) doesn't
     // paint the gauge past the track edge.
     val fraction = (humidity / 100f).coerceIn(0f, 1f)
@@ -141,7 +143,7 @@ private fun HumidityGauge(
         listOf(0.3f, 0.6f).forEach { mark ->
             val x = size.width * mark
             drawLine(
-                color = Color.White.copy(alpha = 0.2f),
+                color = overlayInk.copy(alpha = 0.2f),
                 start = Offset(x, y - 4.dp.toPx()),
                 end = Offset(x, y + barHeight + 4.dp.toPx()),
                 strokeWidth = 1.dp.toPx(),

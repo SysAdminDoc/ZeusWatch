@@ -43,6 +43,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
+import com.sysadmindoc.nimbus.ui.theme.NimbusRawInkLight
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusSurfaceVariant
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -140,7 +141,7 @@ private fun RadarPreviewMap(
                 Text(
                     text = stringResource(R.string.radar_preview_map_attribution),
                     style = MaterialTheme.typography.labelSmall,
-                    color = NimbusTextPrimary,
+                    color = NimbusRawInkLight,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)

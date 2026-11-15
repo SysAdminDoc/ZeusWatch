@@ -35,6 +35,7 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.CurrentConditions
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -139,8 +140,8 @@ private fun DetailCell(item: DetailItem, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(Color.White.copy(alpha = 0.04f))
-            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
+            .background(NimbusOverlayInk.copy(alpha = 0.04f))
+            .border(1.dp, NimbusOverlayInk.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
             .padding(horizontal = 14.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -149,7 +150,7 @@ private fun DetailCell(item: DetailItem, modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .size(34.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White.copy(alpha = 0.06f)),
+                    .background(NimbusOverlayInk.copy(alpha = 0.06f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

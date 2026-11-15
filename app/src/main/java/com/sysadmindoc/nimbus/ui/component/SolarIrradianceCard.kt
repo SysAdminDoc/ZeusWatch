@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import java.util.Locale
@@ -128,6 +129,7 @@ private fun SolarChart(
 ) {
     // 24h curves run chronologically start-edge → end-edge; mirror under RTL.
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val overlayInk = NimbusOverlayInk
     Canvas(modifier = modifier) {
         if (ghiValues.isEmpty()) return@Canvas
         val w = size.width
@@ -150,7 +152,7 @@ private fun SolarChart(
         drawCurve(dniValues, DNI_COLOR)
 
         drawLine(
-            color = Color.White.copy(alpha = 0.08f),
+            color = overlayInk.copy(alpha = 0.08f),
             start = Offset(0f, h),
             end = Offset(w, h),
             strokeWidth = 1.dp.toPx(),

@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -43,6 +42,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassHighlight
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
 
@@ -57,8 +57,8 @@ fun ShimmerLoadingSkeleton(modifier: Modifier = Modifier) {
     val shimmerBrush = if (reducedMotion) {
         Brush.linearGradient(
             colors = listOf(
-                Color.White.copy(alpha = 0.08f),
-                Color.White.copy(alpha = 0.08f),
+                NimbusOverlayInk.copy(alpha = 0.08f),
+                NimbusOverlayInk.copy(alpha = 0.08f),
             ),
         )
     } else {
@@ -74,9 +74,9 @@ fun ShimmerLoadingSkeleton(modifier: Modifier = Modifier) {
         )
         Brush.linearGradient(
             colors = listOf(
-                Color.White.copy(alpha = 0.05f),
-                Color.White.copy(alpha = 0.12f),
-                Color.White.copy(alpha = 0.05f),
+                NimbusOverlayInk.copy(alpha = 0.05f),
+                NimbusOverlayInk.copy(alpha = 0.12f),
+                NimbusOverlayInk.copy(alpha = 0.05f),
             ),
             start = Offset(translateX, 0f),
             end = Offset(translateX + 400f, 0f),
@@ -195,7 +195,7 @@ private fun ShimmerBox(
             .clip(RoundedCornerShape(8.dp))
             .background(NimbusCardBg)
             .border(1.dp, NimbusCardBorder.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-            .background(Color.White.copy(alpha = 0.02f))
+            .background(NimbusOverlayInk.copy(alpha = 0.02f))
             .background(brush)
     )
 }
@@ -227,7 +227,7 @@ private fun ShimmerCard(
                     colors = listOf(
                         NimbusGlassHighlight.copy(alpha = 0.72f),
                         NimbusCardBorder.copy(alpha = 0.72f),
-                        Color.White.copy(alpha = 0.04f),
+                        NimbusOverlayInk.copy(alpha = 0.04f),
                     ),
                 ),
                 shape = shape,

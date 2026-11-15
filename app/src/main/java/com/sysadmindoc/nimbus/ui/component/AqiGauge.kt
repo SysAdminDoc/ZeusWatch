@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.AqiLevel
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.util.labelRes
 import kotlin.math.PI
@@ -50,6 +51,7 @@ fun AqiGauge(
     val cue = ColorSafeRiskCues.aqi(level)
 
     val semanticLabel = stringResource(R.string.aqi_gauge_semantics, aqi, levelLabel)
+    val overlayInk = NimbusOverlayInk
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -70,7 +72,7 @@ fun AqiGauge(
 
             // Background arc
             drawArc(
-                color = Color.White.copy(alpha = 0.06f),
+                color = overlayInk.copy(alpha = 0.06f),
                 startAngle = startAngle,
                 sweepAngle = totalSweep,
                 useCenter = false,

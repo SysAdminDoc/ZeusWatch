@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -83,13 +84,14 @@ fun OutdoorScoreCard(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.size(80.dp),
             ) {
+                val trackInk = NimbusOverlayInk
                 Canvas(modifier = Modifier.size(80.dp)) {
                     val strokeWidth = 8f
                     val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
                     val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
 
                     drawArc(
-                        color = Color.White.copy(alpha = 0.1f),
+                        color = trackInk.copy(alpha = 0.1f),
                         startAngle = 135f,
                         sweepAngle = 270f,
                         useCenter = false,
@@ -178,7 +180,7 @@ private fun FactorBar(name: String, value: Int) {
                 .weight(1f)
                 .height(6.dp)
                 .clip(RoundedCornerShape(3.dp))
-                .background(Color.White.copy(alpha = 0.06f)),
+                .background(NimbusOverlayInk.copy(alpha = 0.06f)),
         ) {
             Box(
                 modifier = Modifier

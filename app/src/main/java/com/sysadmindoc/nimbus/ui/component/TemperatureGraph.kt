@@ -60,7 +60,9 @@ import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.repository.ConfidenceBandData
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
+import com.sysadmindoc.nimbus.ui.theme.NimbusRawInkLight
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
@@ -99,7 +101,9 @@ fun TemperatureGraph(
 
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 10.sp)
-    val tooltipStyle = TextStyle(color = NimbusTextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+    val tooltipStyle = TextStyle(color = NimbusRawInkLight, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+    val textTertiary = NimbusTextTertiary
+    val overlayInk = NimbusOverlayInk
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     // Interactive state
@@ -183,12 +187,12 @@ fun TemperatureGraph(
 
                             onDrawBehind {
                                 drawPrecipitationBars(data, metrics, isRtl)
-                                drawNormalBand(metrics, normalHigh, normalLow)
+                                drawNormalBand(metrics, normalHigh, normalLow, textTertiary, overlayInk)
                                 drawConfidenceBand(data, metrics, confidenceBands, isRtl)
                                 drawTemperatureCurve(paths, metrics)
                                 drawFeelsLikeOverlay(data, metrics, isRtl)
                                 drawHighLowMarkers(data, points, textMeasurer, labelStyle, s, metrics.width)
-                                drawDayBoundaries(data, points, textMeasurer, labelStyle, metrics, isRtl)
+                                drawDayBoundaries(data, points, textMeasurer, labelStyle, metrics, isRtl, textTertiary)
                                 drawTimeLabels(data, points, referenceTime, s, textMeasurer, labelStyle, metrics, context)
                                 drawInspectionOverlay(
                                     data = data,
@@ -198,6 +202,7 @@ fun TemperatureGraph(
                                     metrics = metrics,
                                     inspectionText = inspectionText,
                                     isRtl = isRtl,
+                                    textTertiary = textTertiary,
                                 )
                             }
                         },
@@ -221,7 +226,7 @@ private fun ForecastUncertaintyLegend(summaryText: String, modelName: String?) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(Color.White.copy(alpha = 0.04f))
+            .background(NimbusOverlayInk.copy(alpha = 0.04f))
             .border(1.dp, NimbusBlueAccent.copy(alpha = 0.22f), RoundedCornerShape(8.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -384,6 +389,8 @@ private fun DrawScope.drawNormalBand(
     metrics: TemperatureGraphMetrics,
     normalHigh: Double?,
     normalLow: Double?,
+    textTertiary: Color,
+    overlayInk: Color,
 ) {
     val high = normalHigh ?: return
     val low = normalLow ?: return
@@ -392,20 +399,21 @@ private fun DrawScope.drawNormalBand(
     val highY = temperatureY(high, metrics)
     val lowY = temperatureY(low, metrics)
     drawRect(
-        color = Color(0x15FFFFFF),
+        color = overlayInk.copy(alpha = 0.082f),
         topLeft = Offset(0f, highY.coerceAtLeast(metrics.paddingTop)),
         size = Size(metrics.width, (lowY - highY).coerceAtLeast(2f)),
     )
-    drawNormalLine(highY, metrics)
-    drawNormalLine(lowY, metrics)
+    drawNormalLine(highY, metrics, textTertiary)
+    drawNormalLine(lowY, metrics, textTertiary)
 }
 
 private fun DrawScope.drawNormalLine(
     y: Float,
     metrics: TemperatureGraphMetrics,
+    textTertiary: Color,
 ) {
     drawLine(
-        color = NimbusTextTertiary.copy(alpha = 0.3f),
+        color = textTertiary.copy(alpha = 0.3f),
         start = Offset(0f, y),
         end = Offset(metrics.width, y),
         strokeWidth = 1.dp.toPx(),
@@ -640,13 +648,14 @@ private fun DrawScope.drawDayBoundaries(
     labelStyle: TextStyle,
     metrics: TemperatureGraphMetrics,
     isRtl: Boolean,
+    textTertiary: Color,
 ) {
     if (data.size <= DEFAULT_GRAPH_HOURS) return
     for (index in 1 until minOf(data.size, points.size)) {
         if (data[index].time.toLocalDate() == data[index - 1].time.toLocalDate()) continue
         val x = points[index].x
         drawLine(
-            color = NimbusTextTertiary.copy(alpha = 0.35f),
+            color = textTertiary.copy(alpha = 0.35f),
             start = Offset(x, 0f),
             end = Offset(x, metrics.baselineY),
             strokeWidth = 1f,
@@ -674,6 +683,7 @@ private fun DrawScope.drawInspectionOverlay(
     metrics: TemperatureGraphMetrics,
     inspectionText: TemperatureInspectionText,
     isRtl: Boolean,
+    textTertiary: Color,
 ) {
     if (!isInspecting || inspectX < 0f || metrics.stepX <= 0f) return
 
@@ -681,7 +691,7 @@ private fun DrawScope.drawInspectionOverlay(
     val nearestIndex = ((logicalInspectX / metrics.stepX + 0.5f).toInt()).coerceIn(0, data.lastIndex)
     val nearPoint = points[nearestIndex]
     val nearHour = data[nearestIndex]
-    drawInspectionGuide(nearPoint, metrics)
+    drawInspectionGuide(nearPoint, metrics, textTertiary)
     drawCircle(NimbusBlueAccent, radius = 6.dp.toPx(), center = nearPoint)
     drawCircle(Color.White, radius = 3.dp.toPx(), center = nearPoint)
     drawInspectionTooltip(nearHour, nearPoint, metrics, inspectionText)
@@ -690,9 +700,10 @@ private fun DrawScope.drawInspectionOverlay(
 private fun DrawScope.drawInspectionGuide(
     point: Offset,
     metrics: TemperatureGraphMetrics,
+    textTertiary: Color,
 ) {
     drawLine(
-        color = NimbusTextTertiary.copy(alpha = 0.5f),
+        color = textTertiary.copy(alpha = 0.5f),
         start = Offset(point.x, metrics.paddingTop),
         end = Offset(point.x, metrics.baselineY),
         strokeWidth = 1.dp.toPx(),

@@ -54,6 +54,7 @@ import com.sysadmindoc.nimbus.data.repository.ForecastDelta
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
@@ -189,7 +190,7 @@ private fun DailyTrendTabChip(
             .clip(shape)
             .background(
                 if (isSelected) NimbusBlueAccent.copy(alpha = 0.15f)
-                else Color.White.copy(alpha = 0.05f),
+                else NimbusOverlayInk.copy(alpha = 0.05f),
             )
             .border(
                 1.dp,
@@ -367,7 +368,7 @@ private fun DailyUvRow(
                 .weight(1f)
                 .height(8.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color.White.copy(alpha = 0.08f)),
+                .background(NimbusOverlayInk.copy(alpha = 0.08f)),
         ) {
             Box(
                 modifier = Modifier
@@ -427,7 +428,7 @@ private fun DailyPrecipRow(
                 .weight(1f)
                 .height(8.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color.White.copy(alpha = 0.08f)),
+                .background(NimbusOverlayInk.copy(alpha = 0.08f)),
         ) {
             Box(
                 modifier = Modifier
@@ -570,7 +571,7 @@ private fun DailyOverviewRow(
             tint = NimbusTextTertiary,
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color.White.copy(alpha = 0.04f))
+                .background(NimbusOverlayInk.copy(alpha = 0.04f))
                 .padding(4.dp)
                 .size(20.dp),
         )
@@ -616,7 +617,7 @@ private fun TempRangeBar(
     endFraction: Float,
     modifier: Modifier = Modifier,
 ) {
-    val trackColor = Color.White.copy(alpha = 0.08f)
+    val trackColor = NimbusOverlayInk.copy(alpha = 0.08f)
     val barShape = RoundedCornerShape(6.dp)
     val midFraction = (startFraction + endFraction) / 2f
     val barColor = when {

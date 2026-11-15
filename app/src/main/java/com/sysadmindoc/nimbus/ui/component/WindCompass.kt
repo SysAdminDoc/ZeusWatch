@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
@@ -54,6 +55,8 @@ fun WindCompass(
     modifier: Modifier = Modifier,
 ) {
     val textMeasurer = rememberTextMeasurer()
+    val textTertiary = NimbusTextTertiary
+    val overlayInk = NimbusOverlayInk
     val s = LocalUnitSettings.current
     // Localized compass cardinals, resolved outside the draw lambda
     // (stringResource cannot be called inside Canvas DrawScope).
@@ -101,7 +104,7 @@ fun WindCompass(
                 val ringColor = if (s.showBeaufortColors) {
                     Color(WeatherFormatter.beaufortScale(windSpeed).colorHex)
                 } else {
-                    Color.White.copy(alpha = 0.1f)
+                    NimbusOverlayInk.copy(alpha = 0.1f)
                 }
                 val ringWidth = if (s.showBeaufortColors) 3f else 1.5f
                 // No semantics here: the merged WeatherCard above already carries
@@ -114,7 +117,7 @@ fun WindCompass(
                         val ringStroke = Stroke(width = ringWidth)
 
                         val cardinalStyle = TextStyle(
-                            color = NimbusTextTertiary,
+                            color = textTertiary,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Medium,
                         )
@@ -135,7 +138,7 @@ fun WindCompass(
                             TickMark(
                                 start = Offset(cx + cos(angle) * innerR, cy + sin(angle) * innerR),
                                 end = Offset(cx + cos(angle) * radius, cy + sin(angle) * radius),
-                                color = Color.White.copy(alpha = if (isCardinal) 0.3f else 0.15f),
+                                color = overlayInk.copy(alpha = if (isCardinal) 0.3f else 0.15f),
                                 width = if (isCardinal) 1.5f else 1f,
                             )
                         }

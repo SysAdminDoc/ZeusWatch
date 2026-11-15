@@ -67,6 +67,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
@@ -409,7 +410,7 @@ fun NimbusStatusBadge(
                 Brush.verticalGradient(
                     colors = listOf(
                         tint.copy(alpha = if (emphasized) 0.16f else 0.10f),
-                        Color.White.copy(alpha = 0.04f),
+                        NimbusOverlayInk.copy(alpha = 0.04f),
                     ),
                 ),
             )
@@ -676,7 +677,7 @@ fun NimbusSheetDragHandle() {
                 .width(40.dp)
                 .height(4.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color.White.copy(alpha = 0.16f)),
+                .background(NimbusOverlayInk.copy(alpha = 0.16f)),
         )
     }
 }

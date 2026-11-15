@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -42,6 +41,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusToolbarSurface
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -127,7 +127,7 @@ fun RadarPlaybackControls(
                     .clip(RoundedCornerShape(10.dp))
                     .background(
                         if (playbackEnabled) NimbusBlueAccent.copy(alpha = 0.95f)
-                        else Color.White.copy(alpha = 0.08f),
+                        else NimbusOverlayInk.copy(alpha = 0.08f),
                     )
                     .border(
                         1.dp,

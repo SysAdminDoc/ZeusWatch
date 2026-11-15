@@ -61,7 +61,9 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusFogGray
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassBottom
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
+import com.sysadmindoc.nimbus.ui.theme.NimbusSnowWhite
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextTertiary
 import com.sysadmindoc.nimbus.util.WeatherFormatter
@@ -243,7 +245,7 @@ private fun TrendTabChip(
             .clip(shape)
             .background(
                 if (isSelected) NimbusBlueAccent.copy(alpha = 0.15f)
-                else Color.White.copy(alpha = 0.05f),
+                else NimbusOverlayInk.copy(alpha = 0.05f),
             )
             .border(
                 1.dp,
@@ -462,7 +464,7 @@ private fun HourlyItemPrecip(
         Text(
             text = if (snow != null && snow > 0) WeatherFormatter.formatSnowfall(snow, s) else " ",
             style = MaterialTheme.typography.labelSmall,
-            color = Color(0xFFE8EAF6),
+            color = NimbusSnowWhite,
         )
     }
 }
@@ -494,7 +496,7 @@ private fun HourlyItemCloudCover(
                 .width(40.dp)
                 .height(4.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(Color.White.copy(alpha = 0.1f)),
+                .background(NimbusOverlayInk.copy(alpha = 0.1f)),
         ) {
             Box(
                 modifier = Modifier
@@ -555,7 +557,7 @@ private fun HourlyItemHumidity(
                 .width(40.dp)
                 .height(4.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(Color.White.copy(alpha = 0.1f)),
+                .background(NimbusOverlayInk.copy(alpha = 0.1f)),
         ) {
             Box(
                 modifier = Modifier

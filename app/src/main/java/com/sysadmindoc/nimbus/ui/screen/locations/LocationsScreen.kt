@@ -1032,6 +1032,7 @@ private fun SavedLocationRow(
     }
 }
 
+@Composable
 private fun savedLocationBackground(isCurrentLocation: Boolean): Color =
     if (isCurrentLocation) NimbusBlueAccent.copy(alpha = 0.08f) else NimbusCardBg.copy(alpha = 0.32f)
 

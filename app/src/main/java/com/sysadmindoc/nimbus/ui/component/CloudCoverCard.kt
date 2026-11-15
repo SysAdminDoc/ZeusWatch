@@ -131,6 +131,8 @@ private fun CloudCoverChart(
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val textSecondary = NimbusTextSecondary
+    val textTertiary = NimbusTextTertiary
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -168,8 +170,8 @@ private fun CloudCoverChart(
             val barColor = when {
                 cloud <= 25 -> NimbusBlueAccent.copy(alpha = 0.7f)
                 cloud <= 50 -> NimbusFogGray.copy(alpha = 0.6f)
-                cloud <= 75 -> NimbusTextSecondary.copy(alpha = 0.5f)
-                else -> NimbusTextTertiary.copy(alpha = 0.55f)
+                cloud <= 75 -> textSecondary.copy(alpha = 0.5f)
+                else -> textTertiary.copy(alpha = 0.55f)
             }
 
             val isCurrent = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime)

@@ -80,6 +80,7 @@ import com.sysadmindoc.nimbus.ui.component.ReportSubmitSheet
 import com.sysadmindoc.nimbus.ui.theme.NimbusBackgroundGradient
 import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
+import com.sysadmindoc.nimbus.ui.theme.NimbusRawInkLight
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
@@ -597,7 +598,7 @@ private fun RadarAttribution(
     // map tiles was illegible, including the cached-fallback status.
     Text(
         text = attribution,
-        color = NimbusTextPrimary.copy(alpha = 0.85f),
+        color = NimbusRawInkLight.copy(alpha = 0.85f),
         fontSize = 10.sp,
         modifier = modifier
             .padding(start = 8.dp, bottom = 4.dp)

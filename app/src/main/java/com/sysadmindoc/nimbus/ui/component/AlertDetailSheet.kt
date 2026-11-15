@@ -39,6 +39,7 @@ import com.sysadmindoc.nimbus.R
 import com.sysadmindoc.nimbus.data.model.WeatherAlert
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusNavyDark
+import com.sysadmindoc.nimbus.ui.theme.NimbusOverlayInk
 import com.sysadmindoc.nimbus.ui.theme.NimbusSurface
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
@@ -135,7 +136,7 @@ fun AlertDetailSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color.White.copy(alpha = 0.03f))
+                    .background(NimbusOverlayInk.copy(alpha = 0.03f))
                     .border(1.dp, NimbusCardBorder, RoundedCornerShape(10.dp))
                     .padding(horizontal = 16.dp, vertical = 14.dp),
             ) {
