@@ -5,6 +5,7 @@ import android.location.Address
 import android.location.Geocoder
 import android.os.Build
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import com.sysadmindoc.nimbus.data.api.AlertSourceAdapter
 import com.sysadmindoc.nimbus.data.api.MeteoAlarmAdapter
 import com.sysadmindoc.nimbus.data.api.WmoAlertAdapter
@@ -18,6 +19,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.text.Normalizer
 import java.util.Locale
 import javax.inject.Inject
@@ -57,6 +59,9 @@ class AlertRepository @Inject constructor(
 ) {
     companion object {
         private const val TAG = "AlertRepository"
+
+        /** Same bound ReverseGeocoder puts on the platform geocoder. */
+        private const val GEOCODE_TIMEOUT_MS = 5_000L
 
         /** Shortest normalized place name the WMO area filter will match on. */
         private const val MIN_AREA_NAME_CHARS = 3
@@ -436,6 +441,13 @@ class AlertRepository @Inject constructor(
             .replace(Regex("[^a-z0-9]+"), " ")
             .trim()
 
+    /** How long the API 33+ geocoder listener gets before the check moves on. */
+    @VisibleForTesting
+    internal var geocodeTimeoutMs = GEOCODE_TIMEOUT_MS
+
+    /** A listener answer, so a timed-out wait (null) differs from an answer with no address. */
+    private class GeocodeAnswer(val address: Address?)
+
     /** Reverse-geocoding result: country code plus the point's place names. */
     private data class GeocodedLocation(
         val countryCode: String?,
@@ -459,21 +471,29 @@ class AlertRepository @Inject constructor(
 
         val geocoder = Geocoder(context, Locale.US)
         val address = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            suspendCancellableCoroutine<Address?> { continuation ->
-                geocoder.getFromLocation(lat, lon, 1, object : Geocoder.GeocodeListener {
-                    override fun onGeocode(addresses: MutableList<Address>) {
-                        if (continuation.isActive) {
-                            continuation.resume(addresses.firstOrNull())
+            // The listener may never fire when the geocoder backend is
+            // unreachable, so the wait is bounded like ReverseGeocoder's. A
+            // silent geocoder reads as no address: the country comes from the
+            // timezone guess and the WMO area filter gets no names to judge.
+            val answer = withTimeoutOrNull(geocodeTimeoutMs) {
+                GeocodeAnswer(suspendCancellableCoroutine<Address?> { continuation ->
+                    geocoder.getFromLocation(lat, lon, 1, object : Geocoder.GeocodeListener {
+                        override fun onGeocode(addresses: MutableList<Address>) {
+                            if (continuation.isActive) {
+                                continuation.resume(addresses.firstOrNull())
+                            }
                         }
-                    }
 
-                    override fun onError(errorMessage: String?) {
-                        if (continuation.isActive) {
-                            continuation.resume(null)
+                        override fun onError(errorMessage: String?) {
+                            if (continuation.isActive) {
+                                continuation.resume(null)
+                            }
                         }
-                    }
+                    })
                 })
             }
+            if (answer == null) Log.w(TAG, "Geocoder gave no answer within $geocodeTimeoutMs ms")
+            answer?.address
         } else {
             @Suppress("DEPRECATION")
             geocoder.getFromLocation(lat, lon, 1)?.firstOrNull()

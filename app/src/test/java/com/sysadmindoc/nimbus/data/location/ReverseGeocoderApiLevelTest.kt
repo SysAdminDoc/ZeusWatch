@@ -152,6 +152,7 @@ class CannedGeocoderShadow {
         listener: Geocoder.GeocodeListener,
     ) {
         listenerCalls++
+        if (silent) return
         val message = error
         if (message != null) listener.onError(message) else listener.onGeocode(addresses.toMutableList())
     }
@@ -159,12 +160,21 @@ class CannedGeocoderShadow {
     companion object {
         var addresses: List<Address> = emptyList()
         var error: String? = null
+
+        /** The listener never calls back, as when the geocoder backend is unreachable. */
+        var silent = false
         var blockingCalls = 0
         var listenerCalls = 0
+
+        /** The real check asks the location service, which Robolectric doesn't run. */
+        @JvmStatic
+        @Implementation
+        fun isPresent(): Boolean = true
 
         fun reset() {
             addresses = emptyList()
             error = null
+            silent = false
             blockingCalls = 0
             listenerCalls = 0
         }
