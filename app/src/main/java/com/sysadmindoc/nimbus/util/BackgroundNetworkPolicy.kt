@@ -2,7 +2,6 @@ package com.sysadmindoc.nimbus.util
 
 import android.content.Context
 import android.net.ConnectivityManager
-import androidx.core.net.ConnectivityManagerCompat
 import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.NetworkType
@@ -25,7 +24,7 @@ class BackgroundNetworkPolicy @Inject constructor(
 ) {
     fun isMetered(): Boolean {
         val manager = context.getSystemService(ConnectivityManager::class.java) ?: return false
-        return ConnectivityManagerCompat.isActiveNetworkMetered(manager)
+        return manager.isActiveNetworkMetered
     }
 
     /**

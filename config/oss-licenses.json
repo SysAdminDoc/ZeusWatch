@@ -149,6 +149,10 @@
       "license": "Apache-2.0",
       "url": "https://developer.android.com/guide/navigation"
     },
+    "androidx.navigationevent": {
+      "license": "Apache-2.0",
+      "url": "https://developer.android.com/jetpack/androidx/releases/navigationevent"
+    },
     "androidx.preference": {
       "license": "Apache-2.0",
       "url": "https://developer.android.com/jetpack/androidx"

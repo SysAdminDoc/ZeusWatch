@@ -170,7 +170,7 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
 
     // Core
-    implementation(libs.core.ktx)
+    implementation(libs.core)
     implementation(libs.activity.compose)
 
     // Adaptive Layout
