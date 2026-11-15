@@ -757,6 +757,7 @@ enum class PressureUnit(val label: String, val symbol: String) {
     INHG("inHg", "inHg"),
     HPA("hPa", "hPa"),
     MBAR("mbar", "mbar"),
+    MMHG("mmHg", "mmHg")
 }
 
 enum class PrecipUnit(val label: String, val symbol: String) {

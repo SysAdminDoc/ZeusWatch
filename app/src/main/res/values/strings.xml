@@ -1253,6 +1253,7 @@
     <string name="settings_unit_inhg">inHg</string>
     <string name="settings_unit_hpa">hPa</string>
     <string name="settings_unit_mbar">mbar</string>
+    <string name="settings_unit_mmhg">mmHg</string>
     <string name="settings_unit_inches">inches</string>
     <string name="settings_unit_mm">mm</string>
     <string name="settings_unit_miles">miles</string>

@@ -7,6 +7,8 @@ import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.data.repository.NimbusSettings
+import com.sysadmindoc.nimbus.data.repository.PressureUnit
 import java.io.ByteArrayInputStream
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -173,6 +175,13 @@ class BreezyWeatherProviderPayloadsTest {
         // Already cm: the value must survive the mm round-trip unchanged.
         assertEquals("cm", hourlySnow.getValue("unit").jsonPrimitive.content)
         assertEquals(1.5, hourlySnow.getValue("value").jsonPrimitive.double, 0.001)
+    }
+
+    @Test
+    fun pressureUnitSettingMapsToMmHgForBreezy() {
+        val units = BreezyUnitPreferences.from(NimbusSettings(pressureUnit = PressureUnit.MMHG))
+
+        assertEquals("mmhg", units.pressureUnit)
     }
 
     private fun snowyBlobJson(precipitationUnit: String): JsonObject {

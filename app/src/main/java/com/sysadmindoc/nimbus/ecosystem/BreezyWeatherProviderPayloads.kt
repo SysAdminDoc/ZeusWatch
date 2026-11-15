@@ -122,6 +122,7 @@ internal data class BreezyUnitPreferences(
                     PressureUnit.HPA -> "hpa"
                     PressureUnit.MBAR -> "mb"
                     PressureUnit.INHG -> "inhg"
+                    PressureUnit.MMHG -> "mmhg"
                 },
             )
     }

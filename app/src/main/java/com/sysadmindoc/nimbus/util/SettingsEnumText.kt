@@ -40,6 +40,7 @@ internal val PressureUnit.labelRes: Int
         PressureUnit.INHG -> R.string.settings_unit_inhg
         PressureUnit.HPA -> R.string.settings_unit_hpa
         PressureUnit.MBAR -> R.string.settings_unit_mbar
+        PressureUnit.MMHG -> R.string.settings_unit_mmhg
     }
 
 @get:StringRes
