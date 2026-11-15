@@ -212,7 +212,7 @@ class SettingsViewModel @Inject constructor(
         prefs.setDailyBriefingEnabled(enabled)
         val settings = prefs.settings.first()
         if (enabled) {
-            DailyBriefingWorker.schedule(appContext, settings.dailyBriefingMinutes)
+            DailyBriefingWorker.schedule(appContext, settings.dailyBriefingMinutes, pinNextRun = true)
         } else {
             DailyBriefingWorker.cancel(appContext)
             deliveryHealthRepository.forget(DeliverySurface.DAILY_BRIEFING)
@@ -223,7 +223,9 @@ class SettingsViewModel @Inject constructor(
         prefs.setDailyBriefingMinutes(minutes)
         val settings = prefs.settings.first()
         if (settings.dailyBriefingEnabled) {
-            DailyBriefingWorker.schedule(appContext, settings.dailyBriefingMinutes)
+            // Pinned: once the briefing has run, UPDATE keeps the old next-run
+            // time and the new initial delay alone would change nothing.
+            DailyBriefingWorker.schedule(appContext, settings.dailyBriefingMinutes, pinNextRun = true)
         }
     }
     fun setDrivingAlerts(enabled: Boolean) = viewModelScope.launch { prefs.setDrivingAlerts(enabled) }
@@ -275,6 +277,10 @@ class SettingsViewModel @Inject constructor(
         // Sync on BOTH transitions: enabling must start the periodic worker,
         // and disabling must stop it when nothing else needs the refresh.
         syncWidgetRefreshWorker()
+    }
+    // Read by each worker when it runs, so nothing needs rescheduling.
+    fun setBackgroundUnmeteredOnly(enabled: Boolean) = viewModelScope.launch {
+        prefs.setBackgroundUnmeteredOnly(enabled)
     }
     fun setWeatherContentProviderEnabled(enabled: Boolean) = viewModelScope.launch {
         prefs.setWeatherContentProviderEnabled(enabled)

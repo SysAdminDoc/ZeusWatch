@@ -1694,6 +1694,14 @@
     <string name="delivery_failure_no_receiver">nothing listening</string>
     <string name="delivery_failure_battery_restricted">restricted by battery saver</string>
     <string name="delivery_failure_unknown">unknown</string>
+    <string name="settings_background_unmetered_only">Background updates on Wi-Fi only</string>
+    <string name="settings_background_unmetered_only_desc">Severe weather alerts, Run now and widget taps still use mobile data.</string>
+    <string name="settings_delivery_health_last_skip">Skipped: %1$s (%2$s)</string>
+    <string name="delivery_skip_metered_network">Wi-Fi only</string>
+    <plurals name="settings_delivery_health_traffic">
+        <item quantity="one">Last 24 hours: %1$d request, %2$s</item>
+        <item quantity="other">Last 24 hours: %1$d requests, %2$s</item>
+    </plurals>
     <string name="activity_window_range">Best %1$s to %2$s</string>
     <string name="activity_window_none">No good window in the next 24 hours</string>
     <string name="activity_window_limited_by">Held back by %1$s</string>

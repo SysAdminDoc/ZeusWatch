@@ -66,6 +66,16 @@ enum class DeliveryFailureReason {
 }
 
 /**
+ * Why a run held back on purpose. A skip is the user's own setting doing its
+ * job, so it never counts as a failure.
+ */
+@Serializable
+enum class DeliverySkipReason {
+    /** Background updates are set to Wi-Fi only and the phone is on mobile data. */
+    METERED_NETWORK,
+}
+
+/**
  * Maps a caught exception onto a reason worth persisting.
  *
  * Nothing from the exception itself survives this: `e.message` from a provider
@@ -83,6 +93,14 @@ fun Throwable.deliveryFailureReason(): DeliveryFailureReason = when (this) {
     else -> DeliveryFailureReason.UNKNOWN
 }
 
+/** What one surface used in the clock hour starting at [hourStartEpochMs]. */
+@Serializable
+data class TrafficHour(
+    val hourStartEpochMs: Long,
+    val requests: Int,
+    val bytes: Long,
+)
+
 @Serializable
 data class DeliveryHealthEntry(
     val surface: DeliverySurface,
@@ -92,7 +110,36 @@ data class DeliveryHealthEntry(
     val lastFailureReason: DeliveryFailureReason? = null,
     val nextScheduledEpochMs: Long? = null,
     val consecutiveFailures: Int = 0,
-)
+    val lastSkipEpochMs: Long? = null,
+    val lastSkipReason: DeliverySkipReason? = null,
+    val traffic: List<TrafficHour> = emptyList(),
+) {
+    /** Requests and bytes over the current clock hour and the 23 before it. */
+    fun trafficLast24Hours(nowEpochMs: Long): TrafficSample {
+        val oldest = hourStart(nowEpochMs) - (TRAFFIC_HOURS - 1) * HOUR_MS
+        return traffic.filter { it.hourStartEpochMs in oldest..nowEpochMs }
+            .fold(TrafficSample.NONE) { sum, hour -> sum + TrafficSample(hour.requests, hour.bytes) }
+    }
+
+    /**
+     * The skip worth showing: one newer than every run since. The attempt
+     * counts too, because the rain, health and custom alerts end most runs
+     * having checked and found nothing to say, which records an attempt and
+     * nothing else.
+     */
+    fun standingSkipEpochMs(): Long? = lastSkipEpochMs?.takeIf { skip ->
+        skip > maxOf(
+            lastAttemptEpochMs ?: Long.MIN_VALUE,
+            lastSuccessEpochMs ?: Long.MIN_VALUE,
+            lastFailureEpochMs ?: Long.MIN_VALUE,
+        )
+    }
+}
+
+internal const val HOUR_MS = 3_600_000L
+internal const val TRAFFIC_HOURS = 24
+
+internal fun hourStart(epochMs: Long): Long = Math.floorDiv(epochMs, HOUR_MS) * HOUR_MS
 
 @Serializable
 data class DeliveryHealthSnapshot(
@@ -156,6 +203,33 @@ class DeliveryHealthRepository @Inject constructor(
         }
     }
 
+    /**
+     * A run that held back on purpose. It isn't an attempt and leaves the
+     * failure count alone: the job did what the user's setting asked.
+     */
+    suspend fun recordSkip(surface: DeliverySurface, reason: DeliverySkipReason, nowEpochMs: Long) {
+        update(surface) { it.copy(lastSkipEpochMs = nowEpochMs, lastSkipReason = reason) }
+    }
+
+    /**
+     * Adds [sample] to [surface]'s total for the hour holding [nowEpochMs] and
+     * drops hours that have left the 24-hour window.
+     */
+    suspend fun recordTraffic(surface: DeliverySurface, sample: TrafficSample, nowEpochMs: Long) {
+        if (sample.isEmpty) return
+        val hour = hourStart(nowEpochMs)
+        val oldest = hour - (TRAFFIC_HOURS - 1) * HOUR_MS
+        update(surface) { entry ->
+            val kept = entry.traffic.filter { it.hourStartEpochMs in oldest..hour }
+            val current = kept.firstOrNull { it.hourStartEpochMs == hour } ?: TrafficHour(hour, 0, 0L)
+            val added = current.copy(
+                requests = current.requests + sample.requests,
+                bytes = current.bytes + sample.bytes,
+            )
+            entry.copy(traffic = (kept.filterNot { it.hourStartEpochMs == hour } + added).sortedBy { it.hourStartEpochMs })
+        }
+    }
+
     /** Forgets a surface the user has turned off, so it stops being reported. */
     suspend fun forget(surface: DeliverySurface) {
         store.edit { prefs ->
@@ -204,9 +278,10 @@ class DeliveryHealthRepository @Inject constructor(
 /**
  * The exportable form.
  *
- * Everything here is either a timestamp or the name of one of this app's own
- * enum constants, which is the whole reason the failure reason is an enum: a
- * user sending this to a bug report must not be sending their coordinates.
+ * Everything here is either a timestamp, a count or the name of one of this
+ * app's own enum constants, which is the whole reason the failure reason is an
+ * enum: a user sending this to a bug report must not be sending their
+ * coordinates.
  */
 object DeliveryHealthDiagnosticsFormatter {
     fun format(
@@ -228,12 +303,16 @@ object DeliveryHealthDiagnosticsFormatter {
         }
 
         snapshot.entries.sortedBy { it.surface.ordinal }.forEach { entry ->
+            val traffic = entry.trafficLast24Hours(nowEpochMs)
             appendLine("- " + entry.surface.name)
             appendLine("  Last attempt: " + entry.lastAttemptEpochMs.orNone())
             appendLine("  Last success: " + entry.lastSuccessEpochMs.orNone())
             appendLine("  Last failure: " + entry.lastFailureEpochMs.orNone())
             appendLine("  Failure reason: " + (entry.lastFailureReason?.name ?: "none"))
             appendLine("  Consecutive failures: " + entry.consecutiveFailures)
+            appendLine("  Last skipped: " + entry.lastSkipEpochMs.orNone())
+            appendLine("  Skip reason: " + (entry.lastSkipReason?.name ?: "none"))
+            appendLine("  Last 24 hours: ${traffic.requests} requests, ${traffic.bytes} bytes")
             appendLine(
                 "  Next scheduled: " +
                     (nextScheduledRuns[entry.surface] ?: entry.nextScheduledEpochMs).orNone(),

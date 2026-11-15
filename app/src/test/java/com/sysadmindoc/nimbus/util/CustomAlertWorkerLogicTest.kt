@@ -13,6 +13,8 @@ import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.AirQualityRepository
 import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
+import com.sysadmindoc.nimbus.data.repository.DeliverySkipReason
+import com.sysadmindoc.nimbus.data.repository.DeliverySurface
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.SavedLocation
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
@@ -37,6 +39,9 @@ import java.time.LocalDateTime
  * for any weather rules that already fired this run.
  */
 class CustomAlertWorkerLogicTest {
+    // Relaxed: holdsBack is false, so nothing waits for Wi-Fi unless a test says so.
+    private val networkPolicy: BackgroundNetworkPolicy = mockk(relaxed = true)
+
     // Relaxed: these tests are about what the worker delivers, not
     // about the diagnostics recording, which has its own tests.
     private val deliveryHealth: DeliveryHealthRepository = io.mockk.mockk(relaxed = true)
@@ -72,7 +77,39 @@ class CustomAlertWorkerLogicTest {
         } returns Result.success(weatherData())
     }
 
-    private fun worker() = CustomAlertWorker(context, params, weatherRepository, airQualityRepository, prefs, deliveryHealth)
+    private fun worker() = CustomAlertWorker(context, params, weatherRepository, airQualityRepository, prefs, deliveryHealth, networkPolicy)
+
+    @Test
+    fun `a scheduled run held for Wi-Fi records a skip and fetches nothing`() = runTest {
+        // Held only when the run is a scheduled one: the worker must pass the mark through.
+        every { networkPolicy.holdsBack(any(), false) } returns true
+
+        assertEquals(ListenableWorker.Result.success(), worker().doWork())
+        coVerify(exactly = 1) {
+            deliveryHealth.recordSkip(DeliverySurface.CUSTOM_ALERTS, DeliverySkipReason.METERED_NETWORK, any())
+        }
+        coVerify(exactly = 0) { deliveryHealth.recordAttempt(any(), any()) }
+        coVerify(exactly = 0) { weatherRepository.getWeather(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { airQualityRepository.getAirQuality(any(), any()) }
+    }
+
+    @Test
+    fun `Run now on mobile data goes through with the Wi-Fi hold on`() = runTest {
+        // The policy as it really answers on mobile data: hold a scheduled
+        // run, never one the user started. A worker that dropped the mark
+        // would be held here.
+        every { networkPolicy.holdsBack(any(), false) } returns true
+        every { networkPolicy.holdsBack(any(), true) } returns false
+        every { params.inputData } returns BackgroundWork.userInitiatedInput()
+        coEvery { airQualityRepository.getAirQuality(any(), any()) } returns
+            Result.failure(IOException("aqi outage"))
+
+        worker().doWork()
+
+        coVerify(exactly = 1) { weatherRepository.getWeather(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 1) { airQualityRepository.getAirQuality(any(), any()) }
+        coVerify(exactly = 0) { deliveryHealth.recordSkip(any(), any(), any()) }
+    }
 
     @Test
     fun `AQI fetch failure with AQI rules enabled returns retry`() = runTest {

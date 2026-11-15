@@ -1645,6 +1645,16 @@
     <string name="delivery_failure_no_receiver">אין מאזין</string>
     <string name="delivery_failure_battery_restricted">מוגבל על ידי חוסך הסוללה</string>
     <string name="delivery_failure_unknown">לא ידוע</string>
+    <string name="settings_background_unmetered_only">עדכונים ברקע ב-Wi-Fi בלבד</string>
+    <string name="settings_background_unmetered_only_desc">התראות מזג אוויר קיצוני, \"הפעל עכשיו\" והקשה על ווידג\'ט פועלות גם בסלולר.</string>
+    <string name="settings_delivery_health_last_skip">דולג: %1$s (%2$s)</string>
+    <string name="delivery_skip_metered_network">Wi-Fi בלבד</string>
+    <plurals name="settings_delivery_health_traffic">
+        <item quantity="one">24 השעות האחרונות: בקשה אחת, %2$s</item>
+        <item quantity="two">24 השעות האחרונות: שתי בקשות, %2$s</item>
+        <item quantity="many">24 השעות האחרונות: %1$d בקשות, %2$s</item>
+        <item quantity="other">24 השעות האחרונות: %1$d בקשות, %2$s</item>
+    </plurals>
     <string name="activity_window_range">הכי טוב מהשעה %1$s עד %2$s</string>
     <string name="activity_window_none">אין זמן מתאים בעשרים וארבע השעות הקרובות</string>
     <string name="activity_window_limited_by">מוגבל על ידי %1$s</string>

@@ -1,27 +1,36 @@
 package com.sysadmindoc.nimbus.util
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkInfo
 import androidx.test.core.app.ApplicationProvider
+import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
+import androidx.work.testing.WorkManagerTestInitHelper
 import com.sysadmindoc.nimbus.data.repository.DeliveryFailureReason
 import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
+import com.sysadmindoc.nimbus.data.repository.DeliverySkipReason
 import com.sysadmindoc.nimbus.data.repository.DeliverySurface
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.SavedLocation
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowNetworkInfo
 
 /**
  * What each worker records, asserted against a real store.
@@ -41,13 +50,21 @@ class DeliveryRecordingTest {
     private lateinit var prefs: UserPreferences
     private lateinit var weatherRepository: WeatherRepository
     private val params: WorkerParameters = mockk(relaxed = true)
+    private val networkPolicy = BackgroundNetworkPolicy(context)
 
     @Before
     fun setUp() = runTest {
+        // A scheduled briefing pins its next run through WorkManager.
+        WorkManagerTestInitHelper.initializeTestWorkManager(context)
         deliveryHealth = DeliveryHealthRepository(context)
         deliveryHealth.clear()
         prefs = mockk(relaxed = true)
         weatherRepository = mockk(relaxed = true)
+    }
+
+    @After
+    fun tearDown() {
+        WorkManagerTestInitHelper.closeWorkDatabase()
     }
 
     private suspend fun entryFor(surface: DeliverySurface) =
@@ -59,7 +76,7 @@ class DeliveryRecordingTest {
         every { prefs.backgroundAlertLocation } returns flowOf(null)
         every { prefs.lastLocation } returns flowOf(null)
 
-        DailyBriefingWorker(context, params, weatherRepository, prefs, deliveryHealth).doWork()
+        DailyBriefingWorker(context, params, weatherRepository, prefs, deliveryHealth, networkPolicy).doWork()
 
         assertEquals(
             DeliveryFailureReason.NO_LOCATION,
@@ -75,7 +92,7 @@ class DeliveryRecordingTest {
         coEvery { weatherRepository.getWeather(any(), any(), any()) } returns
             Result.failure(java.io.IOException("down"))
 
-        DailyBriefingWorker(context, params, weatherRepository, prefs, deliveryHealth).doWork()
+        DailyBriefingWorker(context, params, weatherRepository, prefs, deliveryHealth, networkPolicy).doWork()
 
         val entry = entryFor(DeliverySurface.DAILY_BRIEFING)
         assertEquals(DeliveryFailureReason.NO_NETWORK, entry?.lastFailureReason)
@@ -91,12 +108,76 @@ class DeliveryRecordingTest {
         )
         every { prefs.settings } returns flowOf(NimbusSettings(dailyBriefingEnabled = false))
 
-        DailyBriefingWorker(context, params, weatherRepository, prefs, deliveryHealth).doWork()
+        DailyBriefingWorker(context, params, weatherRepository, prefs, deliveryHealth, networkPolicy).doWork()
 
         assertNull(
             "a disabled surface must stop reporting a stale failure",
             entryFor(DeliverySurface.DAILY_BRIEFING),
         )
+    }
+
+    private fun connectVia(type: Int) {
+        val manager = context.getSystemService(ConnectivityManager::class.java)
+        shadowOf(manager).setActiveNetworkInfo(
+            ShadowNetworkInfo.newInstance(
+                NetworkInfo.DetailedState.CONNECTED,
+                type,
+                0,
+                true,
+                NetworkInfo.State.CONNECTED,
+            ),
+        )
+    }
+
+    private fun wifiOnlyBriefingWithNoLocation() {
+        every { prefs.settings } returns flowOf(
+            NimbusSettings(dailyBriefingEnabled = true, backgroundUnmeteredOnly = true),
+        )
+        every { prefs.backgroundAlertLocation } returns flowOf(null)
+        every { prefs.lastLocation } returns flowOf(null)
+    }
+
+    @Test
+    fun `a briefing held for Wi-Fi records a skip, not a failure, and fetches nothing`() = runTest {
+        connectVia(ConnectivityManager.TYPE_MOBILE)
+        wifiOnlyBriefingWithNoLocation()
+        every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+
+        val result = DailyBriefingWorker(context, params, weatherRepository, prefs, deliveryHealth, networkPolicy).doWork()
+
+        // Success, never retry: a retried periodic run moves every later
+        // briefing to whenever the retry finally went through.
+        assertEquals(ListenableWorker.Result.success(), result)
+        val entry = entryFor(DeliverySurface.DAILY_BRIEFING)
+        assertEquals(DeliverySkipReason.METERED_NETWORK, entry?.lastSkipReason)
+        assertNull("a hold is not a failure", entry?.lastFailureReason)
+        assertNull("a hold is not an attempt", entry?.lastAttemptEpochMs)
+        coVerify(exactly = 0) { weatherRepository.getWeather(any(), any(), any()) }
+    }
+
+    @Test
+    fun `Run now goes through on mobile data with the Wi-Fi hold on`() = runTest {
+        connectVia(ConnectivityManager.TYPE_MOBILE)
+        wifiOnlyBriefingWithNoLocation()
+        every { params.inputData } returns BackgroundWork.userInitiatedInput()
+
+        DailyBriefingWorker(context, params, weatherRepository, prefs, deliveryHealth, networkPolicy).doWork()
+
+        val entry = entryFor(DeliverySurface.DAILY_BRIEFING)
+        assertEquals(DeliveryFailureReason.NO_LOCATION, entry?.lastFailureReason)
+        assertNull(entry?.lastSkipReason)
+    }
+
+    @Test
+    fun `on Wi-Fi a scheduled briefing goes through with the hold on`() = runTest {
+        connectVia(ConnectivityManager.TYPE_WIFI)
+        wifiOnlyBriefingWithNoLocation()
+
+        DailyBriefingWorker(context, params, weatherRepository, prefs, deliveryHealth, networkPolicy).doWork()
+
+        val entry = entryFor(DeliverySurface.DAILY_BRIEFING)
+        assertEquals(DeliveryFailureReason.NO_LOCATION, entry?.lastFailureReason)
+        assertNull(entry?.lastSkipReason)
     }
 
     @Test

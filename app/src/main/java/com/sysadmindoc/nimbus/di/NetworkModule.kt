@@ -39,6 +39,7 @@ import com.sysadmindoc.nimbus.data.api.RainViewerApi
 import com.sysadmindoc.nimbus.data.api.RateLimitInterceptor
 import com.sysadmindoc.nimbus.data.api.WmoAlertAdapter
 import com.sysadmindoc.nimbus.data.api.WmoAlertApi
+import com.sysadmindoc.nimbus.data.repository.BackgroundTraffic
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -107,6 +108,9 @@ object NetworkModule {
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
+            // Counts what background workers fetch, per surface, for the
+            // delivery panel. Every provider client is built from this one.
+            .eventListenerFactory(BackgroundTraffic.eventListenerFactory)
             .apply {
                 if (BuildConfig.DEBUG) {
                     addInterceptor(

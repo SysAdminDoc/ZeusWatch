@@ -161,6 +161,7 @@ class UserPreferences @Inject constructor(
         val SOURCE_MINUTELY = stringPreferencesKey("source_minutely")
         val OPEN_METEO_FLATBUFFERS_ENABLED = booleanPreferencesKey("open_meteo_flatbuffers_enabled")
         val GADGETBRIDGE_BROADCAST_ENABLED = booleanPreferencesKey("gadgetbridge_broadcast_enabled")
+        val BACKGROUND_UNMETERED_ONLY = booleanPreferencesKey("background_unmetered_only")
         val WEATHER_CONTENT_PROVIDER_ENABLED = booleanPreferencesKey("weather_content_provider_enabled")
         // When enabled, the ecosystem ContentProvider rounds served coordinates
         // to ~1 km so consumers get city-level (not exact) location (NX-32 sibling).
@@ -291,6 +292,7 @@ class UserPreferences @Inject constructor(
             ).normalized(),
             openMeteoFlatBuffersEnabled = prefs[Keys.OPEN_METEO_FLATBUFFERS_ENABLED] ?: false,
             gadgetbridgeBroadcastEnabled = prefs[Keys.GADGETBRIDGE_BROADCAST_ENABLED] ?: false,
+            backgroundUnmeteredOnly = prefs[Keys.BACKGROUND_UNMETERED_ONLY] ?: false,
             weatherContentProviderEnabled = prefs[Keys.WEATHER_CONTENT_PROVIDER_ENABLED] ?: false,
             weatherContentProviderCoarseLocation = prefs[Keys.WEATHER_CONTENT_PROVIDER_COARSE] ?: false,
             owmApiKey = apiKeys.owmApiKey.ifBlank { prefs[Keys.OWM_API_KEY] ?: "" },
@@ -583,6 +585,9 @@ class UserPreferences @Inject constructor(
     suspend fun setGadgetbridgeBroadcastEnabled(enabled: Boolean) = store.edit {
         it[Keys.GADGETBRIDGE_BROADCAST_ENABLED] = enabled
     }
+    suspend fun setBackgroundUnmeteredOnly(enabled: Boolean) = store.edit {
+        it[Keys.BACKGROUND_UNMETERED_ONLY] = enabled
+    }
     suspend fun setWeatherContentProviderEnabled(enabled: Boolean) = store.edit {
         it[Keys.WEATHER_CONTENT_PROVIDER_ENABLED] = enabled
     }
@@ -732,6 +737,8 @@ data class NimbusSettings(
     val sourceConfig: SourceConfig = SourceConfig(),
     val openMeteoFlatBuffersEnabled: Boolean = false,
     val gadgetbridgeBroadcastEnabled: Boolean = false,
+    /** Scheduled fetches wait for an unmetered network; severe weather alerts and runs the user starts don't. */
+    val backgroundUnmeteredOnly: Boolean = false,
     val weatherContentProviderEnabled: Boolean = false,
     val weatherContentProviderCoarseLocation: Boolean = false,
     val owmApiKey: String = "",

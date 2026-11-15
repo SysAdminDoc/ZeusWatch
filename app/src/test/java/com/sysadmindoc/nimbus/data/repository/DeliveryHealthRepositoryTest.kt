@@ -121,4 +121,74 @@ class DeliveryHealthRepositoryTest {
         val entry = repository.current().entries.single()
         assertTrue(entry.lastFailureReason in DeliveryFailureReason.entries)
     }
+
+    @Test
+    fun `a skip is neither an attempt nor a failure`() = runTest {
+        repository.clear()
+        repository.recordFailure(DeliverySurface.NOWCAST_ALERTS, DeliveryFailureReason.NO_NETWORK, 1_000L)
+
+        repository.recordSkip(DeliverySurface.NOWCAST_ALERTS, DeliverySkipReason.METERED_NETWORK, 2_000L)
+
+        val entry = repository.current().entries.single()
+        assertEquals(2_000L, entry.lastSkipEpochMs)
+        assertEquals(DeliverySkipReason.METERED_NETWORK, entry.lastSkipReason)
+        assertEquals(1_000L, entry.lastAttemptEpochMs)
+        assertEquals(1, entry.consecutiveFailures)
+        assertEquals(DeliveryFailureReason.NO_NETWORK, entry.lastFailureReason)
+        assertEquals(2_000L, entry.standingSkipEpochMs())
+    }
+
+    @Test
+    fun `a run that worked after a skip outranks it`() = runTest {
+        repository.clear()
+        repository.recordSkip(DeliverySurface.WIDGETS, DeliverySkipReason.METERED_NETWORK, 1_000L)
+
+        repository.recordSuccess(DeliverySurface.WIDGETS, 2_000L)
+
+        assertNull(repository.current().entries.single().standingSkipEpochMs())
+    }
+
+    @Test
+    fun `an alert check that ran and found nothing also clears the hold`() = runTest {
+        repository.clear()
+        repository.recordSkip(DeliverySurface.NOWCAST_ALERTS, DeliverySkipReason.METERED_NETWORK, 1_000L)
+
+        // Back on Wi-Fi, no rain coming: the run records its attempt and stops.
+        repository.recordAttempt(DeliverySurface.NOWCAST_ALERTS, 2_000L)
+
+        assertNull(repository.current().entries.single().standingSkipEpochMs())
+    }
+
+    @Test
+    fun `traffic adds up per clock hour and only the last 24 hours count`() = runTest {
+        repository.clear()
+        val now = 100 * HOUR_MS + 30 * 60_000L
+        repository.recordTraffic(DeliverySurface.WIDGETS, TrafficSample(2, 500L), now - 25 * HOUR_MS)
+        repository.recordTraffic(DeliverySurface.WIDGETS, TrafficSample(1, 100L), now - 23 * HOUR_MS)
+        repository.recordTraffic(DeliverySurface.WIDGETS, TrafficSample(3, 300L), now - 60_000L)
+        repository.recordTraffic(DeliverySurface.WIDGETS, TrafficSample(4, 400L), now)
+        repository.recordTraffic(DeliverySurface.HEALTH_ALERTS, TrafficSample(9, 900L), now)
+
+        val entries = repository.current().entries.associateBy { it.surface }
+        val widgets = entries.getValue(DeliverySurface.WIDGETS)
+        // The 25-hour-old hour was dropped when a later one was written, and
+        // the two calls this hour share one bucket.
+        assertEquals(
+            listOf(hourStart(now - 23 * HOUR_MS), hourStart(now)),
+            widgets.traffic.map { it.hourStartEpochMs },
+        )
+        assertEquals(TrafficSample(8, 800L), widgets.trafficLast24Hours(now))
+        assertEquals(TrafficSample(9, 900L), entries.getValue(DeliverySurface.HEALTH_ALERTS).trafficLast24Hours(now))
+        // An hour later the 23-hour-old bucket has aged out of the window too.
+        assertEquals(TrafficSample(7, 700L), widgets.trafficLast24Hours(now + HOUR_MS))
+    }
+
+    @Test
+    fun `an empty sample writes nothing`() = runTest {
+        repository.clear()
+
+        repository.recordTraffic(DeliverySurface.WIDGETS, TrafficSample.NONE, 1_000L)
+
+        assertTrue(repository.current().entries.isEmpty())
+    }
 }

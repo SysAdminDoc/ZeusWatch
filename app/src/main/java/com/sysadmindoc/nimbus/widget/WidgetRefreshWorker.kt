@@ -8,13 +8,11 @@ import android.util.Log
 import androidx.glance.appwidget.updateAll
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -24,8 +22,10 @@ import com.sysadmindoc.nimbus.data.model.DailyConditions
 import com.sysadmindoc.nimbus.data.model.HourlyConditions
 import com.sysadmindoc.nimbus.data.model.SavedLocationEntity
 import com.sysadmindoc.nimbus.data.model.WeatherData
+import com.sysadmindoc.nimbus.data.repository.BackgroundTraffic
 import com.sysadmindoc.nimbus.data.repository.DeliveryFailureReason
 import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
+import com.sysadmindoc.nimbus.data.repository.DeliverySkipReason
 import com.sysadmindoc.nimbus.data.repository.DeliverySurface
 import com.sysadmindoc.nimbus.data.repository.LocationRepository
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
@@ -38,6 +38,8 @@ import com.sysadmindoc.nimbus.data.repository.deliveryFailureReason
 import com.sysadmindoc.nimbus.data.repository.sourceOverrides
 import com.sysadmindoc.nimbus.sync.WearSyncManager
 import com.sysadmindoc.nimbus.sync.WearSyncOutcome
+import com.sysadmindoc.nimbus.util.BackgroundNetworkPolicy
+import com.sysadmindoc.nimbus.util.BackgroundWork
 import com.sysadmindoc.nimbus.util.BackgroundWorkSync
 import com.sysadmindoc.nimbus.util.GadgetbridgeWeatherBroadcaster
 import com.sysadmindoc.nimbus.util.WeatherNotificationHelper
@@ -71,13 +73,27 @@ class WidgetRefreshWorker @AssistedInject constructor(
     private val wearSyncManager: WearSyncManager,
     private val gadgetbridgeWeatherBroadcaster: GadgetbridgeWeatherBroadcaster,
     private val deliveryHealth: DeliveryHealthRepository,
+    private val networkPolicy: BackgroundNetworkPolicy,
 ) : CoroutineWorker(appContext, params) {
 
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result =
+        BackgroundTraffic.meter(DeliverySurface.WIDGETS, deliveryHealth) { refresh() }
+
+    private suspend fun refresh(): Result {
         val startedAt = System.currentTimeMillis()
-        deliveryHealth.recordAttempt(DeliverySurface.WIDGETS, startedAt)
         val settings = prefs.settings.first()
         val lastLoc = prefs.lastLocation.first()
+        // A user-initiated refresh (widget tap, Run now) must run even on low
+        // battery or mobile data.
+        val forceRefresh = inputData.getBoolean(KEY_FORCE_REFRESH, false)
+        if (networkPolicy.holdsBack(settings, userInitiated = forceRefresh)) {
+            // Held for Wi-Fi: the watch and the notification still get what's
+            // cached, and the next run on an unmetered network fetches.
+            pushCachedDataOnly(settings, lastLoc)
+            deliveryHealth.recordSkip(DeliverySurface.WIDGETS, DeliverySkipReason.METERED_NETWORK, startedAt)
+            return Result.success()
+        }
+        deliveryHealth.recordAttempt(DeliverySurface.WIDGETS, startedAt)
         // Cross-check stored widget mappings against the launcher's live ids —
         // a missed onDeleted (force-stop, crash) otherwise leaves orphaned
         // per-widget data refreshing forever.
@@ -86,9 +102,16 @@ class WidgetRefreshWorker @AssistedInject constructor(
         )
         val savedLocations = runCatching { locationRepository.getAll() }.getOrElse { emptyList() }
 
-        // A user-initiated refresh (widget tap) must run even on low battery.
-        val forceRefresh = inputData.getBoolean(KEY_FORCE_REFRESH, false)
         if (!forceRefresh && shouldSkipForBattery()) {
+            // Mostly a backstop now. The periodic run carries the battery-not-low
+            // constraint, so the system holds it outright at its own low-battery
+            // level, and every one-time run is forced. This still fires where a
+            // device sets that level below this check's 15%, and on a phone
+            // plugged in but not charging at 15% or less, which the system
+            // doesn't count as low. The cost of the constraint: at a low
+            // battery the panel shows no "battery restricted" row, and the
+            // watch, Gadgetbridge and the ongoing notification get no cached
+            // push.
             // No network work — but don't let the watch and the persistent
             // notification silently starve: push the cached data we have.
             // This path still pushes cached data to the watch and to
@@ -588,23 +611,17 @@ class WidgetRefreshWorker @AssistedInject constructor(
         /** A one-off run of this worker, for the diagnostics panel's Run now. */
         fun oneTimeRequest(): OneTimeWorkRequest =
             OneTimeWorkRequestBuilder<WidgetRefreshWorker>()
-                .setConstraints(
-                    // The same network constraint the periodic work carries.
-                    // Without it Run now fires offline, every provider call
-                    // fails, and the diagnostic action manufactures the very
-                    // failure it exists to diagnose.
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build(),
-                )
+                .setConstraints(BackgroundWork.userInitiatedConstraints())
                 .setInputData(
                     androidx.work.Data.Builder()
-                        // A manual run is user-initiated, so it must
-                        // not be skipped for battery.
+                        // A manual run is user-initiated, so it must not be
+                        // skipped for battery or held back for Wi-Fi.
                         .putBoolean(KEY_FORCE_REFRESH, true)
                         .build(),
                 )
                 .build()
+
+        /** Marks a run the user started; this worker's name for [BackgroundWork.KEY_USER_INITIATED]. */
         internal const val KEY_FORCE_REFRESH = "force"
 
         /** Nominal widget-refresh cadence; matches the periodic work interval. */
@@ -640,15 +657,11 @@ class WidgetRefreshWorker @AssistedInject constructor(
         }
 
         fun schedule(context: Context) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
             val request = PeriodicWorkRequestBuilder<WidgetRefreshWorker>(
                 WIDGET_BACKGROUND_REFRESH_INTERVAL_MINUTES, TimeUnit.MINUTES,
                 WIDGET_BACKGROUND_REFRESH_FLEX_MINUTES, TimeUnit.MINUTES,
             )
-                .setConstraints(constraints)
+                .setConstraints(BackgroundWork.periodicConstraints())
                 .setBackoffCriteria(
                     BackoffPolicy.EXPONENTIAL,
                     WIDGET_BACKGROUND_REFRESH_BACKOFF_MINUTES,
@@ -665,13 +678,9 @@ class WidgetRefreshWorker @AssistedInject constructor(
 
         fun enqueueImmediate(context: Context) {
             val request = OneTimeWorkRequestBuilder<WidgetRefreshWorker>()
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build()
-                )
-                // Manual refresh bypasses the low-battery skip — the user
-                // explicitly asked for fresh data.
+                .setConstraints(BackgroundWork.userInitiatedConstraints())
+                // Manual refresh bypasses the low-battery skip and the Wi-Fi
+                // hold — the user explicitly asked for fresh data.
                 .setInputData(workDataOf(KEY_FORCE_REFRESH to true))
                 .build()
 

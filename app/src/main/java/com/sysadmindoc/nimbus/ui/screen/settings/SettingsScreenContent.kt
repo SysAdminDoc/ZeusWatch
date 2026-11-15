@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
@@ -264,6 +265,7 @@ internal data class SettingsActions(
     val onSourceMinutely: (WeatherSourceProvider) -> Unit = {},
     val onOpenMeteoFlatBuffersEnabled: (Boolean) -> Unit = {},
     val onGadgetbridgeBroadcastEnabled: (Boolean) -> Unit = {},
+    val onBackgroundUnmeteredOnly: (Boolean) -> Unit = {},
     val onWeatherContentProviderEnabled: (Boolean) -> Unit = {},
     val onWeatherContentProviderCoarseLocation: (Boolean) -> Unit = {},
     val onOwmApiKey: (String) -> Unit = {},
@@ -992,6 +994,13 @@ private fun SettingsDataSourcesSection(
             actions = actions,
         )
         ActivityThresholdsPanel(thresholds = activityThresholds, actions = actions)
+        Spacer(modifier = Modifier.height(12.dp))
+        SettingToggle(
+            stringResource(R.string.settings_background_unmetered_only),
+            stringResource(R.string.settings_background_unmetered_only_desc),
+            settings.backgroundUnmeteredOnly,
+            actions.onBackgroundUnmeteredOnly,
+        )
         DeliveryHealthPanel(
             snapshot = deliveryHealth,
             enabledSurfaces = enabledDeliverySurfaces(settings),
@@ -1384,10 +1393,27 @@ private fun DeliveryHealthRow(
     val nextLabel = nextRunEpochMs?.let {
         stringResource(R.string.settings_delivery_health_next_run, relativeDeliveryTime(it, nowEpochMs))
     } ?: stringResource(R.string.settings_delivery_health_next_unknown)
+    // Only a skip no run has happened since: once one runs, that says more
+    // about now than an old hold.
+    val skipLabel = entry.standingSkipEpochMs()?.let { skippedAt ->
+        stringResource(
+            R.string.settings_delivery_health_last_skip,
+            relativeDeliveryTime(skippedAt, nowEpochMs),
+            stringResource((entry.lastSkipReason ?: DeliverySkipReason.METERED_NETWORK).labelRes),
+        )
+    }
+    val context = LocalContext.current
+    val traffic = entry.trafficLast24Hours(nowEpochMs)
+    val trafficLabel = pluralStringResource(
+        R.plurals.settings_delivery_health_traffic,
+        traffic.requests,
+        traffic.requests,
+        Formatter.formatShortFileSize(context, traffic.bytes),
+    )
 
-    // One merged description rather than five nodes: a screen reader reading
-    // this row field by field is unusable. The button inside keeps its own
-    // label, which a merged row would otherwise swallow.
+    // One merged description rather than one node per line: a screen reader
+    // reading this row field by field is unusable. The button inside keeps
+    // its own label, which a merged row would otherwise swallow.
     val runNowDescription = stringResource(
         R.string.settings_delivery_health_retry_cd,
         surfaceLabel,
@@ -1395,8 +1421,8 @@ private fun DeliveryHealthRow(
     val description = stringResource(
         R.string.settings_delivery_health_row_cd,
         surfaceLabel,
-        failureLabel ?: successLabel,
-        nextLabel,
+        listOfNotNull(failureLabel ?: successLabel, skipLabel).joinToString(". "),
+        "$trafficLabel. $nextLabel",
     )
 
     Column(
@@ -1439,6 +1465,18 @@ private fun DeliveryHealthRow(
                 color = if (entry.consecutiveFailures > 0) NimbusWarning else NimbusTextTertiary,
             )
         }
+        if (skipLabel != null) {
+            Text(
+                text = skipLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = NimbusTextSecondary,
+            )
+        }
+        Text(
+            text = trafficLabel,
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextTertiary,
+        )
         Text(
             text = nextLabel,
             style = MaterialTheme.typography.bodySmall,
@@ -1492,6 +1530,11 @@ private val DeliveryFailureReason.labelRes: Int
         DeliveryFailureReason.NO_RECEIVER -> R.string.delivery_failure_no_receiver
         DeliveryFailureReason.BATTERY_RESTRICTED -> R.string.delivery_failure_battery_restricted
         DeliveryFailureReason.UNKNOWN -> R.string.delivery_failure_unknown
+    }
+
+private val DeliverySkipReason.labelRes: Int
+    get() = when (this) {
+        DeliverySkipReason.METERED_NETWORK -> R.string.delivery_skip_metered_network
     }
 
 @Composable

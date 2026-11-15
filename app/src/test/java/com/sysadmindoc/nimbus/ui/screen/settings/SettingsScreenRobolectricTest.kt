@@ -11,14 +11,21 @@ import androidx.compose.ui.test.performScrollTo
 import com.sysadmindoc.nimbus.BuildConfig
 import com.sysadmindoc.nimbus.data.repository.AlertSourcePreference
 import com.sysadmindoc.nimbus.data.repository.ApiKeyName
+import com.sysadmindoc.nimbus.data.repository.DeliveryHealthEntry
+import com.sysadmindoc.nimbus.data.repository.DeliveryHealthSnapshot
+import com.sysadmindoc.nimbus.data.repository.DeliverySkipReason
+import com.sysadmindoc.nimbus.data.repository.DeliverySurface
+import com.sysadmindoc.nimbus.data.repository.HOUR_MS
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.ProviderFailureReason
 import com.sysadmindoc.nimbus.data.repository.ProviderHealthEntry
 import com.sysadmindoc.nimbus.data.repository.ProviderHealthSnapshot
 import com.sysadmindoc.nimbus.data.repository.TempUnit
+import com.sysadmindoc.nimbus.data.repository.TrafficHour
 import com.sysadmindoc.nimbus.data.repository.WeatherDataType
 import com.sysadmindoc.nimbus.data.repository.WeatherSourceProvider
 import com.sysadmindoc.nimbus.data.repository.WindUnit
+import com.sysadmindoc.nimbus.data.repository.hourStart
 import com.sysadmindoc.nimbus.testing.setContentWithAccessibilityChecks
 import com.sysadmindoc.nimbus.ui.theme.NimbusTheme
 import org.junit.Assert.assertEquals
@@ -291,6 +298,62 @@ class SettingsScreenRobolectricTest {
         composeTestRule.onNodeWithText("Pirate Weather", substring = true).performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("saved API keys", substring = true).assertDoesNotExist()
         composeTestRule.onNodeWithText("Needs re-entry").assertDoesNotExist()
+    }
+
+    @Test
+    fun settingsScreen_deliveryPanelShowsAHeldRunAndWhatEachSurfaceUsed() {
+        val now = System.currentTimeMillis()
+        val health = DeliveryHealthSnapshot(
+            entries = listOf(
+                // Held for Wi-Fi after its last good run: the hold is the news.
+                DeliveryHealthEntry(
+                    surface = DeliverySurface.WIDGETS,
+                    lastAttemptEpochMs = now - 3 * HOUR_MS,
+                    lastSuccessEpochMs = now - 3 * HOUR_MS,
+                    lastSkipEpochMs = now - 20 * 60_000L,
+                    lastSkipReason = DeliverySkipReason.METERED_NETWORK,
+                    traffic = listOf(
+                        TrafficHour(hourStart(now), requests = 12, bytes = 34_000L),
+                        // Older than 24 hours, so it must not count.
+                        TrafficHour(hourStart(now) - 30 * HOUR_MS, requests = 500, bytes = 9_000_000L),
+                    ),
+                ),
+                // Held, then ran fine on Wi-Fi: the old hold says nothing about now.
+                DeliveryHealthEntry(
+                    surface = DeliverySurface.DAILY_BRIEFING,
+                    lastAttemptEpochMs = now - 10 * 60_000L,
+                    lastSuccessEpochMs = now - 10 * 60_000L,
+                    lastSkipEpochMs = now - 2 * HOUR_MS,
+                    lastSkipReason = DeliverySkipReason.METERED_NETWORK,
+                    traffic = listOf(TrafficHour(hourStart(now), requests = 1, bytes = 2_000L)),
+                ),
+            ),
+        )
+
+        composeTestRule.setContentWithAccessibilityChecks {
+            NimbusTheme {
+                SettingsContent(
+                    settings = NimbusSettings(backgroundUnmeteredOnly = true),
+                    deliveryHealth = health,
+                    onBack = {},
+                )
+            }
+        }
+
+        clickCategory("Advanced")
+        composeTestRule.onNode(hasText("Data Sources") and hasClickAction()).performScrollTo().performClick()
+        composeTestRule.onNodeWithText("Background updates on Wi-Fi only").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Skipped:", substring = true).performScrollTo().assertIsDisplayed()
+        assertEquals(
+            "only the widgets' hold is newer than its last run",
+            1,
+            composeTestRule.onAllNodesWithText("Skipped:", substring = true).fetchSemanticsNodes().size,
+        )
+        composeTestRule.onNodeWithText("(Wi-Fi only)", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Last 24 hours: 12 requests", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Last 24 hours: 1 request,", substring = true).performScrollTo().assertIsDisplayed()
+        // The 30-hour-old bucket counted in would make it 512.
+        composeTestRule.onNodeWithText("512 requests", substring = true).assertDoesNotExist()
     }
 
     @Test

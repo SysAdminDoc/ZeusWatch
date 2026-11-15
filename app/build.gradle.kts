@@ -282,6 +282,8 @@ dependencies {
     testImplementation(libs.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.core.testing)
+    // A real WorkManager with a test driver, for what a schedule does across runs.
+    testImplementation(libs.work.testing)
 
     // JVM-side Compose UI tests via Robolectric (device-free). The on-device
     // instrumented harness is broken tree-wide; these run under

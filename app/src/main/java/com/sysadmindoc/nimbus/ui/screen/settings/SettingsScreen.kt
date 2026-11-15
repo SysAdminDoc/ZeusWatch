@@ -242,6 +242,7 @@ fun SettingsScreen(
             onSourceMinutely = viewModel::setSourceMinutely,
             onOpenMeteoFlatBuffersEnabled = viewModel::setOpenMeteoFlatBuffersEnabled,
             onGadgetbridgeBroadcastEnabled = viewModel::setGadgetbridgeBroadcastEnabled,
+            onBackgroundUnmeteredOnly = viewModel::setBackgroundUnmeteredOnly,
             onWeatherContentProviderEnabled = viewModel::setWeatherContentProviderEnabled,
             onWeatherContentProviderCoarseLocation = viewModel::setWeatherContentProviderCoarseLocation,
             onOwmApiKey = viewModel::setOwmApiKey,

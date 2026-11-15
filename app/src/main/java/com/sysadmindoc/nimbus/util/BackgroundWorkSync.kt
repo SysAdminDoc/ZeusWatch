@@ -77,7 +77,7 @@ object BackgroundWorkSync {
         }
 
         if (settings.dailyBriefingEnabled) {
-            DailyBriefingWorker.schedule(context, settings.dailyBriefingMinutes)
+            DailyBriefingWorker.sync(context, settings.dailyBriefingMinutes)
         } else {
             DailyBriefingWorker.cancel(context)
             WeatherNotificationHelper.dismissDailyBriefing(context)

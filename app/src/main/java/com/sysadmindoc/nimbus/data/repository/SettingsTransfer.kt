@@ -206,6 +206,7 @@ data class SettingsBackupPreferences(
     val sourceMinutely: String = WeatherSourceProvider.defaultFor(WeatherDataType.MINUTELY).name,
     val openMeteoFlatBuffersEnabled: Boolean = false,
     val gadgetbridgeBroadcastEnabled: Boolean = false,
+    val backgroundUnmeteredOnly: Boolean = false,
     val weatherContentProviderEnabled: Boolean = false,
     val weatherContentProviderCoarseLocation: Boolean = false,
     val tempestDeviceId: String = "",
@@ -417,6 +418,7 @@ fun NimbusSettings.toBackup(): SettingsBackupPreferences = SettingsBackupPrefere
     sourceMinutely = sourceConfig.minutely.name,
     openMeteoFlatBuffersEnabled = openMeteoFlatBuffersEnabled,
     gadgetbridgeBroadcastEnabled = gadgetbridgeBroadcastEnabled,
+    backgroundUnmeteredOnly = backgroundUnmeteredOnly,
     weatherContentProviderEnabled = weatherContentProviderEnabled,
     weatherContentProviderCoarseLocation = weatherContentProviderCoarseLocation,
     tempestDeviceId = tempestDeviceId,
@@ -486,6 +488,7 @@ fun SettingsBackupPreferences.toSettings(): NimbusSettings = NimbusSettings(
     ).normalized(),
     openMeteoFlatBuffersEnabled = openMeteoFlatBuffersEnabled,
     gadgetbridgeBroadcastEnabled = gadgetbridgeBroadcastEnabled,
+    backgroundUnmeteredOnly = backgroundUnmeteredOnly,
     weatherContentProviderEnabled = weatherContentProviderEnabled,
     weatherContentProviderCoarseLocation = weatherContentProviderCoarseLocation,
     tempestDeviceId = tempestDeviceId.filter(Char::isDigit).take(24),
@@ -600,6 +603,7 @@ suspend fun UserPreferences.applyImportedSettings(settings: NimbusSettings) {
     setSourceMinutely(settings.sourceConfig.minutely)
     setOpenMeteoFlatBuffersEnabled(settings.openMeteoFlatBuffersEnabled)
     setGadgetbridgeBroadcastEnabled(settings.gadgetbridgeBroadcastEnabled)
+    setBackgroundUnmeteredOnly(settings.backgroundUnmeteredOnly)
     setWeatherContentProviderEnabled(settings.weatherContentProviderEnabled)
     setWeatherContentProviderCoarseLocation(settings.weatherContentProviderCoarseLocation)
     setTempestDeviceId(settings.tempestDeviceId)

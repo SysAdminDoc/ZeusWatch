@@ -27,6 +27,7 @@ class SettingsTransferTest {
             settings = NimbusSettings(
                 tempUnit = TempUnit.CELSIUS,
                 gadgetbridgeBroadcastEnabled = true,
+                backgroundUnmeteredOnly = true,
                 owmApiKey = "owm-secret",
                 pirateWeatherApiKey = "pirate-secret",
                 tempestAccessToken = "tempest-secret",
@@ -45,6 +46,7 @@ class SettingsTransferTest {
         assertTrue(encoded.contains("\"tempestDeviceId\":\"62009\""))
         assertTrue(encoded.contains(TempUnit.CELSIUS.name))
         assertTrue(encoded.contains("\"gadgetbridgeBroadcastEnabled\":true"))
+        assertTrue(encoded.contains("\"backgroundUnmeteredOnly\":true"))
     }
 
     @Test
@@ -265,6 +267,7 @@ class SettingsTransferTest {
             sourceForecast = "NOT_A_PROVIDER",
             radarProvider = "NOT_A_RADAR_PROVIDER",
             gadgetbridgeBroadcastEnabled = true,
+            backgroundUnmeteredOnly = true,
         ).toSettings()
 
         assertEquals(TempUnit.FAHRENHEIT, restored.tempUnit)
@@ -283,6 +286,7 @@ class SettingsTransferTest {
             restored.sourceConfig.forecast,
         )
         assertTrue(restored.gadgetbridgeBroadcastEnabled)
+        assertTrue(restored.backgroundUnmeteredOnly)
     }
 
     @Test

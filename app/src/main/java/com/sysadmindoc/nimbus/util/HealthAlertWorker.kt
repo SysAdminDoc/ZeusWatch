@@ -4,17 +4,17 @@ import android.content.Context
 import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.sysadmindoc.nimbus.data.repository.BackgroundTraffic
 import com.sysadmindoc.nimbus.data.repository.DeliveryFailureReason
 import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
+import com.sysadmindoc.nimbus.data.repository.DeliverySkipReason
 import com.sysadmindoc.nimbus.data.repository.DeliverySurface
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
 import com.sysadmindoc.nimbus.data.repository.WeatherRepository
@@ -53,14 +53,22 @@ class HealthAlertWorker @AssistedInject constructor(
     private val weatherRepository: WeatherRepository,
     private val prefs: UserPreferences,
     private val deliveryHealth: DeliveryHealthRepository,
+    private val networkPolicy: BackgroundNetworkPolicy,
 ) : CoroutineWorker(appContext, params) {
 
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result =
+        BackgroundTraffic.meter(DeliverySurface.HEALTH_ALERTS, deliveryHealth) { deliver() }
+
+    private suspend fun deliver(): Result {
         val startedAt = System.currentTimeMillis()
         val settings = prefs.settings.first()
         if (!settings.healthAlertsEnabled) {
             Log.d(TAG, "Health alerts disabled; skipping")
             deliveryHealth.forget(DeliverySurface.HEALTH_ALERTS)
+            return Result.success()
+        }
+        if (networkPolicy.holdsBack(settings, BackgroundWork.isUserInitiated(inputData))) {
+            deliveryHealth.recordSkip(DeliverySurface.HEALTH_ALERTS, DeliverySkipReason.METERED_NETWORK, startedAt)
             return Result.success()
         }
         deliveryHealth.recordAttempt(DeliverySurface.HEALTH_ALERTS, startedAt)
@@ -166,22 +174,16 @@ class HealthAlertWorker @AssistedInject constructor(
         /** A one-off run of this worker, for the diagnostics panel's Run now. */
         fun oneTimeRequest(): OneTimeWorkRequest =
             OneTimeWorkRequestBuilder<HealthAlertWorker>()
-                .setConstraints(
-                    // The same network constraint the periodic work carries.
-                    // Without it Run now fires offline, every provider call
-                    // fails, and the diagnostic action manufactures the very
-                    // failure it exists to diagnose.
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build(),
-                )
+                // Network only: offline, every provider call fails and Run now
+                // manufactures the failure it exists to diagnose. The battery
+                // and Wi-Fi holds are for scheduled runs, not this one.
+                .setConstraints(BackgroundWork.userInitiatedConstraints())
+                .setInputData(BackgroundWork.userInitiatedInput())
                 .build()
         private const val MAX_RETRY_ATTEMPTS = 3
 
         fun schedule(context: Context) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
+            val constraints = BackgroundWork.periodicConstraints()
 
             val request = PeriodicWorkRequestBuilder<HealthAlertWorker>(
                 1, TimeUnit.HOURS,

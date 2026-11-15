@@ -1661,6 +1661,18 @@
     <string name="delivery_failure_no_receiver">لا مستقبل</string>
     <string name="delivery_failure_battery_restricted">مقيد بموفر البطارية</string>
     <string name="delivery_failure_unknown">غير معروف</string>
+    <string name="settings_background_unmetered_only">التحديثات في الخلفية عبر Wi-Fi فقط</string>
+    <string name="settings_background_unmetered_only_desc">تنبيهات الطقس الشديد و«شغل الآن» والنقر على الأداة تعمل عبر بيانات الجوال أيضًا.</string>
+    <string name="settings_delivery_health_last_skip">تم التخطي: %1$s (%2$s)</string>
+    <string name="delivery_skip_metered_network">Wi-Fi فقط</string>
+    <plurals name="settings_delivery_health_traffic">
+        <item quantity="zero">آخر 24 ساعة: %1$d طلبات، %2$s</item>
+        <item quantity="one">آخر 24 ساعة: طلب واحد، %2$s</item>
+        <item quantity="two">آخر 24 ساعة: طلبان، %2$s</item>
+        <item quantity="few">آخر 24 ساعة: %1$d طلبات، %2$s</item>
+        <item quantity="many">آخر 24 ساعة: %1$d طلبًا، %2$s</item>
+        <item quantity="other">آخر 24 ساعة: %1$d طلب، %2$s</item>
+    </plurals>
     <string name="activity_window_range">الأفضل من %1$s إلى %2$s</string>
     <string name="activity_window_none">لا يوجد وقت مناسب خلال الـ 24 ساعة القادمة</string>
     <string name="activity_window_limited_by">يحد منه %1$s</string>

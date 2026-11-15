@@ -10,6 +10,8 @@ import com.sysadmindoc.nimbus.data.model.LocationInfo
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.data.model.WeatherData
 import com.sysadmindoc.nimbus.data.repository.DeliveryHealthRepository
+import com.sysadmindoc.nimbus.data.repository.DeliverySkipReason
+import com.sysadmindoc.nimbus.data.repository.DeliverySurface
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.SavedLocation
 import com.sysadmindoc.nimbus.data.repository.UserPreferences
@@ -25,11 +27,16 @@ import io.mockk.unmockkObject
 import io.mockk.verify
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
 import java.time.LocalDateTime
 
 class HealthAlertWorkerTest {
+    // Relaxed: holdsBack is false, so nothing waits for Wi-Fi unless a test says so.
+    private val networkPolicy: BackgroundNetworkPolicy = mockk(relaxed = true)
+
     // Relaxed: these tests are about what the worker delivers, not
     // about the diagnostics recording, which has its own tests.
     private val deliveryHealth: DeliveryHealthRepository = io.mockk.mockk(relaxed = true)
@@ -79,12 +86,59 @@ class HealthAlertWorkerTest {
             )
         )
 
-        val worker = HealthAlertWorker(context, params, weatherRepository, prefs, deliveryHealth)
+        val worker = HealthAlertWorker(context, params, weatherRepository, prefs, deliveryHealth, networkPolicy)
         val result = worker.doWork()
 
         assertTrue(result is ListenableWorker.Result.Success)
         coVerify(exactly = 1) { weatherRepository.getWeather(39.7, -104.9, "Denver") }
         coVerify(exactly = 0) { weatherRepository.getWeatherDirect(any(), any(), any()) }
+    }
+
+    @Test
+    fun `a scheduled run held for Wi-Fi records a skip and fetches nothing`() = runTest {
+        val context = mockk<Context>(relaxed = true)
+        val params = mockk<WorkerParameters>(relaxed = true)
+        val weatherRepository = mockk<WeatherRepository>()
+        val prefs = mockk<UserPreferences>()
+        every { prefs.settings } returns flowOf(
+            NimbusSettings(healthAlertsEnabled = true, migraineAlerts = true, backgroundUnmeteredOnly = true),
+        )
+        every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        // Held only when the run is a scheduled one: the worker must pass the mark through.
+        every { networkPolicy.holdsBack(any(), false) } returns true
+
+        val result = HealthAlertWorker(context, params, weatherRepository, prefs, deliveryHealth, networkPolicy).doWork()
+
+        assertEquals(ListenableWorker.Result.success(), result)
+        coVerify(exactly = 1) {
+            deliveryHealth.recordSkip(DeliverySurface.HEALTH_ALERTS, DeliverySkipReason.METERED_NETWORK, any())
+        }
+        coVerify(exactly = 0) { deliveryHealth.recordAttempt(any(), any()) }
+        coVerify(exactly = 0) { weatherRepository.getWeather(any(), any(), any()) }
+    }
+
+    @Test
+    fun `Run now on mobile data goes through with the Wi-Fi hold on`() = runTest {
+        val context = mockk<Context>(relaxed = true)
+        val params = mockk<WorkerParameters>(relaxed = true)
+        val weatherRepository = mockk<WeatherRepository>()
+        val prefs = mockk<UserPreferences>()
+        every { prefs.settings } returns flowOf(
+            NimbusSettings(healthAlertsEnabled = true, migraineAlerts = true, backgroundUnmeteredOnly = true),
+        )
+        every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        coEvery { weatherRepository.getWeather(any(), any(), any()) } returns Result.failure(IOException("down"))
+        // The policy as it really answers on mobile data: hold a scheduled
+        // run, never one the user started. A worker that dropped the mark
+        // would be held here.
+        every { networkPolicy.holdsBack(any(), false) } returns true
+        every { networkPolicy.holdsBack(any(), true) } returns false
+        every { params.inputData } returns BackgroundWork.userInitiatedInput()
+
+        HealthAlertWorker(context, params, weatherRepository, prefs, deliveryHealth, networkPolicy).doWork()
+
+        coVerify(exactly = 1) { weatherRepository.getWeather(any(), any(), any()) }
+        coVerify(exactly = 0) { deliveryHealth.recordSkip(any(), any(), any()) }
     }
 
     @Test
@@ -108,7 +162,7 @@ class HealthAlertWorkerTest {
             )
             every { prefs.backgroundAlertLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
 
-            val worker = HealthAlertWorker(context, params, weatherRepository, prefs, deliveryHealth)
+            val worker = HealthAlertWorker(context, params, weatherRepository, prefs, deliveryHealth, networkPolicy)
 
             // Run 1: ADVISORY-range pressure delta (4 hPa / 3h) → notifies.
             coEvery { weatherRepository.getWeather(39.7, -104.9, "Denver") } returns
@@ -166,7 +220,7 @@ class HealthAlertWorkerTest {
             coEvery { weatherRepository.getWeather(39.7, -104.9, "Denver") } returns
                 Result.success(weatherWithPressures(WARNING_PRESSURES))
 
-            val worker = HealthAlertWorker(context, params, weatherRepository, prefs, deliveryHealth)
+            val worker = HealthAlertWorker(context, params, weatherRepository, prefs, deliveryHealth, networkPolicy)
 
             // Run 1: POST_NOTIFICATIONS revoked → delivery fails. The claim
             // must be rolled back instead of burning the daily slot.

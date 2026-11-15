@@ -1670,6 +1670,14 @@
     <string name="delivery_failure_no_receiver">nadie escuchando</string>
     <string name="delivery_failure_battery_restricted">restringido por el ahorro de bateria</string>
     <string name="delivery_failure_unknown">desconocido</string>
+    <string name="settings_background_unmetered_only">Actualizaciones en segundo plano solo con Wi-Fi</string>
+    <string name="settings_background_unmetered_only_desc">Avisos de clima severo, Ejecutar ahora y tocar un widget aún usan datos móviles.</string>
+    <string name="settings_delivery_health_last_skip">Omitido: %1$s (%2$s)</string>
+    <string name="delivery_skip_metered_network">solo con Wi-Fi</string>
+    <plurals name="settings_delivery_health_traffic">
+        <item quantity="one">Últimas 24 horas: %1$d solicitud, %2$s</item>
+        <item quantity="other">Últimas 24 horas: %1$d solicitudes, %2$s</item>
+    </plurals>
     <string name="activity_window_range">Mejor de %1$s a %2$s</string>
     <string name="activity_window_none">No hay un buen momento en las proximas 24 horas</string>
     <string name="activity_window_limited_by">Limitado por %1$s</string>
