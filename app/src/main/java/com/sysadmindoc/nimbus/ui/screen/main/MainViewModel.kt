@@ -448,6 +448,22 @@ class MainViewModel @Inject constructor(
                 if (!locationProvider.hasLocationPermission) {
                     val hasCached = tryLoadCached(requestId)
                     if (!isLatestWeatherRequest(requestId)) return@launch
+                    val retained = if (hasCached) prefs.lastLocation.first() else null
+                    if (retained != null) {
+                        // The cache on screen belongs to the last location, often a city
+                        // added by hand. Refreshing it by coordinates needs no permission;
+                        // without this, every launch and pull-to-refresh only re-showed
+                        // the cache.
+                        useGpsLocation = false
+                        activeLocationName = retained.name
+                        fetchWeather(
+                            lat = retained.latitude,
+                            lon = retained.longitude,
+                            locationName = retained.name,
+                            requestId = requestId,
+                        )
+                        return@launch
+                    }
                     _uiState.update {
                         it.copy(
                             isLoading = false,

@@ -302,6 +302,9 @@ class MainViewModelTest {
         every { locationProvider.hasLocationPermission } returns false
         every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
         coEvery { weatherRepository.getCachedWeather(39.7, -104.9, SourceOverrides(), null) } returns testWeatherData
+        // Offline: the refresh of the retained location fails, so the cache stays.
+        coEvery { weatherRepository.getWeather(39.7, -104.9, any(), any(), any(), any()) } returns
+            Result.failure(Exception("Network error"))
 
         viewModel = createAndAdvance()
 
@@ -309,7 +312,40 @@ class MainViewModelTest {
         assertFalse(state.needsLocationPermission)
         assertFalse(state.isLoading)
         assertTrue(state.isCached)
+        assertNull(state.error)
         assertEquals("Denver", state.weatherData?.location?.name)
+        coVerify(exactly = 0) { locationProvider.getCurrentLocation() }
+    }
+
+    @Test
+    fun `cold start without permission refreshes the retained location`() = runTest {
+        every { locationProvider.hasLocationPermission } returns false
+        every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        coEvery { weatherRepository.getCachedWeather(39.7, -104.9, SourceOverrides(), null) } returns testWeatherData
+
+        viewModel = createAndAdvance()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.needsLocationPermission)
+        assertFalse(state.isCached)
+        assertNull(state.error)
+        assertEquals("Denver", state.weatherData?.location?.name)
+        coVerify(exactly = 1) { weatherRepository.getWeather(39.7, -104.9, any(), any(), any(), any()) }
+        coVerify(exactly = 0) { locationProvider.getCurrentLocation() }
+    }
+
+    @Test
+    fun `refresh without permission refetches the retained location`() = runTest {
+        every { locationProvider.hasLocationPermission } returns false
+        every { prefs.lastLocation } returns flowOf(SavedLocation(39.7, -104.9, "Denver"))
+        coEvery { weatherRepository.getCachedWeather(39.7, -104.9, SourceOverrides(), null) } returns testWeatherData
+        viewModel = createAndAdvance()
+
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isRefreshing)
+        coVerify(exactly = 2) { weatherRepository.getWeather(39.7, -104.9, any(), any(), any(), any()) }
         coVerify(exactly = 0) { locationProvider.getCurrentLocation() }
     }
 
