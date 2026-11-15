@@ -28,6 +28,21 @@ data class ReverseGeoResult(
     val country: String,
 )
 
+/**
+ * Names the place after the first of town, county and state that isn't blank,
+ * so an empty town name falls through exactly like a missing one. Null when
+ * none is usable, and the caller then uses Open-Meteo's name. Both API branches
+ * below and the map picker read addresses through this one mapping.
+ */
+internal fun Address.toReverseGeoResult(): ReverseGeoResult? {
+    val name = listOf(locality, subAdminArea, adminArea).firstOrNull { !it.isNullOrBlank() } ?: return null
+    return ReverseGeoResult(
+        name = name,
+        region = adminArea ?: "",
+        country = countryName ?: "",
+    )
+}
+
 @Singleton
 class ReverseGeocoder @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -40,13 +55,7 @@ class ReverseGeocoder @Inject constructor(
                     resolveAsync(geocoder, latitude, longitude)
                 } else {
                     @Suppress("DEPRECATION")
-                    val addresses = geocoder.getFromLocation(latitude, longitude, 1)
-                    val addr = addresses?.firstOrNull() ?: return@withContext null
-                    ReverseGeoResult(
-                        name = addr.locality ?: addr.subAdminArea ?: addr.adminArea ?: return@withContext null,
-                        region = addr.adminArea ?: "",
-                        country = addr.countryName ?: "",
-                    )
+                    geocoder.getFromLocation(latitude, longitude, 1)?.firstOrNull()?.toReverseGeoResult()
                 }
             } catch (e: IOException) {
                 // Geocoder backend unavailable/offline — distinct from "no result".
@@ -72,22 +81,7 @@ class ReverseGeocoder @Inject constructor(
                 object : Geocoder.GeocodeListener {
                     override fun onGeocode(addresses: MutableList<Address>) {
                         if (!cont.isActive) return
-                        val addr = addresses.firstOrNull()
-                        val name = addr?.run { locality ?: subAdminArea ?: adminArea }
-                        if (addr == null || name.isNullOrBlank()) {
-                            // Match the pre-TIRAMISU branch: reject entries with no
-                            // usable human-readable name rather than propagating an
-                            // empty string. The caller falls back to Open-Meteo.
-                            cont.resume(null)
-                        } else {
-                            cont.resume(
-                                ReverseGeoResult(
-                                    name = name,
-                                    region = addr.adminArea ?: "",
-                                    country = addr.countryName ?: "",
-                                )
-                            )
-                        }
+                        cont.resume(addresses.firstOrNull()?.toReverseGeoResult())
                     }
 
                     override fun onError(errorMessage: String?) {

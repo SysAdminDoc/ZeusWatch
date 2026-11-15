@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.ui.screen.locations
 
+import android.location.Address
 import android.location.Geocoder
 import android.view.Gravity
 import android.widget.FrameLayout
@@ -52,6 +53,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import com.sysadmindoc.nimbus.R
+import com.sysadmindoc.nimbus.data.location.toReverseGeoResult
 import com.sysadmindoc.nimbus.ui.screen.radar.BasemapLoader
 import com.sysadmindoc.nimbus.ui.screen.radar.BasemapLoaderEffect
 import com.sysadmindoc.nimbus.ui.theme.LocalNimbusPalette
@@ -409,15 +411,21 @@ private suspend fun reverseGeocode(
     try {
         @Suppress("DEPRECATION")
         val addresses = Geocoder(context, Locale.getDefault()).getFromLocation(lat, lon, 1)
-        val addr = addresses?.firstOrNull()
-        when {
-            addr?.locality != null -> addr.locality
-            addr?.subAdminArea != null -> addr.subAdminArea
-            addr?.adminArea != null -> addr.adminArea
-            addr?.countryName != null -> addr.countryName
-            else -> String.format(Locale.US, "%.4f, %.4f", lat, lon)
-        }
+        pickerPlaceName(addresses?.firstOrNull(), lat, lon)
     } catch (ignored: Exception) {
-        String.format(Locale.US, "%.4f, %.4f", lat, lon)
+        coordinateLabel(lat, lon)
     }
 }
+
+/**
+ * Names a dropped pin the way the current location is named, then tries the
+ * country, and falls back to the coordinates when the address has no usable
+ * name, so a blank town never leaves the picker with an empty label.
+ */
+internal fun pickerPlaceName(address: Address?, latitude: Double, longitude: Double): String =
+    address?.toReverseGeoResult()?.name
+        ?: address?.countryName?.takeUnless { it.isBlank() }
+        ?: coordinateLabel(latitude, longitude)
+
+private fun coordinateLabel(latitude: Double, longitude: Double): String =
+    String.format(Locale.US, "%.4f, %.4f", latitude, longitude)
