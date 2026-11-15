@@ -97,6 +97,38 @@ class AlertRepositoryGeocoderApiLevelTest {
     }
 
     @Test
+    fun `an answer with no address falls back to the timezone without the timeout warning`() =
+        runTest(timeout = 10.seconds) {
+            // An empty answer is still an answer: the short bound must not
+            // fire, and nothing here is worth a warning at any level.
+            CannedGeocoderShadow.addresses = emptyList()
+
+            val result = repository(us, japan, timeoutMs = SHORT_TIMEOUT_MS).getAlertsDetailed(TOKYO_LAT, TOKYO_LON)
+
+            assertEquals(1, us.calls.get())
+            assertEquals(0, japan.calls.get())
+            assertFalse(result.allAdaptersFailed)
+            assertTheLevelsCallRan()
+            assertEquals(emptyList<String>(), warnings())
+        }
+
+    @Test
+    fun `a geocoder error falls back to the timezone without the timeout warning`() = runTest(timeout = 10.seconds) {
+        CannedGeocoderShadow.error = GEOCODER_ERROR
+
+        val result = repository(us, japan, timeoutMs = SHORT_TIMEOUT_MS).getAlertsDetailed(TOKYO_LAT, TOKYO_LON)
+
+        assertEquals(1, us.calls.get())
+        assertEquals(0, japan.calls.get())
+        assertFalse(result.allAdaptersFailed)
+        assertTheLevelsCallRan()
+        // Below 33 the blocking call throws and the caller's catch logs it.
+        // From 33 the listener's onError is an answer, so the wait ends quietly.
+        val expected = if (usesListener) emptyList() else listOf("Geocoder location detection failed: $GEOCODER_ERROR")
+        assertEquals(expected, warnings())
+    }
+
+    @Test
     fun `a silent listener leaves the WMO area filter with no names, so it keeps every row`() =
         runTest(timeout = 10.seconds) {
             // A country hint skips the country lookup, so the WMO area filter
@@ -185,6 +217,7 @@ class AlertRepositoryGeocoderApiLevelTest {
         const val TAG = "AlertRepository"
         const val SHORT_TIMEOUT_MS = 200L
         const val NO_ANSWER = "Geocoder gave no answer within $SHORT_TIMEOUT_MS ms"
+        const val GEOCODER_ERROR = "geocoder backend unreachable"
         const val TOKYO_LAT = 35.68
         const val TOKYO_LON = 139.69
         const val MOSCOW_LAT = 55.75
