@@ -1,0 +1,2 @@
+# The baseline profile plugin writes CRLF on Windows; commit the profiles as LF.
+app/src/*/generated/baselineProfiles/*.txt text eol=lf

@@ -17,6 +17,8 @@ class StartupBenchmark {
     @get:Rule
     val benchmarkRule = MacrobenchmarkRule()
 
+    private var firstRunDone = false
+
     @Test
     fun startupBaselineProfile() = startup(
         CompilationMode.Partial(
@@ -32,6 +34,17 @@ class StartupBenchmark {
             startupMode = StartupMode.COLD,
             iterations = 10,
             setupBlock = {
+                // Measure the launch returning users get (the weather screen),
+                // not the one-time onboarding a fresh install opens on.
+                if (!firstRunDone) {
+                    grantLocation()
+                    pressHome()
+                    startActivityAndWait()
+                    finishFirstRunIfShown()
+                    awaitForecast()
+                    killProcess()
+                    firstRunDone = true
+                }
                 pressHome()
             },
         ) {

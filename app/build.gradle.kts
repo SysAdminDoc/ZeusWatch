@@ -122,9 +122,11 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
-        // Required for Robolectric to load Android resources so JVM-side Compose
-        // UI tests can render (the on-device instrumented harness is broken —
-        // see ROADMAP "Fix the instrumented Compose test harness").
+        // Required for Robolectric to load Android resources so the JVM-side
+        // Compose UI tests can render. There is no app/src/androidTest: the
+        // instrumented suites failed tree-wide and moved to *RobolectricTest
+        // classes in 1c667cb. The only on-device lane is :benchmark (baseline
+        // profile, startupGate).
         unitTests.isIncludeAndroidResources = true
     }
 
@@ -285,9 +287,9 @@ dependencies {
     // A real WorkManager with a test driver, for what a schedule does across runs.
     testImplementation(libs.work.testing)
 
-    // JVM-side Compose UI tests via Robolectric (device-free). The on-device
-    // instrumented harness is broken tree-wide; these run under
-    // :app:testStandardDebugUnitTest with no emulator.
+    // JVM-side Compose UI tests via Robolectric (device-free). They replaced
+    // the instrumented suites and run under :app:testStandardDebugUnitTest
+    // with no emulator.
     testImplementation(libs.robolectric)
     testImplementation(libs.junit.ext)
     testImplementation(platform(libs.compose.bom))
@@ -304,16 +306,6 @@ dependencies {
     testImplementation(libs.glance.appwidget.testing)
     testImplementation(libs.glance.testing)
 
-    // Instrumented / Compose UI Tests
-    androidTestImplementation(platform(libs.compose.bom))
-    androidTestImplementation(libs.compose.ui.test.junit4)
-    androidTestImplementation(libs.compose.ui.test.junit4.accessibility)
-    androidTestImplementation(libs.junit.ext)
-    androidTestImplementation(libs.espresso.core)
-    androidTestImplementation(libs.hilt.testing)
-    androidTestImplementation(libs.mockk.android)
-    androidTestImplementation(libs.coroutines.test)
-    kspAndroidTest(libs.hilt.compiler)
     debugImplementation(libs.compose.ui.test.manifest)
     baselineProfile(project(":benchmark"))
 }

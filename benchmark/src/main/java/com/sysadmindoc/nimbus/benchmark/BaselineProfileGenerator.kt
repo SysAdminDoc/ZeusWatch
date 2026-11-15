@@ -19,8 +19,16 @@ class BaselineProfileGenerator {
             packageName = TARGET_PACKAGE,
             includeInStartupProfile = true,
         ) {
+            // The first pass goes through onboarding. The cold start after it is
+            // the one returning users get every day: straight to the forecast.
+            grantLocation()
             pressHome()
             startActivityAndWait()
+            finishFirstRunIfShown()
+            awaitForecast()
+            killProcess()
+            startActivityAndWait()
+            awaitForecast()
             killProcess()
         }
     }

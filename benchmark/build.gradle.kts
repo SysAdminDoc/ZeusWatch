@@ -60,13 +60,34 @@ dependencies {
 
 val STARTUP_P95_BUDGET_MS = 1200.0
 
+// benchmarkRelease is the plugin's copy of release, and it is the variant that
+// packs the generated profile from src/standardRelease. The app's own
+// `benchmark` build type never gets a generated profile, and
+// BaselineProfileMode.Require passes on library rules alone, so measuring there
+// would not prove the app's profile ships. Set ANDROID_SERIAL first: the
+// connected task installs on every attached device.
+val STARTUP_VARIANT = "standardBenchmarkRelease"
+val STANDARD_APP_PROFILE = rootProject.file("app/src/standardRelease/generated/baselineProfiles/baseline-prof.txt")
+val APP_PROFILE_RULE_PREFIX = "Lcom/sysadmindoc/nimbus/"
+
 tasks.register("checkStandardStartupP95") {
     group = "verification"
     description = "Runs standard benchmark startup measurements and fails when cold-start p95 exceeds ${STARTUP_P95_BUDGET_MS.toInt()}ms."
-    dependsOn("connectedStandardBenchmarkBenchmarkAndroidTest")
+    dependsOn("connectedStandardBenchmarkReleaseAndroidTest")
 
     doLast {
-        val outputDir = layout.buildDirectory.dir("outputs/connected_android_test_additional_output").get().asFile
+        // Require only checks that some profile installed, and library rules
+        // satisfy it. Fail here when the app's own generated rules are gone.
+        val appRules = STANDARD_APP_PROFILE.takeIf { it.isFile }
+            ?.useLines { lines -> lines.count { APP_PROFILE_RULE_PREFIX in it } }
+            ?: 0
+        if (appRules == 0) {
+            throw GradleException(
+                "No app rules in ${STANDARD_APP_PROFILE.path}. Run :app:generateStandardReleaseBaselineProfile on a phone first."
+            )
+        }
+
+        val outputDir = layout.buildDirectory.dir("outputs/connected_android_test_additional_output/$STARTUP_VARIANT").get().asFile
         val resultFiles = outputDir
             .takeIf { it.exists() }
             ?.walkTopDown()
@@ -80,7 +101,7 @@ tasks.register("checkStandardStartupP95") {
 
         if (startupP95Values.isEmpty()) {
             throw GradleException(
-                "No startup p95 values found under ${outputDir.path}. Run connectedStandardBenchmarkBenchmarkAndroidTest on a connected device first."
+                "No startup p95 values found under ${outputDir.path}. Run connectedStandardBenchmarkReleaseAndroidTest on a connected device first."
             )
         }
 
