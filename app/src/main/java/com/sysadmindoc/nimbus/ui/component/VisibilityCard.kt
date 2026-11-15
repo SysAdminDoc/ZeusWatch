@@ -267,6 +267,7 @@ private fun VisibilityTrendChart(
     val timeFmt = DateTimeFormatter.ofPattern(timePattern)
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 9.sp)
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val accent = NimbusBlueAccent
 
     Canvas(modifier = modifier) {
         val w = size.width
@@ -285,7 +286,7 @@ private fun VisibilityTrendChart(
         // Draw line
         for (i in 0 until points.size - 1) {
             drawLine(
-                color = NimbusBlueAccent.copy(alpha = 0.6f),
+                color = accent.copy(alpha = 0.6f),
                 start = points[i],
                 end = points[i + 1],
                 strokeWidth = 2.dp.toPx(),
@@ -296,7 +297,7 @@ private fun VisibilityTrendChart(
         // Dots at each point
         points.forEach { pt ->
             drawCircle(
-                color = NimbusBlueAccent,
+                color = accent,
                 radius = 3.dp.toPx(),
                 center = pt,
             )

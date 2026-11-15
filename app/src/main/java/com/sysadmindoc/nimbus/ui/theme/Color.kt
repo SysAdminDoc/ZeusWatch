@@ -16,9 +16,9 @@ import androidx.compose.ui.graphics.luminance
  * read from composable context (hoist into a `val` before a `Canvas`/
  * `remember` block if you need them inside one).
  *
- * Accent and data-visualization colors stay literal on purpose: their meaning
- * (UV scale, condition icons, precipitation gradient) must not shift with the
- * theme, and [inkOn] picks readable ink on top of them.
+ * Data-visualization colors stay literal on purpose: their meaning (UV scale,
+ * condition icons, precipitation gradient) must not shift with the theme, and
+ * [inkOn] picks readable ink on top of them. The UI accent tracks the palette.
  */
 
 // Fixed raw inks: theme-independent luminance reference points for the
@@ -35,7 +35,9 @@ val NimbusNavyMid: Color
     @Composable get() = LocalNimbusPalette.current.navyMid
 val NimbusNavyLight: Color
     @Composable get() = LocalNimbusPalette.current.navyLight
-val NimbusBlueAccent = Color(0xFF54A8FF)
+/** UI accent; deepened in light mode so accent text stays readable on white. */
+val NimbusBlueAccent: Color
+    @Composable get() = LocalNimbusPalette.current.accent
 val NimbusBlueAccentSoft = Color(0xFFA9D3FF)
 
 // Surface colors

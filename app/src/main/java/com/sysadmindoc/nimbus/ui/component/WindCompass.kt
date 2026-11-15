@@ -57,6 +57,7 @@ fun WindCompass(
     val textMeasurer = rememberTextMeasurer()
     val textTertiary = NimbusTextTertiary
     val overlayInk = NimbusOverlayInk
+    val accent = NimbusBlueAccent
     val s = LocalUnitSettings.current
     // Localized compass cardinals, resolved outside the draw lambda
     // (stringResource cannot be called inside Canvas DrawScope).
@@ -155,10 +156,10 @@ fun WindCompass(
                             tickData.forEach { drawLine(it.color, it.start, it.end, it.width) }
                             cardinalLabels.forEach { (measured, x, y) -> drawText(measured, topLeft = Offset(x, y)) }
                             rotate(windDirection.toFloat() + 180f, pivot = Offset(cx, cy)) {
-                                drawPath(arrowPath, NimbusBlueAccent)
-                                drawLine(NimbusBlueAccent.copy(alpha = 0.6f), Offset(cx, cy - radius + 26f), Offset(cx, cy), 2f, StrokeCap.Round)
+                                drawPath(arrowPath, accent)
+                                drawLine(accent.copy(alpha = 0.6f), Offset(cx, cy - radius + 26f), Offset(cx, cy), 2f, StrokeCap.Round)
                             }
-                            drawCircle(color = NimbusBlueAccent, radius = 3f, center = Offset(cx, cy))
+                            drawCircle(color = accent, radius = 3f, center = Offset(cx, cy))
                         }
                     },
                 ) { }

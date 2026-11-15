@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -55,6 +56,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusBlueAccent
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBg
 import com.sysadmindoc.nimbus.ui.theme.NimbusCardBorder
 import com.sysadmindoc.nimbus.ui.theme.NimbusGlassTop
+import com.sysadmindoc.nimbus.ui.theme.NimbusPalette
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import kotlinx.coroutines.Dispatchers
@@ -155,7 +157,7 @@ fun MapLocationPickerScreen(
                             style.addLayer(
                                 CircleLayer(PIN_LAYER, PIN_SOURCE).withProperties(
                                     PropertyFactory.circleRadius(10f),
-                                    PropertyFactory.circleColor(NimbusBlueAccent.hashCode()),
+                                    PropertyFactory.circleColor(NimbusPalette.Dark.accent.toArgb()),
                                     PropertyFactory.circleStrokeWidth(3f),
                                     PropertyFactory.circleStrokeColor(
                                         android.graphics.Color.WHITE,

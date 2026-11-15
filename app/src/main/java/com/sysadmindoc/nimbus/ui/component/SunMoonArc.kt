@@ -70,6 +70,7 @@ fun SunArc(
     val labelStyle = TextStyle(color = NimbusTextTertiary, fontSize = 10.sp)
     val twilightColor = Color(0xFF1A237E).copy(alpha = 0.25f)
     val textTertiary = NimbusTextTertiary
+    val accent = NimbusBlueAccent
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     val sunriseLabel = WeatherFormatter.formatTime(sunrise, settings)
@@ -114,6 +115,7 @@ fun SunArc(
                         sunriseLabel = sunriseLabel,
                         sunsetLabel = sunsetLabel,
                         twilightLabel = twilightLabel,
+                        accent = accent,
                     )
                 }
             },
@@ -334,6 +336,7 @@ private fun DrawScope.drawSunArcLabels(
     sunriseLabel: String,
     sunsetLabel: String,
     twilightLabel: String?,
+    accent: Color,
 ) {
     val riseM = textMeasurer.measure(sunriseLabel, labelStyle)
     drawText(
@@ -361,7 +364,7 @@ private fun DrawScope.drawSunArcLabels(
     if (twilightLabel != null) {
         val label = textMeasurer.measure(
             text = twilightLabel,
-            style = TextStyle(color = NimbusBlueAccent.copy(alpha = 0.6f), fontSize = 9.sp),
+            style = TextStyle(color = accent.copy(alpha = 0.6f), fontSize = 9.sp),
         )
         drawText(
             label,

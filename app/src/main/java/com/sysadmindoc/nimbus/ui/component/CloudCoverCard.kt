@@ -133,6 +133,7 @@ private fun CloudCoverChart(
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val textSecondary = NimbusTextSecondary
     val textTertiary = NimbusTextTertiary
+    val accent = NimbusBlueAccent
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -147,7 +148,7 @@ private fun CloudCoverChart(
         val partlyY = chartH * (1f - 50f / 100f)
 
         drawLine(
-            color = NimbusBlueAccent.copy(alpha = 0.25f),
+            color = accent.copy(alpha = 0.25f),
             start = Offset(0f, clearY),
             end = Offset(w, clearY),
             strokeWidth = 1f,
@@ -168,14 +169,14 @@ private fun CloudCoverChart(
             val x = rtlCanvasRectLeft(i * (barWidth + barSpacing), barWidth, w, isRtl)
 
             val barColor = when {
-                cloud <= 25 -> NimbusBlueAccent.copy(alpha = 0.7f)
+                cloud <= 25 -> accent.copy(alpha = 0.7f)
                 cloud <= 50 -> NimbusFogGray.copy(alpha = 0.6f)
                 cloud <= 75 -> textSecondary.copy(alpha = 0.5f)
                 else -> textTertiary.copy(alpha = 0.55f)
             }
 
             val isCurrent = referenceTime != null && WeatherFormatter.isSameForecastHour(hour.time, referenceTime)
-            val finalColor = if (isCurrent) NimbusBlueAccent else barColor
+            val finalColor = if (isCurrent) accent else barColor
 
             drawRoundRect(
                 color = finalColor,

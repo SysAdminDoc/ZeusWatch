@@ -105,6 +105,7 @@ fun TemperatureGraph(
     val textTertiary = NimbusTextTertiary
     val overlayInk = NimbusOverlayInk
     val rainColor = NimbusRainBlue
+    val accent = NimbusBlueAccent
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     // Interactive state
@@ -189,10 +190,10 @@ fun TemperatureGraph(
                             onDrawBehind {
                                 drawPrecipitationBars(data, metrics, isRtl, rainColor)
                                 drawNormalBand(metrics, normalHigh, normalLow, textTertiary, overlayInk)
-                                drawConfidenceBand(data, metrics, confidenceBands, isRtl)
-                                drawTemperatureCurve(paths, metrics)
+                                drawConfidenceBand(data, metrics, confidenceBands, isRtl, accent)
+                                drawTemperatureCurve(paths, metrics, accent)
                                 drawFeelsLikeOverlay(data, metrics, isRtl)
-                                drawHighLowMarkers(data, points, textMeasurer, labelStyle, s, metrics.width)
+                                drawHighLowMarkers(data, points, textMeasurer, labelStyle, s, metrics.width, accent)
                                 drawDayBoundaries(data, points, textMeasurer, labelStyle, metrics, isRtl, textTertiary)
                                 drawTimeLabels(data, points, referenceTime, s, textMeasurer, labelStyle, metrics, context)
                                 drawInspectionOverlay(
@@ -204,6 +205,7 @@ fun TemperatureGraph(
                                     inspectionText = inspectionText,
                                     isRtl = isRtl,
                                     textTertiary = textTertiary,
+                                    accent = accent,
                                 )
                             }
                         },
@@ -428,6 +430,7 @@ private fun DrawScope.drawConfidenceBand(
     metrics: TemperatureGraphMetrics,
     confidenceBands: ConfidenceBandData?,
     isRtl: Boolean,
+    accent: Color,
 ) {
     confidenceBands ?: return
     val upperPoints = mutableListOf<Offset>()
@@ -462,15 +465,16 @@ private fun DrawScope.drawConfidenceBand(
 
     drawPath(
         path = fillPath,
-        color = NimbusBlueAccent.copy(alpha = 0.12f),
+        color = accent.copy(alpha = 0.12f),
     )
-    drawConfidenceBandEdge(upperPoints, metrics)
-    drawConfidenceBandEdge(lowerPoints, metrics)
+    drawConfidenceBandEdge(upperPoints, metrics, accent)
+    drawConfidenceBandEdge(lowerPoints, metrics, accent)
 }
 
 private fun DrawScope.drawConfidenceBandEdge(
     points: List<Offset>,
     metrics: TemperatureGraphMetrics,
+    accent: Color,
 ) {
     val path = Path()
     points.forEachIndexed { index, point ->
@@ -483,7 +487,7 @@ private fun DrawScope.drawConfidenceBandEdge(
     }
     drawPath(
         path = path,
-        color = NimbusBlueAccent.copy(alpha = 0.25f),
+        color = accent.copy(alpha = 0.25f),
         style = Stroke(
             width = 1f,
             cap = StrokeCap.Round,
@@ -496,18 +500,19 @@ private fun DrawScope.drawConfidenceBandEdge(
 private fun DrawScope.drawTemperatureCurve(
     paths: TemperatureGraphPaths,
     metrics: TemperatureGraphMetrics,
+    accent: Color,
 ) {
     drawPath(
         path = paths.fill,
         brush = Brush.verticalGradient(
-            listOf(NimbusBlueAccent.copy(alpha = 0.25f), Color.Transparent),
+            listOf(accent.copy(alpha = 0.25f), Color.Transparent),
             startY = metrics.paddingTop,
             endY = metrics.baselineY,
         ),
     )
     drawPath(
         path = paths.line,
-        color = NimbusBlueAccent,
+        color = accent,
         style = Stroke(width = 2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round),
     )
 }
@@ -565,6 +570,7 @@ private fun DrawScope.drawHighLowMarkers(
     labelStyle: TextStyle,
     settings: NimbusSettings,
     chartWidth: Float,
+    accent: Color,
 ) {
     val temps = data.map { it.temperature }
     val maxIdx = temps.indices.maxByOrNull { temps[it] } ?: 0
@@ -579,6 +585,7 @@ private fun DrawScope.drawHighLowMarkers(
                 labelStyle = labelStyle,
                 settings = settings,
                 chartWidth = chartWidth,
+                accent = accent,
             )
         }
     }
@@ -592,8 +599,9 @@ private fun DrawScope.drawTemperatureMarker(
     labelStyle: TextStyle,
     settings: NimbusSettings,
     chartWidth: Float,
+    accent: Color,
 ) {
-    drawCircle(NimbusBlueAccent, radius = 4.dp.toPx(), center = point)
+    drawCircle(accent, radius = 4.dp.toPx(), center = point)
     drawCircle(Color(0xFF0A0E1A), radius = 2.dp.toPx(), center = point)
 
     val label = WeatherFormatter.formatTemperature(temperature, settings)
@@ -686,6 +694,7 @@ private fun DrawScope.drawInspectionOverlay(
     inspectionText: TemperatureInspectionText,
     isRtl: Boolean,
     textTertiary: Color,
+    accent: Color,
 ) {
     if (!isInspecting || inspectX < 0f || metrics.stepX <= 0f) return
 
@@ -694,7 +703,7 @@ private fun DrawScope.drawInspectionOverlay(
     val nearPoint = points[nearestIndex]
     val nearHour = data[nearestIndex]
     drawInspectionGuide(nearPoint, metrics, textTertiary)
-    drawCircle(NimbusBlueAccent, radius = 6.dp.toPx(), center = nearPoint)
+    drawCircle(accent, radius = 6.dp.toPx(), center = nearPoint)
     drawCircle(Color.White, radius = 3.dp.toPx(), center = nearPoint)
     drawInspectionTooltip(nearHour, nearPoint, metrics, inspectionText)
 }

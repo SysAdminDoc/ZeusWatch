@@ -53,15 +53,39 @@ class AccessibilityContrastTest {
     }
 
     @Test
+    fun lightAccentTextMeetsWcagAaOnCardsAndItsOwnChipWashes() {
+        val light = NimbusPalette.Light
+        val cardBackground = light.cardBg.compositeOver(light.background)
+        // A translucent card over the darkest light sky stop (storm).
+        val cardOnStormSky = light.cardBg.compositeOver(Color(0xFFC9CEE0))
+        val pairs = listOf(
+            ContrastPair("light accent text on background", light.accent, light.background, WCAG_AA_TEXT),
+            ContrastPair("light accent text on surface", light.accent, light.surface, WCAG_AA_TEXT),
+            ContrastPair("light accent text on card", light.accent, cardBackground, WCAG_AA_TEXT),
+            ContrastPair("light accent text on card over storm sky", light.accent, cardOnStormSky, WCAG_AA_TEXT),
+            // Selected chips and tabs put accent text on an accent wash (alpha 0.12 to 0.22).
+            ContrastPair(
+                "light accent text on selected chip",
+                light.accent,
+                light.accent.copy(alpha = 0.22f).compositeOver(cardOnStormSky),
+                WCAG_AA_TEXT,
+            ),
+            ContrastPair("white ink on light accent fill", Color.White, light.accent, WCAG_AA_TEXT),
+        )
+
+        pairs.assertContrast()
+    }
+
+    @Test
     fun statusAndAccentTokensMeetNonTextContrastOnPrimarySurfaces() {
         val dark = NimbusPalette.Dark
         val cardBackground = dark.cardBg.compositeOver(dark.background)
         val pairs = listOf(
-            ContrastPair("accent on navy", NimbusBlueAccent, dark.background, WCAG_AA_NON_TEXT),
+            ContrastPair("accent on navy", dark.accent, dark.background, WCAG_AA_NON_TEXT),
             ContrastPair("warning on navy", dark.warning, dark.background, WCAG_AA_NON_TEXT),
             ContrastPair("success on navy", dark.success, dark.background, WCAG_AA_NON_TEXT),
             ContrastPair("error on navy", dark.error, dark.background, WCAG_AA_NON_TEXT),
-            ContrastPair("accent on card", NimbusBlueAccent, cardBackground, WCAG_AA_NON_TEXT),
+            ContrastPair("accent on card", dark.accent, cardBackground, WCAG_AA_NON_TEXT),
             ContrastPair("warning on card", dark.warning, cardBackground, WCAG_AA_NON_TEXT),
             ContrastPair("success on card", dark.success, cardBackground, WCAG_AA_NON_TEXT),
             ContrastPair("error on card", dark.error, cardBackground, WCAG_AA_NON_TEXT),

@@ -12,9 +12,10 @@ import androidx.compose.runtime.staticCompositionLocalOf
  *
  * The public constants in [Color.kt] delegate to the palette provided by
  * [NimbusTheme], so call sites stay untouched when the mode switches.
- * Accent and data-visualization colors are deliberately NOT in here — they
- * carry meaning (UV scale, condition icons) that must not shift with the
- * theme, and [inkOn] adapts their ink automatically.
+ * Data-visualization colors are deliberately NOT in here: they carry meaning
+ * (UV scale, condition icons) that must not shift with the theme, and [inkOn]
+ * adapts their ink automatically. The UI accent ([accent]) is chrome, not
+ * meaning, so it lives here.
  */
 data class NimbusPalette(
     val isLight: Boolean,
@@ -51,6 +52,12 @@ data class NimbusPalette(
      * cards, so the light palette deepens it.
      */
     val rainTint: Color,
+    /**
+     * UI accent: card titles, selected chips and tabs, links, focus rings.
+     * The dark mode sky blue reads at about 2.4:1 on white, so the light
+     * palette deepens it to hold 4.5:1 on cards and on its own chip washes.
+     */
+    val accent: Color,
     /**
      * Base ink for the faint neutral washes (chip fills, gauge tracks, skeleton
      * shimmer) that call sites tint with a low alpha. Dark mode keeps the
@@ -160,6 +167,7 @@ data class NimbusPalette(
             overlayCard = Color(0xFF111833),
             snowTint = Color(0xFFE8EAF6),
             rainTint = Color(0xFF73C5FF),
+            accent = Color(0xFF54A8FF),
             overlayInk = Color(0xFFFFFFFF),
         )
 
@@ -192,6 +200,7 @@ data class NimbusPalette(
             overlayCard = Color(0xFFE9F0FA),
             snowTint = Color(0xFF5A6B85),
             rainTint = Color(0xFF0A5594),
+            accent = Color(0xFF0A5BA8),
             overlayInk = Color(0xFF1E3550),
         )
     }

@@ -15,7 +15,7 @@ import com.sysadmindoc.nimbus.data.model.WeatherCode
 // NOT the theme-aware composable getters in Color.kt (top-level initializers
 // cannot call composables). Values mirror NimbusPalette.Dark 1:1.
 private val NimbusDarkScheme = darkColorScheme(
-    primary = NimbusBlueAccent,
+    primary = NimbusPalette.Dark.accent,
     onPrimary = Color(0xFF01070D),
     primaryContainer = Color(0xFF173A5C),
     onPrimaryContainer = Color(0xFFF4F7FB),
@@ -35,16 +35,18 @@ private val NimbusDarkScheme = darkColorScheme(
     outlineVariant = Color(0xFF203A61),
     error = Color(0xFFCF6679),
     onError = Color(0xFF01070D),
-    surfaceTint = NimbusBlueAccent,
+    surfaceTint = NimbusPalette.Dark.accent,
     scrim = Color(0xFF01070D).copy(alpha = 0.72f),
 )
 
 /**
  * Normal light theme (issue #59): white surfaces on cool paper, with the
- * accent deepened so white ink on filled controls holds WCAG AA.
+ * accent deepened so white ink on filled controls and accent text on cards
+ * both hold WCAG AA. Primary is the palette accent, so Material components
+ * and the app's own accent text match.
  */
 internal val NimbusLightScheme = lightColorScheme(
-    primary = Color(0xFF0A66C2),
+    primary = NimbusPalette.Light.accent,
     onPrimary = Color(0xFFFFFFFF),
     primaryContainer = Color(0xFFD3E5FB),
     onPrimaryContainer = Color(0xFF16202B),
@@ -64,7 +66,7 @@ internal val NimbusLightScheme = lightColorScheme(
     outlineVariant = Color(0xFFC3CFDA),
     error = Color(0xFFB3261E),
     onError = Color(0xFFFFFFFF),
-    surfaceTint = Color(0xFF0A66C2),
+    surfaceTint = NimbusPalette.Light.accent,
     scrim = Color(0x66000A14),
 )
 
@@ -108,7 +110,7 @@ internal fun weatherAdaptiveScheme(weatherCode: WeatherCode?, isDay: Boolean): C
             WeatherCode.FREEZING_DRIZZLE_LIGHT, WeatherCode.FREEZING_DRIZZLE_DENSE,
             WeatherCode.FREEZING_RAIN_LIGHT, WeatherCode.FREEZING_RAIN_HEAVY,
         ) -> Color(0xFF80DEEA) // Cyan
-        else -> NimbusBlueAccent
+        else -> NimbusPalette.Dark.accent
     }
 
     val tertiaryColor = accentColor
