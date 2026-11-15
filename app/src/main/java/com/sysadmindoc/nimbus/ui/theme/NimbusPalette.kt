@@ -88,7 +88,8 @@ data class NimbusPalette(
      * the faded colour is judged, and the result carries the fade.
      *
      * Text straight on the sky isn't covered: no ink but [textPrimary] reads
-     * on every sky stop, so such text sits on a card or sheet.
+     * on every sky stop, so such text goes through `skyTint` or sits on a
+     * card or sheet.
      */
     fun textTint(color: Color, wash: Color = Color.Transparent, fade: Float = 1f): Color =
         readableOn(color, grounds(wash), WCAG_TEXT_RATIO, darken = isLight, fade = fade)

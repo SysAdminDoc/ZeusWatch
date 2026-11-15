@@ -141,7 +141,8 @@ import com.sysadmindoc.nimbus.ui.component.ShimmerLoadingSkeleton
 import com.sysadmindoc.nimbus.ui.component.TemperatureGraph
 import com.sysadmindoc.nimbus.ui.component.UvIndexBar
 import com.sysadmindoc.nimbus.ui.component.WeatherDetailsGrid
-import com.sysadmindoc.nimbus.ui.component.WeatherParticles
+import com.sysadmindoc.nimbus.ui.component.particlesBehind
+import com.sysadmindoc.nimbus.ui.component.rememberWeatherParticles
 import com.sysadmindoc.nimbus.ui.component.WindCompass
 import com.sysadmindoc.nimbus.ui.component.PremiumMessageCard
 import com.sysadmindoc.nimbus.ui.navigation.BottomTab
@@ -972,15 +973,16 @@ private fun WeatherHero(
             )
         },
     ) {
-        if (state.particlesEnabled) {
-            WeatherParticles(
-                weatherCode = data.current.weatherCode,
-                isDay = data.current.isDay,
-                modifier = Modifier.matchParentSize(),
-            )
+        val particles = if (state.particlesEnabled) {
+            rememberWeatherParticles(data.current.weatherCode, data.current.isDay)
+        } else {
+            null
         }
+        // Remembered: a new modifier would rebuild the erase mask on every recomposition.
+        val behind = remember(particles) { Modifier.particlesBehind(particles) }
         CurrentConditionsHeader(
             current = data.current,
+            modifier = behind,
             yesterdayHigh = state.yesterdayHigh.takeIf { settings.showYesterdayComparison },
         )
     }

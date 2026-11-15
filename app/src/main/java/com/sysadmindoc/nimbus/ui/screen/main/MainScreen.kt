@@ -146,7 +146,6 @@ import com.sysadmindoc.nimbus.ui.component.ShimmerLoadingSkeleton
 import com.sysadmindoc.nimbus.ui.component.TemperatureGraph
 import com.sysadmindoc.nimbus.ui.component.UvIndexBar
 import com.sysadmindoc.nimbus.ui.component.WeatherDetailsGrid
-import com.sysadmindoc.nimbus.ui.component.WeatherParticles
 import com.sysadmindoc.nimbus.ui.component.WindCompass
 import com.sysadmindoc.nimbus.ui.component.PremiumMessageCard
 import com.sysadmindoc.nimbus.ui.navigation.BottomTab

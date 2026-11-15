@@ -6,53 +6,68 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.Lifecycle
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.toRect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.layer.CompositingStrategy
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.WeatherCode
 import com.sysadmindoc.nimbus.util.isReducedMotionEnabled
 import kotlin.math.PI
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * Canvas-drawn weather particle effects overlaid on the header.
+ * One frame of the weather particles behind the header, for
+ * [particlesBehind]: null while the app is in the background or the system
+ * has animations off.
  * Rain: angled droplets falling. Snow: drifting flakes. Clear: sun rays / star twinkle.
  * Gravity sensor support: particles respond to device tilt for parallax effect.
  * Inspired by breezy-weather's MaterialPainterView + DelayRotateController.
  */
 @Composable
-fun WeatherParticles(
+fun rememberWeatherParticles(
     weatherCode: WeatherCode,
     isDay: Boolean,
-    modifier: Modifier = Modifier,
-) {
+): (DrawScope.() -> Unit)? {
     // Stop animations when app is backgrounded to save battery.
     // currentStateAsState() observes lifecycle transitions; deriving from the
     // raw (non-snapshot) currentState computed once and never updated.
     val lifecycleOwner = LocalLifecycleOwner.current
     val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
-    if (!lifecycleState.isAtLeast(Lifecycle.State.RESUMED)) return
+    if (!lifecycleState.isAtLeast(Lifecycle.State.RESUMED)) return null
 
     // Respect system reduced motion / animation off setting
-    if (isReducedMotionEnabled()) return
+    if (isReducedMotionEnabled()) return null
+
+    // Partly cloudy and overcast draw nothing, so they get no sensor, clock
+    // or erase layers to spend on drawing nothing.
+    val kind = weatherCode.particleKind() ?: return null
 
     // Gravity sensor for gyroscopic parallax. Keep the State unwrapped here and
-    // read .value inside the Canvas draw lambda so sensor updates only
+    // read .value inside the draw lambda so sensor updates only
     // invalidate the draw phase instead of recomposing at sensor rate.
     val gravityTilt = rememberGravityTilt()
 
@@ -92,30 +107,130 @@ fun WeatherParticles(
         generateParticles(weatherCode, count = 40)
     }
 
-    Canvas(modifier = modifier.fillMaxSize()) {
-        // Gravity-based pixel offset for parallax (max ~20px shift) — read in
-        // the draw phase, see note above.
-        val gravity = gravityTilt.value
-        val offsetX = gravity.x * 20f
-        val offsetY = gravity.y * 12f
+    return remember(weatherCode, isDay, particles) {
+        {
+            // Gravity-based pixel offset for parallax (max ~20px shift) — read in
+            // the draw phase, see note above.
+            val gravity = gravityTilt.value
+            val offsetX = gravity.x * 20f
+            val offsetY = gravity.y * 12f
 
-        when {
-            weatherCode.isRainy -> drawRain(particles, phase, offsetX, offsetY)
-            weatherCode.isSnowy -> drawSnow(particles, slowPhase, offsetX, offsetY)
-            weatherCode.isStormy -> {
-                drawRain(particles, phase, offsetX, offsetY)
-                if (phase in 0.48f..0.52f) {
-                    drawRect(Color.White.copy(alpha = 0.03f))
+            when (kind) {
+                ParticleKind.RAIN -> drawRain(particles, phase, offsetX, offsetY)
+                ParticleKind.SNOW -> drawSnow(particles, slowPhase, offsetX, offsetY)
+                ParticleKind.STORM -> {
+                    drawRain(particles, phase, offsetX, offsetY)
+                    if (phase in 0.48f..0.52f) {
+                        drawRect(Color.White.copy(alpha = 0.03f))
+                    }
                 }
+                ParticleKind.CLEAR -> {
+                    if (isDay) drawSunRays(rotationPhase, offsetX, offsetY)
+                    else drawStars(particles, slowPhase, offsetX, offsetY)
+                }
+                ParticleKind.FOG -> drawFog(slowPhase, offsetY)
             }
-            weatherCode == WeatherCode.CLEAR_SKY || weatherCode == WeatherCode.MAINLY_CLEAR -> {
-                if (isDay) drawSunRays(rotationPhase, offsetX, offsetY)
-                else drawStars(particles, slowPhase, offsetX, offsetY)
-            }
-            weatherCode.isFoggy -> drawFog(slowPhase, offsetY)
-            // Cloudy/partly cloudy - no particles
         }
     }
+}
+
+internal enum class ParticleKind { RAIN, SNOW, STORM, CLEAR, FOG }
+
+/**
+ * What [rememberWeatherParticles] draws for this sky, or null for nothing.
+ * One answer for both the early return and the draw, so they can't disagree.
+ */
+internal fun WeatherCode.particleKind(): ParticleKind? = when {
+    isRainy -> ParticleKind.RAIN
+    isSnowy -> ParticleKind.SNOW
+    isStormy -> ParticleKind.STORM
+    this == WeatherCode.CLEAR_SKY || this == WeatherCode.MAINLY_CLEAR -> ParticleKind.CLEAR
+    isFoggy -> ParticleKind.FOG
+    else -> null
+}
+
+/**
+ * Draws [particles] behind this content, erased within [clearance] of
+ * everything the content draws. Rain peaks at 0.45 alpha and snow at 0.36,
+ * enough to drop white text under 4.5:1 where one crosses a letter, so the
+ * hero's text and icons always sit on the bare sky that `skyTint` reads
+ * against, and the particles show between and around them.
+ *
+ * The particles move every frame and the content almost never does, so the
+ * two live in separate nodes. The inner one sits behind its own layer and
+ * builds the erase mask only when the content redraws. The outer one reads
+ * the animation, and each frame costs it one particle layer and one blit of
+ * the finished mask.
+ *
+ * Remember the result, keyed on [particles]: every call builds new caches,
+ * so calling it on each recomposition rebuilds the mask each time.
+ */
+fun Modifier.particlesBehind(
+    particles: (DrawScope.() -> Unit)?,
+    clearance: Dp = PARTICLE_CLEARANCE,
+): Modifier {
+    if (particles == null) return this
+    val eraser = EraseMask()
+    return graphicsLayer()
+        .drawWithCache {
+            val hero = obtainGraphicsLayer()
+            val bounds = size.toRect()
+            val ownLayer = Paint()
+            val erase = Paint().apply { blendMode = BlendMode.DstOut }
+            onDrawWithContent {
+                // Recorded first: drawing the inner node is what brings the
+                // mask up to date when the content has changed.
+                hero.record { this@onDrawWithContent.drawContent() }
+                val mask = eraser.mask
+                if (mask != null) {
+                    drawIntoCanvas { canvas ->
+                        canvas.saveLayer(bounds, ownLayer)
+                        particles()
+                        canvas.saveLayer(bounds, erase)
+                        drawLayer(mask)
+                        canvas.restore()
+                        canvas.restore()
+                    }
+                }
+                drawLayer(hero)
+            }
+        }
+        .graphicsLayer()
+        .drawWithCache {
+            val content = obtainGraphicsLayer()
+            // The content smeared sideways, then that stamped up and down: a
+            // solid square of [clearance] around every pixel it draws, in
+            // 2 × 13 draws. Rings of stamps left holes beside small marks like
+            // the dot on an i. Both are offscreen so the finished mask is a
+            // cached bitmap until the content changes.
+            val widened = obtainGraphicsLayer().apply { compositingStrategy = CompositingStrategy.Offscreen }
+            val mask = obtainGraphicsLayer().apply { compositingStrategy = CompositingStrategy.Offscreen }
+            val shifts = clearanceShifts(clearance.toPx(), CLEARANCE_STEP.toPx())
+            onDrawWithContent {
+                content.record { this@onDrawWithContent.drawContent() }
+                widened.record { shifts.forEach { dx -> translate(left = dx) { drawLayer(content) } } }
+                mask.record { shifts.forEach { dy -> translate(top = dy) { drawLayer(widened) } } }
+                eraser.mask = mask
+                drawLayer(content)
+            }
+        }
+}
+
+/** Hands the inner node's finished mask to the outer node that erases with it. */
+private class EraseMask {
+    var mask: GraphicsLayer? = null
+}
+
+/** Room left around every letter and icon, wide enough to read as a halo. */
+internal val PARTICLE_CLEARANCE = 3.dp
+
+/** Under the thinnest stroke or smallest dot the hero draws, so no gap opens between stamps. */
+private val CLEARANCE_STEP = 0.5.dp
+
+/** Even shifts from -[radius] to [radius], no further apart than [step]. */
+internal fun clearanceShifts(radius: Float, step: Float): List<Float> {
+    val gaps = ceil(2 * radius / step).toInt().coerceAtLeast(1)
+    return List(gaps + 1) { i -> -radius + 2 * radius * i / gaps }
 }
 
 private data class Particle(

@@ -30,6 +30,7 @@ import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextSecondary
 import com.sysadmindoc.nimbus.ui.theme.NimbusWarning
+import com.sysadmindoc.nimbus.ui.theme.skyTint
 import com.sysadmindoc.nimbus.util.WeatherFormatter
 import com.sysadmindoc.nimbus.util.conditionDescription
 import kotlin.math.abs
@@ -110,9 +111,18 @@ private fun currentHeaderCopy(
     return CurrentHeaderCopy(
         feelsLikeText = feelsLikeText,
         comparisonLabel = currentComparisonLabel(current, yesterdayHigh, settings),
-        comparisonColor = currentComparisonColor(current, yesterdayHigh, settings),
+        comparisonColor = heroInk(currentComparisonColor(current, yesterdayHigh, settings), current),
     )
 }
+
+/**
+ * [color] as the hero draws it. The hero has no card: it sits straight on the
+ * sky, where only the primary ink reads on every shade, so the rest is tinted
+ * for the sky the screen draws behind it.
+ */
+@Composable
+private fun heroInk(color: Color, current: CurrentConditions): Color =
+    skyTint(color, current.isDay, current.weatherCode.code)
 
 @Composable
 private fun currentComparisonLabel(
@@ -179,7 +189,7 @@ private fun CurrentHeaderTextBlock(
         Text(
             text = copy.feelsLikeText,
             style = MaterialTheme.typography.bodySmall,
-            color = NimbusTextSecondary,
+            color = heroInk(NimbusTextSecondary, current),
         )
     }
 }
@@ -191,30 +201,37 @@ private fun CurrentMetricStack(
     modifier: Modifier = Modifier,
 ) {
     val unavailable = stringResource(R.string.current_metric_unavailable)
+    val labelColor = heroInk(NimbusTextSecondary, current)
     Column(modifier = modifier) {
         HeaderDetailRow(
             label = stringResource(R.string.wind),
             value = WeatherFormatter.formatWindSpeed(current.windSpeed, current.windDirection, settings),
+            labelColor = labelColor,
         )
         HeaderDetailRow(
             label = stringResource(R.string.humidity),
             value = "${current.humidity}%",
+            labelColor = labelColor,
         )
         HeaderDetailRow(
             label = stringResource(R.string.uv_index),
             value = WeatherFormatter.formatUvIndex(current.uvIndex),
+            labelColor = labelColor,
         )
         HeaderDetailRow(
             label = stringResource(R.string.dew_point),
             value = current.dewPoint?.let { WeatherFormatter.formatDewPoint(it, settings) } ?: unavailable,
+            labelColor = labelColor,
         )
         HeaderDetailRow(
             label = stringResource(R.string.pressure),
             value = WeatherFormatter.formatPressure(current.pressure, settings),
+            labelColor = labelColor,
         )
         HeaderDetailRow(
             label = stringResource(R.string.visibility),
             value = current.visibility?.let { WeatherFormatter.formatVisibility(it, settings) } ?: unavailable,
+            labelColor = labelColor,
             showDivider = false,
         )
     }
@@ -224,6 +241,7 @@ private fun CurrentMetricStack(
 private fun HeaderDetailRow(
     label: String,
     value: String,
+    labelColor: Color,
     showDivider: Boolean = true,
 ) {
     Row(
@@ -236,7 +254,7 @@ private fun HeaderDetailRow(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = NimbusTextSecondary,
+            color = labelColor,
         )
         Text(
             text = value,
@@ -263,6 +281,7 @@ private fun CurrentHeaderMetricsRow(
     comparisonLabel: String?,
     comparisonColor: Color,
 ) {
+    val labelColor = heroInk(NimbusTextSecondary, current)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(20.dp),
@@ -271,17 +290,20 @@ private fun CurrentHeaderMetricsRow(
             modifier = Modifier.weight(1f),
             label = stringResource(R.string.current_metric_high),
             value = WeatherFormatter.formatTemperature(current.dailyHigh, settings),
+            labelColor = labelColor,
         )
         HeroMetricTile(
             modifier = Modifier.weight(1f),
             label = stringResource(R.string.current_metric_low),
             value = WeatherFormatter.formatTemperature(current.dailyLow, settings),
+            labelColor = labelColor,
         )
         comparisonLabel?.let {
             HeroMetricTile(
                 modifier = Modifier.weight(1f),
                 label = stringResource(R.string.current_metric_trend),
                 value = it,
+                labelColor = labelColor,
                 accentColor = comparisonColor,
             )
         }
@@ -292,6 +314,7 @@ private fun CurrentHeaderMetricsRow(
 private fun HeroMetricTile(
     label: String,
     value: String,
+    labelColor: Color,
     modifier: Modifier = Modifier,
     accentColor: Color = NimbusTextPrimary,
 ) {
@@ -299,7 +322,7 @@ private fun HeroMetricTile(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = NimbusTextSecondary,
+            color = labelColor,
         )
         Spacer(modifier = Modifier.height(1.dp))
         Text(
