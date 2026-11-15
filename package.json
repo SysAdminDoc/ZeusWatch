@@ -7,5 +7,8 @@
   "devDependencies": {
     "@firebase/rules-unit-testing": "5.0.1",
     "firebase": "12.5.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.7"
   }
 }

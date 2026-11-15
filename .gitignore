@@ -21,6 +21,7 @@ google-services.json
 .kotlin/
 node_modules/
 firestore-debug.log
+firebase-debug.log
 *.bak
 
 # Markdown files local-only (except README)
