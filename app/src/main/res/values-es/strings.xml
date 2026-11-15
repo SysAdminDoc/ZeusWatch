@@ -1216,6 +1216,9 @@
     <string name="settings_none">Ninguno</string>
     <string name="settings_api_key_field_cd">Campo de %1$s</string>
     <string name="settings_api_key_saved_hint">Guardado en este dispositivo al salir del campo</string>
+    <string name="settings_api_key_needs_reentry">Hay que volver a introducirla</string>
+    <string name="settings_api_keys_reset_notice">Tu teléfono restableció su almacén seguro de claves, así que no se pudieron recuperar las claves API guardadas. Vuelve a introducirlas abajo.</string>
+    <string name="settings_api_keys_reset_dismiss">Descartar</string>
     <string name="settings_enter_api_key">Ingresar clave API...</string>
     <string name="settings_enter_value">Ingresar valor…</string>
     <string name="settings_no_icon_packs">No hay paquetes de iconos instalados. Coloca paquetes en assets/iconpacks/ o instala una app con el intent com.sysadmindoc.nimbus.ICON_PACK.</string>

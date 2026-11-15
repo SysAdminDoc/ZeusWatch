@@ -248,6 +248,7 @@ fun SettingsScreen(
             onPirateWeatherApiKey = viewModel::setPirateWeatherApiKey,
             onTempestAccessToken = viewModel::setTempestAccessToken,
             onTempestDeviceId = viewModel::setTempestDeviceId,
+            onDismissApiKeysReset = viewModel::dismissApiKeysReset,
             onExportSettings = { exportSettingsLauncher.launch("zeuswatch-settings.json") },
             onImportSettings = { importSettingsLauncher.launch(arrayOf("application/json", "text/*")) },
             onExportProviderDiagnostics = { exportDiagnosticsLauncher.launch("zeuswatch-source-health.txt") },

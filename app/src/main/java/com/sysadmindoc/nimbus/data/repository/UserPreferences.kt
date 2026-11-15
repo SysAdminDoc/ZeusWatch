@@ -214,7 +214,8 @@ class UserPreferences @Inject constructor(
     val settings: Flow<NimbusSettings> = combine(
         store.data.catch { if (it is IOException) emit(emptyPreferences()) else throw it },
         encryptedApiKeyStore.apiKeys,
-    ) { prefs, apiKeys ->
+        encryptedApiKeyStore.lostKeys,
+    ) { prefs, apiKeys, lostKeys ->
         NimbusSettings(
             tempUnit = safeValueOf<TempUnit>(prefs[Keys.TEMP_UNIT] ?: TempUnit.FAHRENHEIT.name) ?: TempUnit.FAHRENHEIT,
             windUnit = safeValueOf<WindUnit>(prefs[Keys.WIND_UNIT] ?: WindUnit.MPH.name) ?: WindUnit.MPH,
@@ -296,6 +297,7 @@ class UserPreferences @Inject constructor(
             pirateWeatherApiKey = apiKeys.pirateWeatherApiKey.ifBlank { prefs[Keys.PIRATE_WEATHER_API_KEY] ?: "" },
             tempestAccessToken = apiKeys.tempestAccessToken.ifBlank { prefs[Keys.TEMPEST_ACCESS_TOKEN] ?: "" },
             tempestDeviceId = prefs[Keys.TEMPEST_DEVICE_ID] ?: "",
+            apiKeysNeedingReentry = lostKeys,
             onboardingComplete = prefs[Keys.ONBOARDING_COMPLETE] ?: hasExistingUserFootprint(prefs),
             locationPermissionRequested = prefs[Keys.LOCATION_PERMISSION_REQUESTED] ?: false,
         )
@@ -627,6 +629,8 @@ class UserPreferences @Inject constructor(
         prefs.remove(Keys.TEMPEST_ACCESS_TOKEN)
     }
 
+    fun dismissApiKeysReset() = encryptedApiKeyStore.clearLostKeys()
+
     suspend fun migrateEncryptedApiKeys() {
         encryptedApiKeyStore.migrateFromLegacyEncryptedDataStore()
     }
@@ -734,6 +738,8 @@ data class NimbusSettings(
     val pirateWeatherApiKey: String = "",
     val tempestAccessToken: String = "",
     val tempestDeviceId: String = "",
+    /** Saved keys a device keystore reset destroyed; Settings asks for them again. */
+    val apiKeysNeedingReentry: Set<ApiKeyName> = emptySet(),
     val onboardingComplete: Boolean = false,
     val locationPermissionRequested: Boolean = false,
 ) {

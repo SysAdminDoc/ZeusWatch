@@ -25,6 +25,11 @@ private const val TINK_KEYSET_PREFS = "nimbus_api_key_keyset_prefs"
 private const val MASTER_KEY_URI = "android-keystore://nimbus_api_key_master"
 private const val AEAD_RETRY_BACKOFF_MS = 250L
 
+// Plaintext record of which keys are set and which a keyset reset destroyed. Names only, never values.
+private const val KEY_STATUS_PREFS = "nimbus_api_key_status"
+private const val PREF_CONFIGURED_KEYS = "configured"
+private const val PREF_LOST_KEYS = "lost"
+
 private const val OLD_ENCRYPTED_FILE = "datastore/nimbus_api_keys.preferences_pb"
 private val OLD_ASSOCIATED_DATA = "nimbus_api_keys.preferences_pb".toByteArray()
 private val ASSOCIATED_DATA = "nimbus_api_keys_v2".toByteArray()
@@ -36,19 +41,49 @@ data class ApiKeys(
     val tempestAccessToken: String = "",
 )
 
-class EncryptedApiKeyStore(context: Context) {
+enum class ApiKeyName { OWM, PIRATE_WEATHER, TEMPEST }
+
+internal fun ApiKeys.configuredNames(): Set<ApiKeyName> = buildSet {
+    if (owmApiKey.isNotBlank()) add(ApiKeyName.OWM)
+    if (pirateWeatherApiKey.isNotBlank()) add(ApiKeyName.PIRATE_WEATHER)
+    if (tempestAccessToken.isNotBlank()) add(ApiKeyName.TEMPEST)
+}
+
+/** Builds the AEAD for a Tink keyset stored under that name; tests swap in one without the Android Keystore. */
+internal typealias KeysetAeadFactory = (context: Context, keysetName: String) -> Aead
+
+class EncryptedApiKeyStore internal constructor(
+    context: Context,
+    private val keysetAead: KeysetAeadFactory,
+) {
+
+    constructor(context: Context) : this(context, ::buildAndroidKeystoreAead)
 
     private val appContext = context.applicationContext
     private val aeadLock = Any()
+    private val statusPrefs = appContext.getSharedPreferences(KEY_STATUS_PREFS, Context.MODE_PRIVATE)
 
     @Volatile
-    private var cachedAead: Aead? = createAeadOrNull(appContext)
+    private var cachedAead: Aead? = createAeadOrNull(appContext, keysetAead)
     private val file = File(appContext.filesDir, API_KEY_FILE)
     private val mutex = Mutex()
     private val json = Json { ignoreUnknownKeys = true }
     private val _keys = MutableStateFlow(readFromFile(cachedAead))
+    private val _lostKeys = MutableStateFlow(readLostKeys())
 
     val apiKeys: StateFlow<ApiKeys> = _keys.asStateFlow()
+
+    /**
+     * Keys that were saved when the keyset had to be reset, so they're gone
+     * and need entering again. Cleared one by one as each is re-entered, or
+     * all at once by [clearLostKeys].
+     */
+    val lostKeys: StateFlow<Set<ApiKeyName>> = _lostKeys.asStateFlow()
+
+    fun clearLostKeys() {
+        statusPrefs.edit().remove(PREF_LOST_KEYS).apply()
+        _lostKeys.value = emptySet()
+    }
 
     suspend fun setOwmApiKey(key: String) = update { it.copy(owmApiKey = key) }
 
@@ -67,9 +102,10 @@ class EncryptedApiKeyStore(context: Context) {
         cachedAead?.let { return it }
         synchronized(aeadLock) {
             cachedAead?.let { return it }
-            val created = createAeadOrNull(appContext) ?: return null
+            val created = createAeadOrNull(appContext, keysetAead) ?: return null
             cachedAead = created
             _keys.value = readFromFile(created)
+            _lostKeys.value = readLostKeys()
             return created
         }
     }
@@ -81,6 +117,11 @@ class EncryptedApiKeyStore(context: Context) {
         val updated = transform(_keys.value)
         writeToFile(updated)
         _keys.value = updated
+        val stillLost = _lostKeys.value - updated.configuredNames()
+        if (stillLost != _lostKeys.value) {
+            statusPrefs.edit().putStringSet(PREF_LOST_KEYS, stillLost.mapTo(HashSet()) { it.name }).apply()
+            _lostKeys.value = stillLost
+        }
     }
 
     private fun readFromFile(aead: Aead?): ApiKeys {
@@ -90,10 +131,20 @@ class EncryptedApiKeyStore(context: Context) {
             if (encrypted.isEmpty()) return ApiKeys()
             val decrypted = aead.decrypt(encrypted, ASSOCIATED_DATA)
             json.decodeFromString(ApiKeys.serializer(), String(decrypted, Charsets.UTF_8))
+                // Installs from before the record existed get it on their first good read.
+                .also(::recordConfigured)
         } catch (ignored: Exception) {
             ApiKeys()
         }
     }
+
+    private fun recordConfigured(keys: ApiKeys) {
+        statusPrefs.edit().putStringSet(PREF_CONFIGURED_KEYS, keys.configuredNames().mapTo(HashSet()) { it.name }).apply()
+    }
+
+    private fun readLostKeys(): Set<ApiKeyName> =
+        statusPrefs.getStringSet(PREF_LOST_KEYS, null).orEmpty()
+            .mapNotNullTo(HashSet()) { name -> ApiKeyName.entries.firstOrNull { it.name == name } }
 
     private fun writeToFile(keys: ApiKeys) {
         val aead = aeadOrNull() ?: throw IllegalStateException(
@@ -103,6 +154,7 @@ class EncryptedApiKeyStore(context: Context) {
         val encrypted = aead.encrypt(plaintext.toByteArray(Charsets.UTF_8), ASSOCIATED_DATA)
         file.parentFile?.mkdirs()
         writeBytesAtomically(file, encrypted)
+        recordConfigured(keys)
     }
 
     suspend fun migrateFromLegacyEncryptedDataStore() = mutex.withLock {
@@ -141,22 +193,22 @@ class EncryptedApiKeyStore(context: Context) {
     }
 }
 
-private fun createAeadOrNull(context: Context): Aead? {
+private fun createAeadOrNull(context: Context, keysetAead: KeysetAeadFactory): Aead? {
     AeadConfig.register()
     return try {
-        buildAead(context)
+        keysetAead(context, TINK_KEYSET_NAME)
     } catch (_: Exception) {
         // Transient Android Keystore failures (post-OTA races, keystore daemon
         // contention) throw the same way as true keyset corruption. Retry once
         // after a brief backoff before considering any recovery.
         try {
             Thread.sleep(AEAD_RETRY_BACKOFF_MS)
-            buildAead(context)
+            keysetAead(context, TINK_KEYSET_NAME)
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
             null
         } catch (ignored: Exception) {
-            recoverAeadOrNull(context)
+            recoverAeadOrNull(context, keysetAead)
         }
     }
 }
@@ -170,20 +222,31 @@ private fun createAeadOrNull(context: Context): Aead? {
  * itself is down: keep the keyset intact and let the AEAD retry lazily, so a
  * transient failure never destroys the user's stored keys.
  */
-private fun recoverAeadOrNull(context: Context): Aead? {
-    val keystoreHealthy = runCatching { buildProbeAead(context) }.isSuccess
+private fun recoverAeadOrNull(context: Context, keysetAead: KeysetAeadFactory): Aead? {
+    val keystoreHealthy = runCatching { keysetAead(context, TINK_KEYSET_PROBE_NAME) }.isSuccess
     val prefs = context.getSharedPreferences(TINK_KEYSET_PREFS, Context.MODE_PRIVATE)
     prefs.edit().remove(TINK_KEYSET_PROBE_NAME).apply()
     if (!keystoreHealthy) return null
     prefs.edit().remove(TINK_KEYSET_NAME).commit()
-    return runCatching { buildAead(context) }.getOrNull()
+    recordLostKeys(context)
+    return runCatching { keysetAead(context, TINK_KEYSET_NAME) }.getOrNull()
 }
 
-private fun buildAead(context: Context): Aead = buildAead(context, TINK_KEYSET_NAME)
+/**
+ * The saved keys went with the keyset, so remember which ones there were for
+ * Settings to ask for again. An install that never recorded them (it reset
+ * before its first good read) can't tell, so every key is asked for.
+ */
+private fun recordLostKeys(context: Context) {
+    if (File(context.filesDir, API_KEY_FILE).length() == 0L) return
+    val status = context.getSharedPreferences(KEY_STATUS_PREFS, Context.MODE_PRIVATE)
+    val lost = status.getStringSet(PREF_CONFIGURED_KEYS, null)
+        ?: ApiKeyName.entries.mapTo(HashSet()) { it.name }
+    if (lost.isEmpty()) return
+    status.edit().putStringSet(PREF_LOST_KEYS, HashSet(lost)).commit()
+}
 
-private fun buildProbeAead(context: Context): Aead = buildAead(context, TINK_KEYSET_PROBE_NAME)
-
-private fun buildAead(context: Context, keysetName: String): Aead {
+private fun buildAndroidKeystoreAead(context: Context, keysetName: String): Aead {
     val keysetHandle = AndroidKeysetManager.Builder()
         .withSharedPref(context, keysetName, TINK_KEYSET_PREFS)
         .withKeyTemplate(KeyTemplate.createFrom(PredefinedAeadParameters.AES256_GCM))

@@ -4,10 +4,13 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.sysadmindoc.nimbus.BuildConfig
+import com.sysadmindoc.nimbus.data.repository.AlertSourcePreference
+import com.sysadmindoc.nimbus.data.repository.ApiKeyName
 import com.sysadmindoc.nimbus.data.repository.NimbusSettings
 import com.sysadmindoc.nimbus.data.repository.ProviderFailureReason
 import com.sysadmindoc.nimbus.data.repository.ProviderHealthEntry
@@ -239,6 +242,55 @@ class SettingsScreenRobolectricTest {
         composeTestRule.onNodeWithText("Export diagnostics").performScrollTo().performClick()
 
         assertTrue(exportClicked)
+    }
+
+    @Test
+    fun settingsScreen_asksAgainForKeysAKeystoreResetDestroyed() {
+        var dismissed = false
+
+        composeTestRule.setContentWithAccessibilityChecks {
+            NimbusTheme {
+                SettingsContent(
+                    // Pirate Weather's field shows for AUTO alerts; its key is gone. The OWM key isn't in use.
+                    settings = NimbusSettings(
+                        alertSourcePref = AlertSourcePreference.AUTO,
+                        apiKeysNeedingReentry = setOf(ApiKeyName.PIRATE_WEATHER, ApiKeyName.OWM),
+                    ),
+                    onBack = {},
+                    actions = SettingsActions(onDismissApiKeysReset = { dismissed = true }),
+                )
+            }
+        }
+
+        clickCategory("Advanced")
+        composeTestRule.onNode(hasText("Data Sources") and hasClickAction()).performScrollTo().performClick()
+        composeTestRule.onNodeWithText("saved API keys", substring = true).performScrollTo().assertIsDisplayed()
+        assertEquals(1, composeTestRule.onAllNodesWithText("Needs re-entry").fetchSemanticsNodes().size)
+        composeTestRule.onNodeWithText("Dismiss").performScrollTo().performClick()
+
+        assertTrue(dismissed)
+    }
+
+    @Test
+    fun settingsScreen_noResetNoticeOnceTheKeyIsBack() {
+        composeTestRule.setContentWithAccessibilityChecks {
+            NimbusTheme {
+                SettingsContent(
+                    settings = NimbusSettings(
+                        alertSourcePref = AlertSourcePreference.AUTO,
+                        pirateWeatherApiKey = "re-entered",
+                        apiKeysNeedingReentry = setOf(ApiKeyName.PIRATE_WEATHER),
+                    ),
+                    onBack = {},
+                )
+            }
+        }
+
+        clickCategory("Advanced")
+        composeTestRule.onNode(hasText("Data Sources") and hasClickAction()).performScrollTo().performClick()
+        composeTestRule.onNodeWithText("Pirate Weather", substring = true).performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("saved API keys", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Needs re-entry").assertDoesNotExist()
     }
 
     @Test

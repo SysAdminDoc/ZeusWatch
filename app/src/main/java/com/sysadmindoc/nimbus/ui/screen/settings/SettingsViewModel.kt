@@ -288,6 +288,7 @@ class SettingsViewModel @Inject constructor(
     fun setPirateWeatherApiKey(key: String) = viewModelScope.launch { prefs.setPirateWeatherApiKey(key) }
     fun setTempestAccessToken(token: String) = viewModelScope.launch { prefs.setTempestAccessToken(token) }
     fun setTempestDeviceId(deviceId: String) = viewModelScope.launch { prefs.setTempestDeviceId(deviceId) }
+    fun dismissApiKeysReset() = prefs.dismissApiKeysReset()
 
     fun exportSettings(uri: Uri) = viewModelScope.launch {
         if (!beginTransfer()) return@launch

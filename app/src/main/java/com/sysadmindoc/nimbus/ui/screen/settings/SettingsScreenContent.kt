@@ -270,6 +270,7 @@ internal data class SettingsActions(
     val onPirateWeatherApiKey: (String) -> Unit = {},
     val onTempestAccessToken: (String) -> Unit = {},
     val onTempestDeviceId: (String) -> Unit = {},
+    val onDismissApiKeysReset: () -> Unit = {},
     val onExportSettings: () -> Unit = {},
     val onImportSettings: () -> Unit = {},
     val onExportProviderDiagnostics: () -> Unit = {},
@@ -1025,21 +1026,43 @@ private fun SettingsApiKeyFields(
         settings.tempestAccessToken.isNotBlank() ||
         settings.tempestDeviceId.isNotBlank()
 
+    // A key a keystore reset destroyed, on a field that's showing and still empty.
+    val owmNeedsReentry = needsOwmKey && ApiKeyName.OWM in settings.apiKeysNeedingReentry &&
+        settings.owmApiKey.isBlank()
+    val pirateNeedsReentry = needsPirateKey && ApiKeyName.PIRATE_WEATHER in settings.apiKeysNeedingReentry &&
+        settings.pirateWeatherApiKey.isBlank()
+    val tempestNeedsReentry = needsTempestConfig && ApiKeyName.TEMPEST in settings.apiKeysNeedingReentry &&
+        settings.tempestAccessToken.isBlank()
+
     if (needsOwmKey || needsPirateKey || needsTempestConfig) {
         Spacer(modifier = Modifier.height(12.dp))
         Text(stringResource(R.string.settings_api_keys), style = MaterialTheme.typography.bodySmall, color = NimbusTextSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
     }
+    if (owmNeedsReentry || pirateNeedsReentry || tempestNeedsReentry) {
+        ApiKeysResetNotice(onDismiss = actions.onDismissApiKeysReset)
+    }
     if (needsOwmKey) {
-        ApiKeyField(stringResource(R.string.settings_owm_key), settings.owmApiKey, actions.onOwmApiKey)
+        ApiKeyField(
+            stringResource(R.string.settings_owm_key),
+            settings.owmApiKey,
+            actions.onOwmApiKey,
+            needsReentry = owmNeedsReentry,
+        )
     }
     if (needsPirateKey) {
-        ApiKeyField(stringResource(R.string.settings_pirate_key), settings.pirateWeatherApiKey, actions.onPirateWeatherApiKey)
+        ApiKeyField(
+            stringResource(R.string.settings_pirate_key),
+            settings.pirateWeatherApiKey,
+            actions.onPirateWeatherApiKey,
+            needsReentry = pirateNeedsReentry,
+        )
     }
     if (needsTempestConfig) {
         ApiKeyField(
             label = stringResource(R.string.settings_tempest_access_token),
             value = settings.tempestAccessToken,
             onValueChange = actions.onTempestAccessToken,
+            needsReentry = tempestNeedsReentry,
         )
         ApiKeyField(
             label = stringResource(R.string.settings_tempest_device_id),
@@ -2470,6 +2493,31 @@ private fun SourceDropdownNullable(
 }
 
 @Composable
+private fun ApiKeysResetNotice(onDismiss: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(NimbusCardBg)
+            .border(1.dp, NimbusWarning, RoundedCornerShape(10.dp))
+            .padding(start = 14.dp, end = 4.dp, top = 12.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_api_keys_reset_notice),
+            style = MaterialTheme.typography.bodySmall,
+            color = NimbusTextPrimary,
+            modifier = Modifier
+                .padding(end = 10.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+        )
+        TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+            Text(stringResource(R.string.settings_api_keys_reset_dismiss), color = NimbusBlueAccent)
+        }
+    }
+}
+
+@Composable
 private fun ApiKeyField(
     label: String,
     value: String,
@@ -2477,6 +2525,7 @@ private fun ApiKeyField(
     isSecret: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Password,
     placeholder: String? = null,
+    needsReentry: Boolean = false,
 ) {
     var text by remember(label) { mutableStateOf(value) }
     var isFocused by remember { mutableStateOf(false) }
@@ -2518,9 +2567,11 @@ private fun ApiKeyField(
             modifier = Modifier.padding(start = 4.dp, bottom = 2.dp),
         )
         Text(
-            text = stringResource(R.string.settings_api_key_saved_hint),
+            text = stringResource(
+                if (needsReentry) R.string.settings_api_key_needs_reentry else R.string.settings_api_key_saved_hint,
+            ),
             style = MaterialTheme.typography.labelSmall,
-            color = NimbusTextTertiary,
+            color = if (needsReentry) NimbusWarning else NimbusTextTertiary,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
         )
         BasicTextField(
