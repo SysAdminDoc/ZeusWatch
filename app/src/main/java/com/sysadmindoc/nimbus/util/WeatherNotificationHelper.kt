@@ -28,7 +28,7 @@ object WeatherNotificationHelper {
     private const val CHANNEL_ID = "nimbus_current_weather"
     private const val DAILY_BRIEFING_CHANNEL_ID = "nimbus_daily_briefing"
     private const val NOTIFICATION_ID = 9000
-    private const val DAILY_BRIEFING_NOTIFICATION_ID = 9001
+    internal const val DAILY_BRIEFING_NOTIFICATION_ID = 9001
     private const val MAX_METRICS = 3
 
     fun createChannel(context: Context) {
