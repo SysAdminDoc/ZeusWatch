@@ -42,6 +42,11 @@ class AccessibilityContrastTest {
             ContrastPair("light primary on card", light.textPrimary, cardBackground, WCAG_AA_TEXT),
             ContrastPair("light secondary on card", light.textSecondary, cardBackground, WCAG_AA_TEXT),
             ContrastPair("light tertiary on card", light.textTertiary, cardBackground, WCAG_AA_TEXT),
+            ContrastPair("light rain text on background", light.rainTint, light.background, WCAG_AA_TEXT),
+            ContrastPair("light rain text on surface", light.rainTint, light.surface, WCAG_AA_TEXT),
+            ContrastPair("light rain text on card", light.rainTint, cardBackground, WCAG_AA_TEXT),
+            // The hero trend label sits on the sky wash; storm is its darkest light stop.
+            ContrastPair("light rain text on storm sky", light.rainTint, Color(0xFFC9CEE0), WCAG_AA_TEXT),
         )
 
         pairs.assertContrast()

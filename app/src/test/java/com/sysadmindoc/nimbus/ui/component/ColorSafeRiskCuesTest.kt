@@ -1,5 +1,6 @@
 package com.sysadmindoc.nimbus.ui.component
 
+import androidx.compose.ui.graphics.Color
 import com.sysadmindoc.nimbus.data.model.AqiLevel
 import com.sysadmindoc.nimbus.data.model.PollenLevel
 import org.junit.Assert.assertEquals
@@ -38,8 +39,10 @@ class ColorSafeRiskCuesTest {
 
     @Test
     fun `precipitation cues bucket probability without relying on alpha`() {
-        val cues = listOf(0, 1, 24, 25, 49, 50, 69, 70, 100).map(ColorSafeRiskCues::precipitation)
+        val rain = Color(0xFF0A5594)
+        val cues = listOf(0, 1, 24, 25, 49, 50, 69, 70, 100).map { ColorSafeRiskCues.precipitation(it, rain) }
 
+        assertTrue(cues.all { it.color == rain })
         assertEquals(listOf(0, 1, 1, 2, 2, 3, 3, 4, 4), cues.map { it.ordinal })
         assertEquals(
             listOf("R0/4", "R1/4", "R1/4", "R2/4", "R2/4", "R3/4", "R3/4", "R4/4", "R4/4"),

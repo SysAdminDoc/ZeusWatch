@@ -58,7 +58,7 @@ fun PrecipitationChartCard(
         stringResource(R.string.precip_semantics_total, WeatherFormatter.formatPrecipitation(totalPrecip, s))
     } else null
     val semanticSummary = listOfNotNull(semanticBase, totalSemantic).joinToString(separator = " ")
-    val maxProbCue = ColorSafeRiskCues.precipitation(maxProb)
+    val maxProbCue = ColorSafeRiskCues.precipitation(maxProb, NimbusRainBlue)
 
     WeatherCard(
         titleRes = R.string.card_type_precipitation_chart,

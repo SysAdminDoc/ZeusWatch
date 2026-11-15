@@ -94,11 +94,13 @@ val NimbusWarning: Color
 val NimbusSuccess: Color
     @Composable get() = LocalNimbusPalette.current.success
 
-// Accent colors for weather conditions. NimbusSnowWhite is the one exception
-// that tracks the palette: pale lavender snow is invisible on light cards.
+// Accent colors for weather conditions. NimbusSnowWhite and NimbusRainBlue are
+// the exceptions that track the palette: pale lavender snow is invisible on
+// light cards, and the sky-blue rain text reads at about 2:1 there.
 val NimbusSunYellow = Color(0xFFFFD54F)
 val NimbusMoonBlue = Color(0xFFC5CAE9)
-val NimbusRainBlue = Color(0xFF73C5FF)
+val NimbusRainBlue: Color
+    @Composable get() = LocalNimbusPalette.current.rainTint
 val NimbusSnowWhite: Color
     @Composable get() = LocalNimbusPalette.current.snowTint
 

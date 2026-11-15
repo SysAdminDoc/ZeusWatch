@@ -16,7 +16,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sysadmindoc.nimbus.data.model.AqiLevel
 import com.sysadmindoc.nimbus.data.model.PollenLevel
-import com.sysadmindoc.nimbus.ui.theme.NimbusRainBlue
 import com.sysadmindoc.nimbus.ui.theme.NimbusTextPrimary
 import com.sysadmindoc.nimbus.ui.theme.NimbusUvExtreme
 import com.sysadmindoc.nimbus.ui.theme.NimbusUvHigh
@@ -96,7 +95,8 @@ internal object ColorSafeRiskCues {
         )
     }
 
-    fun precipitation(probability: Int): ColorSafeRiskCue {
+    /** [color] is the caller's theme rain color, read in composition. */
+    fun precipitation(probability: Int, color: Color): ColorSafeRiskCue {
         val ordinal = when {
             probability <= 0 -> 0
             probability < 25 -> 1
@@ -108,7 +108,7 @@ internal object ColorSafeRiskCues {
             code = "R$ordinal/$PRECIP_LEVEL_COUNT",
             ordinal = ordinal,
             total = PRECIP_LEVEL_COUNT,
-            color = NimbusRainBlue,
+            color = color,
         )
     }
 }

@@ -46,6 +46,12 @@ data class NimbusPalette(
     /** Snow accent readable on cards in both modes (condition icons, hourly tints). */
     val snowTint: Color,
     /**
+     * Rain accent. Besides bars and icons it colors text (rain chances, the
+     * "cooler" trend), and the dark mode sky blue reads at about 2:1 on white
+     * cards, so the light palette deepens it.
+     */
+    val rainTint: Color,
+    /**
      * Base ink for the faint neutral washes (chip fills, gauge tracks, skeleton
      * shimmer) that call sites tint with a low alpha. Dark mode keeps the
      * original white; on light cards a white wash is invisible, so the light
@@ -153,6 +159,7 @@ data class NimbusPalette(
             success = Color(0xFF66BB6A),
             overlayCard = Color(0xFF111833),
             snowTint = Color(0xFFE8EAF6),
+            rainTint = Color(0xFF73C5FF),
             overlayInk = Color(0xFFFFFFFF),
         )
 
@@ -184,6 +191,7 @@ data class NimbusPalette(
             success = Color(0xFF1E7B34),
             overlayCard = Color(0xFFE9F0FA),
             snowTint = Color(0xFF5A6B85),
+            rainTint = Color(0xFF0A5594),
             overlayInk = Color(0xFF1E3550),
         )
     }

@@ -301,6 +301,7 @@ private fun MultiSourceTemperatureCanvas(
     val colors = rememberChartColors()
     val layoutDirection = LocalLayoutDirection.current
     val textTertiary = NimbusTextTertiary
+    val rainColor = NimbusRainBlue
     Canvas(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
@@ -347,7 +348,7 @@ private fun MultiSourceTemperatureCanvas(
                 val barHeight = chartHeight * (bar.probability / maxPrecip.toFloat()) * 0.24f
                 val x = xFor(bar.time)
                 drawRect(
-                    color = NimbusRainBlue.copy(alpha = 0.18f),
+                    color = rainColor.copy(alpha = 0.18f),
                     topLeft = Offset(x - barWidth / 2f, chartBottom - barHeight),
                     size = Size(barWidth, barHeight),
                 )

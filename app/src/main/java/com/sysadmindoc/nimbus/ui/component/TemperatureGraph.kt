@@ -104,6 +104,7 @@ fun TemperatureGraph(
     val tooltipStyle = TextStyle(color = NimbusRawInkLight, fontSize = 11.sp, fontWeight = FontWeight.Bold)
     val textTertiary = NimbusTextTertiary
     val overlayInk = NimbusOverlayInk
+    val rainColor = NimbusRainBlue
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     // Interactive state
@@ -186,7 +187,7 @@ fun TemperatureGraph(
                             )
 
                             onDrawBehind {
-                                drawPrecipitationBars(data, metrics, isRtl)
+                                drawPrecipitationBars(data, metrics, isRtl, rainColor)
                                 drawNormalBand(metrics, normalHigh, normalLow, textTertiary, overlayInk)
                                 drawConfidenceBand(data, metrics, confidenceBands, isRtl)
                                 drawTemperatureCurve(paths, metrics)
@@ -366,6 +367,7 @@ private fun DrawScope.drawPrecipitationBars(
     data: List<HourlyConditions>,
     metrics: TemperatureGraphMetrics,
     isRtl: Boolean,
+    rainColor: Color,
 ) {
     if ((data.maxOfOrNull { it.precipitationProbability } ?: 0) <= 0) return
 
@@ -374,7 +376,7 @@ private fun DrawScope.drawPrecipitationBars(
         if (hour.precipitationProbability > 5) {
             val barHeight = (hour.precipitationProbability / 100f) * metrics.graphHeight * 0.4f
             drawRect(
-                color = NimbusRainBlue.copy(alpha = 0.15f),
+                color = rainColor.copy(alpha = 0.15f),
                 topLeft = Offset(
                     rtlCanvasRectLeft(index * metrics.stepX - barWidth / 2, barWidth, metrics.width, isRtl),
                     metrics.baselineY - barHeight,
