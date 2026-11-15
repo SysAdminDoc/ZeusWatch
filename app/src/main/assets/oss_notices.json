@@ -1965,14 +1965,14 @@
       "name": "org.jetbrains.kotlin:kotlin-stdlib",
       "standardOnly": false,
       "url": "https://kotlinlang.org/",
-      "version": "2.4.10"
+      "version": "2.4.21"
     },
     {
       "license": "Apache-2.0",
       "name": "org.jetbrains.kotlin:kotlin-stdlib-common",
       "standardOnly": false,
       "url": "https://kotlinlang.org/",
-      "version": "2.4.10"
+      "version": "2.4.21"
     },
     {
       "license": "Apache-2.0",
